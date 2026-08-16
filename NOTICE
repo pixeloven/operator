@@ -1,0 +1,37 @@
+operator
+Copyright (c) 2026 PixelOven
+
+This product is a soft fork of `firstmate`.
+
+  firstmate — https://github.com/kunchenguid/firstmate
+  Copyright (c) 2026 Kun Chen
+  Licensed under the MIT License.
+
+The complete upstream MIT license text is retained verbatim in LICENSE and
+applies to all upstream-authored files in this repository, which is every file
+present at the fork point:
+
+  upstream commit 6789876442d0fb6da9f70d86399a2930c5073ae2 (short: 6789876442d0)
+  "chore: ignore scratchpad/ at the repo root (#2359)", 2026-08-13, Kun Chen
+
+This repository was seeded by pushing upstream's own git history unchanged, so
+the authorship of every upstream file remains attributable through `git log`
+and `git blame`. See docs/adr/0002-seeded-with-full-upstream-history.md.
+
+PixelOven's own contributions are additive files only — see
+docs/pixeloven/fork-contract.md — and are likewise offered under the MIT
+License.
+
+Third-party components referenced (but not vendored) by this project keep their
+own licenses, notably:
+
+  herdr    — https://github.com/ogulcancelik/herdr        Apache-2.0 (see note)
+  treehouse— https://github.com/kunchenguid/treehouse      per upstream
+  gnhf     — https://github.com/kunchenguid/gnhf           MIT
+  lavish-axi—https://github.com/kunchenguid/lavish-axi     MIT
+
+Note: the herdr repository's LICENSE file is Apache-2.0, while a runtime
+diagnostic string inside firstmate describes herdr as "dual-licensed
+AGPL-3.0-or-later/commercial". This discrepancy is recorded in
+docs/pixeloven/supply-chain-read.md and must be resolved with the herdr
+publisher before herdr is relied on in a distributed product.
