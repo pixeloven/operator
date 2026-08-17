@@ -49,6 +49,32 @@ git rev-parse upstream/main > docs/pixeloven/upstream-pin
 fork-contract assertions diff against. Skipping it makes A4 report upstream's own
 commits as O-1 violations; advancing it without merging is caught by A7.
 
+> ### ⛔ Never rebase an upstream-merge branch
+>
+> The house habit of `git fetch origin && git rebase origin/main` before opening a
+> PR is **wrong here, and silently so.** `git rebase` drops the merge commit and
+> replays upstream's commits as fresh cherry-picks with new SHAs. The result looks
+> fine — same tree, same files — but:
+>
+> - `upstream/main` is **no longer an ancestor**, so the merge base with upstream
+>   is gone and the *next* merge re-presents every one of these commits;
+> - upstream's authorship SHAs are rewritten, which is exactly what
+>   [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md) seeded whole
+>   history to avoid;
+> - assertion **A7 fails**, which is how this was caught the first time it
+>   happened — during this very rehearsal.
+>
+> The merge branch is cut from `main` and merges upstream into it, so it is
+> already current with `main` by construction; there is nothing to rebase onto.
+> If `main` genuinely moves underneath it, **merge `main` in** (`git merge
+> origin/main`) or redo the upstream merge from a fresh branch. If a branch has
+> already been flattened, recover it from the reflog rather than pushing it.
+>
+> ```sh
+> git merge-base --is-ancestor "$(cat docs/pixeloven/upstream-pin)" HEAD \
+>   && echo "merge topology intact"
+> ```
+
 ### What the review is actually looking for
 
 1. **Did anything conflict?** Under the contract nothing should. If something
@@ -159,6 +185,27 @@ passing.
 This is precisely the class of defect a rehearsal exists to surface: it would
 otherwise have been discovered by a red gate on a real merge, under time
 pressure, with the wrong remedy (weaken the assertion) close to hand.
+
+### The second finding: the rebase habit destroys the merge
+
+Immediately after the fix landed, the routine pre-PR `git rebase origin/main`
+flattened the merge commit into eight cherry-picks and severed the merge base
+with upstream. **A7 — added minutes earlier — caught it**, which is the cheapest
+possible validation of a new assertion. The branch was restored from the reflog
+and the prohibition is now written into the procedure above.
+
+Worth stating plainly because it generalises: the standard "rebase before you
+open a PR" advice is safe for every PR in this repository **except** the one kind
+of PR this document is about.
+
+### The third finding: upstream's own suite has never been green here
+
+Re-enabling `ci.yml` for the merge (its one earning occasion) surfaced that
+upstream's documentation-audience test fails on **every** PixelOven commit,
+because it enumerates every tracked `*.md` repo-wide and requires each to be
+classified in an upstream-owned inventory. It is green at the fork point and red
+from the first PixelOven commit onward — nothing to do with this merge. It needs
+an operator decision and is written up in [`releases.md`](releases.md) §4.
 
 ### Cost, and the recommended cadence
 
