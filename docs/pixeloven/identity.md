@@ -74,14 +74,16 @@ environment variables, not the vocabulary, not the filenames.
 | Surface | Scale at the fork point | Stays as-is |
 |---|---|---|
 | `bin/fm-*` script prefix | **138** scripts | yes |
-| `FM_*` environment variables | **975** distinct `FM_*` identifiers across **307** tracked files | yes |
-| `$FM_HOME` (the fleet home root) | referenced by **213** tracked files | yes |
-| Vocabulary — captain / crewmate / secondmate / fleet | ~**6,900** occurrences across ~**180** files | yes |
-| Upstream doc filenames (`docs/*.md`) | **52** files | yes |
+| `FM_*` environment variables | **975** distinct `FM_*` identifiers across **306** tracked files | yes |
+| `$FM_HOME` (the fleet home root) | referenced by **212** tracked files | yes |
+| Vocabulary — captain / crewmate / secondmate / fleet | **6,888** occurrences across **277** files | yes |
+| Upstream doc filenames (`docs/*.md`) | **41** files | yes |
 | `.no-mistakes.yaml`, `.tasks.toml`, `.agents/skills/*` | tool config the upstream toolbelt reads by name | yes |
 
-*(Counts measured on the fork point, 413 tracked files. Re-measure with the
-commands in §5 — they will drift as upstream moves.)*
+*(Measured on the fork point `6789876442d0` — **401** tracked files, upstream
+only. Re-measure with the commands at the end of §5; they will drift as upstream
+moves, and the `docs/*.md` pathspec is repo-wide so it counts our documents too
+once they exist.)*
 
 ### Why
 
@@ -237,10 +239,16 @@ contained in this history, so it cannot be advanced without an actual merge.
 
 ### Re-measuring §3
 
+Run these against the fork point to reproduce the table exactly
+(`git checkout 6789876442d0`), or against `HEAD` for current values:
+
 ```sh
-git ls-files 'bin/fm-*' | wc -l                                  # fm-* scripts
-git grep -hoE '\bFM_[A-Z0-9_]+' -- . | sort -u | wc -l            # distinct FM_* identifiers
-git grep -lE  '\bFM_[A-Z0-9_]+' -- . | wc -l                      # files referencing them
-git grep -lE  '\bFM_HOME\b'     -- . | wc -l                      # files referencing $FM_HOME
-git ls-files 'docs/*.md' | wc -l                                  # upstream doc files
+git ls-files | wc -l                                                  # tracked files
+git ls-files 'bin/fm-*' | wc -l                                       # fm-* scripts
+git grep -hoE '\bFM_[A-Z0-9_]+' -- . | sort -u | wc -l                # distinct FM_* identifiers
+git grep -lE  '\bFM_[A-Z0-9_]+' -- . | wc -l                          # files referencing them
+git grep -lE  '\bFM_HOME\b'     -- . | wc -l                          # files referencing $FM_HOME
+git grep -ioE '\b(captain|crewmate|secondmate|fleet)' -- . | wc -l    # vocabulary occurrences
+git grep -liE '\b(captain|crewmate|secondmate|fleet)' -- . | wc -l    # files using it (union)
+git ls-files 'docs/*.md' | wc -l                                      # doc files (pathspec is repo-wide)
 ```
