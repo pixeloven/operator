@@ -18,6 +18,7 @@ Use [`_template.md`](_template.md).
 | [0004](0004-the-name-operator.md) | The name `operator`, and "the operator" is the human | Accepted | Program plan D-03, G-7 |
 | [0005](0005-agent-self-improvement-is-pr-gated.md) | Agent self-improvement is PR-gated | Accepted | Program plan D-05, O-4 |
 | [0006](0006-operator-cuts-its-own-release-tags.md) | operator cuts its own release tags | Accepted | Program plan O-3 |
+| [0007](0007-pixeloven-ci-in-its-own-workflow-namespace.md) | PixelOven CI lives in its own workflow namespace | Accepted | Task A1.2; O-1, G-2, G-6 |
 
 ## Conventions
 

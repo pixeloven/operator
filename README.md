@@ -6,11 +6,14 @@
 > (MIT, © 2026 Kun Chen) at commit `6789876442d0`, with upstream history preserved intact.
 >
 > **The fork contract: we add files, we do not edit upstream's.** Our surface is
-> `bin/backends/`, `.agents/skills/po-*`, `docs/pixeloven/`, and `docs/adr/`. Upstream merges are
+> `bin/backends/`, `.agents/skills/po-*`, `docs/pixeloven/`, `docs/adr/`, and
+> `.github/workflows/pixeloven-*.yml`. Upstream merges are
 > scheduled, reviewed pull requests — never automatic. `operator` cuts its own semver tags from
 > `v0.1.0`; consumers pin **our** tags, never upstream and never a raw SHA.
 >
 > - **Contract** → [`docs/pixeloven/fork-contract.md`](docs/pixeloven/fork-contract.md)
+> - **Identity & naming** → [`docs/pixeloven/identity.md`](docs/pixeloven/identity.md)
+> - **Releases** → [`docs/pixeloven/releases.md`](docs/pixeloven/releases.md)
 > - **Decisions** → [`docs/adr/`](docs/adr/)
 > - **Supply-chain verdict** → [`docs/pixeloven/supply-chain-read.md`](docs/pixeloven/supply-chain-read.md)
 > - **Attribution** → [`NOTICE`](NOTICE)
