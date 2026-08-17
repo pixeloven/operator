@@ -148,7 +148,12 @@ Every command below is expected to print **nothing**. Any output is a finding.
 The workflow runs exactly these, in this order, and fails the job on any output.
 
 ```sh
-PIN=6789876442d0fb6da9f70d86399a2930c5073ae2   # the fork point
+# The upstream commit our tree currently contains - NOT the frozen fork point.
+# A4/A5 ask "what have WE changed on top of upstream", so the baseline has to
+# move when we merge upstream; anchoring on the fork point reports upstream's
+# own commits as our modifications. The A1.4 rehearsal found this the hard way
+# (see upstream-merges.md). Every upstream-merge PR advances this file.
+PIN=$(tr -d '[:space:]' < docs/pixeloven/upstream-pin)
 
 # The PixelOven-authored prose corpus: the README banner block, NOTICE, and our
 # two doc namespaces. The rest of README.md is upstream's and is not ours to
@@ -188,8 +193,9 @@ ADR-0004 and this page.
     | xargs -0 grep -nE '\bOperator\b'; }
 ```
 
-**A4 — O-1: the diff against the fork point touches only our namespaces.** No
-second ref, so this covers the working tree as well as committed history:
+**A4 — O-1: the diff against the current upstream pin touches only our
+namespaces.** No second ref, so this covers the working tree as well as
+committed history:
 
 ```sh
 git diff --name-only "$PIN" \
@@ -211,6 +217,23 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 ```sh
 git ls-files -- data state config projects .no-mistakes
 ```
+
+**A7 — the recorded upstream pin is real and is contained in this tree.** Stops
+the pin being advanced without an actual merge, which would silently blind A4
+and A5:
+
+```sh
+git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
+```
+
+### Why A4/A5 track a moving pin
+
+`docs/pixeloven/upstream-pin` holds the upstream commit our tree currently
+contains. It starts at the fork point and is advanced by **every upstream-merge
+PR** — which is the point: the pin is the machine-readable half of
+[`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
+stale while the gate keeps passing. A7 refuses a pin that is not a real commit
+contained in this history, so it cannot be advanced without an actual merge.
 
 ### Re-measuring §3
 
