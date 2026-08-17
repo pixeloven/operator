@@ -1,0 +1,248 @@
+---
+# PixelOven gates — task A1.2 · requirements O-1, O-3, G-2, G-3, G-6.
+#
+# A workflow PixelOven OWNS. It is additive: upstream's own `ci.yml`,
+# `no-mistakes-required.yml` and `windows-herdr-spike.yml` are never edited
+# (requirement O-1), and every check here is scoped so that it grades OUR files
+# only. A gate that failed on upstream's code would create pressure to edit
+# upstream's code, which is the thing the fork contract forbids.
+#
+# Composed from the harmony-ci action library's github-hosted template
+# (https://github.com/ductiletoaster/harmony-ci, templates/ci-github-hosted.yml),
+# adapted where this repository differs from that template's assumptions.
+#
+# ── Runner ────────────────────────────────────────────────────────────────────
+# `ubuntu-latest` (GitHub-hosted). This repo is private and the pixeloven org has
+# no ARC runners yet. Phase 0.5 / M0.1 installs the ARC GitHub App on the org;
+# migrating these jobs to the self-hosted pool is a FOLLOW-UP once that lands —
+# flip `runs-on` and drop the pinned-binary install steps (the harmony-arc-runner
+# image bakes gitleaks and friends).
+#
+# ── Cost ──────────────────────────────────────────────────────────────────────
+# Private repo on a free-plan org: Actions minutes are a real budget. Deliberately
+# TWO jobs, no aggregator, concurrency-cancelling. The inherited `ci.yml` is the
+# expensive suite here; see docs/pixeloven/releases.md for the measurement.
+#
+# ── Gate selection (judgement calls, recorded) ────────────────────────────────
+#   gitleaks      YES  — required. Pinned release binary + SHA256, NOT the
+#                        marketplace action: gitleaks/gitleaks-action demands a
+#                        GITLEAKS_LICENSE secret for ORGANIZATION-owned repos and
+#                        `pixeloven` is an org. Runs with --redact (G-3).
+#   actionlint    YES  — the workflow YAML we author is the only new executable
+#                        surface this fork adds today. actionlint parses it and
+#                        runs shellcheck over its `run:` blocks.
+#   shellcheck    NO   — upstream's `ci.yml` already owns it via `bin/fm-lint.sh`,
+#                        which is the single owner of the lint definition. Not
+#                        duplicated. (actionlint still shellchecks OUR run blocks.)
+#   yamllint      NO   — actionlint already validates the workflow YAML we author;
+#                        yamllint would add style-only findings plus a config file
+#                        outside our declared namespace.
+#   markdownlint  NO   — same config-placement problem, and default rulesets are
+#                        noise on prose. Replaced by a relative-link check over
+#                        docs/pixeloven/** + docs/adr/**, which catches the defect
+#                        class that actually bites a docs-heavy fork surface.
+#   osv-scanner   NO   — NOTHING TO SCAN. The only manifest in the tree is
+#   dep-review    NO     `.opencode/plugins/package.json` = {"private","type"} with
+#                        zero dependencies, and there is no lockfile anywhere. Both
+#                        gates would be decorative. A tripwire below fails the
+#                        build the moment a real manifest or lockfile appears, so
+#                        this decision cannot silently rot.
+#   semgrep       NO   — registry rulesets are login-gated (zero findings without a
+#                        token) and the harmony baseline ruleset is baked into the
+#                        private ARC image. Revisit with the ARC migration.
+#
+# ── Follow-ups ────────────────────────────────────────────────────────────────
+#   * ARC migration once M0.1 lands (see Runner above).
+#   * If org rulesets ever require checks on this repo, add a `re-actors/alls-green`
+#     aggregator job so there is one stable required check name. Omitted today:
+#     the repo has no branch protection (private free plan), so it would be a
+#     third billed job for zero current value.
+name: PixelOven gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags-ignore: ['**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pixeloven-gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # G-2: exact pins, with the checksum recorded here rather than trusted at
+  # download time. Bumping a version means bumping its digest in the same commit.
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+jobs:
+  secret-scan:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          # Full history: this fork carries 400 inherited upstream commits and the
+          # scan is over all of them, not just the tip. Measured ~1s.
+          fetch-depth: 0
+
+      - name: Install pinned gitleaks
+        run: |
+          set -euo pipefail
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/gitleaks.tar.gz" "$url"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP/bin" gitleaks
+          "$RUNNER_TEMP/bin/gitleaks" version
+
+      - name: Scan full history for secrets
+        # --redact so a candidate secret is never echoed into a public log (G-3).
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/bin/gitleaks" git . --redact --no-banner
+
+  lint:
+    name: workflows · docs · fork contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          # The fork-contract assertions diff against the fork-point commit and
+          # read upstream's README blob out of history.
+          fetch-depth: 0
+
+      - name: Install pinned actionlint
+        run: |
+          set -euo pipefail
+          url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/actionlint.tar.gz" "$url"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP/bin" actionlint
+          "$RUNNER_TEMP/bin/actionlint" -version
+
+      - name: Lint the workflows PixelOven owns
+        # Scoped to pixeloven-*.yml ON PURPOSE. Upstream's three workflows are
+        # upstream's to lint; grading them here would manufacture pressure to
+        # edit them, which O-1 forbids. shellcheck is on PATH on ubuntu-latest,
+        # so actionlint also shellchecks our `run:` blocks.
+        run: |
+          set -euo pipefail
+          shellcheck --version | head -2
+          "$RUNNER_TEMP/bin/actionlint" -color .github/workflows/pixeloven-*.yml
+
+      - name: Check relative links in PixelOven docs
+        # Replaces a generic markdown linter: this is the defect class that
+        # actually bites here (ADRs and docs cross-link heavily), it needs no
+        # config file outside our namespace, and it adds no dependency.
+        run: |
+          set -euo pipefail
+          broken=0
+          checked=0
+          while IFS= read -r doc; do
+            dir=$(dirname "$doc")
+            targets=$(grep -oE '\]\([^)]+\)' "$doc" | sed -E 's/^\]\(//; s/\)$//' || true)
+            while IFS= read -r target; do
+              [ -n "$target" ] || continue
+              case "$target" in
+                http://*|https://*|mailto:*|'#'*) continue ;;
+              esac
+              path="${target%%#*}"
+              [ -n "$path" ] || continue
+              checked=$((checked + 1))
+              if [ ! -e "$dir/$path" ]; then
+                echo "::error file=$doc::broken relative link -> $target"
+                broken=1
+              fi
+            done < <(printf '%s\n' "$targets")
+          done < <(find docs/pixeloven docs/adr -name '*.md' | sort)
+          [ "$broken" -eq 0 ] || { echo "::error::broken relative links in PixelOven docs"; exit 1; }
+          echo "$checked relative links in docs/pixeloven and docs/adr all resolve"
+
+      - name: Dependency-manifest tripwire
+        # We deliberately ship NO osv-scanner / dependency-review job because
+        # there is nothing to scan (see the header). This step is the guard on
+        # that decision: the moment a lockfile or a dependency-bearing manifest
+        # lands - from our own work or from an upstream merge - this fails and
+        # the remedy is ADDITIVE: enable the scanner in this workflow.
+        run: |
+          set -euo pipefail
+          # Lockfiles, and manifests that are dependency-bearing by construction.
+          hits=$(git ls-files | grep -E '(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|uv\.lock|poetry\.lock|Pipfile|Pipfile\.lock|requirements[^/]*\.txt|pyproject\.toml|go\.mod|go\.sum|Cargo\.toml|Cargo\.lock|Gemfile|Gemfile\.lock)$' || true)
+          # package.json can legitimately declare no dependencies at all - the one
+          # in this tree is {"private": true, "type": "module"}. Only flag it once
+          # it actually declares some.
+          while IFS= read -r pkg; do
+            [ -n "$pkg" ] || continue
+            if grep -qE '"(dependencies|devDependencies|peerDependencies|optionalDependencies)"[[:space:]]*:' "$pkg"; then
+              hits="${hits}${pkg}"$'\n'
+            fi
+          done < <(git ls-files | grep -E '(^|/)package\.json$' || true)
+          if [ -n "$hits" ]; then
+            printf '%s\n' "$hits" | sed '/^$/d'
+            echo "::error::a dependency lockfile or manifest now exists - add an osv-scanner job to this workflow (see the header)"
+            exit 1
+          fi
+          echo "no dependency lockfile or manifest present; osv-scanner stays omitted"
+
+      - name: Fork-contract and identity assertions
+        # Task A1.1's "grep clean" acceptance, enforced continuously instead of
+        # claimed once. Documented in docs/pixeloven/identity.md section 5 -
+        # keep the two in step.
+        run: |
+          set -uo pipefail
+          PIN=6789876442d0fb6da9f70d86399a2930c5073ae2
+          fail=0
+          bad() { printf '::error::%s\n' "$1"; fail=1; }
+
+          banner() { sed -n '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/p' README.md; }
+          # Fenced code blocks are stripped: identity.md quotes these very
+          # patterns and would otherwise match itself.
+          corpus() {
+            { banner; cat NOTICE; find docs/pixeloven docs/adr -name '*.md' -exec cat {} +; } \
+              | awk '/^```/{f=!f; next} !f'
+          }
+
+          echo '== A1 - the project is never named firstmate'
+          out=$(corpus | grep -niE 'pixeloven/firstmate|(this|the) (repo|repository|project) is (a |the )?firstmate|named? firstmate' || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A1: PixelOven-authored text names this project 'firstmate'"; }
+
+          echo '== A2 - every self-referential PixelOven URL is a real PixelOven repo'
+          out=$(corpus | grep -oE 'github\.com/pixeloven/[A-Za-z0-9._-]+' | sed 's/\.git$//' | sort -u \
+                | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci)$' || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A2: unexpected pixeloven/* repository reference"; }
+
+          echo '== A3 - the project is never capitalized as a proper noun (G-7)'
+          out=$( { banner | grep -nE '\bOperator\b'
+                   grep -nE '\bOperator\b' NOTICE
+                   find docs/pixeloven docs/adr -name '*.md' \
+                        ! -name 'identity.md' ! -name '0004-the-name-operator.md' -print0 \
+                     | xargs -0 grep -nE '\bOperator\b'; } 2>/dev/null || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A3: 'Operator' used as a proper noun - write operator in code style"; }
+
+          echo '== A4 - O-1: the diff against the fork point touches only PixelOven namespaces'
+          out=$(git diff --name-only "$PIN" \
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$)' || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: upstream file(s) modified - O-1 violation, needs a new ADR"; }
+
+          echo '== A5 - the README exception stays one bounded banner block'
+          git show "$PIN":README.md > "$RUNNER_TEMP/upstream-README.md"
+          sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/d' README.md \
+            | sed '1{/^$/d}' \
+            | diff - "$RUNNER_TEMP/upstream-README.md" \
+            || bad "A5: README.md differs from upstream outside the PixelOven banner block"
+
+          echo '== A6 - upstream repo invariant: personal fleet paths stay untracked'
+          out=$(git ls-files -- data state config projects .no-mistakes || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A6: personal fleet paths are tracked"; }
+
+          [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
+          echo 'fork-contract assertions PASSED'

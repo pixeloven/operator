@@ -1,0 +1,80 @@
+---
+# PixelOven release — task A1.2 · requirements O-3, G-2, G-6.
+#
+# The mechanism behind O-3: `operator` cuts its own semver tags, and consumers
+# pin OUR tags - never upstream, never a raw SHA
+# (docs/adr/0006-operator-cuts-its-own-release-tags.md, docs/pixeloven/releases.md).
+#
+# Additive, like every PixelOven workflow: upstream's own workflows are untouched
+# (O-1). Upstream ships no releases at all, so nothing here overlaps with it.
+#
+# Deliberately zero third-party actions beyond checkout: the release is created
+# with the `gh` CLI, which is preinstalled on GitHub-hosted runners. Fewer pinned
+# SHAs to maintain, smaller supply-chain surface on a job that holds a
+# write-capable token.
+#
+# Runner: ubuntu-latest for the same reason as pixeloven-gates.yml - the pixeloven
+# org has no ARC runners yet (Phase 0.5 / M0.1). Migrating is a follow-up.
+name: PixelOven release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Cut GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Creating a release writes to the repository.
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Validate the tag is semver
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "::error::tag '$tag' is not semver (expected vMAJOR.MINOR.PATCH) - see docs/pixeloven/releases.md"
+            exit 1
+          fi
+          echo "tag $tag is semver"
+
+      - name: Require the tag to be an ancestor of main
+        # ADR-0006: a tag means "this tree passed our gates and is what we intend
+        # you to run". A tag off a side branch would not have been reviewed, so
+        # it must never become a consumer pin.
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "::error::tag $GITHUB_REF_NAME ($GITHUB_SHA) is not contained in origin/main - refusing to release"
+            exit 1
+          fi
+          echo "$GITHUB_REF_NAME is contained in main"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag already exists; nothing to do"
+            exit 0
+          fi
+          # --generate-notes picks the previous release as the diff base on its
+          # own; the first tag simply gets notes from the start of history.
+          gh release create "$tag" \
+            --title "$tag" \
+            --verify-tag \
+            --generate-notes \
+            --latest
+          gh release view "$tag" --json url --jq '.url'
