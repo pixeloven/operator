@@ -34,9 +34,21 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Skills | `.agents/skills/po-*` | the `po-` prefix exists so upstream can never collide with us |
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
+| CI we own | `.github/workflows/pixeloven-*.yml` | upstream's three workflows are never edited |
 
 Anything that does not fit one of these needs a new ADR that says why, and which
 namespace it claims.
+
+Nothing inside the upstream surface is renamed — not the `fm-*` scripts, not the
+`FM_*` variables, not the captain/crewmate vocabulary. The reasoning, and the
+prose rule that "the operator" means the human (G-7), are in
+[`identity.md`](identity.md).
+
+The contract is **enforced on every pull request** by
+[`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml): it fails
+the build if the diff against the fork point touches anything outside the table
+above, or if `README.md` differs from upstream outside the banner block. The
+assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
 
 ## The one edited upstream file
 
@@ -65,7 +77,9 @@ git merge --no-ff upstream/main           # on a branch, into a PR
 
 `operator` cuts its own semver tags from `v0.1.0`. **Consumers pin our tags —
 never upstream, never a raw SHA** (requirement O-3,
-[ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md)).
+[ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md)). The policy, what
+a tag means, how it relates to an upstream merge, and the CI cost of this
+repository are in [`releases.md`](releases.md).
 
 ## Attribution
 
