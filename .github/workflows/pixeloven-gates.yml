@@ -199,7 +199,13 @@ jobs:
         # keep the two in step.
         run: |
           set -uo pipefail
-          PIN=6789876442d0fb6da9f70d86399a2930c5073ae2
+          # The upstream commit our tree currently contains. NOT the frozen fork
+          # point: A4/A5 ask "what have WE changed on top of upstream", and after
+          # an upstream merge the fork point is the wrong baseline - it reports
+          # upstream's own commits as our modifications. Found by the A1.4 merge
+          # rehearsal; see docs/pixeloven/upstream-merges.md. Every upstream-merge
+          # PR advances this file, which is also what keeps the ledger honest.
+          PIN=$(tr -d '[:space:]' < docs/pixeloven/upstream-pin)
           fail=0
           bad() { printf '::error::%s\n' "$1"; fail=1; }
 
@@ -228,7 +234,7 @@ jobs:
                      | xargs -0 grep -nE '\bOperator\b'; } 2>/dev/null || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A3: 'Operator' used as a proper noun - write operator in code style"; }
 
-          echo '== A4 - O-1: the diff against the fork point touches only PixelOven namespaces'
+          echo "== A4 - O-1: the diff against upstream $PIN touches only PixelOven namespaces"
           out=$(git diff --name-only "$PIN" \
                 | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: upstream file(s) modified - O-1 violation, needs a new ADR"; }
@@ -243,6 +249,13 @@ jobs:
           echo '== A6 - upstream repo invariant: personal fleet paths stay untracked'
           out=$(git ls-files -- data state config projects .no-mistakes || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A6: personal fleet paths are tracked"; }
+
+          echo '== A7 - the recorded upstream pin is real and is contained in this tree'
+          if ! git cat-file -e "${PIN}^{commit}" 2>/dev/null; then
+            bad "A7: docs/pixeloven/upstream-pin is not a commit in this repository"
+          elif ! git merge-base --is-ancestor "$PIN" HEAD; then
+            bad "A7: docs/pixeloven/upstream-pin ($PIN) is not an ancestor of HEAD - the pin was advanced without merging"
+          fi
 
           [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
           echo 'fork-contract assertions PASSED'

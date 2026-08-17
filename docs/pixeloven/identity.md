@@ -74,14 +74,16 @@ environment variables, not the vocabulary, not the filenames.
 | Surface | Scale at the fork point | Stays as-is |
 |---|---|---|
 | `bin/fm-*` script prefix | **138** scripts | yes |
-| `FM_*` environment variables | **975** distinct `FM_*` identifiers across **307** tracked files | yes |
-| `$FM_HOME` (the fleet home root) | referenced by **213** tracked files | yes |
-| Vocabulary — captain / crewmate / secondmate / fleet | ~**6,900** occurrences across ~**180** files | yes |
-| Upstream doc filenames (`docs/*.md`) | **52** files | yes |
+| `FM_*` environment variables | **975** distinct `FM_*` identifiers across **306** tracked files | yes |
+| `$FM_HOME` (the fleet home root) | referenced by **212** tracked files | yes |
+| Vocabulary — captain / crewmate / secondmate / fleet | **6,888** occurrences across **277** files | yes |
+| Upstream doc filenames (`docs/*.md`) | **41** files | yes |
 | `.no-mistakes.yaml`, `.tasks.toml`, `.agents/skills/*` | tool config the upstream toolbelt reads by name | yes |
 
-*(Counts measured on the fork point, 413 tracked files. Re-measure with the
-commands in §5 — they will drift as upstream moves.)*
+*(Measured on the fork point `6789876442d0` — **401** tracked files, upstream
+only. Re-measure with the commands at the end of §5; they will drift as upstream
+moves, and the `docs/*.md` pathspec is repo-wide so it counts our documents too
+once they exist.)*
 
 ### Why
 
@@ -148,7 +150,12 @@ Every command below is expected to print **nothing**. Any output is a finding.
 The workflow runs exactly these, in this order, and fails the job on any output.
 
 ```sh
-PIN=6789876442d0fb6da9f70d86399a2930c5073ae2   # the fork point
+# The upstream commit our tree currently contains - NOT the frozen fork point.
+# A4/A5 ask "what have WE changed on top of upstream", so the baseline has to
+# move when we merge upstream; anchoring on the fork point reports upstream's
+# own commits as our modifications. The A1.4 rehearsal found this the hard way
+# (see upstream-merges.md). Every upstream-merge PR advances this file.
+PIN=$(tr -d '[:space:]' < docs/pixeloven/upstream-pin)
 
 # The PixelOven-authored prose corpus: the README banner block, NOTICE, and our
 # two doc namespaces. The rest of README.md is upstream's and is not ours to
@@ -188,8 +195,9 @@ ADR-0004 and this page.
     | xargs -0 grep -nE '\bOperator\b'; }
 ```
 
-**A4 — O-1: the diff against the fork point touches only our namespaces.** No
-second ref, so this covers the working tree as well as committed history:
+**A4 — O-1: the diff against the current upstream pin touches only our
+namespaces.** No second ref, so this covers the working tree as well as
+committed history:
 
 ```sh
 git diff --name-only "$PIN" \
@@ -212,12 +220,35 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-### Re-measuring §3
+**A7 — the recorded upstream pin is real and is contained in this tree.** Stops
+the pin being advanced without an actual merge, which would silently blind A4
+and A5:
 
 ```sh
-git ls-files 'bin/fm-*' | wc -l                                  # fm-* scripts
-git grep -hoE '\bFM_[A-Z0-9_]+' -- . | sort -u | wc -l            # distinct FM_* identifiers
-git grep -lE  '\bFM_[A-Z0-9_]+' -- . | wc -l                      # files referencing them
-git grep -lE  '\bFM_HOME\b'     -- . | wc -l                      # files referencing $FM_HOME
-git ls-files 'docs/*.md' | wc -l                                  # upstream doc files
+git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
+```
+
+### Why A4/A5 track a moving pin
+
+`docs/pixeloven/upstream-pin` holds the upstream commit our tree currently
+contains. It starts at the fork point and is advanced by **every upstream-merge
+PR** — which is the point: the pin is the machine-readable half of
+[`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
+stale while the gate keeps passing. A7 refuses a pin that is not a real commit
+contained in this history, so it cannot be advanced without an actual merge.
+
+### Re-measuring §3
+
+Run these against the fork point to reproduce the table exactly
+(`git checkout 6789876442d0`), or against `HEAD` for current values:
+
+```sh
+git ls-files | wc -l                                                  # tracked files
+git ls-files 'bin/fm-*' | wc -l                                       # fm-* scripts
+git grep -hoE '\bFM_[A-Z0-9_]+' -- . | sort -u | wc -l                # distinct FM_* identifiers
+git grep -lE  '\bFM_[A-Z0-9_]+' -- . | wc -l                          # files referencing them
+git grep -lE  '\bFM_HOME\b'     -- . | wc -l                          # files referencing $FM_HOME
+git grep -ioE '\b(captain|crewmate|secondmate|fleet)' -- . | wc -l    # vocabulary occurrences
+git grep -liE '\b(captain|crewmate|secondmate|fleet)' -- . | wc -l    # files using it (union)
+git ls-files 'docs/*.md' | wc -l                                      # doc files (pathspec is repo-wide)
 ```
