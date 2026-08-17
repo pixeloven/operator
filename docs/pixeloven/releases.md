@@ -68,7 +68,8 @@ all.
 
 Every merge records its before/after distance and its conflict surface in
 [`upstream-tracking.md`](upstream-tracking.md), and the standing merge procedure
-plus the first measured rehearsal live in `upstream-merges.md` (task A1.4).
+plus the first measured rehearsal live in
+[`upstream-merges.md`](upstream-merges.md) (task A1.4).
 
 ## 3. Mechanism
 
@@ -107,50 +108,140 @@ Two suites run here, and they have very different characters:
 | `pixeloven-gates.yml` | **ours** | push to `main`, every PR | 2 jobs, both seconds of real work |
 | `pixeloven-release.yml` | **ours** | `push: tags: ['v*']` | 1 job |
 
-### The cost finding
+### The cost finding — measured, not estimated
 
 This repository is **private, on a free-plan org** — 2,000 included Actions
 minutes per month, and private-repo minutes bill against them. GitHub bills each
 **job** rounded up to the minute, and `macos` bills at **10×**.
 
-Estimated from the workflow's own documented timings (its comments state
-measured shard walls):
+Measured on the first real run (PR #3, 2026-08-17):
 
-| Lane | Jobs | Wall | Multiplier | Billed |
-|---|---|---|---|---|
-| lint, coverage, invariants, aggregate | 4 | ~1 min each | 1× | ~4 |
-| portable parallel shards | 2 | ~1–2 min each | 1× | ~4 |
-| portable serial matrix | 4 | ~4.8 min each | 1× | ~19 |
-| real-Herdr lane | 1 | 15–40 min (cap 75) | 1× | ~30 |
-| `macos-stock-bash` | 1 | ~2–3 min | **10×** | ~25 |
-| **`ci.yml` total** | **12** | | | **≈ 80–90 min per run** |
-| `pixeloven-gates.yml` | 2 | seconds | 1× | ~2 |
+| Job | Wall | Multiplier | Billed |
+|---|---|---|---|
+| Lint shell scripts | 5m57s | 1× | 6 |
+| Test coverage guard | 8s | 1× | 1 |
+| Repo invariants | 6s | 1× | 1 |
+| Behavior portable parallel 1 | 2m12s | 1× | 3 |
+| Behavior portable parallel 2 | 1m39s | 1× | 2 |
+| Behavior portable serial 1 | 9m41s | 1× | 10 |
+| Behavior portable serial 2 | 10m51s | 1× | 11 |
+| Behavior portable serial 3 | 10m25s | 1× | 11 |
+| Behavior portable serial 4 | 11m49s | 1× | 12 |
+| Behavior tests (Herdr) | 7m17s | 1× | 8 |
+| Behavior timing aggregate | ~10s | 1× | 1 |
+| **Stock macOS Bash snapshot compatibility** | 1m49s | **10×** | **20** |
+| **`ci.yml` total** | | | **≈ 86 billed min per run** |
+| `pixeloven-gates.yml` — gitleaks | 9s | 1× | 1 |
+| `pixeloven-gates.yml` — workflows · docs · fork contract | 7s | 1× | 1 |
+| **`pixeloven-gates.yml` total** | | | **2 billed min per run** |
+
+Two corrections to earlier estimates, both from real data: the **serial shards
+are ~10–12 min each**, not the ~4.8 min the workflow comment implies, and the
+**Herdr lane finishes in ~7 min**, not the 15–40 min its old comment estimated
+(upstream's own #2413 says the same, merged in A1.4).
 
 `ci.yml` fires on **both** the pull request and the subsequent push to `main`, so
-**one landed PR costs roughly 160–180 billed minutes** — about **9 % of the
-monthly allowance per PR**, or **~11 PRs before the budget is gone**. Our own
-gates add ~2 % of that.
+**one landed PR costs ≈ 172 billed minutes** — **8.6 % of the monthly allowance
+per PR**, or **≈ 11 PRs before the budget is gone**. Our own gates are **1.2 %**
+of one `ci.yml` run.
+
+### The pre-existing `ci.yml` failure — needs an operator decision
+
+**`ci.yml` has never been green on this repository, and not because of anything
+we changed in it.** Upstream's `tests/fm-documentation-audiences.test.sh` runs
+`bin/fm-doc-audience-check.sh`, which enumerates **every tracked `*.md`, `*.mdx`,
+`*.rst`, `*.txt` in the repo** — repo-wide, not just under `docs/` — and requires
+each one to be classified in the upstream-owned inventory
+`docs/documentation-audiences.json`. Every PixelOven document is therefore
+"unclassified" and the shard fails.
+
+Demonstrated locally at three points in our history:
+
+| Tree | `bin/fm-doc-audience-check.sh` |
+|---|---|
+| fork point `6789876442d0` (pure upstream) | `ok surfaces=68 local_links=253` |
+| `a5e90e3` (Phase 0, task A0.1 — **before** any A1 work) | **fails**: 11 unclassified |
+| `d6d7f85` (`v0.1.0`) | **fails**: 14 unclassified |
+
+So the failure dates from the first PixelOven commit. It is a **structural
+collision between the additive-only contract and an upstream invariant that
+enumerates the whole tree** — and relocating our docs does not help, because the
+patterns are repo-wide.
+
+The options, none of which should be taken unilaterally:
+
+1. **Accept the red shard**, exactly as we accept `Require no-mistakes`. Cost:
+   `ci.yml` can no longer be read as a pass/fail signal, only as a diff of *which*
+   tests fail. Combined with option 2 below this is coherent — the suite is off
+   except during merge review, where this one known failure is expected.
+2. **Add our documents to `docs/documentation-audiences.json`.** One upstream file
+   edited, and it is data rather than code — but it is a file upstream touches
+   whenever *they* add a document, so it would conflict on most merges, in
+   exchange for a green shard. It needs a new ADR and it directly weakens O-2.
+3. **Ask upstream for an extension point** (an ignore list, or honouring a second
+   inventory — the checker already accepts `--inventory <path>`, just not from
+   the test). This is a **G-5 upstream post** and needs per-instance operator
+   approval.
+
+**Recommendation: option 1**, with option 3 raised if the fork ever goes public.
+Option 2 trades a permanent merge cost for a cosmetic green. **No upstream file
+was edited to work around this.**
+
+One further shard failure on the same run — `Behavior portable serial 3`,
+`tests/fm-remote-job.test.sh`: *"remote job worker did not report ready after
+startup"* — is an environmental flake in an upstream secondmate test, unrelated to
+anything PixelOven adds.
+
+### The levers, and how to pull them
 
 **This is an inherited property of upstream's suite, not a defect, and it is not
 ours to fix by editing.** O-1 forbids touching `ci.yml`. The available levers are
-repository *settings* rather than files, and they are the operator's call:
+repository *settings* rather than files:
 
-1. **Disable `ci.yml` at the repository level** (Actions → workflow → Disable, or
-   `gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/disable`).
-   Nothing in the tree changes; the file stays byte-identical for upstream
-   merges. This is the single biggest saving and the recommended default while
-   the repo is private and pre-pilot — our own gates plus the merge review
-   already cover what we change, and we change no shell.
+1. **Disable `ci.yml` at the repository level.** Nothing in the tree changes; the
+   file stays byte-identical for upstream merges. The single biggest saving, and
+   the recommended posture while the repo is private and pre-pilot: our own gates
+   plus the merge review already cover what we change, and **we change no shell**.
 2. **Leave it on and accept ~11 PRs/month**, revisiting when ARC lands.
 3. **Migrate to the ARC self-hosted pool** (Phase 0.5 / M0.1) — self-hosted
    minutes do not bill against the allowance. This fixes the cost permanently,
-   but `ci.yml` names `ubuntu-latest`/`macos-latest` explicitly and re-pointing
-   it would mean editing an upstream file. So ARC fixes *our* workflows' cost,
-   not upstream's, unless a runner group is labelled to intercept
-   `ubuntu-latest` (possible, and worth evaluating at M0.1).
+   but `ci.yml` names `ubuntu-latest`/`macos-latest` explicitly and re-pointing it
+   would mean editing an upstream file. So ARC fixes *our* workflows' cost, not
+   upstream's, unless a runner group is labelled to intercept `ubuntu-latest`
+   (worth evaluating at M0.1).
 
-Whichever is chosen, our own workflows stay on `ubuntu-latest` until M0.1 lands;
-the migration is a follow-up noted in both workflow headers.
+#### The disable, as a documented reversible posture
+
+Option 1 is a **posture, not a deletion**. Recorded here so that whoever finds it
+switched off in two months can explain it and reverse it in one command.
+
+```sh
+# Find the workflow id (the numeric id is stable; the path is the readable key).
+gh api /repos/pixeloven/operator/actions/workflows \
+  --jq '.workflows[] | select(.path==".github/workflows/ci.yml") | {id, name, state}'
+
+# Disable
+gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/disable
+
+# Re-enable
+gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/enable
+```
+
+(Equivalently: Actions → *CI* → ⋯ → Disable workflow.)
+
+**Re-enable triggers — both mandatory:**
+
+1. **Before any upstream merge, and for the whole merge PR.** An upstream merge is
+   the one occasion where upstream's suite earns its cost: it is the only thing
+   that can answer *"does the merged tree still pass upstream's own tests"*, which
+   is a first-class question for [`upstream-merges.md`](upstream-merges.md).
+   Re-enable, open the merge PR, record the result in the merge log, then disable
+   again once it has landed.
+2. **At the ARC migration (M0.1)**, when self-hosted minutes change the economics
+   and the whole calculation should be redone.
+
+Whichever posture is chosen, our own workflows stay on `ubuntu-latest` until M0.1
+lands; the migration is a follow-up noted in both workflow headers.
 
 ### Expected red check on every PR
 
@@ -165,4 +256,10 @@ merges; note the red check in the PR body.
 
 | Tag | Date | Upstream merged through | Notes |
 |---|---|---|---|
-| `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag. The reviewed pre-upstream-merge state: fork contract, ADR-0001…0006, supply-chain verdict, identity doc, PixelOven gates and release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
+| `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
+
+The **next** tag will carry the A1.4 upstream merge (8 upstream commits through
+`bdae21ed09d2`). Per §2 it is a **minor** bump — `v0.2.0` — because
+[`upstream-merges.md`](upstream-merges.md) records consumer-visible behaviour
+changes in it (`/stow` gains open-record persistence; `CLAUDE.md` changes shape
+from a symlink to an `@AGENTS.md` pointer file).

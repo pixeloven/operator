@@ -22,6 +22,12 @@ git diff --stat main..upstream/main                 # the conflict surface
 | Date | Our `main` | Upstream `main` | Behind by | Event | Notes |
 |------|-----------|-----------------|-----------|-------|-------|
 | 2026-08-16 | `6789876442d0` | `ef35d799a846` | **4 commits** | fork point (task A0.1) | Baseline. Recorded for the A1.4 merge rehearsal. **No merge performed** — Phase 0 seeds only. |
+| 2026-08-17 | `d6d7f85` (= `v0.1.0`) | `bdae21ed09d2` | **8 commits** | **first merge** (task A1.4) | Clean: **zero conflicts**, merge wall **0.031 s**. Full record in [`upstream-merges.md`](upstream-merges.md). Pin advanced to `bdae21ed09d2`. |
+
+The machine-readable half of this ledger is [`upstream-pin`](upstream-pin) — a
+single line holding the upstream commit our tree currently contains. The
+fork-contract gate reads it (assertions A4, A5, A7), so a merge that forgets to
+advance it fails CI rather than drifting quietly.
 
 ## Baseline detail (2026-08-16)
 
@@ -35,9 +41,9 @@ git diff --stat main..upstream/main                 # the conflict surface
 - Upstream also carries ~40 in-flight `fm/*` topic branches. These were
   deliberately **not** mirrored (ADR-0002) and are not part of this measurement.
 
-## What A1.4 must produce
+## What A1.4 produced — done, 2026-08-17
 
-The merge rehearsal is not "did it merge". It must record:
+The merge rehearsal was never "did it merge". It had to record:
 
 1. Commits merged, and the wall-clock and review time it took.
 2. **The conflict surface** — which files conflicted, and whether any of them
@@ -46,3 +52,8 @@ The merge rehearsal is not "did it merge". It must record:
 3. Whether any merged change is consumer-visible, and therefore what semver
    bump the next tag needs ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md)).
 4. A recommended cadence, argued from the observed cost.
+
+All four, plus the standing procedure and the gate defect the rehearsal
+uncovered, are in **[`upstream-merges.md`](upstream-merges.md)**. Headline: 8
+commits, **zero conflicts**, **0.031 s** of merge, and a recommended cadence of
+**every two weeks or ~15 commits, whichever comes first**.
