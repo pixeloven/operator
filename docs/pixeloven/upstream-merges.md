@@ -43,13 +43,26 @@ git rev-parse upstream/main > docs/pixeloven/upstream-pin
 # 5. Open a PR. Review it as code, not as a formality: this repository's files
 #    execute inside every agent turn, and workers launch with their harness
 #    permission gates disabled (see supply-chain-read.md).
+#
+# 6. Merge it with a REAL MERGE COMMIT. Not --squash, not a rebase.
+gh pr merge <n> --merge
 ```
 
 **Step 3 is not optional.** `docs/pixeloven/upstream-pin` is what the
 fork-contract assertions diff against. Skipping it makes A4 report upstream's own
 commits as O-1 violations; advancing it without merging is caught by A7.
 
-> ### ⛔ Never rebase an upstream-merge branch
+> ### ⛔ Never rebase an upstream-merge branch — and never squash-merge one
+>
+> **Two habits that are correct for every other PR in this repository will
+> silently destroy this one.** Both flatten the merge commit away:
+>
+> | Habit | What it does here |
+> |---|---|
+> | `git rebase origin/main` before opening the PR | replays upstream's commits as fresh cherry-picks |
+> | `gh pr merge --squash` (the repo's normal merge mode) | collapses the whole branch, merge commit included, into one commit on `main` |
+>
+> **An upstream-merge PR is merged with a real merge commit — `gh pr merge --merge`.**
 >
 > The house habit of `git fetch origin && git rebase origin/main` before opening a
 > PR is **wrong here, and silently so.** `git rebase` drops the merge commit and
@@ -69,6 +82,10 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 > If `main` genuinely moves underneath it, **merge `main` in** (`git merge
 > origin/main`) or redo the upstream merge from a fresh branch. If a branch has
 > already been flattened, recover it from the reflog rather than pushing it.
+>
+> The check below is the same one A7 runs. Run it **after** the PR lands, too — a
+> squash-merge passes every gate on the PR and only shows up as a failure on the
+> *next* PR, by which point the merge base is already gone.
 >
 > ```sh
 > git merge-base --is-ancestor "$(cat docs/pixeloven/upstream-pin)" HEAD \
