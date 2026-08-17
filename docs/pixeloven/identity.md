@@ -1,0 +1,223 @@
+# Identity — what this project is called, and what stays named `fm`
+
+- **Task:** A1.1
+- **Satisfies:** **O-1** (soft fork: upstream files are never edited) · **G-7**
+  (in prose, "the operator" means the human; the project is written `operator`)
+- **Decisions:** [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) (additive-only),
+  [ADR-0004](../adr/0004-the-name-operator.md) (the name)
+
+This page answers three questions a reader arrives with: *what is this called*,
+*why does everything inside it still say `fm`*, and *how do I check that
+somebody hasn't quietly broken either answer*.
+
+---
+
+## 1. The name
+
+| | |
+|---|---|
+| Project | `operator` |
+| Repository | `pixeloven/operator` |
+| Upstream it forks | [`kunchenguid/firstmate`](https://github.com/kunchenguid/firstmate) |
+| Release tags | `v0.1.0`+, semver, cut by us ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md)) |
+
+`firstmate` is the name of the **upstream project**, and every mention of it in
+PixelOven-authored text is an attribution or a reference to upstream behaviour —
+never this project's own name. That distinction is asserted mechanically in §5.
+
+## 2. The prose rule (G-7)
+
+> **In prose, "the operator" means the human. The project is written `operator`,
+> in code style, always lowercase, never capitalized as a proper noun.**
+
+- *"Ask the operator", "the operator approves", "escalate to the operator"* — a
+  **person**. This reading wins, unqualified and unhedged. The existing agent
+  corpus stays correct without edits, which is the entire point.
+- When the project is meant, code-style it: `operator`. If a sentence is still
+  ambiguous, write "the `operator` project" or "the `operator` repo".
+- **Never "Operator".** Capitalization is invisible at the start of a sentence —
+  exactly where *"The operator should…"* appears — so it cannot carry the
+  distinction. ADR-0004 rejected it for that reason.
+
+Kubernetes "operators" (controllers reconciling a custom resource) are a third
+sense, normally disambiguated by their neighbouring nouns. No mitigation beyond
+awareness.
+
+### The crew / crewmate overlap
+
+This fork's lineage and the agent foundation both use the word **crew**, meaning
+different things:
+
+| Vocabulary | "crew" means | the human is | a worker is |
+|---|---|---|---|
+| firstmate lineage (this repo) | the **fleet of dispatched worker processes** in a running session | **the captain** | a **crewmate** / **secondmate** |
+| the agent foundation (`pixeloven/crew`) | the **set of declarative agent roles** (lead, implementer, reviewer, …) | **the operator** | a dispatched **role** |
+
+"The captain" and "the operator" denote the **same human** in a session that
+spans both. Do not introduce a third name for that person, and never translate
+between the two vocabularies silently — a crewmate is a running process in a git
+worktree; a crew role is a capability definition.
+
+**This repository does not own that resolution and does not restate it.** It
+lives in the platform glossary skill, the single owner of the platform's shared
+vocabulary: `skills/platform-glossary/SKILL.md` in
+[`pixeloven/crew`](https://github.com/pixeloven/crew) — landed as
+[PR #59](https://github.com/pixeloven/crew/pull/59), shipped in **crew v0.23.0**
+(task A0.4). The repository was `ductiletoaster/harmony-crew` at the time that
+merged; it transferred to `pixeloven/crew` in Phase 0.5 (M0.2).
+
+## 3. What is deliberately *not* renamed
+
+Nothing inside the upstream surface is renamed. Not the scripts, not the
+environment variables, not the vocabulary, not the filenames.
+
+| Surface | Scale at the fork point | Stays as-is |
+|---|---|---|
+| `bin/fm-*` script prefix | **138** scripts | yes |
+| `FM_*` environment variables | **975** distinct `FM_*` identifiers across **307** tracked files | yes |
+| `$FM_HOME` (the fleet home root) | referenced by **213** tracked files | yes |
+| Vocabulary — captain / crewmate / secondmate / fleet | ~**6,900** occurrences across ~**180** files | yes |
+| Upstream doc filenames (`docs/*.md`) | **52** files | yes |
+| `.no-mistakes.yaml`, `.tasks.toml`, `.agents/skills/*` | tool config the upstream toolbelt reads by name | yes |
+
+*(Counts measured on the fork point, 413 tracked files. Re-measure with the
+commands in §5 — they will drift as upstream moves.)*
+
+### Why
+
+**Renaming any of it means editing upstream files, and editing upstream files
+is the one thing this fork does not do.**
+
+1. **It breaks the merge contract (O-1 / O-2).** The soft fork is cheap *only*
+   because our changes and upstream's changes never touch the same lines. A
+   rename of `fm-` → `po-` would rewrite 138 filenames and ~300 files, turning
+   every subsequent upstream merge from a fast-forward into a conflict
+   resolution exercise across the whole tree — permanently, on every merge,
+   forever. That cost recurs; the rename is paid once and then billed monthly.
+2. **The names are load-bearing, not cosmetic.** `FM_HOME`, `FM_BACKEND`,
+   `FM_SERIAL_LANE` and their ~970 siblings are the interface between the
+   scripts, the test harness, the toolbelt (`.tasks.toml` *is* tasks-axi's
+   config), and any agent session already running. `$FM_HOME` is a real
+   directory on a real machine. Renaming an environment variable is an
+   API break disguised as a find-and-replace.
+3. **The benefit is zero.** No consumer types `fm-spawn.sh`; consumers pin
+   `operator` release tags (O-3) and run what the distro provides. The user-facing
+   identity is the repository name, the README banner, the tags, and these docs —
+   all of which say `operator` already.
+4. **Upstream vocabulary is upstream's to change.** captain/crewmate/secondmate
+   is firstmate's product language. We consume it; we do not fork the dictionary.
+
+### What *is* ours to name
+
+Our surface is new files only, in namespaces upstream can never collide with:
+
+| Surface | Path |
+|---|---|
+| Runtime backends | `bin/backends/` |
+| Skills | `.agents/skills/po-*` |
+| Documentation | `docs/pixeloven/` |
+| Decisions | `docs/adr/` |
+| CI we own | `.github/workflows/pixeloven-*.yml` |
+
+Plus exactly one bounded exception: the delimited PixelOven banner block at the
+top of `README.md` (ADR-0001). Anything outside this list needs a **new ADR**,
+not a silent change. See [fork-contract.md](fork-contract.md).
+
+## 4. Erratum on ADR-0004
+
+ADRs are never edited after acceptance — a decision that changes gets a new ADR.
+One factual reference inside an accepted ADR has since moved, and is corrected
+here rather than in the ADR:
+
+- **ADR-0004 names the identity tier `wetware`** (in its component list and its
+  "alternatives considered" section). That name was **retracted** and was never
+  operator-ratified. The identity tier is **`crew`** — `pixeloven/crew`, per
+  program-plan decision **D-03** as amended 2026-08-17. `wetware` and `lifepath`
+  remain recorded only as vetted-clean bench candidates.
+- Nothing else in ADR-0004 is affected: the decision it records is about the name
+  `operator` and the human/project prose rule, both of which stand unchanged.
+
+## 5. Assertions — the grep evidence
+
+These are the checks behind A1.1's "grep clean". They are **also run on every
+pull request** by [`.github/workflows/pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml)
+(job `fork-contract`), so this section is a description of a live gate rather
+than a one-time claim.
+
+Every command below is expected to print **nothing**. Any output is a finding.
+The workflow runs exactly these, in this order, and fails the job on any output.
+
+```sh
+PIN=6789876442d0fb6da9f70d86399a2930c5073ae2   # the fork point
+
+# The PixelOven-authored prose corpus: the README banner block, NOTICE, and our
+# two doc namespaces. The rest of README.md is upstream's and is not ours to
+# police. Fenced code blocks are stripped, because this section quotes the very
+# patterns the assertions look for and would otherwise match itself.
+banner() { sed -n '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/p' README.md; }
+corpus() {
+  { banner; cat NOTICE; find docs/pixeloven docs/adr -name '*.md' -exec cat {} +; } \
+    | awk '/^```/{f=!f; next} !f'
+}
+```
+
+**A1 — the project is never named `firstmate`.** No PixelOven-authored line
+claims firstmate as this repository's own identity:
+
+```sh
+corpus | grep -niE 'pixeloven/firstmate|(this|the) (repo|repository|project) is (a |the )?firstmate|named? firstmate'
+```
+
+**A2 — every self-referential PixelOven URL points at a real PixelOven repo.**
+Anchored on the host so that `docs/pixeloven/…` paths are not false positives:
+
+```sh
+corpus | grep -oE 'github\.com/pixeloven/[A-Za-z0-9._-]+' | sed 's/\.git$//' | sort -u \
+       | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci)$'
+```
+
+**A3 — the project is never capitalized as a proper noun** (G-7). Two files are
+exempt because they *state* the rule and therefore quote the rejected form:
+ADR-0004 and this page.
+
+```sh
+{ banner | grep -nE '\bOperator\b'
+  grep -nE '\bOperator\b' NOTICE
+  find docs/pixeloven docs/adr -name '*.md' \
+       ! -name 'identity.md' ! -name '0004-the-name-operator.md' -print0 \
+    | xargs -0 grep -nE '\bOperator\b'; }
+```
+
+**A4 — O-1: the diff against the fork point touches only our namespaces.** No
+second ref, so this covers the working tree as well as committed history:
+
+```sh
+git diff --name-only "$PIN" \
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$)'
+```
+
+**A5 — the README exception stays one bounded block.** Strip the banner and what
+remains is byte-identical to upstream's README at the pin:
+
+```sh
+git show "$PIN":README.md > /tmp/upstream-README.md
+sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/d' README.md \
+  | sed '1{/^$/d}' \
+  | diff - /tmp/upstream-README.md
+```
+
+**A6 — upstream's own repo invariant holds** (personal fleet paths untracked):
+
+```sh
+git ls-files -- data state config projects .no-mistakes
+```
+
+### Re-measuring §3
+
+```sh
+git ls-files 'bin/fm-*' | wc -l                                  # fm-* scripts
+git grep -hoE '\bFM_[A-Z0-9_]+' -- . | sort -u | wc -l            # distinct FM_* identifiers
+git grep -lE  '\bFM_[A-Z0-9_]+' -- . | wc -l                      # files referencing them
+git grep -lE  '\bFM_HOME\b'     -- . | wc -l                      # files referencing $FM_HOME
+git ls-files 'docs/*.md' | wc -l                                  # upstream doc files
+```
