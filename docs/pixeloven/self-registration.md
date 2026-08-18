@@ -127,6 +127,66 @@ $ no-mistakes doctor
 provisions this posture owns that daemon's lifecycle, and an idempotent bootstrap must
 converge the unit and the daemon, not merely the binary.
 
+### 5.1 Pipeline validation — runs headlessly, blocked on host git config
+
+A1.3's acceptance asks for a test agent-authored change routed through the pipeline. It was
+attempted, on this document's own branch. The result is worth recording precisely, because
+it is half a pass.
+
+**The headless path exists and works.** `no-mistakes axi` is explicitly non-interactive —
+*"prints token-efficient TOON to stdout and is driven entirely by flags (no interactive
+prompts)"* — with `run`, `respond`, `status`, `logs`, `abort`, and a guarded `sync`.
+`git push no-mistakes <branch>` returned **exit 0** and started a pipeline with no TTY
+attached, and `no-mistakes axi run --yes --intent …` drives gates without a human.
+
+**The pipeline genuinely reviews.** On the first attempt the `review` step ran a real agent
+review for **248 s** against this document, verifying its claims — including reading
+`bin/fm-project-mode.sh` to confirm the `--raw` mapping described in §2. It ended only
+because the harness hit its subscription session limit.
+
+**It cannot currently complete on this host.** Re-run after that limit reset, the pipeline
+fails at `rebase`, before review:
+
+```console
+$ no-mistakes axi status
+    intent,completed,0,6
+    rebase,failed,0,1533
+    review,pending,0,0
+error: step rebase failed: git rebase origin/main: exit status 128:
+       fatal: either user.signingkey or gpg.ssh.defaultKeyCommand needs to be configured
+```
+
+The cause is host git configuration, not the tool. Globally this machine sets
+`commit.gpgsign=true`, `gpg.format=ssh`, and `gpg.ssh.program=/opt/1Password/op-ssh-sign` —
+but **`user.signingkey` is unset**, and the 1Password SSH agent holds no identities in a
+non-interactive context (`ssh-add -L` → *"The agent has no identities"*). Existing repos on
+this box work around it individually; harmony's clone carries a local
+`commit.gpgsign=false`.
+
+Setting the same locally in the project clone **does not** fix the pipeline, and the reason
+matters: the daemon rebases in its own gate repository under `~/.no-mistakes/repos/`, which
+inherits the **global** config. That gate repo also has **no `user.email`**, so an
+"Author identity unknown" failure waits immediately behind the signing one.
+
+**Status: the posture is registered and enforced; the pipeline check is pending first real
+use.** Two host-level gaps have to close first. Both belong to the provisioning task
+(harmony's `ansible/roles/bastion/tasks/agentic.yml`), and one needs a human decision that
+should not be made silently:
+
+1. **Commit signing.** Either unlock the 1Password SSH agent and set `user.signingkey` from
+   `ssh-add -L` — the intent the global config already expresses — or deliberately exempt
+   agent-authored commits from signing. Disabling signing machine-wide to unblock a robot
+   changes a human's commit provenance across every repository on the box, so it is the
+   human's call, not the role's.
+2. **Git identity for agent-created clones.** Neither the fleet home nor the gate repo
+   inherits a `user.name` / `user.email`, and this host sets none globally. Every fresh
+   clone the fleet creates starts unable to commit, and it fails late — inside an agent
+   session, at commit time.
+
+Neither is a defect in `no-mistakes`, in the registration, or in the posture itself. Both
+would otherwise have surfaced during the first real overnight run, which is the argument
+for having attempted the validation rather than asserting it.
+
 Two environment settings are required on any host that runs the gate, and are baked into
 the bastion role rather than left to the shell:
 
