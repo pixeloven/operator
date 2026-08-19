@@ -4,7 +4,7 @@ Durable decisions for `operator`. One file per decision, numbered, never edited
 after acceptance — a decision that changes gets a **new** ADR that supersedes
 the old one.
 
-Format follows [`ductiletoaster/lattice`](https://github.com/ductiletoaster/lattice)'s
+Format follows [`pixeloven/lattice`](https://github.com/pixeloven/lattice)'s
 `docs/decisions/`: Context → Decision → Consequences → Alternatives considered.
 Use [`_template.md`](_template.md).
 
