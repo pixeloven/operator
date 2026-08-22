@@ -222,14 +222,12 @@ gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/enable
 Whichever posture is chosen, our own workflows stay on `ubuntu-latest` until M0.1
 lands; the migration is a follow-up noted in both workflow headers.
 
-### Expected red check on every PR
+### Required delivery check on every PR
 
-`Require no-mistakes` fails on any pull request whose body lacks the upstream
-pipeline signature. That is upstream's enforcement that contributions arrive
-through the `no-mistakes` pipeline — **it working is evidence for task A1.3**,
-not a defect. The workflow is upstream's and is never edited. The repository has
-no branch protection (private, free plan), so `gh pr merge --squash` still
-merges; note the red check in the PR body.
+`Require no-mistakes` passes when the pull request body carries the valid pipeline attestation for the delivered head.
+A red result means the delivery metadata is missing, stale, or invalid and must be repaired through the no-mistakes pipeline before merge.
+That upstream-owned enforcement is evidence that task A1.3 remains active, and its workflow is never edited.
+The repository has no branch protection on its current private free plan, but the ability to merge through the CLI does not make a red required check acceptable.
 
 ## 5. Release log
 
