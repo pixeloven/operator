@@ -166,7 +166,10 @@ The PixelOven fork gate enforces that semantic boundary and rejects any added cl
 This creates an ongoing merge-conflict cost in one upstream-owned data file in exchange for making the inherited documentation check authoritative and green.
 
 The same PR diagnosis observed a separate `tests/fm-remote-job.test.sh` worker-readiness timeout in one CI run.
-Seven consecutive focused runs passed unchanged, including the relocated-root worker identity case, so no runtime change was made for that intermittent event.
+Seven consecutive focused runs passed unchanged, including the relocated-root worker identity case, which establishes non-reproduction rather than a proven environmental cause.
+The PR contains no runtime change, and the failed CI run passed the initial startup and stale-code replacement cases before the relocated-root readiness symptom.
+The exact CI-only timing or worker-lock release cause remains unresolved, and the passing reruns do not disprove a latent race.
+The available evidence therefore does not justify a runtime change in this documentation repair.
 
 ### The levers, and how to pull them
 
