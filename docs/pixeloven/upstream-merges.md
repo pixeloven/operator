@@ -166,17 +166,12 @@ Two are worth flagging beyond the diff:
 
 ### The conflict surface, and why it was empty
 
-Not luck. Of the 35 files upstream changed, **exactly one is a file we also
-touch: `README.md`.** Our change there is the delimited banner block at the very
-top; upstream's change was a table row at line 178. Git merged both without a
-murmur.
+At the time of this 2026-08-17 rehearsal, exactly one of the 35 files upstream changed was a file the fork also touched: `README.md`.
+The fork's change was the delimited banner block at the top, while upstream's change was a table row at line 178, and Git merged both without conflict.
 
-That single file is the fork's **entire file-level contact surface with
-upstream**, and it is the place the first real conflict will eventually appear —
-if upstream restructures the head of `README.md`. When it does, the resolution is
-mechanical (keep the banner block, take upstream's body wholesale) and assertion
-A5 proves the result byte-for-byte. Everything else we own lives in namespaces
-upstream cannot collide with by construction.
+`README.md` was then the fork's entire file-level contact surface with upstream and the expected site of its first real conflict.
+If upstream restructures the head of `README.md`, the resolution remains mechanical: keep the banner block, take upstream's body wholesale, and let assertion A5 prove the result byte-for-byte.
+ADR-0008 later added `docs/documentation-audiences.json` as the second bounded contact surface, and the current review procedure in section 2 owns that present-tense inventory.
 
 ### The finding: the gate was anchored to the wrong commit
 

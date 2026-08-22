@@ -87,8 +87,7 @@ once they exist.)*
 
 ### Why
 
-**Renaming any of it means editing upstream files, and editing upstream files
-is the one thing this fork does not do.**
+**Renaming any of it means editing upstream files outside the two bounded exceptions, which this fork does not do.**
 
 1. **It breaks the merge contract (O-1 / O-2).** The soft fork is cheap *only*
    because our changes and upstream's changes never touch the same lines. A

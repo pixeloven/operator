@@ -7,7 +7,7 @@
 
 ## The rule, in one line
 
-**We add files. We do not edit upstream's.**
+**We add files, with upstream edits limited to the bounded exceptions in ADR-0001 and ADR-0008.**
 
 ## Fork point
 
