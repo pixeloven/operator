@@ -1,10 +1,11 @@
 # Identity — what this project is called, and what stays named `fm`
 
 - **Task:** A1.1
-- **Satisfies:** **O-1** (soft fork: upstream files are never edited) · **G-7**
+- **Satisfies:** **O-1** (soft fork: upstream edits are limited to ADR-0001 and ADR-0008) · **G-7**
   (in prose, "the operator" means the human; the project is written `operator`)
 - **Decisions:** [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) (additive-only),
-  [ADR-0004](../adr/0004-the-name-operator.md) (the name)
+  [ADR-0004](../adr/0004-the-name-operator.md) (the name),
+  [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md) (audience-inventory exception)
 
 This page answers three questions a reader arrives with: *what is this called*,
 *why does everything inside it still say `fm`*, and *how do I check that

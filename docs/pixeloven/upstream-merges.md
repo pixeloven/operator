@@ -14,7 +14,7 @@ it costs to catch up, and how to do it*.
 
 ## 1. The rule that makes this cheap
 
-**We add files; we never edit upstream's** ([ADR-0001](../adr/0001-soft-fork-of-firstmate.md)).
+**We add files, with upstream edits limited to the bounded exceptions in [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) and [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md).**
 Every merge is a live test of that rule. The rehearsal below is the first
 measurement, and the number it produced is the argument for keeping the rule.
 

@@ -19,11 +19,12 @@
 | Commit date | 2026-08-13 |
 | Seed method | full upstream history pushed unchanged; `main` = the fork commit |
 
-`upstream` is configured as a git remote. To see everything PixelOven has
-changed, at any time:
+`upstream` is configured as a git remote.
+To see everything PixelOven has changed from the current authenticated upstream baseline:
 
 ```sh
-git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
+PIN=$(tr -d '[:space:]' < docs/pixeloven/upstream-pin)
+git diff "$PIN"..HEAD
 ```
 
 ## Where our code goes
