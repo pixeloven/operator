@@ -57,6 +57,7 @@ This is the bounded exception recorded in ADR-0001.
 
 `docs/documentation-audiences.json` carries classifications for maintained prose under `docs/adr/` and `docs/pixeloven/`.
 No inventory policy field or upstream classification may change through that exception.
+The path must retain its upstream regular-file mode and cannot become a symlink.
 This is the narrowly enforced exception recorded in [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md).
 
 ## Taking upstream changes

@@ -255,7 +255,19 @@ jobs:
           echo '== A4.1 - ADR-0008: the audience-inventory exception classifies fork prose only'
           upstream_inventory="$RUNNER_TEMP/upstream-documentation-audiences.json"
           inventory_status=0
-          if git show "$PIN":docs/documentation-audiences.json > "$upstream_inventory"; then
+          inventory_path='docs/documentation-audiences.json'
+          upstream_inventory_mode=$(git ls-tree "$PIN" -- "$inventory_path" | awk '{print $1}')
+          current_inventory_mode=$(git ls-tree HEAD -- "$inventory_path" | awk '{print $1}')
+          case "$upstream_inventory_mode" in
+            100644|100755) ;;
+            *) inventory_status=1 ;;
+          esac
+          if [ "$current_inventory_mode" != "$upstream_inventory_mode" ]; then
+            inventory_status=1
+          fi
+          if [ "$inventory_status" -ne 0 ]; then
+            echo 'audience inventory must retain its upstream regular-file mode'
+          elif git show "$PIN":docs/documentation-audiences.json > "$upstream_inventory"; then
             python3 - "$upstream_inventory" docs/documentation-audiences.json <<'PY' || inventory_status=$?
           import json
           import sys
@@ -268,7 +280,10 @@ jobs:
 
           upstream_policy = {key: value for key, value in upstream.items() if key != "surfaces"}
           current_policy = {key: value for key, value in current.items() if key != "surfaces"}
-          if current_policy != upstream_policy:
+          def canonical_json(value):
+              return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+          if canonical_json(current_policy) != canonical_json(upstream_policy):
               raise SystemExit("inventory policy fields differ from upstream")
 
           def index_surfaces(document, label):

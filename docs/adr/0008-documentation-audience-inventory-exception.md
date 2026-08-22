@@ -17,6 +17,7 @@ The central inventory is upstream-owned, so changing it requires a deliberate ex
 
 PixelOven may extend `docs/documentation-audiences.json` only to classify maintained prose under `docs/adr/` and `docs/pixeloven/`.
 The exception does not permit changing the inventory version, scope, allowed audiences, setup audiences, README setup targets, required owner pointers, or any upstream classification.
+The inventory path must retain its upstream regular-file mode so the exception cannot redirect the checker through a symlink.
 Assertion A4 in `.github/workflows/pixeloven-gates.yml` permits this exact file and no other upstream-owned path.
 The same PixelOven-owned workflow compares the current inventory with the inventory at the recorded upstream pin and fails unless every policy field and upstream surface remains semantically identical and every added surface belongs to one of the two fork-owned documentation namespaces.
 

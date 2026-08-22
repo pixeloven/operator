@@ -206,6 +206,7 @@ git diff --name-only "$PIN" \
 
 **A4.1 - the ADR-0008 exception cannot broaden.**
 The workflow parses the current and upstream inventories, requires every policy field and upstream surface to remain semantically identical, and permits added classifications only under `docs/adr/` and `docs/pixeloven/`.
+It also requires the inventory path to retain its upstream regular-file mode before parsing it.
 The executable assertion in `pixeloven-gates.yml` is the single owner of that comparison.
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
