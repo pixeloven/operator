@@ -96,8 +96,9 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 
 1. **Did anything conflict?** Under the contract nothing should. If something
    does, *the contract is leaking* — that is the finding, not the conflict.
-2. **Did upstream touch a file we also touch?** Today there is exactly one:
-   `README.md`. See §4.
+2. **Did upstream touch a file we also touch?**
+   Today there are two: `README.md` under ADR-0001 and `docs/documentation-audiences.json` under [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md).
+   See §4 for the first rehearsal's historical one-file surface.
 3. **Is any merged change consumer-visible?** That decides the semver bump on
    our next tag ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md),
    [`releases.md`](releases.md) §2).
@@ -105,10 +106,8 @@ commits as O-1 violations; advancing it without merging is caught by A7.
    `ci.yml` is the only thing that can answer this, and an upstream merge is the
    one occasion where it earns its cost — so it is **re-enabled for the whole
    merge PR** and disabled again afterwards ([`releases.md`](releases.md) §4).
-   Read it as a *diff of which tests fail*, not as pass/fail: one shard is
-   **known red on every run** because our documents are not in upstream's
-   documentation-audience inventory, a pre-existing condition dating from the
-   first PixelOven commit and written up in [`releases.md`](releases.md) §4.
+   Read it as pass/fail.
+   The documentation-audience collision that previously kept one shard red was resolved under ADR-0008 and is written up in [`releases.md`](releases.md) §4.
 5. **Anything new in the supply chain?** New network calls, new installers, new
    telemetry, a changed pin. Feeds [`supply-chain-read.md`](supply-chain-read.md).
 
@@ -217,12 +216,9 @@ of PR this document is about.
 
 ### The third finding: upstream's own suite has never been green here
 
-Re-enabling `ci.yml` for the merge (its one earning occasion) surfaced that
-upstream's documentation-audience test fails on **every** PixelOven commit,
-because it enumerates every tracked `*.md` repo-wide and requires each to be
-classified in an upstream-owned inventory. It is green at the fork point and red
-from the first PixelOven commit onward — nothing to do with this merge. It needs
-an operator decision and is written up in [`releases.md`](releases.md) §4.
+Re-enabling `ci.yml` for the merge surfaced that upstream's documentation-audience test failed on every PixelOven commit because it enumerated maintained prose repository-wide and required each path in an upstream-owned inventory.
+It was green at the fork point and red from the first PixelOven commit onward, so the failure was unrelated to that merge.
+The operator accepted the narrow central-inventory exception on 2026-08-22 under [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md), as recorded in [`releases.md`](releases.md) §4.
 
 ### Cost, and the recommended cadence
 

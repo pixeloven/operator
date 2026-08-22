@@ -45,17 +45,18 @@ prose rule that "the operator" means the human (G-7), are in
 [`identity.md`](identity.md).
 
 The contract is **enforced on every pull request** by
-[`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml): it fails
-the build if the diff against the fork point touches anything outside the table
-above, or if `README.md` differs from upstream outside the banner block. The
-assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
+[`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml): it fails the build if the diff against the current upstream pin touches anything outside the table above and the two exceptions below, or if either exception exceeds its exact boundary.
+The assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
 
-## The one edited upstream file
+## The two edited upstream files
 
-`README.md` carries a single delimited PixelOven banner block at the very top,
-pointing here. Nothing else in it is changed. This is a bounded, deliberate
-exception recorded in ADR-0001 — one hunk, in the file least likely to carry
-load-bearing behavior.
+`README.md` carries a single delimited PixelOven banner block at the very top, pointing here.
+Nothing else in it is changed.
+This is the bounded exception recorded in ADR-0001.
+
+`docs/documentation-audiences.json` carries classifications for maintained prose under `docs/adr/` and `docs/pixeloven/`.
+No inventory policy field or upstream classification may change through that exception.
+This is the narrowly enforced exception recorded in [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md).
 
 ## Taking upstream changes
 

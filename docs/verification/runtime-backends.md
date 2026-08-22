@@ -734,26 +734,6 @@ Observed guarantee: a Desktop-owned thread can write Firstmate lifecycle files w
 The missing guarantee remains a supported shell-callable bridge that lets Firstmate perform those operations against the same visible Desktop endpoint.
 App-server partial methods and raw socket experiments do not satisfy that bridge contract.
 
-### Remote stored-thread ownership
-
-Two controlled trials ran on 2026-08-20 against Codex CLI/App Server 0.148.0 and the current iOS Remote client.
-Each trial launched a fresh standalone Codex CLI thread under Herdr, pinned its exact identity for the trial, opened the discoverable thread from iOS while the CLI writer was active, checked that the terminal worker remained healthy, stopped the CLI through the normal control path, and reopened the same stored thread after ownership was released.
-
-The stable conflict output while the CLI owned the writer was:
-
-```text
-iOS: Error loading messages.
-App Server: already has an active writer
-```
-
-The terminal worker and its transcript continued normally through the conflict.
-After the CLI stopped, iOS loaded the complete stored transcript, and read-only process evidence showed the managed Remote App Server holding the exact rollout and writer-lock descriptors.
-This counterfactual distinguishes the deterministic concurrent-writer conflict from worker failure, missing transcript data, connectivity loss, and stale worktree cleanup.
-
-In the first trial, fresh-App-Server `thread/read` and `thread/turns/list` calls read the live externally owned stored thread without loading or resuming it, changing its transcript or metadata, or harming its writer.
-The second trial's control probe negotiated the experimental pagination capability only partially, so it does not independently reverify the bounded turns-list path and does not disconfirm the first result.
-These methods support a bounded stored-thread observer, but they do not provide the create, send, live-state, stop, and status-return guarantees required of a Firstmate backend.
-
 ## Cursor Agent CLI
 
 Cursor runs crewmate, scout, secondmate, and primary work; [`supervision.md`](supervision.md#cursor-primary-park-2026-08-13) owns the primary evidence.

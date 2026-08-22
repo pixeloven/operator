@@ -145,15 +145,10 @@ are ~10–12 min each**, not the ~4.8 min the workflow comment implies, and the
 per PR**, or **≈ 11 PRs before the budget is gone**. Our own gates are **1.2 %**
 of one `ci.yml` run.
 
-### The pre-existing `ci.yml` failure — needs an operator decision
+### The documentation-audience collision - resolved by ADR-0008
 
-**`ci.yml` has never been green on this repository, and not because of anything
-we changed in it.** Upstream's `tests/fm-documentation-audiences.test.sh` runs
-`bin/fm-doc-audience-check.sh`, which enumerates **every tracked `*.md`, `*.mdx`,
-`*.rst`, `*.txt` in the repo** — repo-wide, not just under `docs/` — and requires
-each one to be classified in the upstream-owned inventory
-`docs/documentation-audiences.json`. Every PixelOven document is therefore
-"unclassified" and the shard fails.
+Upstream's `tests/fm-documentation-audiences.test.sh` runs `bin/fm-doc-audience-check.sh`, which enumerates maintained prose across the repository and requires each path to be classified in the upstream-owned `docs/documentation-audiences.json`.
+PixelOven prose was therefore unclassified even though the fork added only new documentation files.
 
 Demonstrated locally at three points in our history:
 
@@ -163,34 +158,15 @@ Demonstrated locally at three points in our history:
 | `a5e90e3` (Phase 0, task A0.1 — **before** any A1 work) | **fails**: 11 unclassified |
 | `d6d7f85` (`v0.1.0`) | **fails**: 14 unclassified |
 
-So the failure dates from the first PixelOven commit. It is a **structural
-collision between the additive-only contract and an upstream invariant that
-enumerates the whole tree** — and relocating our docs does not help, because the
-patterns are repo-wide.
+The failure dates from the first PixelOven commit and is a structural collision between the additive-only contract and an upstream invariant that enumerates the whole tree.
+Relocating the documents cannot solve it because the inventory scope is repository-wide.
 
-The options, none of which should be taken unilaterally:
+On 2026-08-22 the operator accepted [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md), which permits the central inventory to classify fork-owned prose while preserving every inventory policy field and upstream classification.
+The PixelOven fork gate enforces that semantic boundary and rejects any added classification outside `docs/adr/` and `docs/pixeloven/`.
+This creates an ongoing merge-conflict cost in one upstream-owned data file in exchange for making the inherited documentation check authoritative and green.
 
-1. **Accept the red shard**, exactly as we accept `Require no-mistakes`. Cost:
-   `ci.yml` can no longer be read as a pass/fail signal, only as a diff of *which*
-   tests fail. Combined with option 2 below this is coherent — the suite is off
-   except during merge review, where this one known failure is expected.
-2. **Add our documents to `docs/documentation-audiences.json`.** One upstream file
-   edited, and it is data rather than code — but it is a file upstream touches
-   whenever *they* add a document, so it would conflict on most merges, in
-   exchange for a green shard. It needs a new ADR and it directly weakens O-2.
-3. **Ask upstream for an extension point** (an ignore list, or honouring a second
-   inventory — the checker already accepts `--inventory <path>`, just not from
-   the test). This is a **G-5 upstream post** and needs per-instance operator
-   approval.
-
-**Recommendation: option 1**, with option 3 raised if the fork ever goes public.
-Option 2 trades a permanent merge cost for a cosmetic green. **No upstream file
-was edited to work around this.**
-
-One further shard failure on the same run — `Behavior portable serial 3`,
-`tests/fm-remote-job.test.sh`: *"remote job worker did not report ready after
-startup"* — is an environmental flake in an upstream secondmate test, unrelated to
-anything PixelOven adds.
+The same PR diagnosis observed a separate `tests/fm-remote-job.test.sh` worker-readiness timeout in one CI run.
+Seven consecutive focused runs passed unchanged, including the relocated-root worker identity case, so no runtime change was made for that intermittent event.
 
 ### The levers, and how to pull them
 

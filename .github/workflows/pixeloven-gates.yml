@@ -236,8 +236,57 @@ jobs:
 
           echo "== A4 - O-1: the diff against upstream $PIN touches only PixelOven namespaces"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$)' || true)
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$|docs/documentation-audiences\.json$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: upstream file(s) modified - O-1 violation, needs a new ADR"; }
+
+          echo '== A4.1 - ADR-0008: the audience-inventory exception classifies fork prose only'
+          upstream_inventory="$RUNNER_TEMP/upstream-documentation-audiences.json"
+          inventory_status=0
+          if git show "$PIN":docs/documentation-audiences.json > "$upstream_inventory"; then
+            python3 - "$upstream_inventory" docs/documentation-audiences.json <<'PY' || inventory_status=$?
+          import json
+          import sys
+
+          upstream_path, current_path = sys.argv[1:]
+          with open(upstream_path, encoding="utf-8") as handle:
+              upstream = json.load(handle)
+          with open(current_path, encoding="utf-8") as handle:
+              current = json.load(handle)
+
+          upstream_policy = {key: value for key, value in upstream.items() if key != "surfaces"}
+          current_policy = {key: value for key, value in current.items() if key != "surfaces"}
+          if current_policy != upstream_policy:
+              raise SystemExit("inventory policy fields differ from upstream")
+
+          def index_surfaces(document, label):
+              surfaces = document.get("surfaces")
+              if not isinstance(surfaces, list):
+                  raise SystemExit(f"{label} surfaces is not a list")
+              indexed = {}
+              for entry in surfaces:
+                  if not isinstance(entry, dict) or set(entry) != {"path", "audience"}:
+                      raise SystemExit(f"{label} surface has unexpected fields: {entry!r}")
+                  path = entry["path"]
+                  if not isinstance(path, str) or path in indexed:
+                      raise SystemExit(f"{label} surface path is invalid or duplicated: {path!r}")
+                  indexed[path] = entry
+              return indexed
+
+          upstream_surfaces = index_surfaces(upstream, "upstream")
+          current_surfaces = index_surfaces(current, "current")
+          for path, entry in upstream_surfaces.items():
+              if current_surfaces.get(path) != entry:
+                  raise SystemExit(f"upstream classification changed or disappeared: {path}")
+          fork_prefixes = ("docs/adr/", "docs/pixeloven/")
+          for path in current_surfaces.keys() - upstream_surfaces.keys():
+              if not path.startswith(fork_prefixes):
+                  raise SystemExit(f"non-fork classification added: {path}")
+          print("audience-inventory exception is limited to fork-owned prose")
+          PY
+          else
+            inventory_status=1
+          fi
+          [ "$inventory_status" -eq 0 ] || bad "A4.1: ADR-0008 audience-inventory exception was broadened"
 
           echo '== A5 - the README exception stays one bounded banner block'
           git show "$PIN":README.md > "$RUNNER_TEMP/upstream-README.md"

@@ -121,9 +121,9 @@ Our surface is new files only, in namespaces upstream can never collide with:
 | Decisions | `docs/adr/` |
 | CI we own | `.github/workflows/pixeloven-*.yml` |
 
-Plus exactly one bounded exception: the delimited PixelOven banner block at the
-top of `README.md` (ADR-0001). Anything outside this list needs a **new ADR**,
-not a silent change. See [fork-contract.md](fork-contract.md).
+Two bounded upstream-file exceptions exist: the delimited PixelOven banner block at the top of `README.md` under ADR-0001, and fork-prose classifications in `docs/documentation-audiences.json` under [ADR-0008](../adr/0008-documentation-audience-inventory-exception.md).
+Anything outside this list needs a **new ADR**, not a silent change.
+See [fork-contract.md](fork-contract.md).
 
 ## 4. Erratum on ADR-0004
 
@@ -201,8 +201,12 @@ committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$|docs/documentation-audiences\.json$)'
 ```
+
+**A4.1 - the ADR-0008 exception cannot broaden.**
+The workflow parses the current and upstream inventories, requires every policy field and upstream surface to remain semantically identical, and permits added classifications only under `docs/adr/` and `docs/pixeloven/`.
+The executable assertion in `pixeloven-gates.yml` is the single owner of that comparison.
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
 remains is byte-identical to upstream's README at the pin:

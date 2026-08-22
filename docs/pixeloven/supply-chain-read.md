@@ -67,6 +67,8 @@ telemetry vocabulary (`telemetry`, `analytics`, `sentry`, `posthog`, `umami`,
 
 ## 2. Findings — firstmate (A0.2)
 
+<a id="f-1"></a>
+
 ### F-1 · Every worker launches with its harness permission gate disabled — **BY DESIGN, HIGH IMPACT**
 
 `launch_template()` in `bin/fm-spawn.sh` is the single most important thing in
@@ -121,6 +123,8 @@ a code fix.
 > vendor-hosted inference.** That is upstream choosing privacy on the user's
 > behalf, at the cost of extra complexity. It materially raises confidence in the
 > author's posture.
+
+<a id="f-2"></a>
 
 ### F-2 · The Relay is the only outbound path, and it is opt-in — **CONDITION C3**
 
@@ -247,6 +251,8 @@ written to a local path and never transmitted.
 ---
 
 ## 3. Findings — adjacent tooling (A0.3)
+
+<a id="f-8"></a>
 
 ### F-8 · `gnhf` and `lavish-axi` phone home by default — **CONDITION C2**
 
@@ -516,6 +522,8 @@ but it means our pins need a scheduled bump, not a one-time decision.
 
 ## 8. Findings — the toolbelt (P1.6)
 
+<a id="f-11"></a>
+
 ### F-11 · `no-mistakes` is not an npm package — **CONDITION C4**
 
 This is the single most important finding in Part 2, and it is a naming trap.
@@ -593,6 +601,8 @@ attestations API returns 404 for the asset digest — so this is publisher-asser
 integrity, not provenance. It is still a step above herdr `0.8.0`, which offers
 no `checksums.txt` at all.
 
+<a id="f-12"></a>
+
 ### F-12 · `no-mistakes` phones home by default, and the daemon does not read your shell profile — **CONDITION C5**
 
 `internal/telemetry/telemetry.go` is the same Umami client pattern A0.3 found in
@@ -642,6 +652,8 @@ rewrites it. Assert by presence, never by echoing the value (G-3).
 > plain `os.WriteFile` would leave a pre-existing `0644` file world-readable
 > during the transition. That is a careful author.
 
+<a id="f-13"></a>
+
 ### F-13 · `chrome-devtools-axi` runs `npx -y chrome-devtools-mcp@latest` — **CONDITION C6**
 
 `chrome-devtools-axi` is a thin wrapper: it spawns `chrome-devtools-mcp` over
@@ -682,6 +694,8 @@ for every context that invokes the tool — profile *and* any scheduled
 environment. This also removes the ~30 s npx bootstrap that races the bridge's
 30 s readiness deadline, so it is a reliability fix as well as a G-2 fix.
 
+<a id="f-14"></a>
+
 ### F-14 · `no-mistakes` installs a `systemd --user` unit and runs a daemon — **CONDITION C7**
 
 `internal/daemon/service_systemd.go` writes
@@ -706,6 +720,8 @@ Two consequences for P1.2:
   mode it *does* inherit the invoking environment, which changes the F-12
   mitigation. Decide which mode the bastion runs in and assert it, rather than
   discovering it.
+
+<a id="f-15"></a>
 
 ### F-15 · Every tool ships an in-band pin-breaker — **CONDITION C8**
 
