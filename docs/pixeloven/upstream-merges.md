@@ -83,13 +83,14 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 > origin/main`) or redo the upstream merge from a fresh branch. If a branch has
 > already been flattened, recover it from the reflog rather than pushing it.
 >
-> The check below is the same one A7 runs. Run it **after** the PR lands, too — a
-> squash-merge passes every gate on the PR and only shows up as a failure on the
-> *next* PR, by which point the merge base is already gone.
+> The checks below are the topology half of A7 after the canonical upstream fetch.
+> Run them **after** the PR lands, too, because a squash-merge passes every gate on the PR and only shows up as a failure on the next PR, by which point the merge base is already gone.
 >
 > ```sh
-> git merge-base --is-ancestor "$(cat docs/pixeloven/upstream-pin)" HEAD \
->   && echo "merge topology intact"
+> git fetch upstream main
+> git merge-base --is-ancestor "$(cat docs/pixeloven/upstream-pin)" upstream/main \
+>   && git merge-base --is-ancestor "$(cat docs/pixeloven/upstream-pin)" HEAD \
+>   && echo "merge topology and upstream lineage intact"
 > ```
 
 ### What the review is actually looking for
@@ -186,12 +187,10 @@ baseline the moment we merge. The question A4 and A5 ask is *"what have we
 changed on top of upstream"*, and after a merge that baseline is the newly merged
 upstream commit, not the fork point.
 
-**Fix, landed in this same PR:** `docs/pixeloven/upstream-pin` holds the upstream
-commit the tree currently contains; A4 and A5 read it; **A7** (new) refuses a pin
-that is not a real commit contained in this history, so it cannot be advanced
-without an actual merge. Advancing the pin is now step 3 of the procedure above,
-which also keeps `upstream-tracking.md` from going stale while the gate keeps
-passing.
+**Fix, landed in this same PR:** `docs/pixeloven/upstream-pin` holds the upstream commit the tree currently contains, and A4 and A5 read it.
+The original A7 refused a pin that was not a real commit contained in this history, so it could not be advanced without a merge.
+ADR-0008 later strengthened A7 to authenticate the pin against canonical upstream main before A4, A4.1, and A5 consume it.
+Advancing the pin remains step 3 of the procedure above, which also keeps `upstream-tracking.md` from going stale while the gate keeps passing.
 
 This is precisely the class of defect a rehearsal exists to surface: it would
 otherwise have been discovered by a red gate on a real merge, under time

@@ -209,6 +209,19 @@ jobs:
           fail=0
           bad() { printf '::error::%s\n' "$1"; fail=1; }
 
+          echo '== A7 - the recorded pin is a canonical upstream commit contained in this tree'
+          canonical_upstream='https://github.com/kunchenguid/firstmate.git'
+          if ! git cat-file -e "${PIN}^{commit}" 2>/dev/null; then
+            bad "A7: docs/pixeloven/upstream-pin is not a commit in this repository"
+          elif ! git merge-base --is-ancestor "$PIN" HEAD; then
+            bad "A7: docs/pixeloven/upstream-pin ($PIN) is not an ancestor of HEAD - the pin was advanced without merging"
+          elif ! git fetch --quiet --no-tags "$canonical_upstream" refs/heads/main; then
+            bad "A7: canonical upstream main could not be fetched"
+          elif ! git merge-base --is-ancestor "$PIN" FETCH_HEAD; then
+            bad "A7: docs/pixeloven/upstream-pin ($PIN) is not on canonical upstream main"
+          fi
+          [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
+
           banner() { sed -n '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/p' README.md; }
           # Fenced code blocks are stripped: identity.md quotes these very
           # patterns and would otherwise match itself.
@@ -298,13 +311,6 @@ jobs:
           echo '== A6 - upstream repo invariant: personal fleet paths stay untracked'
           out=$(git ls-files -- data state config projects .no-mistakes || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A6: personal fleet paths are tracked"; }
-
-          echo '== A7 - the recorded upstream pin is real and is contained in this tree'
-          if ! git cat-file -e "${PIN}^{commit}" 2>/dev/null; then
-            bad "A7: docs/pixeloven/upstream-pin is not a commit in this repository"
-          elif ! git merge-base --is-ancestor "$PIN" HEAD; then
-            bad "A7: docs/pixeloven/upstream-pin ($PIN) is not an ancestor of HEAD - the pin was advanced without merging"
-          fi
 
           [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
           echo 'fork-contract assertions PASSED'

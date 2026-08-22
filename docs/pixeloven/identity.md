@@ -223,12 +223,14 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-**A7 — the recorded upstream pin is real and is contained in this tree.** Stops
-the pin being advanced without an actual merge, which would silently blind A4
-and A5:
+**A7 - the recorded upstream pin is real, contained in this tree, and on canonical upstream main.**
+This stops a fork commit from becoming the baseline for A4, A4.1, and A5, and stops the pin from advancing without an actual upstream merge.
 
 ```sh
-git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
+git cat-file -e "${PIN}^{commit}"
+git merge-base --is-ancestor "$PIN" HEAD
+git fetch --quiet --no-tags https://github.com/kunchenguid/firstmate.git refs/heads/main
+git merge-base --is-ancestor "$PIN" FETCH_HEAD
 ```
 
 ### Why A4/A5 track a moving pin
@@ -237,8 +239,8 @@ git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
 contains. It starts at the fork point and is advanced by **every upstream-merge
 PR** — which is the point: the pin is the machine-readable half of
 [`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
-stale while the gate keeps passing. A7 refuses a pin that is not a real commit
-contained in this history, so it cannot be advanced without an actual merge.
+stale while the gate keeps passing.
+A7 refuses a pin that is not a real commit contained in this history and on canonical upstream main, so a fork commit cannot redefine the trusted baseline.
 
 ### Re-measuring §3
 
