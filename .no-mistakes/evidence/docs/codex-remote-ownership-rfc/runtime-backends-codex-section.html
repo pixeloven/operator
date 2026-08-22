@@ -1,0 +1,30 @@
+<h2>Codex App host tools</h2>
+<p>A reusable Desktop host-tool smoke ran on 2026-07-06 against Codex Desktop bundle version 26.623.101652, build 4674, bundle id <code class="notranslate">com.openai.codex</code>.<br>
+Local paths and task-specific ids are intentionally not retained here.</p>
+<p>The host-tool sequence was:</p>
+<ol>
+<li>list a saved project;</li>
+<li>create a Desktop-owned worktree thread;</li>
+<li>recover and read the thread while active and after completion;</li>
+<li>verify the thread appended a Firstmate status line and wrote its report;</li>
+<li>send a follow-up to the same thread;</li>
+<li>read the completed follow-up;</li>
+<li>archive the exact thread;</li>
+<li>read the archived transcript with state <code class="notranslate">notLoaded</code>.</li>
+</ol>
+<p>Observed guarantee: a Desktop-owned thread can write Firstmate lifecycle files when the prompt provides an authorized absolute path, and create, send, read, and archive work at the Desktop host-tool layer.<br>
+The missing guarantee remains a supported shell-callable bridge that lets Firstmate perform those operations against the same visible Desktop endpoint.<br>
+App-server partial methods and raw socket experiments do not satisfy that bridge contract.</p>
+<h3>Remote stored-thread ownership</h3>
+<p>Two controlled trials ran on 2026-08-20 against Codex CLI/App Server 0.148.0 and the current iOS Remote client.<br>
+Each trial launched a fresh standalone Codex CLI thread under Herdr, pinned its exact identity for the trial, opened the discoverable thread from iOS while the CLI writer was active, checked that the terminal worker remained healthy, stopped the CLI through the normal control path, and reopened the same stored thread after ownership was released.</p>
+<p>The stable conflict output while the CLI owned the writer was:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">iOS: Error loading messages.
+App Server: already has an active writer
+</code></pre>
+<p>The terminal worker and its transcript continued normally through the conflict.<br>
+After the CLI stopped, iOS loaded the complete stored transcript, and read-only process evidence showed the managed Remote App Server holding the exact rollout and writer-lock descriptors.<br>
+This counterfactual distinguishes the deterministic concurrent-writer conflict from worker failure, missing transcript data, connectivity loss, and stale worktree cleanup.</p>
+<p>In the first trial, fresh-App-Server <code class="notranslate">thread/read</code> and <code class="notranslate">thread/turns/list</code> calls read the live externally owned stored thread without loading or resuming it, changing its transcript or metadata, or harming its writer.<br>
+The second trial's control probe negotiated the experimental pagination capability only partially, so it does not independently reverify the bounded turns-list path and does not disconfirm the first result.<br>
+These methods support a bounded stored-thread observer, but they do not provide the create, send, live-state, stop, and status-return guarantees required of a Firstmate backend.</p>

@@ -1,0 +1,920 @@
+<h1>Runtime backend verification</h1>
+<p>Audience: maintainer verification.</p>
+<p>This record contains reusable version-scoped evidence for active runtime guarantees.<br>
+The backend guides own current setup, safety boundaries, and limitations.<br>
+Exact task chronology, branch names, temporary homes, local paths, process ids, thread ids, and delivery transcripts remain in private reports or PR evidence.</p>
+<h2>tmux</h2>
+<p>Foreground-process behavior was verified on 2026-07-07 with tmux 3.6a on macOS.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tmux new-session -d -s fmtest -n testwin
+tmux display-message -p -t fmtest:testwin <span class="pl-s"><span class="pl-pds">'</span>#{pane_current_command}<span class="pl-pds">'</span></span>
+tmux send-keys -t fmtest:testwin <span class="pl-s"><span class="pl-pds">'</span>sleep 30<span class="pl-pds">'</span></span> Enter
+tmux display-message -p -t fmtest:testwin <span class="pl-s"><span class="pl-pds">'</span>#{pane_current_command}<span class="pl-pds">'</span></span>
+tmux send-keys -t fmtest:testwin C-c
+tmux display-message -p -t fmtest:testwin <span class="pl-s"><span class="pl-pds">'</span>#{pane_current_command}<span class="pl-pds">'</span></span></pre></div>
+<p>Observed output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">zsh
+sleep
+zsh
+</code></pre>
+<p>A persistent parent shell waiting for a child remained reported as the parent process, while a shell that directly execed a simple command changed identity with the process itself.<br>
+Pi and pi-signed 0.82.0 were reverified on 2026-07-27 through real isolated <code class="notranslate">fm-spawn.sh</code> launches.</p>
+<h3>Agent liveness name sources</h3>
+<p>The earlier record that every harness is observed under its own <code class="notranslate">#{pane_current_command}</code> no longer holds and has been replaced by the per-harness evidence below.<br>
+In this macOS run that reading reflected a rewritable process title rather than stable executable identity, so it is now one of two independent name sources rather than the sole basis of a verdict.</p>
+<p>The seven primary-capable adapters were relaunched on 2026-08-03 with tmux 3.6a on macOS 26.5.2 arm64, each on a private socket in an isolated lab.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tmux -L <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$socket</span><span class="pl-pds">"</span></span> new-window -d -t <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$session</span>:<span class="pl-pds">"</span></span> -n <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$harness</span><span class="pl-pds">"</span></span> -c <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$wt</span><span class="pl-pds">"</span></span> -- <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$bin</span><span class="pl-pds">"</span></span>
+tmux -L <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$socket</span><span class="pl-pds">"</span></span> display-message -p -t <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$session</span>:<span class="pl-smi">$harness</span><span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">'</span>#{pane_current_command}<span class="pl-pds">'</span></span>
+ps -t <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">${tty<span class="pl-k">#/</span>dev<span class="pl-k">/</span>}</span><span class="pl-pds">"</span></span> -o pgid=,tpgid=,comm=      <span class="pl-c"><span class="pl-c">#</span> rows where pgid = tpgid</span></pre></div>
+<p>Observed identities, and the resulting verdict:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Harness</th>
+<th>Version</th>
+<th><code class="notranslate">#{pane_current_command}</code></th>
+<th>Foreground <code class="notranslate">comm</code></th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>claude</td>
+<td>2.1.220</td>
+<td><code class="notranslate">2.1.220</code></td>
+<td><code class="notranslate">claude</code></td>
+<td>alive</td>
+</tr>
+<tr>
+<td>codex</td>
+<td>codex-cli 0.146.0</td>
+<td><code class="notranslate">codex</code></td>
+<td><code class="notranslate">codex</code></td>
+<td>alive</td>
+</tr>
+<tr>
+<td>opencode</td>
+<td>1.18.11</td>
+<td><code class="notranslate">opencode</code></td>
+<td><code class="notranslate">opencode</code></td>
+<td>alive</td>
+</tr>
+<tr>
+<td>pi</td>
+<td>0.82.0</td>
+<td><code class="notranslate">pi-launcher</code></td>
+<td><code class="notranslate">pi-signed</code>, <code class="notranslate">pi</code></td>
+<td>alive</td>
+</tr>
+<tr>
+<td>pi-signed</td>
+<td>0.82.0</td>
+<td><code class="notranslate">pi-launcher</code></td>
+<td><code class="notranslate">pi-signed</code>, <code class="notranslate">pi</code></td>
+<td>alive</td>
+</tr>
+<tr>
+<td>grok</td>
+<td>0.2.118</td>
+<td><code class="notranslate">grok-0.2.118-ma</code></td>
+<td><code class="notranslate">grok</code></td>
+<td>alive</td>
+</tr>
+<tr>
+<td>kimi</td>
+<td>0.31.1</td>
+<td><code class="notranslate">kimi</code></td>
+<td><code class="notranslate">kimi</code></td>
+<td>alive</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>Claude Code is the harness whose title no longer attributes it at all; every other adapter is currently attributed by both sources.<br>
+Codex reported <code class="notranslate">codex-aarch64-a</code> at 0.145.0 and <code class="notranslate">codex</code> at 0.146.0, and Kimi Code reported <code class="notranslate">kimi-code</code> as its foreground <code class="notranslate">comm</code> at 0.29.1 and <code class="notranslate">kimi</code> at 0.31.1, so these identities move between ordinary patch releases in both directions.<br>
+That is the evidence for treating any single process name as a surface under vendor control rather than a stable contract.</p>
+<p>The crewmate-only Muse Code 0.1.0-R708.1 adapter was verified separately on 2026-08-05 against tmux on macOS arm64.<br>
+Its installed <code class="notranslate">muse-bin-0.1.0-R708.1</code> foreground identity classified <code class="notranslate">alive</code>, while <code class="notranslate">musescore</code>, <code class="notranslate">amuse</code>, <code class="notranslate">muse-binary</code>, and <code class="notranslate">muse-bind</code> remained ambiguous in the portable regression.<br>
+<a href="muse.md#process-identity"><code class="notranslate">muse.md</code></a> owns the artifact identity and launcher evidence for that verification.</p>
+<p>Bounded observed output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">foreground comms:
+  zsh
+  .../instbin/muse-bin-0.1.0-R708.1
+classify each:
+  zsh                            -&gt; shell
+  muse-bin-0.1.0-R708.1          -&gt; agent
+fm_backend_agent_state tmux museliv:zsh
+alive
+</code></pre>
+<p><code class="notranslate">#{pane_current_command}</code> and foreground <code class="notranslate">ps -o comm=</code> read different name fields, but which one preserves executable identity is platform-dependent.<br>
+On macOS the pane command reflected the rewritable title while the full install path could survive in <code class="notranslate">ps -o comm=</code>; in the Linux portable regression those roles reversed for the version-named native executable, with the identifying path retained in argv[0].<br>
+The classifier therefore accepts a harness basename first, then an exact harness path component in the full executable path, then the same component in argv[0], without depending on which field carries it on a given platform.</p>
+<p>The portable regression is CI-enforced, while the real-harness drift guard is opt-in under the policy in <code class="notranslate">.agents/skills/firstmate-coding-guidelines/SKILL.md</code>.<br>
+Run the live guard after any harness upgrade and before trusting or refreshing the table above:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_HARNESS_LIVENESS_DRIFT=1 bin/fm-test-run.sh tests/fm-harness-liveness-drift-live-e2e.test.sh</pre></div>
+<p>Bounded output from the run that produced the table:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - harness liveness: claude 2.1.220 (Claude Code) classifies alive
+# claude 2.1.220 (Claude Code): title='2.1.220' foreground=[claude ]
+# checked 7 installed harness(es)
+</code></pre>
+<p>Installed-wrapper checks:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">basename <span class="pl-s"><span class="pl-pds">"</span><span class="pl-s"><span class="pl-pds">$(</span>command -v pi-signed<span class="pl-pds">)</span></span><span class="pl-pds">"</span></span>
+pi-signed --version
+pi --version</pre></div>
+<p>Observed bounded output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">pi-signed
+0.82.0
+0.82.0
+</code></pre>
+<p>The isolated process and endpoint checks used:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tmux display-message -p -t <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$target</span><span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">'</span>#{pane_current_command}<span class="pl-pds">'</span></span>
+ps -o comm= -p <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$wrapper_pid</span><span class="pl-pds">"</span></span>
+ps -o comm= -p <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$engine_pid</span><span class="pl-pds">"</span></span>
+FM_HOME=<span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$fixture_home</span><span class="pl-pds">"</span></span> bin/fm-crew-state.sh <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$task_id</span><span class="pl-pds">"</span></span></pre></div>
+<p>Observed bounded shapes:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">pi-launcher
+.../pi-signed
+.../Pi Launcher.app/Contents/Resources/pi/pi
+state: done ...
+</code></pre>
+<p>Both launches executed a submitted tool instruction and touched the generated <code class="notranslate">turn_end</code> marker.<br>
+The pi-signed launch retained <code class="notranslate">harness=pi-signed</code>, while the plain comparison retained <code class="notranslate">harness=pi</code>.<br>
+The exact wrapper ancestry was <code class="notranslate">pi-signed</code> parent to Pi engine child, and the plain Pi Launcher path also traversed the signed wrapper on this installation.<br>
+That shared plain-Pi path is retained as disconfirming evidence against using ancestry as runtime-selection authority.<br>
+Firstmate therefore sets the exact <code class="notranslate">FM_PI_HARNESS</code> selection marker on both worker launch paths, while an unmarked Pi-family process remains <code class="notranslate">pi</code>.<br>
+Both recorded runtime identities now classify the exact <code class="notranslate">pi-launcher</code> foreground command as <code class="notranslate">alive</code>.</p>
+<p>Backend applicability was reviewed across every spawn adapter.<br>
+Tmux needs the exact <code class="notranslate">pi-launcher</code>, <code class="notranslate">pi-signed</code>, <code class="notranslate">pi</code>, and <code class="notranslate">Pi</code> process identities for recovery-grade liveness.<br>
+Herdr uses native registered-agent state and needs no process-name branch.<br>
+Zellij has no verified recovery-grade agent process probe, while Orca and cmux do not support secondmate spawns, so those three retain their existing generic ordinary-launch semantics without a new liveness matcher.</p>
+<p>The current classifier matrix and its refresh guard are recorded in <a href="#composer-classification-matrix">Composer classification matrix</a>, with portable shape coverage in <code class="notranslate">tests/fm-composer-lib.test.sh</code> and <code class="notranslate">tests/fm-composer-ghost.test.sh</code>.<br>
+Kimi pointer delivery and OpenCode 1.18.4 busy-queue behavior remain pinned by <code class="notranslate">tests/fm-kimi-harness.test.sh</code> and <code class="notranslate">tests/fm-tmux-submit-busy.test.sh</code>.</p>
+<h3>Cleanup endpoint identity</h3>
+<p>The cleanup identity boundary was validated on 2026-07-28 with tmux 3.6a and metadata fixtures for every supported backend.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-teardown-endpoint-safety.test.sh
+tests/fm-teardown.test.sh
+tests/fm-backend-herdr.test.sh
+tests/fm-backend-zellij.test.sh
+tests/fm-backend-orca.test.sh
+tests/fm-backend-cmux.test.sh</pre></div>
+<p>Bounded output from the incident regression:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - fm-teardown: missing, empty, malformed, ambiguous, and task-mismatched endpoints refuse before every mutation or runtime call
+ok - cleanup identity: valid tmux, Herdr, Zellij, Orca, and cmux records validate while every empty backend target refuses
+ok - tmux backend: direct empty target returns nonzero without invoking tmux
+ok - process cleanup: creation-time PID identity removes only the exact child and preserves the control child
+ok - fm-teardown: dedicated-socket invalid cleanup preserves target/control and valid cleanup removes only the exact target
+</code></pre>
+<p>The dedicated tmux cell removed ambient tmux variables, required a socket-bound wrapper, kept one target and one independent control window, and proved the wrapper was not called for invalid metadata or a direct empty target.<br>
+Valid cleanup removed only the exact task-bound target and left the control window live.<br>
+The metadata-only validation covers tmux, Herdr, Zellij, Orca, and cmux before backend dispatch.<br>
+Claude, Codex, OpenCode, Pi, pi-signed, Grok, Kimi, Cursor, and Muse share that backend cleanup boundary; their harness-specific hook files, tokens, transcript bindings, and session-log sidecars are cleaned only after it, so no harness needs a separate endpoint parser.</p>
+<h2>Composer classification matrix</h2>
+<p>The shared composer classifier (<code class="notranslate">bin/fm-composer-lib.sh</code>, <code class="notranslate">fm_composer_classify_screen</code>) owns every composer shape fleet-wide; each backend contributes only a capture and a capability descriptor.<br>
+The live half of that guarantee was verified on 2026-08-10 from an already-trusted checkout at the branch's final validated head, against every installed harness then covered by the empty-composer matrix on tmux 3.6a, macOS arm64, on an isolated private socket, with no prompt submitted to any harness.<br>
+An earlier untrusted-worktree run left Claude, Grok, and Muse unverified because the guard treats first-launch trust dialogs as an unreadable-composer state and never confirms them; this trusted-checkout rerun supersedes those missing results.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_COMPOSER_MATRIX_LIVE=1 tests/fm-composer-matrix-live-e2e.test.sh</pre></div>
+<p>Observed output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - claude (2.1.227 (Claude Code)): real idle composer classifies empty
+ok - codex (codex-cli 0.146.0): real idle composer classifies empty
+ok - opencode (1.14.46): real idle composer classifies empty
+ok - pi (0.84.0): real idle composer classifies empty
+ok - grok (grok 1.0.0 (3cd0d0cbcebe)): real idle composer classifies empty
+# harness absent, not verified here: kimi
+ok - muse (Muse Code 0.1.0 (0.1.0-R708.1)): real idle composer classifies empty
+ok - strict posture live: a blank shell row classifies unknown and injection defers
+ok - zellij (zellij 0.44.0): unrelated pane change never confirms delivery (verdict: unknown)
+ok - live composer-matrix guard verified 8 live surface(s)
+</code></pre>
+<p>All six installed harnesses' real idle composers reached a proven <code class="notranslate">empty</code> (Claude auto-updated to 2.1.227 between the audit and this rerun, so the shipped classifier is proven against the newer release as well), including Pi through the tmux foreground-process identity probe, Grok through the titled-bottom-border tolerance, and OpenCode through the left-bar shape; Codex and OpenCode first parked on vendor update-available modals that the strict classifier correctly refused until the guard's single non-submitting Escape dismissed them.<br>
+The strict blank-row posture held live (a blank shell row deferred injection), and a zellij pane changing for reasons unrelated to submission never confirmed a delivery, replacing the retired content-diff heuristic's false positive.<br>
+Kimi was not installed on the verification machine; its bordered shape is pinned by the portable byte-capture regressions in <code class="notranslate">tests/fm-composer-lib.test.sh</code>, which also carry the other five adapters' capability profiles for every harness under both a UTF-8 locale and <code class="notranslate">LC_ALL=C</code>.<br>
+This guard is the refresh command after an upgrade to any matrix-covered harness; rerun it and update the versions above rather than trusting this table across releases.<br>
+Cursor is deliberately outside this cursor-anchored empty-composer matrix because its terminal cursor is parked outside the composer; tmux's Cursor-specific, process-identity-gated cursorless fallback is covered by the <a href="#cursor-agent-cli">Cursor Agent CLI</a> section's separate live evidence and drift guard.</p>
+<p><code class="notranslate">zellij action dump-screen --pane-id &lt;id&gt; --ansi</code> was verified at zellij 0.44.0 to preserve ANSI styling (real Claude Code rendered inside a zellij pane dumped <code class="notranslate">ESC[m</code> <code class="notranslate">❯</code> U+00A0 for its idle composer row), which is the capability the zellij composer classifier reads.</p>
+<h2>Herdr</h2>
+<p>The compatibility floor is protocol 14.<br>
+The whole real-Herdr lane's latest active verification uses both Herdr 0.7.4 protocol 16 and Herdr 0.8.0 protocol 19 on macOS aarch64, while focused Herdr 0.7.5 protocol 17, earlier protocol-16, protocol-14, and 0.7.3 evidence is retained where it defines current behavior or fallbacks.<br>
+Protocol 17 keeps every protocol-16 feature gate satisfied; the event and workspace-move floors remain 16.<br>
+Default-on presentation projection has its own floor at Herdr 0.8.0, protocol 19, verified below.</p>
+<p>Core read-only probes:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">herdr --version
+herdr status --json <span class="pl-k">|</span> jq -c <span class="pl-s"><span class="pl-pds">'</span>{client:.client.protocol,server:.server.protocol}<span class="pl-pds">'</span></span>
+herdr api schema --json <span class="pl-k">|</span> jq -c <span class="pl-s"><span class="pl-pds">'</span>.schemas.subscription_event["$defs"].SubscriptionEventKind.enum<span class="pl-pds">'</span></span></pre></div>
+<p>Observed protocol-16 compatibility shapes:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">herdr 0.7.5
+{"client":17,"server":17}
+["pane.output_matched","pane.agent_status_changed","pane.scroll_changed"]
+</code></pre>
+<p>The CLI matrix was checked directly:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Guarantee</th>
+<th>Command shape</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Explicit session routing</td>
+<td><code class="notranslate">herdr &lt;verb&gt; ... --session &lt;name&gt;</code></td>
+<td>Reached the named session even while another server was running.</td>
+</tr>
+<tr>
+<td>Literal send</td>
+<td><code class="notranslate">herdr pane send-text &lt;pane&gt; &lt;text&gt; --session &lt;name&gt;</code></td>
+<td>Left text unsubmitted until Enter.</td>
+</tr>
+<tr>
+<td>Keys</td>
+<td>`herdr pane send-keys  enter</td>
+<td>escape</td>
+</tr>
+<tr>
+<td>Capture</td>
+<td><code class="notranslate">herdr pane read &lt;pane&gt; --source recent --lines N</code></td>
+<td>Small N could return empty below viewport height; a 200-line request plus local trim was stable.</td>
+</tr>
+<tr>
+<td>Native state</td>
+<td><code class="notranslate">herdr agent get &lt;pane&gt;</code></td>
+<td>Working and done transitions were visible; native <code class="notranslate">busy</code> remains positive activity evidence, while native <code class="notranslate">idle</code> cannot close a turn and the adapter's semantic lifecycle decides worker state.</td>
+</tr>
+<tr>
+<td>Restart</td>
+<td>guarded named-session stop then start</td>
+<td>Workspace, tab, pane, and labels persisted; the agent process and registration did not.</td>
+</tr>
+<tr>
+<td>Close</td>
+<td><code class="notranslate">herdr pane close &lt;pane&gt; --session &lt;name&gt;</code></td>
+<td>The exact one-pane task tab closed; closing a final tab could remove the workspace.</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>All destructive verification used <code class="notranslate">bin/fm-herdr-lab.sh</code> with a non-default <code class="notranslate">fm-lab-</code> name and a byte-identical default-session tripwire.<br>
+No ambient <code class="notranslate">herdr server stop</code> command is a supported test operation.</p>
+<h3>Prune and respawn</h3>
+<p>The real label-collision reproduction is owned by:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-prune-safety-e2e.test.sh</pre></div>
+<p>Observed guarantee: a pre-existing captain-owned workspace with a seed-shaped tab was adopted for routing but its tab was never eligible for prune because the current create call did not return that seed id.</p>
+<p>Restart-husk replacement is owned by:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-respawn-idem-e2e.test.sh</pre></div>
+<p>Observed guarantee: a restored no-agent tab was replaced create-before-close, while a registered live agent caused refusal.</p>
+<h3>Launcher workspace placement</h3>
+<p>Herdr exports its pane identity into every process it manages, checked on 2026-07-30 against Herdr 0.7.5 protocol 17 inside a guarded lab pane:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh
+<span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$HERDR_LAB_HELPER</span><span class="pl-pds">"</span></span> run <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$LAB</span><span class="pl-pds">"</span></span> pane run <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$PANE</span><span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>sh -c 'env | grep ^HERDR | sort &gt; /tmp/env.txt'<span class="pl-pds">"</span></span></pre></div>
+<pre lang="text" class="notranslate"><code class="notranslate">HERDR_ENV=1
+HERDR_PANE_ID=w1:p1
+HERDR_SESSION=fm-lab-fm-herdr-env-pro-65961-25535
+HERDR_SOCKET_PATH=/Users/kunchen/.config/herdr/sessions/fm-lab-fm-herdr-env-pro-65961-25535/herdr.sock
+HERDR_TAB_ID=w1:t1
+HERDR_WORKSPACE_ID=w1
+</code></pre>
+<p>This complete injection shape is verified only for Herdr 0.7.5.<br>
+Firstmate requires both <code class="notranslate">HERDR_PANE_ID</code> and <code class="notranslate">HERDR_SOCKET_PATH</code> before accepting claimed launcher ancestry.</p>
+<p><code class="notranslate">pane get</code> reports the pane's current owning tab and workspace, which is what placement resolves from; the injected <code class="notranslate">HERDR_TAB_ID</code> and <code class="notranslate">HERDR_WORKSPACE_ID</code> are creation-time snapshots and are not read as current identity:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate"><span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$HERDR_LAB_HELPER</span><span class="pl-pds">"</span></span> run <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$LAB</span><span class="pl-pds">"</span></span> pane get w1:p1 <span class="pl-k">|</span> jq -c <span class="pl-s"><span class="pl-pds">'</span>.result.pane | {pane_id,tab_id,workspace_id}<span class="pl-pds">'</span></span></pre></div>
+<pre lang="text" class="notranslate"><code class="notranslate">{"pane_id":"w1:p1","tab_id":"w1:t1","workspace_id":"w1"}
+</code></pre>
+<p>Placement is owned by:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-launcher-workspace-e2e.test.sh</pre></div>
+<p>Observed guarantees on 2026-07-30 against Herdr 0.7.5 protocol 17:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real herdr E2E: with one 'firstmate' workspace and no herdr parent, a crewmate still lands in this home's own workspace without stealing focus
+ok - real herdr E2E: the normal unique-label path is unchanged when the launcher's own pane identifies the workspace
+ok - real herdr E2E: presentation spaces still create the isolated child workspace and bind it under the launcher's exact parent, without stealing focus
+ok - real herdr E2E: with two 'firstmate' workspaces, a worker spawned from inside the second one lands in that exact workspace
+ok - real herdr E2E: the duplicate-labeled sibling workspace is left entirely untouched and focus is preserved
+ok - real herdr E2E: with a duplicated home label, a projected worker still hangs off the launcher's exact workspace and the sibling stays untouched
+ok - real herdr E2E: an ambiguous home label with no launcher identity refuses before any worker endpoint exists
+ok - real herdr E2E: a launcher pane that no longer exists refuses before any worker endpoint exists
+ok - real herdr E2E: a secondmate launching its own worker gets the same exact-workspace guarantee, and its same-labeled sibling is untouched
+ok - real herdr E2E: a --secondmate launch still stands up that secondmate's own workspace instead of inheriting the launcher's
+ok - real herdr E2E: teardown closes only the worker's own pane and leaves the launcher, its workspace, and the same-labeled sibling intact
+</code></pre>
+<p>That suite's headline case runs <code class="notranslate">bin/fm-spawn.sh</code> inside a real Herdr pane, so the parent identity comes from Herdr's own injection rather than a composed environment.<br>
+Cross-session and contradictory bindings are covered deterministically in <code class="notranslate">tests/fm-backend-herdr.test.sh</code>, which can script a second server's socket without provisioning one.</p>
+<h3>Per-home and presentation topology</h3>
+<p>Per-home behavior is owned by:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-workspace-per-home-e2e.test.sh</pre></div>
+<p>Observed guarantee: the primary and secondmate used distinct home workspaces, a child launched by the secondmate stayed in that secondmate workspace, list-live remained home-scoped, and exact cleanup did not affect sibling homes.</p>
+<p>The complete projection suite ran on 2026-07-21 against Herdr 0.7.4 protocol 16:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-presentation-e2e.test.sh</pre></div>
+<p>Observed guarantees included:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real Herdr lab: primary and two secondmate homes each own a top-level contiguous child block
+ok - real Herdr lab: concurrent primary/A/B spawns stay session-locked with zero focus drift
+ok - real Herdr lab: session lock contention from a secondmate home falls back flat with no journal
+ok - real Herdr lab: legacy projection labels and flat secondmate tabs are left unmigrated
+ok - real Herdr lab: multi-home exact-pane teardowns restore captain focus without workspace close authority
+ok - real Herdr lab validation completed on Herdr 0.7.4 with the default-session tripwire intact
+</code></pre>
+<p>The suite also covers lost or failed move responses, active-tab refusal, restart husks, missing and duplicate tokens, manual renames, concurrent cleanup, and exact focus restoration.</p>
+<p>The mandatory projection suite ran again on 2026-07-24 against Herdr 0.7.5 protocol 16:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-presentation-e2e.test.sh</pre></div>
+<p>Observed restart-reclaim guarantees:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real Herdr lab: Hi Bit and Wheelhouse-style same-identity restarts reclaim one nested space with exact focus and idempotence
+ok - real Herdr lab: secondmate restart binding and reclaim stay isolated to the exact child home and parent
+ok - real Herdr lab: concurrent cross-home recoveries replace exact husks under one session lock with no focus drift
+ok - real Herdr lab: missing, renamed, and duplicate tokens trigger zero destructive or adoptive calls, and live duplicate risk refuses launch
+ok - real Herdr lab validation completed on Herdr 0.7.5 with the default-session tripwire intact
+</code></pre>
+<p>The projection suite ran again on 2026-08-04 against Herdr 0.8.0 protocol 19 for the default-on flip, where an absent <code class="notranslate">config/herdr-presentation-spaces</code> enables the projection and the value <code class="notranslate">off</code> opts out; since 2026-08-05 an absent file enables the projection only at or above the 0.8.0 floor recorded under "Presentation version floor" below, and <code class="notranslate">on</code> is the explicit opt-in that survives the floor:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-presentation-e2e.test.sh</pre></div>
+<p>Observed default and opt-out guarantees:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real Herdr lab: an opted-out spawn retains the Stage 1 Herdr command sequence with zero ordering calls
+ok - real Herdr lab: a home that configured nothing is projected by default
+ok - real Herdr lab: the primary presentation setting inherits into real secondmate homes
+ok - real Herdr lab validation completed on Herdr 0.8.0 with the default-session tripwire intact
+</code></pre>
+<p>The projected spawn in that run used the historical empty opt-in file, so a home that had already enabled the projection keeps it without any migration step.<br>
+One concurrent cross-home recovery case refused under contention on a loaded machine and passed on an immediate rerun; recovery-path presentation lock contention is a deliberate hard refusal rather than a flat fallback, which default-on now makes reachable from any Herdr home.<br>
+That run measured the default-on projection on Herdr 0.8.0 only, while the focus-flash regression below was last run on 0.7.5 before the flip, so neither run covered a defective release under default-on projection; the version floor and the focus-flash suite's Part C close that gap.</p>
+<p>The restored-shell session-start cleanup ran on 2026-07-24 against Herdr 0.7.5 protocol 17:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-herdr-session-cleanup-e2e.test.sh</pre></div>
+<p>Observed guarantee: one exact home-local, journal-correlated, one-tab and one-pane childless idle shell was closed after restoration while the exact non-target focus and default fleet session remained unchanged, and a repeat run was a no-op.</p>
+<h3>Workspace-removal focus safety</h3>
+<p>The focus-flash regression ran on 2026-08-05 against both Herdr 0.7.5 protocol 17 and Herdr 0.8.0 protocol 19 on macOS aarch64, with the 0.7.5 run using the pinned upstream release binary first on <code class="notranslate">PATH</code>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-focus-flash-e2e.test.sh</pre></div>
+<p>Observed output on Herdr 0.7.5:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - old path: the explicit last-pane close of a non-focused workspace stole focus (w3	w3:t1 -&gt; w2	w2:t1)
+ok - mitigation: every in-operation sample preserved exact focus while the doomed workspace was removed
+ok - mitigation: no explicit close and no corrective focus were needed on the defective release
+ok - fallback: a doomed pane holding a persistent child exhausts the proof and takes the plain explicit close
+ok - fallback on a defective release: a bounded wrong-focus window of 4 samples was fully restored to the anchor
+ok - version floor: herdr 0.7.5 protocol 17 remains conservatively below the floor with steal_live=1
+ok - version floor: an unconfigured home falls back flat on herdr 0.7.5 and the explicit opt-in still projects
+evidence: herdr=0.7.5 protocol=17 steal_live=1 floor_verdict=1 default-session-tripwire=armed
+</code></pre>
+<p>Observed output on Herdr 0.8.0:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - old path note: this Herdr release preserves focus across the explicit close; continuing with outcome-only assertions
+ok - mitigation: every in-operation sample preserved exact focus while the doomed workspace was removed
+ok - fallback: a doomed pane holding a persistent child exhausts the proof and takes the plain explicit close
+ok - fallback on a focus-preserving release: the plain explicit close preserved exact focus throughout
+ok - version floor: herdr 0.8.0 protocol 19 is at or above the floor and preserves focus
+ok - version floor: an unconfigured home stays projected on herdr 0.8.0 and the explicit opt-in agrees
+evidence: herdr=0.8.0 protocol=19 steal_live=0 floor_verdict=0 default-session-tripwire=armed
+</code></pre>
+<p>Part C is the case the suite could not reach before: a doomed pane whose shell holds a persistent background child fails the lone-idle-shell proof on every sample, so the plan takes the plain explicit close, in the geometry where the closing workspace's right neighbour is a spacer rather than the focused anchor.<br>
+On 0.7.5 that fallback exposed a bounded four-sample wrong-focus window and restored the anchor exactly; on 0.8.0 the same fallback exposed none, which is why default-on projection is floored at 0.8.0 rather than mitigated further below it.<br>
+The suite also cross-checks its own Part A measurement against the floor classifier on whatever release it runs, so a drifted protocol-to-release mapping fails there rather than silently gating on the wrong thing.</p>
+<h3>Presentation version floor</h3>
+<p>Default-on presentation projection is floored at Herdr 0.8.0.<br>
+The floor's structural signal is the selected running server's protocol number, falling back to the client protocol only when that selected session positively reports no running server, and the release mapping was measured on 2026-08-05 by running each pinned upstream macOS aarch64 release asset's own <code class="notranslate">status --json</code> through the guarded lab helper:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Release</th>
+<th>Reported version</th>
+<th>Protocol</th>
+<th>Carries both upstream focus fixes</th>
+<th>Floor verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v0.7.3</td>
+<td>0.7.3</td>
+<td>16</td>
+<td>no</td>
+<td>below</td>
+</tr>
+<tr>
+<td>v0.7.4</td>
+<td>0.7.4</td>
+<td>16</td>
+<td>no</td>
+<td>below</td>
+</tr>
+<tr>
+<td>v0.7.5</td>
+<td>0.7.5</td>
+<td>17</td>
+<td>no</td>
+<td>below</td>
+</tr>
+<tr>
+<td>preview-2026-07-21-0f10e1453a7f</td>
+<td>0.7.5-preview.2026-07-21-0f10e1453a7f</td>
+<td>17</td>
+<td>no</td>
+<td>below</td>
+</tr>
+<tr>
+<td>preview-2026-07-29-44b3adb12552</td>
+<td>0.7.5-preview.2026-07-29-44b3adb12552</td>
+<td>18</td>
+<td>yes</td>
+<td>below</td>
+</tr>
+<tr>
+<td>preview-2026-08-04-d78e3d3b5126</td>
+<td>0.8.0-preview.2026-08-04-d78e3d3b5126</td>
+<td>19</td>
+<td>yes</td>
+<td>above</td>
+</tr>
+<tr>
+<td>v0.8.0</td>
+<td>0.8.0</td>
+<td>19</td>
+<td>yes</td>
+<td>above</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>No build lacking both fixes reaches protocol 19, and every pre-fix build tops out at 17, so protocol 19 is a safe structural expression of the 0.8.0 floor.<br>
+The one post-fix build below it is a preview that still reports a 0.7.5 version, so it is conservatively treated as below the floor, which costs a preview build its projection and never lets an unfixed build through.<br>
+The 2026-08-05 named-lab cross-version probe started a server from Herdr 0.7.5 and queried it with the installed 0.8.0 client; status reported client version 0.8.0 protocol 19, server version 0.7.5 protocol 17, server running true, and server compatible false.<br>
+That ordinary post-upgrade shape proves the running server owns the focus behavior, so the unconfigured default composes client and selected-server verdicts conservatively and rechecks after server ensure before publishing a journal or creating a workspace.</p>
+<p>Refresh this table with the opt-in guard, which re-downloads the pinned assets, verifies their digests, and fails naming any release whose reported version, protocol, or verdict has moved:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_HERDR_VERSION_FLOOR_LIVE_E2E=1 tests/fm-herdr-version-floor-live-e2e.test.sh</pre></div>
+<p>The classifier itself, the config preference it composes with, and the one-warning-per-release behavior are pinned portably with no Herdr installed:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-backend-herdr.test.sh</pre></div>
+<p>Observed guarantees: every measured release classifies as the table records; either the protocol or the version signal alone carries an at-or-above verdict, and each divergent pair flips once the carrying signal is removed; client and running selected-session server verdicts compose conservatively, an unreadable server-running state and losing both release signals report indeterminate and fall back flat, the default is rechecked after server ensure before projection publication, an unconfigured home is projected only at or above the floor, an explicit <code class="notranslate">on</code>, including the historical empty opt-in file, is honored below it, and the below-floor warning is emitted once per home per detected release rather than once per spawn.</p>
+<p>The whole real-Herdr lane was run on 2026-08-05 against both the CI-pinned Herdr 0.7.4 protocol 16, which is below the floor, and Herdr 0.8.0 protocol 19, which is at it:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh bin/fm-test-run.sh --lane real-herdr-gated</pre></div>
+<p>Both runs reported <code class="notranslate">family=real-herdr-gated count=11 failed=0</code>.<br>
+The projection suite's unconfigured-home case is release-aware rather than pinned to one outcome, so it proves the projected default on 0.8.0 and the flat fallback with its naming warning on 0.7.4:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real Herdr lab: a home that configured nothing is projected by default on herdr 0.8.0
+ok - real Herdr lab: a home that configured nothing falls back flat on below-floor herdr 0.7.4 with one naming warning
+</code></pre>
+<p>Every other case in that suite uses an explicit opt-in or opt-out, so the floor leaves them unchanged on both releases.</p>
+<p>Direct lab probes on 2026-07-28 established the removal rules the emptying-close plan relies on, each verified with <code class="notranslate">workspace list</code> focus reads around one mutation in a guarded <code class="notranslate">fm-lab-</code> session:</p>
+<ul>
+<li>An explicit <code class="notranslate">pane close</code> that emptied a non-focused workspace moved focus off the focused workspace in both before-focus and after-focus geometries.</li>
+<li>Ending a workspace's lone shell preserved the focused workspace exactly when the dying workspace sat behind it or the focused workspace was last, and moved focus to the focused workspace's right neighbor otherwise.</li>
+<li>The production focus-preserving close in the dangerous geometry repositioned the doomed workspace, ended its proved shell, and left every concurrent focus sample on the exact anchor with no corrective <code class="notranslate">tab focus</code> issued.</li>
+</ul>
+<p>Two real-hardware conditions were required for the pane-death path to engage and are now encoded in the adapter and its unit fixtures: BSD <code class="notranslate">ps</code> reports a login shell's <code class="notranslate">comm</code> as <code class="notranslate">-zsh</code>, and an idle shell transiently hosts a prompt helper (starship) as a second foreground process immediately after a <code class="notranslate">workspace.move</code> relayout, which the bounded settle window absorbs.</p>
+<p>The rules match the v0.7.5 tag source (<code class="notranslate">close_selected_workspace</code> reassigns focus from the closing workspace's index; <code class="notranslate">handle_pane_died</code> only clamps the stale focused index), and the upstream default branch resolves both paths by workspace id (PR #1877, commit <code class="notranslate">165dca45</code>, for the explicit close; PR #1912, commit <code class="notranslate">a979916</code>, for pane death), so the plan degrades to a harmless reorder-then-remove once a release carries them.</p>
+<p>The full projection and restored-shell suites were re-run on 2026-07-28 on Herdr 0.7.5 with the updated close path; the presentation suite completed with <code class="notranslate">real Herdr lab validation completed on Herdr 0.7.5 with the default-session tripwire intact</code>, and the restored-shell cleanup guarantee above was unchanged.</p>
+<p>The teardown-level record-retention gate was verified on 2026-07-28 with metadata fixtures and a live contending lock holder:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-teardown.test.sh
+tests/fm-backend-herdr.test.sh</pre></div>
+<p>Observed guarantees: a contended presentation lock refused the teardown before the isolated copy was returned, with the task branch, every durable record, and the endpoint intact and no pane close attempted; the retry after the contention cleared returned the copy, closed the pane under the lock, and removed the records; an unknown structured-presence result after an attempted projected close retained the journal and every record with a nonzero exit; and every presence-gate mode accepted only a structured not-found as gone.</p>
+<p>The same fixtures verified three further boundaries on 2026-07-29: missing or malformed endpoint identity and an unparseable pane presence refused record removal with everything retained; the SIGKILL escalation re-read the exact pane's process information and refused to signal when a different shell pid owned the pane, falling back to the plain close with the original process untouched; and a reposition whose removal then failed on every path restored the exact original workspace order through a second verified move and reported the close as failed.</p>
+<p>The teardown fixture was re-run on 2026-07-31 after extending the same fail-closed boundary through forced secondmate cleanup, including recursive cleanup of a nested secondmate whose Herdr grandchild close remains unconfirmed.</p>
+<p>Observed output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - forced secondmate teardown preflights every Herdr child before cleanup mutation
+ok - forced secondmate teardown retains Herdr child identity until exact pane disappearance
+ok - forced teardown retains a nested secondmate home and its grandchild's Herdr identity when the grandchild close is unconfirmed
+</code></pre>
+<h3>Composer and operational input</h3>
+<p>Real captures verified these active distinctions:</p>
+<ul>
+<li>Claude and Codex use bare <code class="notranslate">❯</code> and <code class="notranslate">›</code> agent composers.</li>
+<li>Pi uses content between complete separator rows and requires exact native Pi identity.</li>
+<li>Dim or faint suggestion text is ghost content, while normally styled text is pending input.</li>
+<li>Grok dark truecolor placeholders are ghost content, while bright truecolor typed input remains pending.</li>
+<li>A bare shell prompt has no safe agent-composer container and is unknown.</li>
+</ul>
+<p><code class="notranslate">tests/fm-composer-ghost.test.sh</code>, <code class="notranslate">tests/fm-composer-lib.test.sh</code>, and the Herdr composer cases pin the exact captured ANSI bytes.<br>
+The U+2063 operational and routed-request separators were exercised through a real Pi-on-Herdr path; the byte-exact active regression is:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_SEND_MARKER_HERDR_E2E=1 \
+  tests/fm-send-secondmate-marker-herdr-e2e.test.sh</pre></div>
+<h3>Native blocked event</h3>
+<p>The protocol-16 event path was measured on 2026-07-11 with Herdr 0.7.3 and Python 3.13:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-backend-herdr-eventwait-smoke.test.sh</pre></div>
+<p>Observed output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real herdr: events.subscribe capability gate passes
+ok - real herdr: a driven idle-&gt;blocked transition returns the blocked record in 0.129s
+ok - real herdr: the watcher fast-path enqueues a stale wake naming the task window
+</code></pre>
+<p>Polling remained active and is covered as the fallback for capability, connect, subscribe, and repeated reader failure.</p>
+<h3>Agent lifecycle control</h3>
+<p>Herdr is one of the two backends whose recovery-grade agent-state classifier the control plane may trust (<a href="../agent-control.md">agent-control.md</a>), so its lifecycle gating is measured against the real binary; reverified 2026-08-08 on Herdr 0.8.0, and first measured 2026-08-02 on Herdr 0.7.5 with identical results:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-control-herdr-smoke.test.sh</pre></div>
+<p>Observed output:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">ok - real herdr: exit on a pane with no registered agent is idempotent success
+ok - real herdr: interrupt refuses when herdr's own agent registry reports no agent
+ok - real herdr: interrupt delivers the harness's key and proves the agent survived it
+ok - real herdr: no control verb removed the endpoint or the task's local copy
+ok - real herdr: an agent that does not stop fails closed instead of being reported as stopped
+</code></pre>
+<p>The registry read through <code class="notranslate">herdr pane report-agent</code> is the same source <code class="notranslate">fm_backend_herdr_agent_state</code> classifies, so registering and not registering an agent on a plain shell pane exercises exactly the gate every lifecycle verb depends on, with no real agent launched.<br>
+That command is the guard that refreshes this record; run it after every Herdr upgrade rather than trusting the version above.</p>
+<h3>Away-mode transport</h3>
+<p>The Pi/Herdr return and injection path was reverified on Herdr 0.7.3 and Pi 0.80.7:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_AFK_PI_HERDR_E2E=1 HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  tests/fm-afk-pi-herdr-return-e2e.test.sh</pre></div>
+<p>Observed guarantees: pending composer input refused injection and raised one alert; idle Pi accepted one marked escalation; the return gate refused ordinary work while a live blocker remained; resolving the blocker allowed the return flow.<br>
+The dedicated Herdr daemon workspace topology is covered by <code class="notranslate">tests/fm-afk-launch.test.sh</code> and preserves the captain tab's pane count.</p>
+<h2>Zellij</h2>
+<p>The current compatibility floor and latest verification are Zellij 0.44.0 with <code class="notranslate">jq</code> on macOS aarch64.<br>
+All real tests use a uniquely named session and <code class="notranslate">tests/zellij-test-safety.sh</code>; they never touch a session named <code class="notranslate">firstmate</code> or call all-session deletion.</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Guarantee</th>
+<th>Command shape</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Headless session</td>
+<td><code class="notranslate">zellij attach -b &lt;name&gt;</code> without a TTY</td>
+<td>Created a persistent background session and returned.</td>
+</tr>
+<tr>
+<td>Session list</td>
+<td><code class="notranslate">zellij list-sessions --short --no-formatting</code></td>
+<td>Returned one plain name per line without starting a session.</td>
+</tr>
+<tr>
+<td>Create tab</td>
+<td><code class="notranslate">zellij action new-tab --cwd &lt;dir&gt; --name &lt;title&gt;</code></td>
+<td>Returned a numeric tab id and focused the new tab when a client was attached.</td>
+</tr>
+<tr>
+<td>Pane discovery</td>
+<td><code class="notranslate">zellij action list-panes --json</code></td>
+<td>Included terminal pane id, tab id, plugin flag, and top-level <code class="notranslate">pane_cwd</code>.</td>
+</tr>
+<tr>
+<td>Literal send</td>
+<td><code class="notranslate">zellij action paste --pane-id &lt;id&gt; -- &lt;text&gt;</code></td>
+<td>Left text unsubmitted.</td>
+</tr>
+<tr>
+<td>Keys</td>
+<td><code class="notranslate">send-keys --pane-id &lt;id&gt; Enter</code>, <code class="notranslate">Esc</code>, and one argument <code class="notranslate">Ctrl c</code></td>
+<td>All three shared operations worked.</td>
+</tr>
+<tr>
+<td>Capture</td>
+<td><code class="notranslate">dump-screen --pane-id &lt;id&gt;</code> or <code class="notranslate">--full</code></td>
+<td>Worked with no attached client; no line-bound flag exists.</td>
+</tr>
+<tr>
+<td>Styled capture</td>
+<td><code class="notranslate">dump-screen --pane-id &lt;id&gt; --ansi</code></td>
+<td>Preserved ANSI styling ("Composer classification matrix" above); feeds the zellij composer classifier.</td>
+</tr>
+<tr>
+<td>Close</td>
+<td><code class="notranslate">close-tab-by-id &lt;id&gt;</code></td>
+<td>Removed the live task pane and tab together.</td>
+</tr>
+<tr>
+<td>Failure exit</td>
+<td>actions against missing targets</td>
+<td>Returned exit 0, requiring structural preflight and output-shape validation.</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p><code class="notranslate">pane_cwd</code> stayed frozen when a foreground subshell changed directory.<br>
+The marker-delimited <code class="notranslate">pwd</code> probe returned the live nested cwd and is covered by the real smoke.<br>
+The focus mitigation restored the previously active tab after <code class="notranslate">new-tab</code>, with the unavoidable narrow race documented in the operator guide.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-backend-zellij.test.sh
+tests/fm-backend-zellij-smoke.test.sh</pre></div>
+<p>The real lifecycle smoke proved spawn, metadata, nested-subshell worktree discovery, send, capture, unlanded-work refusal, approved local landing, exact tab cleanup, and session cleanup without retaining task-specific ids or branch names here.</p>
+<h2>Orca</h2>
+<p>Real readiness was verified against <code class="notranslate">/usr/local/bin/orca</code> with <code class="notranslate">/Applications/Orca.app</code> bundle version 1.4.116.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">orca status --json</pre></div>
+<p>Observed fields:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">result.runtime.reachable=true
+result.runtime.state=ready
+</code></pre>
+<p><code class="notranslate">orca terminal create --json</code> returned <code class="notranslate">result.terminal.handle</code>.<br>
+<code class="notranslate">orca worktree create</code> returned <code class="notranslate">result.worktree.id</code> and <code class="notranslate">result.worktree.path</code>.<br>
+Speculative bare ids and nested terminal fields were deliberately rejected.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-backend-orca.test.sh
+tests/fm-backend.test.sh
+tests/fm-bootstrap.test.sh</pre></div>
+<p>The fake-Orca suite covers readiness, registration, create response parsing, metadata routing, popup-safe submit, and path-matched release refusal.</p>
+<h2>cmux</h2>
+<p>The current compatibility floor is cmux 0.64, and the active live evidence uses 0.64.17 build 97 on macOS aarch64.<br>
+Real tests use only exact <code class="notranslate">fm-test-</code> workspaces guarded by <code class="notranslate">tests/cmux-test-safety.sh</code> and never quit or relaunch the captain's app.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">cmux version
+cmux ping</pre></div>
+<p>Observed version:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">cmux 0.64.17 (97) [9ed29d81a]
+</code></pre>
+<p>Source and live checks established the five control modes:</p>
+<ul>
+<li><code class="notranslate">off</code> starts no listener.</li>
+<li><code class="notranslate">cmuxOnly</code> rejects an external Firstmate process by ancestry.</li>
+<li><code class="notranslate">automation</code> uses an owner-only 0600 socket with no handshake.</li>
+<li><code class="notranslate">password</code> uses the same 0600 socket plus <code class="notranslate">auth &lt;password&gt;</code>.</li>
+<li><code class="notranslate">allowAll</code> uses a 0666 socket with no authentication.</li>
+</ul>
+<p>The live default rejection was <code class="notranslate">Access denied - only processes started inside cmux can connect</code>.<br>
+The live password challenge was <code class="notranslate">Authentication required - send auth &lt;password&gt; first</code>.<br>
+The app configuration writer did not retain a hand-added socket password, which is why the operator guide requires Settings and a local Firstmate password source.</p>
+<p>Current active CLI findings:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Guarantee</th>
+<th>Command shape</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create</td>
+<td><code class="notranslate">new-workspace --name &lt;title&gt; --cwd &lt;dir&gt; --focus false --id-format uuids</code></td>
+<td>Created one workspace with one surface without focusing it.</td>
+</tr>
+<tr>
+<td>Fresh readiness</td>
+<td><code class="notranslate">list-panes --workspace &lt;id&gt; --json --id-format uuids</code></td>
+<td>Found a brand-new surface before content existed.</td>
+</tr>
+<tr>
+<td>Fresh read counterexample</td>
+<td><code class="notranslate">read-screen</code> before any write</td>
+<td>Returned <code class="notranslate">internal_error: Failed to read terminal text</code>.</td>
+</tr>
+<tr>
+<td>Literal send</td>
+<td><code class="notranslate">send --workspace &lt;id&gt; --surface &lt;id&gt; -- &lt;text&gt;</code></td>
+<td>Left text unsubmitted.</td>
+</tr>
+<tr>
+<td>Keys</td>
+<td>`send-key ... enter</td>
+<td>escape</td>
+</tr>
+<tr>
+<td>Nested cwd</td>
+<td><code class="notranslate">current_directory</code> plus foreground subshell</td>
+<td>Structured cwd froze; the marker-delimited <code class="notranslate">pwd</code> probe found the live cwd.</td>
+</tr>
+<tr>
+<td>Last surface</td>
+<td><code class="notranslate">close-surface</code> on the only surface</td>
+<td>Refused with <code class="notranslate">invalid_state: Cannot close the last surface</code>.</td>
+</tr>
+<tr>
+<td>Last workspace</td>
+<td><code class="notranslate">close-workspace</code> on the only workspace in a window</td>
+<td>Printed success but left the workspace present.</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>The last-workspace workaround was reverified on 2026-07-10 in Automation mode.<br>
+After creating one unfocused unnamed sibling in the same window, <code class="notranslate">close-workspace</code> removed the exact task workspace and left only cmux's default sibling.<br>
+A selected non-last workspace closed directly, proving that window cardinality rather than selection is the trigger.</p>
+<p>Source inspection confirmed each workspace constructor creates a new UUID with no restored-id input.<br>
+Recovery therefore remains title-based.<br>
+The bundled Claude wrapper was observed stripping <code class="notranslate">CMUX_*</code> variables on its failed socket-probe path while retaining the app bundle id, supporting the macOS-only bundle-id and ancestry fallbacks.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">tests/fm-backend-cmux.test.sh
+tests/fm-backend-cmux-smoke.test.sh</pre></div>
+<p>The real smoke proves socket access, fresh readiness, current-path probing, send and keys, bounded capture, title identity, and guarded exact cleanup.</p>
+<h3>Claude composer confirmation</h3>
+<p>The borderless Claude composer confirmation was verified on 2026-08-09 with cmux 0.64.22 build 102 and Claude Code 2.1.226 on macOS aarch64.<br>
+An isolated real Claude worker rendered a bare <code class="notranslate">❯</code> plus U+00A0 row between horizontal rules.<br>
+The cmux classifier returned <code class="notranslate">empty</code>, and one <code class="notranslate">fm-send.sh --resolve-key &lt;key&gt; ALBATROSS</code> command appended the matching <code class="notranslate">resolved</code> event before the worker reported completion.<br>
+The terminal capture contained exactly one submitted <code class="notranslate">❯ ALBATROSS</code> row.<br>
+Refresh this harness-dependent proof with an isolated cmux Claude worker before accepting a Claude or cmux upgrade:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_CMUX_CLAUDE_COMPOSER_LIVE=1 bin/fm-test-run.sh tests/fm-cmux-claude-composer-live-e2e.test.sh</pre></div>
+<p>The portable classifier regression is <code class="notranslate">tests/fm-backend-cmux.test.sh</code>.</p>
+<h2>Codex App host tools</h2>
+<p>A reusable Desktop host-tool smoke ran on 2026-07-06 against Codex Desktop bundle version 26.623.101652, build 4674, bundle id <code class="notranslate">com.openai.codex</code>.<br>
+Local paths and task-specific ids are intentionally not retained here.</p>
+<p>The host-tool sequence was:</p>
+<ol>
+<li>list a saved project;</li>
+<li>create a Desktop-owned worktree thread;</li>
+<li>recover and read the thread while active and after completion;</li>
+<li>verify the thread appended a Firstmate status line and wrote its report;</li>
+<li>send a follow-up to the same thread;</li>
+<li>read the completed follow-up;</li>
+<li>archive the exact thread;</li>
+<li>read the archived transcript with state <code class="notranslate">notLoaded</code>.</li>
+</ol>
+<p>Observed guarantee: a Desktop-owned thread can write Firstmate lifecycle files when the prompt provides an authorized absolute path, and create, send, read, and archive work at the Desktop host-tool layer.<br>
+The missing guarantee remains a supported shell-callable bridge that lets Firstmate perform those operations against the same visible Desktop endpoint.<br>
+App-server partial methods and raw socket experiments do not satisfy that bridge contract.</p>
+<h3>Remote stored-thread ownership</h3>
+<p>Two controlled trials ran on 2026-08-20 against Codex CLI/App Server 0.148.0 and the current iOS Remote client.<br>
+Each trial launched a fresh standalone Codex CLI thread under Herdr, pinned its exact identity for the trial, opened the discoverable thread from iOS while the CLI writer was active, checked that the terminal worker remained healthy, stopped the CLI through the normal control path, and reopened the same stored thread after ownership was released.</p>
+<p>The stable conflict output while the CLI owned the writer was:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">iOS: Error loading messages.
+App Server: already has an active writer
+</code></pre>
+<p>The terminal worker and its transcript continued normally through the conflict.<br>
+After the CLI stopped, iOS loaded the complete stored transcript, and read-only process evidence showed the managed Remote App Server holding the exact rollout and writer-lock descriptors.<br>
+This counterfactual distinguishes the deterministic concurrent-writer conflict from worker failure, missing transcript data, connectivity loss, and stale worktree cleanup.</p>
+<p>In the first trial, fresh-App-Server <code class="notranslate">thread/read</code> and <code class="notranslate">thread/turns/list</code> calls read the live externally owned stored thread without loading or resuming it, changing its transcript or metadata, or harming its writer.<br>
+The second trial's control probe negotiated the experimental pagination capability only partially, so it does not independently reverify the bounded turns-list path and does not disconfirm the first result.<br>
+These methods support a bounded stored-thread observer, but they do not provide the create, send, live-state, stop, and status-return guarantees required of a Firstmate backend.</p>
+<h2>Cursor Agent CLI</h2>
+<p>Cursor runs crewmate, scout, secondmate, and primary work; <a href="supervision.md#cursor-primary-park-2026-08-13"><code class="notranslate">supervision.md</code></a> owns the primary evidence.<br>
+The evidence below was produced on 2026-08-11 against the installed signed CLI on macOS 26.5.2 arm64 with tmux 3.6a, running as <code class="notranslate">kunchenguid</code>, and extended on 2026-08-13 with the tmux composer verdict below.</p>
+<ul>
+<li>Binary: <code class="notranslate">~/.local/bin/cursor-agent</code>, canonicalizing into <code class="notranslate">~/.local/share/cursor-agent/versions/2026.08.11-e8db854/cursor-agent</code>.</li>
+<li>Version: <code class="notranslate">cursor-agent --version</code> reported <code class="notranslate">2026.08.11-e8db854</code>, and <code class="notranslate">cursor-agent status</code> reported a logged-in account.</li>
+<li>Both installed names, <code class="notranslate">cursor-agent</code> and the legacy alias <code class="notranslate">agent</code>, resolve into that same versioned install tree.</li>
+</ul>
+<p>Resolution prints the STABLE launcher rather than the canonical target, because the canonical path carries a version the CLI replaces on its own auto-update.</p>
+<h3>Process identity</h3>
+<p><code class="notranslate">#{pane_current_command}</code> and <code class="notranslate">ps -o comm=</code> disagree for cursor, which is why identity reads both:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Source</th>
+<th>Observed value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="notranslate">#{pane_current_command}</code></td>
+<td><code class="notranslate">node</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">ps -o comm=</code></td>
+<td><code class="notranslate">/Users/&lt;user&gt;/.local/bin/cursor-agent</code></td>
+</tr>
+<tr>
+<td>child argv</td>
+<td><code class="notranslate">.../bin/cursor-agent --use-system-ca .../versions/2026.08.11-e8db854/index.js --trust --yolo</code></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p><code class="notranslate">node</code> matches no harness name pattern, so a cursor pane is identified from Cursor's own name or install tree in the path or argv[0].<br>
+An unrelated <code class="notranslate">node</code> or <code class="notranslate">agent</code> matches neither and classifies <code class="notranslate">other</code>, which the liveness callers fold into <code class="notranslate">ambiguous</code> rather than <code class="notranslate">dead</code>.<br>
+A live cursor pane returned <code class="notranslate">alive</code>; a plain shell pane in the same run returned <code class="notranslate">dead</code>.</p>
+<h3>Environment markers and detection ordering</h3>
+<p>Read from the live agent process and from a tool subprocess it spawned:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Marker</th>
+<th>Where observed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="notranslate">CURSOR_INVOKED_AS=cursor-agent</code></td>
+<td>the agent process itself, and its children</td>
+</tr>
+<tr>
+<td><code class="notranslate">CURSOR_AGENT=1</code></td>
+<td>child/tool processes only</td>
+</tr>
+<tr>
+<td><code class="notranslate">CURSOR_CONVERSATION_ID=&lt;uuid&gt;</code></td>
+<td>child/tool processes</td>
+</tr>
+<tr>
+<td><code class="notranslate">AGENT_TRANSCRIPTS=&lt;projects-root&gt;/&lt;slug&gt;/agent-transcripts</code></td>
+<td>child/tool processes</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>Cursor does not clear an inherited <code class="notranslate">CLAUDECODE</code>, so ordering decides the verdict.<br>
+With both markers set, <code class="notranslate">bin/fm-harness.sh</code> reports <code class="notranslate">cursor</code>; with <code class="notranslate">CLAUDECODE</code> alone it still reports <code class="notranslate">claude</code>.</p>
+<h3>Composer</h3>
+<p>Cursor's composer is a BARE row whose prompt glyph is <code class="notranslate">→</code> (U+2192); there is no border.<br>
+Its idle placeholder is <code class="notranslate">Plan, search, build anything</code> in a fresh session and <code class="notranslate">Add a follow-up</code> after a completed turn.</p>
+<p>The styled capture of an idle composer row was:</p>
+<pre class="notranslate"><code class="notranslate">ESC[48;2;21;21;21m ESC[2m→ ESC[0;7mESC[48;2;21;21;21mPESC[0;2mESC[48;2;21;21;21mlan, search, build anythingESC[0m
+</code></pre>
+<p>The glyph and the placeholder tail are dim (SGR 2), but the cell under the terminal cursor is reverse video (SGR 0;7).<br>
+Reverse video is neither dim nor a dark foreground, so ghost stripping leaves a lone <code class="notranslate">P</code> and an idle composer read <code class="notranslate">pending</code> before the fix.<br>
+After teaching the shared classifier the glyph, both placeholders, and the plain-row remnant rule, the same captures read <code class="notranslate">empty</code> on the styled cursorless backends, while real typed text - including text typed to exactly match the placeholder - still read <code class="notranslate">pending</code>.<br>
+An unstyled capture has no ghost-strip proof and correctly stays <code class="notranslate">unknown</code>.</p>
+<h4>tmux composer verdict, corrected 2026-08-13</h4>
+<p>The 2026-08-11 record that a Cursor pane's tmux composer verdict is <code class="notranslate">unknown</code> in every state described the cursor-ANCHORED read, which remains true: <code class="notranslate">#{cursor_y}</code> was 25 with <code class="notranslate">#{cursor_flag}</code> 0 on an idle pane, pointing below the footer, so tmux's cursor row is not a composer locator for Cursor.<br>
+Read cursorlessly, the same live capture classifies correctly, so the composite verdict is no longer <code class="notranslate">unknown</code>:</p>
+<pre lang="text" class="notranslate"><code class="notranslate">cursor_y=25  cursor_flag=0
+with-cursor : unknown      cursorless : empty     (idle composer)
+with-cursor : unknown      cursorless : pending   (real typed text, not submitted)
+with-cursor : unknown      cursorless : unknown   (agent exited to a shell)
+</code></pre>
+<p><code class="notranslate">bin/fm-tmux-lib.sh</code> therefore reclassifies cursorlessly only when the pane's foreground process group is provably Cursor, so every other harness keeps the strict blank-cursor-row posture.<br>
+That supplies the genuine composer-empty proof required for away-mode escalation delivery.<br>
+A live injection through <code class="notranslate">bin/fm-supervise-daemon.sh</code>'s own <code class="notranslate">inject_msg</code> into a real Cursor pane returned 0 and the pane processed the typed <code class="notranslate">FIRSTMATE_OP: v1 away-supervisor:</code> escalation.</p>
+<p><code class="notranslate">tests/fm-tmux-agent-liveness.test.sh</code> pins this with real processes and no Cursor installed: it asserts the cursor-anchored source is blind, that the composite still reads <code class="notranslate">empty</code> idle and <code class="notranslate">pending</code> with typed text, that an identical screen stays <code class="notranslate">unknown</code> when the pane is not Cursor, and that a stale Cursor screen over a dead shell never reads <code class="notranslate">empty</code>.</p>
+<h3>Busy state</h3>
+<p>Cursor writes a per-conversation transcript at <code class="notranslate">&lt;projects-root&gt;/&lt;workspace-slug&gt;/agent-transcripts/&lt;conversation-id&gt;/&lt;conversation-id&gt;.jsonl</code>.<br>
+Each turn is bracketed by a <code class="notranslate">role:user</code> open and a typed <code class="notranslate">{"type":"turn_ended","status":...}</code> close.<br>
+Observed closes: <code class="notranslate">success</code> for a completed turn, and <code class="notranslate">aborted</code> with <code class="notranslate">"error":"User aborted/interrupted manually."</code> after a single Escape.</p>
+<p>The trailing close landed 0 seconds after the pane's busy footer cleared on a normal turn.<br>
+The transcript does NOT accumulate one close per turn, so a count of closes is not a progress signal; only the trailing record is.<br>
+After an interrupt the aborted close was observed within seconds in some runs and not within twenty seconds in others, so <code class="notranslate">bin/fm-control-lib.sh</code> deliberately claims no cancellation acknowledgement for cursor.</p>
+<p>Binding never reconstructs cursor's workspace-slug directory name, which collapses path separators.<br>
+Cursor records the exact absolute workspace path in each project directory's <code class="notranslate">.workspace-trusted</code>, and the binding matches on that value.</p>
+<h3>Rendered busy token, delivery only</h3>
+<p>Mid-turn the pane showed a braille spinner plus a verb, and <code class="notranslate">ctrl+c to stop</code> on the composer row; both the verb line and that token were absent the instant the turn ended.<br>
+The same version rendered <code class="notranslate">Working</code> in one turn and <code class="notranslate">Running</code> in the next, so the TOKEN is matched and the verb is not.<br>
+This row is a delivery guard for submit acknowledgement only; recorded worker state comes from the transcript fold.</p>
+<h3>Launch, lifecycle, and skills</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Fact</th>
+<th>Observed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Workspace trust</td>
+<td><code class="notranslate">--trust</code> suppressed the prompt; <code class="notranslate">--yolo</code> alone did NOT, and the prompt blocks a fresh worktree</td>
+</tr>
+<tr>
+<td>Autonomy</td>
+<td><code class="notranslate">--yolo</code> (alias of <code class="notranslate">--force</code>); the footer renders <code class="notranslate">Run Everything</code></td>
+</tr>
+<tr>
+<td>Worktree</td>
+<td><code class="notranslate">-w/--worktree</code> allocates a SECOND worktree under <code class="notranslate">~/.cursor/worktrees</code> and is never passed</td>
+</tr>
+<tr>
+<td>Effort</td>
+<td>no effort flag exists; requested effort stays in task metadata</td>
+</tr>
+<tr>
+<td>Interrupt</td>
+<td>single Escape; the pane showed <code class="notranslate">Cancelled</code> and the composer returned to its placeholder, so no clear key is needed</td>
+</tr>
+<tr>
+<td>Exit</td>
+<td><code class="notranslate">/exit</code></td>
+</tr>
+<tr>
+<td>Skill invocation</td>
+<td><code class="notranslate">/&lt;skill&gt;</code>; cursor discovers firstmate's user-level skills, and <code class="notranslate">/no-mistakes</code> autocompleted with firstmate's own description and invoked the skill</td>
+</tr>
+<tr>
+<td>Slash popup</td>
+<td>real: the first Enter closes the popup and a SECOND Enter submits, the same hazard as grok, covered by the submit core's retried Enter</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<h3>End-to-end</h3>
+<p>A throwaway scout was spawned through <code class="notranslate">bin/fm-spawn.sh --scout --backend tmux</code> on a real cursor worker and driven to completion:</p>
+<ol>
+<li>the launch delivered its brief positionally and the agent executed it;</li>
+<li><code class="notranslate">state/&lt;id&gt;.cursor-session</code> was written with the task worktree;</li>
+<li>the transcript fold read <code class="notranslate">busy</code> mid-turn and <code class="notranslate">idle</code> after it;</li>
+<li><code class="notranslate">bin/fm-send.sh</code> delivered a steer and exited 0;</li>
+<li><code class="notranslate">bin/fm-control.sh &lt;id&gt; interrupt</code> cancelled a running turn;</li>
+<li><code class="notranslate">bin/fm-control.sh &lt;id&gt; exit</code> stopped the agent;</li>
+<li><code class="notranslate">bin/fm-teardown.sh</code> refused until the scout's report and decision gate were satisfied, then removed the session record.</li>
+</ol>
+<h3>Herdr backend</h3>
+<p>The tmux run above is the reference; this section is the separate Herdr proof, produced on 2026-08-12 against Herdr 0.8.0 (client and server, protocol 19) and the same signed <code class="notranslate">cursor-agent</code> 2026.08.11-e8db854 on macOS 26.5.2 arm64.<br>
+Every step ran inside an isolated <code class="notranslate">fm-lab-</code> session provisioned by <code class="notranslate">bin/fm-herdr-lab.sh</code>, launched from a neutral parent outside any Herdr pane, with the live default session's pane count checked before, during, and after; it stayed at 7 throughout.</p>
+<p><strong>Herdr's native agent state is unusable for Cursor.</strong><br>
+A 60-sample probe of <code class="notranslate">agent get</code> across a full turn reported <code class="notranslate">agent_status=blocked</code> in every state - idle, mid-turn, and after.<br>
+The submit path's idle baseline is therefore structurally unreachable for Cursor, and every send falls into the composer branch.</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Pane state</th>
+<th>Composer verdict</th>
+<th>Rendered footer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Idle</td>
+<td><code class="notranslate">empty</code></td>
+<td>no busy token</td>
+</tr>
+<tr>
+<td>Text typed, not submitted</td>
+<td><code class="notranslate">pending</code></td>
+<td>no busy token</td>
+</tr>
+<tr>
+<td>Mid-turn</td>
+<td><code class="notranslate">pending</code> (placeholder plus <code class="notranslate">ctrl+c to stop</code> on one row)</td>
+<td><code class="notranslate">ctrl+c to stop</code></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>Herdr draws the composer's rules with the half-block glyphs U+2584 and U+2580 rather than the box-drawing family.<br>
+Before those were taught to the shared edge detector, a bare composer's wrap region ran through its own closing rule and swallowed the model and path footer, so an idle pane read <code class="notranslate">pending</code>.<br>
+Measured as an A/B on the same live pane, the pre-fix classifier returned <code class="notranslate">pending</code> and the current one returned <code class="notranslate">empty</code>.</p>
+<p>The idle fix alone did not confirm delivery, because the composer branch reads the mid-turn row instead.<br>
+With the rendered-footer transition in place, <code class="notranslate">bin/fm-send.sh</code> exited 0 and the steer executed in the pane; the same send previously exited 1 with <code class="notranslate">delivery unconfirmed; verdict=pending</code> on a message that had actually landed.</p>
+<p>The rest of the lifecycle was driven end to end on that worker:</p>
+<ol>
+<li><code class="notranslate">bin/fm-spawn.sh --scout --backend herdr</code> placed the worker and it executed its brief;</li>
+<li>the transcript fold read <code class="notranslate">busy</code> mid-turn and <code class="notranslate">idle</code> after, unchanged from tmux, so the recorded worker state is backend-agnostic;</li>
+<li><code class="notranslate">bin/fm-control.sh &lt;id&gt; interrupt</code> reported <code class="notranslate">cancel=unconfirmed</code> by design and the pane showed <code class="notranslate">Cancelled</code>, with the footer and the fold both returning to idle;</li>
+<li><code class="notranslate">bin/fm-control.sh &lt;id&gt; exit</code> stopped the agent through the slash popup and the pane returned to its shell;</li>
+<li><code class="notranslate">bin/fm-teardown.sh</code> refused until the scout's report and decision gate were satisfied, then removed the session record and returned the worktree.</li>
+</ol>
+<p>Other harnesses on Herdr are unaffected by the edge-detector change.<br>
+All seven live panes of the running default session - one Pi, four Claude, two plain shells - classified identically under the pre-fix and current classifiers.</p>
+<p><strong>Delivery confirmation is verified on tmux and Herdr only.</strong><br>
+Zellij, cmux, and Orca share a submit core that never consults the busy footer, so a Cursor steer there lands but <code class="notranslate">fm-send</code> reports delivery unconfirmed and exits non-zero.<br>
+Teaching that shared core the same transition is deliberately separate work, because it changes the submit path for every harness on those three backends and needs its own live validation on each.</p>
+<p>The portable regression is <code class="notranslate">tests/fm-cursor-harness.test.sh</code>, the composer captures are pinned in <code class="notranslate">tests/fm-composer-lib.test.sh</code>, and the Herdr submit and footer behavior is pinned in <code class="notranslate">tests/fm-backend-herdr.test.sh</code>.<br>
+Refresh this harness-dependent proof before accepting a cursor upgrade:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">FM_HARNESS_LIVENESS_DRIFT=1 bin/fm-test-run.sh tests/fm-harness-liveness-drift-live-e2e.test.sh</pre></div>
