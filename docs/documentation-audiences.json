@@ -409,11 +409,75 @@
       "audience": "maintainer-verification"
     },
     {
+      "path": "docs/adr/0001-soft-fork-of-firstmate.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0002-seeded-with-full-upstream-history.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0003-pixeloven-org-private-until-review.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0004-the-name-operator.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0005-agent-self-improvement-is-pr-gated.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0006-operator-cuts-its-own-release-tags.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0007-pixeloven-ci-in-its-own-workflow-namespace.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/_template.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/0008-autonomous-delivery-lane.md",
       "audience": "maintainer-architecture"
     },
     {
       "path": "docs/adr/0009-operator-arc-runner-routing.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/fork-contract.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/identity.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/releases.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/self-registration.md",
+      "audience": "operator-current"
+    },
+    {
+      "path": "docs/pixeloven/supply-chain-read.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/upstream-merges.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/upstream-tracking.md",
       "audience": "maintainer-architecture"
     }
   ]
