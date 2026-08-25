@@ -102,7 +102,7 @@ Two suites run here, and they have very different characters:
 
 | Workflow | Owner | Fires on | Character |
 |---|---|---|---|
-| `ci.yml` | **upstream** — never edited (O-1) | push to `main`, every PR | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
+| `ci.yml` | upstream suite, Linux routed to PixelOven ARC | push to `main`, every PR; native macOS is manual/non-blocking | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
 | `no-mistakes-required.yml` | **upstream** — never edited (O-1) | every PR | asserts the PR body carries the `no-mistakes` pipeline signature |
 | `windows-herdr-spike.yml` | **upstream** — never edited (O-1) | `workflow_dispatch` only | costs nothing unless invoked |
 | `pixeloven-gates.yml` | **ours** | push to `main`, every PR | 2 jobs, both seconds of real work |
@@ -110,7 +110,7 @@ Two suites run here, and they have very different characters:
 
 ### The cost finding — measured, not estimated
 
-This repository is **private, on a free-plan org** — 2,000 included Actions
+The native macOS compatibility job is intentionally non-blocking for routine PR delivery and is run manually (or on pushes to `main`). Releases affecting shell portability must have recent native macOS evidence, or equivalent current upstream evidence, recorded before release. This repository is **private, on a free-plan org** — 2,000 included Actions
 minutes per month, and private-repo minutes bill against them. GitHub bills each
 **job** rounded up to the minute, and `macos` bills at **10×**.
 
