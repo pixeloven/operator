@@ -313,6 +313,20 @@ EOF
   out=$(GIT_CONFIG_NOSYSTEM=0 GIT_CONFIG_GLOBAL="$global" "$DELIVERY_LANE" preflight "$cfg")
   assert_contains "$out" "diagnostic=human-1password-signer-overridden" \
     "1Password signing configuration was not identified by preflight"
+
+  # A separate human SSH configuration with no key or default-key command must
+  # produce the actionable incomplete-signing diagnostic as well.
+  local incomplete="$dir/incomplete-human-global"
+  cat > "$incomplete" <<'EOF'
+[commit]
+    gpgSign = true
+[gpg]
+    format = ssh
+EOF
+  out=$(GIT_CONFIG_NOSYSTEM=0 GIT_CONFIG_GLOBAL="$incomplete" \
+    "$DELIVERY_LANE" preflight "$cfg")
+  assert_contains "$out" "diagnostic=human-ssh-signing-config-incomplete" \
+    "incomplete SSH signing configuration was not identified by preflight"
   pass "autonomous delivery lane uses isolated unsigned Git config despite 1Password and incomplete SSH signing setup"
 }
 
