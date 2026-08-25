@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -350,7 +351,8 @@ jobs:
 
   macos-stock-bash:
     name: Stock macOS Bash snapshot compatibility
-    # This job must remain GitHub-hosted to exercise native macOS Bash 3.2.
+    # Manual/non-blocking compatibility evidence; releases enforce freshness.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
