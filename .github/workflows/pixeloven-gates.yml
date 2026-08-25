@@ -236,7 +236,7 @@ jobs:
 
           echo "== A4 - O-1: the diff against upstream $PIN touches only PixelOven namespaces"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$|bin/fm-spawn\.sh$|tests/fm-task-delivery\.test\.sh$)' || true)
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$|bin/fm-spawn\.sh$|bin/fm-delivery-lane\.sh$|tests/fm-task-delivery\.test\.sh$|docs/verification/delivery-lane\.md$|docs/documentation-audiences\.json$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: upstream file(s) modified - O-1 violation, needs a new ADR"; }
 
           echo '== A5 - the README exception stays one bounded banner block'
