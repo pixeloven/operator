@@ -387,6 +387,10 @@
     {
       "path": "docs/adr/0008-autonomous-delivery-lane.md",
       "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0009-operator-arc-runner-routing.md",
+      "audience": "maintainer-architecture"
     }
   ]
 }
