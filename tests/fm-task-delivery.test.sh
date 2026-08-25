@@ -20,6 +20,7 @@ set -u
 SPAWN="$ROOT/bin/fm-spawn.sh"
 PROMOTE="$ROOT/bin/fm-promote.sh"
 PROJECT_MODE="$ROOT/bin/fm-project-mode.sh"
+DELIVERY_LANE="$ROOT/bin/fm-delivery-lane.sh"
 TMP_ROOT=$(fm_test_tmproot fm-task-delivery)
 
 # A home with one registered project, one project directory, and a fake tmux that
@@ -271,6 +272,51 @@ EOF
   assert_contains "$err" "unknown mode" "a typo'd registry mode stopped warning"
   pass "fm-project-mode: the conditional policy is accepted, mapped for mechanical callers, and readable raw"
 }
+
+test_autonomous_delivery_lane_is_unsigned_and_hermetic() {
+  local dir cfg out status global
+  dir="$TMP_ROOT/lane"
+  mkdir -p "$dir"
+  cfg="$dir/gitconfig"
+  out=$("$DELIVERY_LANE" prepare "$cfg" && "$DELIVERY_LANE" preflight "$cfg")
+  status=$?
+  expect_code 0 "$status" "delivery lane preparation and preflight should succeed"
+  assert_contains "$out" "signing=disabled" "delivery lane did not report signing disabled"
+  assert_grep 'gpgSign = false' "$cfg" "delivery config did not disable commit signing"
+  assert_grep 'name = Firstmate Autonomous Worker' "$cfg" "delivery config did not set stable identity"
+
+  # A human 1Password SSH signer and an incomplete SSH key setup are both
+  # deliberately present in the ambient config; the task-owned config wins and
+  # the commit must succeed without invoking either signer.
+  global="$dir/human-global"
+  cat > "$global" <<'EOF'
+[commit]
+    gpgSign = true
+[gpg]
+    format = ssh
+    [gpg "ssh"]
+        program = /opt/1Password/op-ssh-sign
+EOF
+  mkdir -p "$dir/repo"
+  printf 'payload\n' > "$dir/repo/file"
+  git -C "$dir/repo" init -q
+  git -C "$dir/repo" add file
+  out=$(GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$cfg" GIT_CONFIG_SYSTEM="$global" \
+    git -C "$dir/repo" -c user.name='Firstmate Autonomous Worker' \
+    -c user.email=firstmate-autonomous@localhost commit -m autonomous 2>&1)
+  status=$?
+  expect_code 0 "$status" "unsigned autonomous commit should ignore 1Password SSH signing config"
+  assert_not_contains "$out" "1Password" "autonomous commit attempted the human signer"
+
+  # The same incomplete human setup is surfaced as a diagnostic when the lane
+  # is inspected against it, without changing either config.
+  out=$(GIT_CONFIG_NOSYSTEM=0 GIT_CONFIG_GLOBAL="$global" "$DELIVERY_LANE" preflight "$cfg")
+  assert_contains "$out" "diagnostic=human-1password-signer-overridden" \
+    "1Password signing configuration was not identified by preflight"
+  pass "autonomous delivery lane uses isolated unsigned Git config despite 1Password and incomplete SSH signing setup"
+}
+
+test_autonomous_delivery_lane_is_unsigned_and_hermetic
 
 test_ship_spawn_requires_a_valid_delivery_contract
 test_scout_and_secondmate_refuse_delivery_flags

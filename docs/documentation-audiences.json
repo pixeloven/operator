@@ -379,6 +379,10 @@
     {
       "path": "skills/stow/SKILL.md",
       "audience": "public-product"
+    },
+    {
+      "path": "docs/verification/delivery-lane.md",
+      "audience": "maintainer-verification"
     }
   ]
 }
