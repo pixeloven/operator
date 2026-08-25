@@ -203,12 +203,11 @@ repository *settings* rather than files:
    the recommended posture while the repo is private and pre-pilot: our own gates
    plus the merge review already cover what we change, and **we change no shell**.
 2. **Leave it on and accept ~11 PRs/month**, revisiting when ARC lands.
-3. **Migrate to the ARC self-hosted pool** (Phase 0.5 / M0.1) — self-hosted
-   minutes do not bill against the allowance. This fixes the cost permanently,
-   but `ci.yml` names `ubuntu-latest`/`macos-latest` explicitly and re-pointing it
-   would mean editing an upstream file. So ARC fixes *our* workflows' cost, not
-   upstream's, unless a runner group is labelled to intercept `ubuntu-latest`
-   (worth evaluating at M0.1).
+3. **Migrate the Linux jobs to the ARC self-hosted pool** — self-hosted
+   minutes do not bill against the allowance. Operator's Linux jobs now use the
+   organization-owned `lattice` label, while the native macOS and Windows jobs
+   retain their hosted labels. The runner group must keep `pixeloven/operator`
+   in its repository access policy.
 
 #### The disable, as a documented reversible posture
 
@@ -240,8 +239,10 @@ gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/enable
 2. **At the ARC migration (M0.1)**, when self-hosted minutes change the economics
    and the whole calculation should be redone.
 
-Whichever posture is chosen, our own workflows stay on `ubuntu-latest` until M0.1
-lands; the migration is a follow-up noted in both workflow headers.
+The current routing is intentionally mixed: Linux jobs use `lattice`, the
+native macOS compatibility job uses `macos-latest`, and the Windows Herdr spike
+uses `windows-latest`. Reconcile the ARC runner-group repository allowlist after
+any organization or repository move.
 
 ### Expected red check on every PR
 
