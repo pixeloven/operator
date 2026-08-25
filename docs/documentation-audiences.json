@@ -383,6 +383,10 @@
     {
       "path": "docs/verification/delivery-lane.md",
       "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/adr/0008-autonomous-delivery-lane.md",
+      "audience": "maintainer-architecture"
     }
   ]
 }
