@@ -11,11 +11,9 @@
 # adapted where this repository differs from that template's assumptions.
 #
 # ── Runner ────────────────────────────────────────────────────────────────────
-# `ubuntu-latest` (GitHub-hosted). This repo is private and the pixeloven org has
-# no ARC runners yet. Phase 0.5 / M0.1 installs the ARC GitHub App on the org;
-# migrating these jobs to the self-hosted pool is a FOLLOW-UP once that lands —
-# flip `runs-on` and drop the pinned-binary install steps (the harmony-arc-runner
-# image bakes gitleaks and friends).
+# Linux gates use the organization's PixelOven ARC pool via the `lattice` label.
+# The pinned binary installs remain intentional: these gates own their tool
+# versions and do not assume the ARC image contents.
 #
 # ── Cost ──────────────────────────────────────────────────────────────────────
 # Private repo on a free-plan org: Actions minutes are a real budget. Deliberately
@@ -82,7 +80,7 @@ env:
 jobs:
   secret-scan:
     name: gitleaks (secret scan)
-    runs-on: ubuntu-latest
+    runs-on: lattice
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -109,7 +107,7 @@ jobs:
 
   lint:
     name: workflows · docs · fork contract
-    runs-on: ubuntu-latest
+    runs-on: lattice
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -235,7 +233,7 @@ jobs:
 
           echo "== A4 - O-1: the diff against upstream $PIN stays inside PixelOven namespaces and ADR-0010 overrides"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-bootstrap|fm-test-run)\.sh$|tests/(fm-bootstrap|fm-no-mistakes-required)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json)$|README\.md$|NOTICE$)' || true)
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane)\.sh$|tests/(fm-bootstrap|fm-no-mistakes-required|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: path is outside PixelOven namespaces and ADR-0010's exact override set"; }
 
           echo '== A5 - the README exception stays one bounded banner block'

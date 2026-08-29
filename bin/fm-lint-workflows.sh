@@ -124,8 +124,10 @@ fi
 # fm-lint.sh owns ShellCheck of the canonical shell set. Disable actionlint's
 # extra shell and Python subprocess linters so this gate is the named workflow
 # linter, not a second shell lint of `run:` blocks.
+# The PixelOven ARC pool's custom `lattice` label is declared in the
+# repository actionlint config alongside the workflows.
 set +e
-"$ACTIONLINT_BIN" -no-color -shellcheck= -pyflakes= -- "${FILES[@]}"
+"$ACTIONLINT_BIN" -no-color -config-file "$ROOT/.github/actionlint.yaml" -shellcheck= -pyflakes= -- "${FILES[@]}"
 rc=$?
 set -e
 

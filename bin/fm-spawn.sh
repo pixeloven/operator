@@ -2341,6 +2341,18 @@ fi
 # targeted knob: TMPDIR is too broad (affects every program's temp, not just Go's).
 TASK_TMP="/tmp/fm-$ID"
 mkdir -p "$TASK_TMP/gotmp"
+# Autonomous workers use an inspectable, per-task Git configuration that disables
+# commit signing without changing the captain's global Git settings. The helper
+# also performs the signing preflight and emits actionable diagnostics on failure.
+DELIVERY_GIT_CONFIG="$TASK_TMP/gitconfig"
+"$FM_ROOT/bin/fm-delivery-lane.sh" prepare "$DELIVERY_GIT_CONFIG" >/dev/null || {
+  echo "error: autonomous delivery-lane Git configuration could not be prepared at $DELIVERY_GIT_CONFIG" >&2
+  exit 1
+}
+"$FM_ROOT/bin/fm-delivery-lane.sh" preflight "$DELIVERY_GIT_CONFIG" || {
+  echo "error: autonomous delivery-lane signing preflight failed for $DELIVERY_GIT_CONFIG" >&2
+  exit 1
+}
 
 # Per-harness turn-end hook where enabled: a file that touches
 # state/<id>.turn-ended when the agent finishes a turn. Worktree-resident hooks
@@ -2859,6 +2871,10 @@ spawn_record_traceparent() {
 # process (go build, go test, ...) inherit it. Sent before the launch command so
 # the env is set when the agent starts; the brief sleep lets the export land.
 spawn_send_text_line "$T" "export GOTMPDIR=$TASK_TMP/gotmp"
+# Keep autonomous workers isolated from human signing configuration. The per-task
+# global file is inspectable and disposable with the task's temp root.
+spawn_send_text_line "$T" "export GIT_CONFIG_NOSYSTEM=1"
+spawn_send_text_line "$T" "export GIT_CONFIG_GLOBAL=$(shell_quote "$DELIVERY_GIT_CONFIG")"
 # Send through the exact channel that already ships GOTMPDIR, so every backend
 # and harness - ship, scout, and secondmate - gets it before launch. Skipped
 # entirely when trace context is off.

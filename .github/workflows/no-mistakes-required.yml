@@ -21,7 +21,8 @@ concurrency:
 jobs:
   check:
     name: PR must be raised via no-mistakes
-    runs-on: ubuntu-latest
+    # This Linux policy check uses the organization's PixelOven ARC pool.
+    runs-on: lattice
     if: >-
       github.event.pull_request.user.login != 'github-actions[bot]' &&
       github.event.pull_request.user.login != 'dependabot[bot]'

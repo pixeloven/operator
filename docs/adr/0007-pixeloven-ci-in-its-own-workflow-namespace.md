@@ -26,8 +26,10 @@ Two further forces shaped the content rather than the location:
    organization-owned repositories, and we hold no license key. The
    github-hosted template in the harmony-ci action library carries exactly that
    caveat in a comment.
-2. **There are no ARC runners on the org yet.** Phase 0.5 / M0.1 installs the
-   ARC GitHub App; until it lands, GitHub-hosted runners are the only option.
+2. **ARC routing is a separate organization-owned concern.** The repository was
+   initially created before the PixelOven ARC pool was available, so its first
+   workflows used GitHub-hosted runners. The later ARC migration is recorded in
+   ADR-0009.
 
 ## Decision
 
@@ -48,8 +50,8 @@ Two further forces shaped the content rather than the location:
   commit SHA.
 - gitleaks runs with `--redact` so a candidate secret is never echoed into a log
   (G-3).
-- Runners are `ubuntu-latest`. Migration to the ARC pool is a follow-up once
-  M0.1 lands, noted in both workflow headers.
+- Linux jobs now use the organization-owned `lattice` ARC pool. Native macOS
+  and Windows jobs retain `macos-latest` and `windows-latest` respectively.
 - The fork contract's own assertions — the diff-against-the-fork-point check and
   the G-7 naming rule — run as a step in `pixeloven-gates.yml`, so task A1.1's
   "grep clean" acceptance is continuously enforced rather than claimed once.
@@ -112,4 +114,5 @@ Two further forces shaped the content rather than the location:
   without a token) and the harmony baseline ruleset is baked into the private
   ARC runner image. Revisit with the ARC migration.
 - **Wait for ARC before adding any gates.** Rejected: G-6 says gates from day
-  one, and task A1.2 gates task P1.2. `runs-on` is one line to change later.
+  one, and task A1.2 gates task P1.2. GitHub-hosted labels were the initial
+  fallback; ADR-0009 records the later Linux migration to `lattice`.
