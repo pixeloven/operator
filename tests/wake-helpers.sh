@@ -117,10 +117,13 @@ SH
 prime_status_seen() {  # <state> <file>
   FM_STATE_OVERRIDE="$1" bash -c '
     . "$1"
-    sig=$(fm_wake_signal_sig "$3") || exit 1
-    [ -n "$sig" ] || exit 1
-    printf "%s" "$sig" > "$(fm_wake_signal_seen_path "$2" "$3")"
+    fm_wake_status_mark_current "$2" "$3"
   ' _ "$ROOT/bin/fm-wake-lib.sh" "$1" "$2"
+}
+
+# Print the generation from a recovery marker token of any status/kind.
+recovery_marker_generation() {  # <marker-file>
+  sed -n 's/^[^:]*:[^:]*:\(.*\)$/\1/p' "$1"
 }
 
 # Acknowledge a drain from its captured stderr (the WAKE_ACK_REQUIRED line).
