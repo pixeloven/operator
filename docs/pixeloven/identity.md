@@ -1,10 +1,9 @@
 # Identity — what this project is called, and what stays named `fm`
 
 - **Task:** A1.1
-- **Satisfies:** **O-1** (soft fork: upstream files are never edited) · **G-7**
+- **Satisfies:** **O-1** (soft fork: additions by default, with ADR-0010's bounded distribution exceptions) · **G-7**
   (in prose, "the operator" means the human; the project is written `operator`)
-- **Decisions:** [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) (additive-only),
-  [ADR-0004](../adr/0004-the-name-operator.md) (the name)
+- **Decisions:** [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) (additive default), [ADR-0004](../adr/0004-the-name-operator.md) (the name), and [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md) (bounded distribution overrides)
 
 This page answers three questions a reader arrives with: *what is this called*,
 *why does everything inside it still say `fm`*, and *how do I check that
@@ -87,8 +86,7 @@ once they exist.)*
 
 ### Why
 
-**Renaming any of it means editing upstream files, and editing upstream files
-is the one thing this fork does not do.**
+**Renaming any of it would be a broad upstream rewrite, which remains outside the bounded distribution exception.**
 
 1. **It breaks the merge contract (O-1 / O-2).** The soft fork is cheap *only*
    because our changes and upstream's changes never touch the same lines. A
@@ -111,7 +109,7 @@ is the one thing this fork does not do.**
 
 ### What *is* ours to name
 
-Our surface is new files only, in namespaces upstream can never collide with:
+Our default surface is new files in namespaces upstream can never collide with:
 
 | Surface | Path |
 |---|---|
@@ -120,10 +118,13 @@ Our surface is new files only, in namespaces upstream can never collide with:
 | Documentation | `docs/pixeloven/` |
 | Decisions | `docs/adr/` |
 | CI we own | `.github/workflows/pixeloven-*.yml` |
+| Companion installer | `bin/fm-install-pixeloven-tool.sh` |
+| Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` |
 
-Plus exactly one bounded exception: the delimited PixelOven banner block at the
-top of `README.md` (ADR-0001). Anything outside this list needs a **new ADR**,
-not a silent change. See [fork-contract.md](fork-contract.md).
+The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
+ADR-0010 adds an exact existing-file allowlist for downstream companion distribution and documentation-audience ownership.
+Anything outside those lists needs a **new ADR**, not a silent change.
+See [fork-contract.md](fork-contract.md).
 
 ## 4. Erratum on ADR-0004
 
@@ -180,7 +181,7 @@ Anchored on the host so that `docs/pixeloven/…` paths are not false positives:
 
 ```sh
 corpus | grep -oE 'github\.com/pixeloven/[A-Za-z0-9._-]+' | sed 's/\.git$//' | sort -u \
-       | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci)$'
+       | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci|gh-axi|chrome-devtools-axi|lavish-axi|tasks-axi|quota-axi|no-mistakes)$'
 ```
 
 **A3 — the project is never capitalized as a proper noun** (G-7). Two files are
@@ -195,13 +196,12 @@ ADR-0004 and this page.
     | xargs -0 grep -nE '\bOperator\b'; }
 ```
 
-**A4 — O-1: the diff against the current upstream pin touches only our
-namespaces.** No second ref, so this covers the working tree as well as
-committed history:
+**A4 - O-1: the diff against the current upstream pin touches only our namespaces and ADR-0010's exact override paths.**
+No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-bootstrap|fm-test-run)\.sh$|tests/(fm-bootstrap|fm-no-mistakes-required)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
@@ -227,6 +227,14 @@ and A5:
 ```sh
 git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
 ```
+
+**A8 - the executable companion inventory selects exactly the six matching PixelOven forks.**
+
+```sh
+bin/fm-install-pixeloven-tool.sh --list
+```
+
+The gate requires six rows, the fixed tool-name order, and `https://github.com/pixeloven/<tool>` as each row's source URL.
 
 ### Why A4/A5 track a moving pin
 

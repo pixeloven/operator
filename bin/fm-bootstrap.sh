@@ -837,9 +837,9 @@ install_cmd() {
     tmux|node|git|gh|curl|jq|orca|zellij) echo "brew install $1  # or the platform's package manager" ;;
     cmux) echo "brew install --cask cmux  # or see https://cmux.com" ;;
     treehouse) echo "curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh" ;;
-    no-mistakes) echo "curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh" ;;
-    gh-axi|chrome-devtools-axi|lavish-axi) echo "npm install -g $1 && $1 setup hooks" ;;
-    tasks-axi|quota-axi) echo "npm install -g $1" ;;
+    no-mistakes) echo "bin/fm-install-pixeloven-tool.sh no-mistakes" ;;
+    gh-axi|chrome-devtools-axi|lavish-axi) echo "bin/fm-install-pixeloven-tool.sh $1 && ${FM_PIXELOVEN_TOOL_PREFIX:-$HOME/.local}/bin/$1 setup hooks" ;;
+    tasks-axi|quota-axi) echo "bin/fm-install-pixeloven-tool.sh $1" ;;
     *) return 1 ;;
   esac
 }

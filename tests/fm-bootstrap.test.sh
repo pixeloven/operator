@@ -300,12 +300,12 @@ test_bootstrap_reporting() {
 treehouse --lease support is accepted silently^1^0.2.4^1^manual^empty^^
 treehouse without --lease reports an upgrade, gh auth is fine^0^0.2.4^1^-^grep^MISSING: treehouse (install: curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh)^NEEDS_GH_AUTH
 compatible tasks-axi is silent by default^1^0.2.4^1^-^empty^^
-missing tasks-axi is required by default^1^-^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-incompatible tasks-axi is required by default^1^0.1.0^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-tasks-axi without archive-body is required by default^1^0.2.4:noarchive^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-tasks-axi without multi-id mv is required by default^1^0.2.4:nomulti^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-missing quota-axi is required by default^1^0.2.4^0^manual^exact^MISSING: quota-axi (install: npm install -g quota-axi)^
-manual backlog backend still requires missing tasks-axi^1^-^1^manual^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
+missing tasks-axi is required by default^1^-^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
+incompatible tasks-axi is required by default^1^0.1.0^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
+tasks-axi without archive-body is required by default^1^0.2.4:noarchive^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
+tasks-axi without multi-id mv is required by default^1^0.2.4:nomulti^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
+missing quota-axi is required by default^1^0.2.4^0^manual^exact^MISSING: quota-axi (install: bin/fm-install-pixeloven-tool.sh quota-axi)^
+manual backlog backend still requires missing tasks-axi^1^-^1^manual^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
 manual backlog backend suppresses tasks-axi availability^1^0.2.4^1^manual^empty^^
 ROWS
   pass "bootstrap reports treehouse lease + tasks-axi/quota-axi bootstrap contracts"
@@ -313,7 +313,7 @@ ROWS
 
 test_no_mistakes_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: no-mistakes (install: curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh)'
+  missing='MISSING: no-mistakes (install: bin/fm-install-pixeloven-tool.sh no-mistakes)'
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -343,7 +343,7 @@ ROWS
 
 test_gh_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: gh-axi (install: npm install -g gh-axi && gh-axi setup hooks)'
+  missing="MISSING: gh-axi (install: bin/fm-install-pixeloven-tool.sh gh-axi && $HOME/.local/bin/gh-axi setup hooks)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -374,7 +374,7 @@ ROWS
 
 test_lavish_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: lavish-axi (install: npm install -g lavish-axi && lavish-axi setup hooks)'
+  missing="MISSING: lavish-axi (install: bin/fm-install-pixeloven-tool.sh lavish-axi && $HOME/.local/bin/lavish-axi setup hooks)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -405,7 +405,7 @@ ROWS
 
 test_tasks_axi_min_version() {
   local label version mode case_dir fakebin out missing n archive_body multi_id
-  missing='MISSING: tasks-axi (install: npm install -g tasks-axi)'
+  missing='MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)'
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -455,7 +455,7 @@ ROWS
 # --version: below the floor produces MISSING, while at or above is silent.
 test_quota_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: quota-axi (install: npm install -g quota-axi)'
+  missing='MISSING: quota-axi (install: bin/fm-install-pixeloven-tool.sh quota-axi)'
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue

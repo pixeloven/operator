@@ -102,8 +102,8 @@ Two suites run here, and they have very different characters:
 
 | Workflow | Owner | Fires on | Character |
 |---|---|---|---|
-| `ci.yml` | **upstream** — never edited (O-1) | push to `main`, every PR | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
-| `no-mistakes-required.yml` | **upstream** — never edited (O-1) | every PR | asserts the PR body carries the `no-mistakes` pipeline signature |
+| `ci.yml` | **upstream**, with ADR-0010's bounded PixelOven tasks-axi acquisition hunk | push to `main`, every PR | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
+| `no-mistakes-required.yml` | **upstream**, with ADR-0010's bounded PixelOven action source hunk | every PR | asserts the PR body carries the `no-mistakes` pipeline signature |
 | `windows-herdr-spike.yml` | **upstream** — never edited (O-1) | `workflow_dispatch` only | costs nothing unless invoked |
 | `pixeloven-gates.yml` | **ours** | push to `main`, every PR | 2 jobs, both seconds of real work |
 | `pixeloven-release.yml` | **ours** | `push: tags: ['v*']` | 1 job |
@@ -145,15 +145,10 @@ are ~10–12 min each**, not the ~4.8 min the workflow comment implies, and the
 per PR**, or **≈ 11 PRs before the budget is gone**. Our own gates are **1.2 %**
 of one `ci.yml` run.
 
-### The pre-existing `ci.yml` failure — needs an operator decision
+### The historical documentation-audience failure - resolved 2026-08-29
 
-**`ci.yml` has never been green on this repository, and not because of anything
-we changed in it.** Upstream's `tests/fm-documentation-audiences.test.sh` runs
-`bin/fm-doc-audience-check.sh`, which enumerates **every tracked `*.md`, `*.mdx`,
-`*.rst`, `*.txt` in the repo** — repo-wide, not just under `docs/` — and requires
-each one to be classified in the upstream-owned inventory
-`docs/documentation-audiences.json`. Every PixelOven document is therefore
-"unclassified" and the shard fails.
+Upstream's `tests/fm-documentation-audiences.test.sh` runs `bin/fm-doc-audience-check.sh`, which enumerates every tracked prose surface repo-wide and requires each one to be classified in `docs/documentation-audiences.json`.
+Every PixelOven document was therefore unclassified from the first downstream commit through `v0.1.0`.
 
 Demonstrated locally at three points in our history:
 
@@ -163,29 +158,9 @@ Demonstrated locally at three points in our history:
 | `a5e90e3` (Phase 0, task A0.1 — **before** any A1 work) | **fails**: 11 unclassified |
 | `d6d7f85` (`v0.1.0`) | **fails**: 14 unclassified |
 
-So the failure dates from the first PixelOven commit. It is a **structural
-collision between the additive-only contract and an upstream invariant that
-enumerates the whole tree** — and relocating our docs does not help, because the
-patterns are repo-wide.
-
-The options, none of which should be taken unilaterally:
-
-1. **Accept the red shard**, exactly as we accept `Require no-mistakes`. Cost:
-   `ci.yml` can no longer be read as a pass/fail signal, only as a diff of *which*
-   tests fail. Combined with option 2 below this is coherent — the suite is off
-   except during merge review, where this one known failure is expected.
-2. **Add our documents to `docs/documentation-audiences.json`.** One upstream file
-   edited, and it is data rather than code — but it is a file upstream touches
-   whenever *they* add a document, so it would conflict on most merges, in
-   exchange for a green shard. It needs a new ADR and it directly weakens O-2.
-3. **Ask upstream for an extension point** (an ignore list, or honouring a second
-   inventory — the checker already accepts `--inventory <path>`, just not from
-   the test). This is a **G-5 upstream post** and needs per-instance operator
-   approval.
-
-**Recommendation: option 1**, with option 3 raised if the fork ever goes public.
-Option 2 trades a permanent merge cost for a cosmetic green. **No upstream file
-was edited to work around this.**
+ADR-0010 accepted the documentation inventory as one bounded existing-file exception because maintained downstream prose needs the same audience and owner checks as upstream prose.
+The inventory now classifies every PixelOven ADR and project document, so `bin/fm-doc-audience-check.sh` can be read as a real pass/fail gate again.
+That file is part of the future upstream contact surface and must be reconciled by ownership during every synchronization.
 
 One further shard failure on the same run — `Behavior portable serial 3`,
 `tests/fm-remote-job.test.sh`: *"remote job worker did not report ready after
@@ -194,14 +169,13 @@ anything PixelOven adds.
 
 ### The levers, and how to pull them
 
-**This is an inherited property of upstream's suite, not a defect, and it is not
-ours to fix by editing.** O-1 forbids touching `ci.yml`. The available levers are
-repository *settings* rather than files:
+The suite remains expensive, and ADR-0010 authorizes only the tasks-axi acquisition hunk in `ci.yml`, not runner or scheduling changes.
+The available cost levers remain repository settings rather than broader workflow edits:
 
 1. **Disable `ci.yml` at the repository level.** Nothing in the tree changes; the
    file stays byte-identical for upstream merges. The single biggest saving, and
    the recommended posture while the repo is private and pre-pilot: our own gates
-   plus the merge review already cover what we change, and **we change no shell**.
+   plus the merge review cover the bounded downstream surface.
 2. **Leave it on and accept ~11 PRs/month**, revisiting when ARC lands.
 3. **Migrate to the ARC self-hosted pool** (Phase 0.5 / M0.1) — self-hosted
    minutes do not bill against the allowance. This fixes the cost permanently,
@@ -217,14 +191,14 @@ switched off in two months can explain it and reverse it in one command.
 
 ```sh
 # Find the workflow id (the numeric id is stable; the path is the readable key).
-gh api /repos/pixeloven/operator/actions/workflows \
+gh-axi api /repos/pixeloven/operator/actions/workflows \
   --jq '.workflows[] | select(.path==".github/workflows/ci.yml") | {id, name, state}'
 
 # Disable
-gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/disable
+gh-axi api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/disable
 
 # Re-enable
-gh api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/enable
+gh-axi api -X PUT /repos/pixeloven/operator/actions/workflows/<id>/enable
 ```
 
 (Equivalently: Actions → *CI* → ⋯ → Disable workflow.)
@@ -245,12 +219,10 @@ lands; the migration is a follow-up noted in both workflow headers.
 
 ### Expected red check on every PR
 
-`Require no-mistakes` fails on any pull request whose body lacks the upstream
-pipeline signature. That is upstream's enforcement that contributions arrive
-through the `no-mistakes` pipeline — **it working is evidence for task A1.3**,
-not a defect. The workflow is upstream's and is never edited. The repository has
-no branch protection (private, free plan), so `gh pr merge --squash` still
-merges; note the red check in the PR body.
+`Require no-mistakes` fails on any pull request whose body lacks the upstream-authored pipeline signature.
+That is the inherited enforcement that contributions arrive through the `no-mistakes` pipeline, and **it working is evidence for task A1.3**, not a defect.
+ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the same pinned commit.
+The repository has no branch protection (private, free plan), so `gh-axi pr merge --squash` still merges; note the red check in the PR body.
 
 ## 5. Release log
 

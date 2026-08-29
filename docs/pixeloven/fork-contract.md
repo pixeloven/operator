@@ -2,12 +2,13 @@
 
 `pixeloven/operator` is a **soft fork** of [`kunchenguid/firstmate`](https://github.com/kunchenguid/firstmate)
 (MIT, © 2026 Kun Chen). This page is the operating rule; the reasoning lives in
-[ADR-0001](../adr/0001-soft-fork-of-firstmate.md) and
-[ADR-0002](../adr/0002-seeded-with-full-upstream-history.md).
+[ADR-0001](../adr/0001-soft-fork-of-firstmate.md),
+[ADR-0002](../adr/0002-seeded-with-full-upstream-history.md), and the bounded
+distribution exception in [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
 
 ## The rule, in one line
 
-**We add files. We do not edit upstream's.**
+**We add by default. We edit upstream files only for the exact downstream distribution and documentation-audience surfaces accepted by ADR-0010.**
 
 ## Fork point
 
@@ -34,28 +35,31 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Skills | `.agents/skills/po-*` | the `po-` prefix exists so upstream can never collide with us |
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
-| CI we own | `.github/workflows/pixeloven-*.yml` | upstream's three workflows are never edited |
+| CI we own | `.github/workflows/pixeloven-*.yml` | |
+| Companion installer | `bin/fm-install-pixeloven-tool.sh` | closed inventory of six public PixelOven forks |
+| Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` | executable source and lifecycle contract |
 
-Anything that does not fit one of these needs a new ADR that says why, and which
-namespace it claims.
+Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
+ADR-0010 lists the exact existing upstream files that may carry bounded distribution or documentation-audience hunks.
 
 Nothing inside the upstream surface is renamed — not the `fm-*` scripts, not the
 `FM_*` variables, not the captain/crewmate vocabulary. The reasoning, and the
 prose rule that "the operator" means the human (G-7), are in
 [`identity.md`](identity.md).
 
-The contract is **enforced on every pull request** by
-[`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml): it fails
-the build if the diff against the fork point touches anything outside the table
-above, or if `README.md` differs from upstream outside the banner block. The
-assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
+The contract is **enforced on every pull request** by [`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml).
+It fails the build if the diff against the current upstream pin touches anything outside the owned namespaces and ADR-0010 allowlist, if `README.md` differs from upstream outside the banner block, or if the companion source inventory selects anything other than the six matching PixelOven forks.
+The assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
 
-## The one edited upstream file
+## Bounded upstream-file exceptions
 
-`README.md` carries a single delimited PixelOven banner block at the very top,
-pointing here. Nothing else in it is changed. This is a bounded, deliberate
-exception recorded in ADR-0001 — one hunk, in the file least likely to carry
-load-bearing behavior.
+`README.md` carries a single delimited PixelOven banner block at the very top, pointing here.
+Nothing else in it is changed.
+This remains the identity exception recorded in ADR-0001.
+
+ADR-0010 separately permits the exact source-selection, CI acquisition, contributor guidance, audience inventory, and regression files needed to make PixelOven's companion forks independently usable.
+Those are behavior-owned hunks, not permission for renames, cleanup, or unrelated downstream edits.
+The companion source and sync policy is owned by [`tool-distribution.md`](tool-distribution.md).
 
 ## Taking upstream changes
 

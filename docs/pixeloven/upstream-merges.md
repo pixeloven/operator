@@ -1,4 +1,4 @@
-# Upstream merges — the standing procedure, and the first rehearsal
+# Upstream merges - standing procedure and measurements
 
 - **Task:** A1.4
 - **Satisfies:** **O-2** (upstream merges are scheduled, reviewed PRs — never
@@ -12,11 +12,11 @@ it costs to catch up, and how to do it*.
 
 ---
 
-## 1. The rule that makes this cheap
+## 1. The rule that keeps this reviewable
 
-**We add files; we never edit upstream's** ([ADR-0001](../adr/0001-soft-fork-of-firstmate.md)).
-Every merge is a live test of that rule. The rehearsal below is the first
-measurement, and the number it produced is the argument for keeping the rule.
+**We add by default and keep every existing-file exception exact and reviewed.**
+[ADR-0001](../adr/0001-soft-fork-of-firstmate.md) owns the additive default, while [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md) owns the bounded companion-distribution exception.
+Every merge is a live test of both rules.
 
 **G-5, absolutely: this is a PULL ONLY.** Nothing is pushed, opened, commented,
 or otherwise posted to `kunchenguid/*`. The `upstream` remote exists to fetch.
@@ -45,7 +45,7 @@ git rev-parse upstream/main > docs/pixeloven/upstream-pin
 #    permission gates disabled (see supply-chain-read.md).
 #
 # 6. Merge it with a REAL MERGE COMMIT. Not --squash, not a rebase.
-gh pr merge <n> --merge
+gh-axi pr merge <n> --merge
 ```
 
 **Step 3 is not optional.** `docs/pixeloven/upstream-pin` is what the
@@ -60,9 +60,9 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 > | Habit | What it does here |
 > |---|---|
 > | `git rebase origin/main` before opening the PR | replays upstream's commits as fresh cherry-picks |
-> | `gh pr merge --squash` (the repo's normal merge mode) | collapses the whole branch, merge commit included, into one commit on `main` |
+> | `gh-axi pr merge --squash` (the repo's normal merge mode) | collapses the whole branch, merge commit included, into one commit on `main` |
 >
-> **An upstream-merge PR is merged with a real merge commit — `gh pr merge --merge`.**
+> **An upstream-merge PR is merged with a real merge commit - `gh-axi pr merge --merge`.**
 >
 > The house habit of `git fetch origin && git rebase origin/main` before opening a
 > PR is **wrong here, and silently so.** `git rebase` drops the merge commit and
@@ -251,10 +251,40 @@ first.** Argued from what was measured, not from habit:
   quality falls off a cliff past ~30 commits — which is exactly when a merge
   stops being a merge and becomes an audit.
 
-Revisit after the second merge; two data points beat one.
+The second measurement is below.
 
-## 4. Merge log
+## 4. Second synchronization - 2026-08-29
+
+The second synchronization merged the current upstream default branch before applying any new downstream distribution change.
+
+| | |
+|---|---|
+| Our `main` before | `61539eb05602b9b2859c94ee73a47bff2b328e3b` |
+| Upstream `main` | `c731c36c381ea0886fa5aabf6a3be761534d3f30` |
+| Previous pin and merge base | `bdae21ed09d2cca4f57caed4bda9d30d8f9d9be8` |
+| Behind by | **83 commits**, accumulated over **12 days** |
+| **Conflicts** | **zero** |
+| **Merge wall-clock** | **0.3 s** |
+| **Conflict-resolution time** | **none** |
+| Files changed by upstream | 281 |
+| Diff size | 53,688 insertions, 8,420 deletions |
+
+Git's `ort` strategy auto-merged `README.md` and reported no conflict.
+The merge commit has first parent `61539eb` and second parent `c731c36`, so current upstream remains an ancestor and every PixelOven-only commit remains in ordinary history.
+
+This synchronization is consumer-visible and brings substantial runtime, supervision, backend, documentation, and test behavior.
+The next `operator` release therefore needs at least a minor version bump under the existing release policy.
+
+The same task deliberately introduces ADR-0010 after the pure merge.
+That decision expands the future contact surface from the README banner to an exact set of source-selection, CI acquisition, documentation-audience, and regression files.
+Future synchronizations review those paths by behavior and ownership rather than choosing an upstream or downstream side wholesale.
+
+The 83-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
+The existing recommendation of every two weeks or roughly 15 commits remains the upper bound, and the commit trigger should win whenever upstream is moving quickly.
+
+## 5. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
 | 2026-08-17 | `6789876442d0` (fork point) | `bdae21ed09d2` | 8 | **0** | 0.031 s | Task A1.4 rehearsal. Cut after `v0.1.0`. Only contact surface was `README.md` (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added). |
+| 2026-08-29 | `bdae21ed09d2` | `c731c36c381e` | 83 | **0** | 0.3 s | Second synchronization. `README.md` auto-merged cleanly. Companion-fork distribution changes followed as separate downstream commits under ADR-0010. |

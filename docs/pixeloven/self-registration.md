@@ -69,14 +69,14 @@ enabled only on the human's explicit instruction.
 
 ## 3. Provisioning it
 
-Preconditions: the fleet home is a clone of this repository at a release tag, and the
-`no-mistakes` binary is installed from a pinned GitHub release (it is a Go binary — **not**
-the npm package of the same name; see [`supply-chain-read.md`](supply-chain-read.md)).
+Preconditions: the fleet home is a clone of this repository at a release tag, and the `no-mistakes` binary is installed from the exact PixelOven fork source selected by [`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh).
+It is a Go binary, **not** the npm package of the same name.
+See [`tool-distribution.md`](tool-distribution.md) for the current source contract and [`supply-chain-read.md`](supply-chain-read.md) for the upstream package audit.
 
 ```sh
 mkdir -p "$FM_HOME/data" "$FM_HOME/projects"
 # add the registry line above to $FM_HOME/data/projects.md
-gh repo clone pixeloven/operator "$FM_HOME/projects/operator"
+gh-axi repo clone pixeloven/operator "$FM_HOME/projects/operator"
 cd "$FM_HOME/projects/operator" && no-mistakes init && no-mistakes doctor
 ```
 
@@ -96,11 +96,11 @@ because only one of them is visible in this repository:
 |---|---|---|
 | Registry posture | `$FM_HOME/data/projects.md` (machine-local) | What the fleet *intends* — consumed by `fm-fleet-sync.sh`, `fm-home-seed.sh`, and `fm-spawn.sh`'s registry-deviation notice |
 | The gate itself | `no-mistakes init` state under `~/.no-mistakes/` | The pipeline a change must pass to become a PR |
-| `Require no-mistakes` | `.github/workflows/no-mistakes-required.yml` (upstream, in-repo) | **Server-side refusal** of any PR whose body lacks the pipeline signature |
+| `Require no-mistakes` | `.github/workflows/no-mistakes-required.yml` (inherited, with ADR-0010's bounded PixelOven action source) | **Server-side refusal** of any PR whose body lacks the pipeline signature |
 
 The third is the one that cannot be bypassed by a mistake on the workstation, and it is
 the reason O-4 is a property of the repository rather than of one machine's configuration.
-It is an upstream file and is never edited.
+It remains upstream-owned except for ADR-0010's exact reusable-action source hunk.
 
 A useful consequence, observed during Phase 1: PRs raised by hand — including this
 program's own bootstrap PRs — show that check **red**. That is the control working, not a

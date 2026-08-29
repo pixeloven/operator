@@ -18,9 +18,7 @@ This repository was seeded by pushing upstream's own git history unchanged, so
 the authorship of every upstream file remains attributable through `git log`
 and `git blame`. See docs/adr/0002-seeded-with-full-upstream-history.md.
 
-PixelOven's own contributions are additive files only — see
-docs/pixeloven/fork-contract.md — and are likewise offered under the MIT
-License.
+PixelOven's own contributions, including the bounded downstream distribution overrides recorded in ADR-0010, are described in docs/pixeloven/fork-contract.md and are likewise offered under the MIT License.
 
 Third-party components referenced (but not vendored) by this project keep their
 own licenses, notably:
@@ -28,7 +26,16 @@ own licenses, notably:
   herdr    — https://github.com/ogulcancelik/herdr        Apache-2.0 (see note)
   treehouse— https://github.com/kunchenguid/treehouse      per upstream
   gnhf     — https://github.com/kunchenguid/gnhf           MIT
-  lavish-axi—https://github.com/kunchenguid/lavish-axi     MIT
+  gh-axi - https://github.com/kunchenguid/gh-axi - MIT
+  chrome-devtools-axi - https://github.com/kunchenguid/chrome-devtools-axi - MIT
+  lavish-axi - https://github.com/kunchenguid/lavish-axi - MIT
+  tasks-axi - https://github.com/kunchenguid/tasks-axi - MIT
+  quota-axi - https://github.com/kunchenguid/quota-axi - MIT
+  no-mistakes - https://github.com/kunchenguid/no-mistakes - MIT
+
+The `operator` project selects public PixelOven forks of those six upstream projects as its distribution sources.
+Those forks preserve upstream ancestry and attribution.
+PixelOven does not claim original authorship of the upstream work.
 
 Note: the herdr repository's LICENSE file is Apache-2.0, while a runtime
 diagnostic string inside firstmate describes herdr as "dual-licensed

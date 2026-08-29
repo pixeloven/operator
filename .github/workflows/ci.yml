@@ -67,8 +67,9 @@ jobs:
       - name: Install tasks-axi
         run: |
           set -eu
-          npm install -g tasks-axi
-          tasks-axi --version
+          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+          echo "$RUNNER_TEMP/fm-tools/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/fm-tools/bin/tasks-axi" --version
       - name: Run portable parallel shard 1
         run: |
           set -eu
@@ -104,8 +105,9 @@ jobs:
       - name: Install tasks-axi
         run: |
           set -eu
-          npm install -g tasks-axi
-          tasks-axi --version
+          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+          echo "$RUNNER_TEMP/fm-tools/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/fm-tools/bin/tasks-axi" --version
       - name: Run portable parallel shard 2
         run: |
           set -eu
@@ -163,8 +165,9 @@ jobs:
       - name: Install tasks-axi for backlog-handoff delegation
         run: |
           set -eu
-          npm install -g tasks-axi
-          tasks-axi --version
+          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+          echo "$RUNNER_TEMP/fm-tools/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/fm-tools/bin/tasks-axi" --version
       - name: Run portable serial shard ${{ matrix.shard }}
         env:
           # job-total rather than a literal, so shrinking or growing the matrix

@@ -10,6 +10,8 @@ TMP_ROOT=$(fm_test_tmproot fm-no-mistakes-required)
 VERIFY="$TMP_ROOT/verify.py"
 OLD_SHA=1111111111111111111111111111111111111111
 NEW_SHA=2222222222222222222222222222222222222222
+# The verifier's signature identifies the upstream-authored no-mistakes product;
+# it is attribution syntax, not the action or binary acquisition source.
 SIGNATURE='Updates from [git push no-mistakes](https://github.com/kunchenguid/no-mistakes)'
 COMPLETED_STEPS='[{"step":"review","status":"completed"},{"step":"test","status":"completed"},{"step":"document","status":"completed"}]'
 
@@ -17,7 +19,7 @@ fetch_shared_verifier() {
   command -v curl >/dev/null 2>&1 || fail "curl is required to exercise the pinned shared action"
   command -v python3 >/dev/null 2>&1 || fail "python3 is required to exercise the pinned shared action"
   curl --fail --silent --show-error --location \
-    "https://raw.githubusercontent.com/kunchenguid/no-mistakes/${ACTION_REF}/.github/actions/require-no-mistakes/verify.py" \
+    "https://raw.githubusercontent.com/pixeloven/no-mistakes/${ACTION_REF}/.github/actions/require-no-mistakes/verify.py" \
     > "$VERIFY" || fail "could not fetch the pinned shared action verifier"
   [ -s "$VERIFY" ] || fail "the pinned shared action verifier was empty"
 }
