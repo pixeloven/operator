@@ -24,9 +24,9 @@ the model** it implements, and **two of its adjacent npm tools**:
 
 | # | Condition | Blocks |
 |---|---|---|
-| **C1** | Understand and accept that **every worker launches with its harness's permission gate disabled**. The isolation boundary is the git worktree plus the delivery mode — *not* the harness sandbox. See [F-1](#f-1). | P1.2 — must be an explicit, recorded acceptance, not a discovery later |
-| **C2** | **`gnhf` and `lavish-axi` phone home by default.** Both ship an analytics client, enabled unless opted out. The workstation role must set `GNHF_TELEMETRY=0` and `LAVISH_AXI_TELEMETRY=0`. See [F-8](#f-8). | P1.2 |
-| **C3** | **The Relay must stay off.** firstmate's optional Relay posts to a third-party service; it activates only when a pairing token exists in `$FM_HOME/.env`. Do not create one, and assert its absence. See [F-2](#f-2). | P1.2, P1.5 |
+| **C1** | Understand and accept that **every worker launches with its harness's permission gate disabled**. The isolation boundary is the git worktree plus the delivery mode — *not* the harness sandbox. See [F-1](#f-1--every-worker-launches-with-its-harness-permission-gate-disabled--by-design-high-impact). | P1.2 — must be an explicit, recorded acceptance, not a discovery later |
+| **C2** | **`gnhf` and `lavish-axi` phone home by default.** Both ship an analytics client, enabled unless opted out. The workstation role must set `GNHF_TELEMETRY=0` and `LAVISH_AXI_TELEMETRY=0`. See [F-8](#f-8--gnhf-and-lavish-axi-phone-home-by-default--condition-c2). | P1.2 |
+| **C3** | **The Relay must stay off.** firstmate's optional Relay posts to a third-party service; it activates only when a pairing token exists in `$FM_HOME/.env`. Do not create one, and assert its absence. See [F-2](#f-2--the-relay-is-the-only-outbound-path-and-it-is-opt-in--condition-c3). | P1.2, P1.5 |
 
 Two lower-severity items need an owner but block nothing:
 **F-9** (herdr license discrepancy) and **F-10** (herdr version drift: the plan
@@ -449,11 +449,11 @@ firstmate itself:
 
 | # | Condition | Blocks |
 |---|---|---|
-| **C4** | **`no-mistakes` is not the npm package of that name.** The tool firstmate requires is a Go binary from `kunchenguid/no-mistakes`; npm `no-mistakes` is a different publisher's TS/JS analysis tool. Install from the pinned GitHub release with checksum verification — never `npm i -g no-mistakes`, never the `curl \| sh` hint. See [F-11](#f-11). | P1.2 |
-| **C5** | **`no-mistakes` phones home by default**, to the same `a.kunchenguid.com` Umami endpoint as `gnhf` and `lavish-axi`. Set `NO_MISTAKES_TELEMETRY=0` — **and set it where the daemon will see it**, which is not the shell profile. See [F-12](#f-12). | P1.2 |
-| **C6** | **`chrome-devtools-axi` runs `npx -y chrome-devtools-mcp@latest` at runtime** unless told otherwise — a floating fetch-and-execute, in the exact words G-2 forbids. Pin `chrome-devtools-mcp` and export `CHROME_DEVTOOLS_AXI_MCP_PATH`. See [F-13](#f-13). | P1.2 |
-| **C7** | **`no-mistakes` installs and enables a `systemd --user` unit** and runs a persistent daemon. P1.2 must own that unit deliberately or H-1's idempotency claim is not true. See [F-14](#f-14). | P1.2, H-1 |
-| **C8** | **Every tool ships an in-band pin-breaker.** `<tool> update` really does run `npm install -g <pkg>@latest`; `no-mistakes` background-checks GitHub on nearly every invocation. Set `NO_MISTAKES_NO_UPDATE_CHECK=1` and record `update` as forbidden. See [F-15](#f-15). | P1.2 |
+| **C4** | **`no-mistakes` is not the npm package of that name.** The tool firstmate requires is a Go binary from `kunchenguid/no-mistakes`; npm `no-mistakes` is a different publisher's TS/JS analysis tool. Install from the pinned GitHub release with checksum verification — never `npm i -g no-mistakes`, never the `curl \| sh` hint. See [F-11](#f-11--no-mistakes-is-not-an-npm-package--condition-c4). | P1.2 |
+| **C5** | **`no-mistakes` phones home by default**, to the same `a.kunchenguid.com` Umami endpoint as `gnhf` and `lavish-axi`. Set `NO_MISTAKES_TELEMETRY=0` — **and set it where the daemon will see it**, which is not the shell profile. See [F-12](#f-12--no-mistakes-phones-home-by-default-and-the-daemon-does-not-read-your-shell-profile--condition-c5). | P1.2 |
+| **C6** | **`chrome-devtools-axi` runs `npx -y chrome-devtools-mcp@latest` at runtime** unless told otherwise — a floating fetch-and-execute, in the exact words G-2 forbids. Pin `chrome-devtools-mcp` and export `CHROME_DEVTOOLS_AXI_MCP_PATH`. See [F-13](#f-13--chrome-devtools-axi-runs-npx--y-chrome-devtools-mcplatest--condition-c6). | P1.2 |
+| **C7** | **`no-mistakes` installs and enables a `systemd --user` unit** and runs a persistent daemon. P1.2 must own that unit deliberately or H-1's idempotency claim is not true. See [F-14](#f-14--no-mistakes-installs-a-systemd---user-unit-and-runs-a-daemon--condition-c7). | P1.2, H-1 |
+| **C8** | **Every tool ships an in-band pin-breaker.** `<tool> update` really does run `npm install -g <pkg>@latest`; `no-mistakes` background-checks GitHub on nearly every invocation. Set `NO_MISTAKES_NO_UPDATE_CHECK=1` and record `update` as forbidden. See [F-15](#f-15--every-tool-ships-an-in-band-pin-breaker--condition-c8). | P1.2 |
 
 Three lower-severity items need an owner but block nothing: **F-16**
 (`setup hooks` rewrites `~/.claude/settings.json`), **F-17** (`quota-axi` reads

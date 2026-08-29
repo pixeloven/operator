@@ -129,6 +129,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/captain-hold-lifecycle/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/decision-hold-lifecycle/SKILL.md",
       "audience": "agent-runtime"
     },
@@ -185,6 +189,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".greptile/rules.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "AGENTS.md",
       "audience": "agent-runtime"
     },
@@ -195,6 +203,10 @@
     {
       "path": "CONTRIBUTING.md",
       "audience": "maintainer-architecture"
+    },
+    {
+      "path": "GROK_BOT.md",
+      "audience": "public-product"
     },
     {
       "path": "README.md",
@@ -241,7 +253,7 @@
       "audience": "operator-current"
     },
     {
-      "path": "docs/decision-hold-lifecycle.md",
+      "path": "docs/captain-hold-lifecycle.md",
       "audience": "maintainer-architecture"
     },
     {
@@ -250,6 +262,10 @@
     },
     {
       "path": "docs/examples/crew-dispatch.json",
+      "audience": "operator-example"
+    },
+    {
+      "path": "docs/examples/watched-tools.json",
       "audience": "operator-example"
     },
     {
@@ -275,6 +291,10 @@
     {
       "path": "docs/orca-backend.md",
       "audience": "operator-current"
+    },
+    {
+      "path": "docs/pi-supervision-branch.md",
+      "audience": "maintainer-architecture"
     },
     {
       "path": "docs/remote-secondmates.md",
@@ -365,6 +385,10 @@
       "audience": "maintainer-verification"
     },
     {
+      "path": "docs/voice-relay.md",
+      "audience": "operator-current"
+    },
+    {
       "path": "docs/watcher-continuity.md",
       "audience": "operator-current"
     },
@@ -379,6 +403,82 @@
     {
       "path": "skills/stow/SKILL.md",
       "audience": "public-product"
+    },
+    {
+      "path": "docs/verification/delivery-lane.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/adr/0001-soft-fork-of-firstmate.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0002-seeded-with-full-upstream-history.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0003-pixeloven-org-private-until-review.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0004-the-name-operator.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0005-agent-self-improvement-is-pr-gated.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0006-operator-cuts-its-own-release-tags.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0007-pixeloven-ci-in-its-own-workflow-namespace.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/_template.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0008-autonomous-delivery-lane.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0009-operator-arc-runner-routing.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/fork-contract.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/identity.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/releases.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/self-registration.md",
+      "audience": "operator-current"
+    },
+    {
+      "path": "docs/pixeloven/supply-chain-read.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/upstream-merges.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/upstream-tracking.md",
+      "audience": "maintainer-architecture"
     }
   ]
 }

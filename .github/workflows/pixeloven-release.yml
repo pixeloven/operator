@@ -27,7 +27,8 @@ permissions:
 jobs:
   release:
     name: Cut GitHub release
-    runs-on: ubuntu-latest
+    # Release validation uses the organization's PixelOven ARC pool.
+    runs-on: lattice
     timeout-minutes: 10
     permissions:
       # Creating a release writes to the repository.
