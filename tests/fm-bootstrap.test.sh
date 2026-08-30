@@ -29,6 +29,7 @@ set -u
 BASE_PATH=${FM_TEST_BASE_PATH:-/usr/bin:/bin:/usr/sbin:/sbin}
 TMP_ROOT=$(fm_test_tmproot fm-bootstrap-tests)
 export FM_BACKEND_CMUX_BUNDLE_BIN="$TMP_ROOT/no-bundled-cmux"
+printf -v PIXELOVEN_INSTALLER '%q' "$ROOT/bin/fm-install-pixeloven-tool.sh"
 
 # Hermetic runtime-backend detection. These cases pin the backend per-home via
 # config/backend; the dev shell's ambient runtime markers ($TMUX inside tmux,
@@ -282,6 +283,7 @@ test_bootstrap_reporting() {
     # FM_ROOT_OVERRIDE points the worktree-tangle check at the non-git home dir so
     # it stays inert: this suite pins tool detection, not the tangle guard, and the
     # ambient checkout (CI runs on a feature branch) must not leak a TANGLE line in.
+    expect=${expect//@PIXELOVEN_INSTALLER@/$PIXELOVEN_INSTALLER}
     out=$(PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
       FM_FAKE_TREEHOUSE_LEASE_HELP="$lease" "$ROOT/bin/fm-bootstrap.sh")
     case "$mode" in
@@ -300,12 +302,12 @@ test_bootstrap_reporting() {
 treehouse --lease support is accepted silently^1^0.2.4^1^manual^empty^^
 treehouse without --lease reports an upgrade, gh auth is fine^0^0.2.4^1^-^grep^MISSING: treehouse (install: curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh)^NEEDS_GH_AUTH
 compatible tasks-axi is silent by default^1^0.2.4^1^-^empty^^
-missing tasks-axi is required by default^1^-^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
-incompatible tasks-axi is required by default^1^0.1.0^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
-tasks-axi without archive-body is required by default^1^0.2.4:noarchive^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
-tasks-axi without multi-id mv is required by default^1^0.2.4:nomulti^1^-^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
-missing quota-axi is required by default^1^0.2.4^0^manual^exact^MISSING: quota-axi (install: bin/fm-install-pixeloven-tool.sh quota-axi)^
-manual backlog backend still requires missing tasks-axi^1^-^1^manual^exact^MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)^
+missing tasks-axi is required by default^1^-^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+incompatible tasks-axi is required by default^1^0.1.0^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+tasks-axi without archive-body is required by default^1^0.2.4:noarchive^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+tasks-axi without multi-id mv is required by default^1^0.2.4:nomulti^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+missing quota-axi is required by default^1^0.2.4^0^manual^exact^MISSING: quota-axi (install: @PIXELOVEN_INSTALLER@ quota-axi)^
+manual backlog backend still requires missing tasks-axi^1^-^1^manual^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
 manual backlog backend suppresses tasks-axi availability^1^0.2.4^1^manual^empty^^
 ROWS
   pass "bootstrap reports treehouse lease + tasks-axi/quota-axi bootstrap contracts"
@@ -313,7 +315,7 @@ ROWS
 
 test_no_mistakes_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: no-mistakes (install: bin/fm-install-pixeloven-tool.sh no-mistakes)'
+  missing="MISSING: no-mistakes (install: $PIXELOVEN_INSTALLER no-mistakes)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -341,9 +343,28 @@ ROWS
   pass "bootstrap enforces no-mistakes minimum version"
 }
 
+test_chrome_devtools_axi_install_hint() {
+  local case_dir linked_root fakebin out installer expected
+  case_dir="$TMP_ROOT/chrome-devtools-axi-hint"
+  linked_root="$case_dir/operator root"
+  mkdir -p "$case_dir/home/config"
+  printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
+  ln -s "$ROOT" "$linked_root"
+  fakebin=$(make_fake_toolchain "$case_dir")
+  rm -f "$fakebin/chrome-devtools-axi"
+  printf -v installer '%q' "$linked_root/bin/fm-install-pixeloven-tool.sh"
+  expected="MISSING: chrome-devtools-axi (install: $installer chrome-devtools-axi && $HOME/.local/bin/chrome-devtools-axi setup hooks)"
+  out=$(cd "$case_dir" && PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" \
+    FM_ROOT_OVERRIDE="$case_dir/home" FM_FAKE_TREEHOUSE_LEASE_HELP=1 \
+    "$linked_root/bin/fm-bootstrap.sh")
+  [ "$out" = "$expected" ] \
+    || fail "chrome-devtools-axi hint was not cwd-independent and shell-quoted: $out"
+  pass "bootstrap reports a cwd-independent chrome-devtools-axi install hint"
+}
+
 test_gh_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing="MISSING: gh-axi (install: bin/fm-install-pixeloven-tool.sh gh-axi && $HOME/.local/bin/gh-axi setup hooks)"
+  missing="MISSING: gh-axi (install: $PIXELOVEN_INSTALLER gh-axi && $HOME/.local/bin/gh-axi setup hooks)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -374,7 +395,7 @@ ROWS
 
 test_lavish_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing="MISSING: lavish-axi (install: bin/fm-install-pixeloven-tool.sh lavish-axi && $HOME/.local/bin/lavish-axi setup hooks)"
+  missing="MISSING: lavish-axi (install: $PIXELOVEN_INSTALLER lavish-axi && $HOME/.local/bin/lavish-axi setup hooks)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -405,7 +426,7 @@ ROWS
 
 test_tasks_axi_min_version() {
   local label version mode case_dir fakebin out missing n archive_body multi_id
-  missing='MISSING: tasks-axi (install: bin/fm-install-pixeloven-tool.sh tasks-axi)'
+  missing="MISSING: tasks-axi (install: $PIXELOVEN_INSTALLER tasks-axi)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -455,7 +476,7 @@ ROWS
 # --version: below the floor produces MISSING, while at or above is silent.
 test_quota_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: quota-axi (install: bin/fm-install-pixeloven-tool.sh quota-axi)'
+  missing="MISSING: quota-axi (install: $PIXELOVEN_INSTALLER quota-axi)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -1150,6 +1171,7 @@ ROWS
 
 test_bootstrap_reporting
 test_no_mistakes_min_version
+test_chrome_devtools_axi_install_hint
 test_gh_axi_min_version
 test_lavish_axi_min_version
 test_tasks_axi_min_version

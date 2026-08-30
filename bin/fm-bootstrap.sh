@@ -832,13 +832,18 @@ secondmate_handoff_detect() {
 }
 
 install_cmd() {
+  local pixeloven_installer hook_bin
+  printf -v pixeloven_installer '%q' "$SCRIPT_DIR/fm-install-pixeloven-tool.sh"
   case "$1" in
     tmux|node|git|gh|curl|jq|orca|zellij) echo "brew install $1  # or the platform's package manager" ;;
     cmux) echo "brew install --cask cmux  # or see https://cmux.com" ;;
     treehouse) echo "curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh" ;;
-    no-mistakes) echo "bin/fm-install-pixeloven-tool.sh no-mistakes" ;;
-    gh-axi|chrome-devtools-axi|lavish-axi) echo "bin/fm-install-pixeloven-tool.sh $1 && ${FM_PIXELOVEN_TOOL_PREFIX:-$HOME/.local}/bin/$1 setup hooks" ;;
-    tasks-axi|quota-axi) echo "bin/fm-install-pixeloven-tool.sh $1" ;;
+    no-mistakes) echo "$pixeloven_installer no-mistakes" ;;
+    gh-axi|chrome-devtools-axi|lavish-axi)
+      printf -v hook_bin '%q' "${FM_PIXELOVEN_TOOL_PREFIX:-$HOME/.local}/bin/$1"
+      echo "$pixeloven_installer $1 && $hook_bin setup hooks"
+      ;;
+    tasks-axi|quota-axi) echo "$pixeloven_installer $1" ;;
     *) return 1 ;;
   esac
 }
