@@ -205,7 +205,7 @@ test_current_workflows_pass() {
 }
 
 test_current_workflow_model_is_hosted_and_node_ready() {
-  local workflow model invalid bad='' ci_model installer_jobs job serial_listing
+  local workflow model invalid bad='' ci_model installer_contract serial_listing
   command -v jq >/dev/null 2>&1 || fail 'jq is required to inspect the normalized workflow model'
 
   for workflow in "$ROOT"/.github/workflows/*.yml "$ROOT"/.github/workflows/*.yaml; do
@@ -230,24 +230,30 @@ test_current_workflow_model_is_hosted_and_node_ready() {
 
   ci_model=$(workflow_to_json "$ROOT/.github/workflows/ci.yml") \
     || fail 'could not parse the CI workflow model'
-  installer_jobs=$(printf '%s\n' "$ci_model" | jq -r '
-    .jobs | to_entries[]
-    | select(any(.value.steps[]?; (.run? // "") | contains("bin/fm-install-pixeloven-tool.sh")))
-    | .key
-  ') || fail 'could not identify CI jobs that execute the PixelOven source installer'
-  [ -n "$installer_jobs" ] || fail 'no CI job executes the PixelOven source installer'
-  while IFS= read -r job; do
-    [ -n "$job" ] || continue
-    printf '%s\n' "$ci_model" | jq -e --arg job "$job" '
-      .jobs[$job].steps
-      | any(.[];
+  installer_contract='[
+    {"job":"tests-portable-parallel-1","step":"Install tasks-axi"},
+    {"job":"tests-portable-parallel-2","step":"Install tasks-axi"},
+    {"job":"tests-portable-serial","step":"Install tasks-axi for backlog-handoff delegation"}
+  ]'
+  printf '%s\n' "$ci_model" | jq -e --argjson expected "$installer_contract" '
+    [
+      .jobs | to_entries[]
+      | .key as $job
+      | .value.steps[]?
+      | select(.name? as $name | any($expected[]; .step == $name))
+      | {job: $job, step: .name}
+    ] == $expected
+    and all($expected[]; . as $owner
+      | any($ci.jobs[$owner.job].steps[]?;
+          .name? == $owner.step
+        )
+      and any($ci.jobs[$owner.job].steps[]?;
           ((.uses? // "") | startswith("actions/setup-node@"))
           and ((.with["node-version"]? // "") == "22.19.0")
         )
-    ' >/dev/null || fail "$job executes the source installer without Node 22.19.0"
-  done <<EOF
-$installer_jobs
-EOF
+    )
+  ' --argjson ci "$ci_model" >/dev/null \
+    || fail 'the declared source-installer jobs or named steps lack Node 22.19.0'
 
   serial_listing=$("$ROOT/bin/fm-test-run.sh" --list --lane portable-serial) \
     || fail 'could not inspect the portable serial lane'
