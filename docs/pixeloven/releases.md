@@ -98,7 +98,7 @@ a different tree.
 
 ## 4. CI on this repository
 
-Two suites run here, and they have very different characters:
+Five workflows run here, and they have very different characters:
 
 | Workflow | Owner | Fires on | Character |
 |---|---|---|---|
@@ -170,14 +170,7 @@ anything PixelOven adds.
 ### Current hosted-runner routing
 
 The measured suite remains expensive, but executable validation is required for the intended public repository.
-ADR-0011 authorizes the bounded runner changes in the inherited workflows without changing their test selection or scheduling.
-
-Every Linux job uses `ubuntu-latest`.
-The native macOS compatibility job retains `macos-latest`, and the Windows Herdr spike retains `windows-latest`.
-There is no ARC, `lattice`, `self-hosted`, Harmony, or other private-runner fallback for public or untrusted work.
-
-Jobs that execute the PixelOven source installer or its integration tests provision Node.js 22.19.0 explicitly.
-The workflow linter uses actionlint's standard runner-label model with no custom private-label exception, and the focused workflow regression parses the job model to enforce the hosted allowlist and Node floor.
+[ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md) owns the bounded hosted-runner routing, private-runner exclusion, Node floor, and verification contract.
 
 Do not disable the required suite as a cost workaround.
 If hosted-runner billing or capacity blocks execution, treat that as an operational blocker rather than routing untrusted code to private infrastructure.
