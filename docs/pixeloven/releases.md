@@ -178,7 +178,7 @@ The available cost levers remain repository settings rather than broader workflo
    plus the merge review cover the bounded downstream surface.
 2. **Leave it on and accept ~11 PRs/month**, revisiting when ARC lands.
 3. **Migrate the Linux jobs to the ARC self-hosted pool** — self-hosted
-   minutes do not bill against the allowance. Operator's Linux jobs now use the
+   minutes do not bill against the allowance. The `operator` Linux jobs now use the
    organization-owned `lattice` label, while the native macOS and Windows jobs
    retain their hosted labels. The runner group must keep `pixeloven/operator`
    in its repository access policy.

@@ -126,8 +126,13 @@ fi
 # linter, not a second shell lint of `run:` blocks.
 # The PixelOven ARC pool's custom `lattice` label is declared in the
 # repository actionlint config alongside the workflows.
+# Explicit alternate roots without a config retain actionlint's defaults.
+ACTIONLINT_CONFIG_ARGS=()
+if [ -f "$ROOT/.github/actionlint.yaml" ]; then
+  ACTIONLINT_CONFIG_ARGS=(-config-file "$ROOT/.github/actionlint.yaml")
+fi
 set +e
-"$ACTIONLINT_BIN" -no-color -config-file "$ROOT/.github/actionlint.yaml" -shellcheck= -pyflakes= -- "${FILES[@]}"
+"$ACTIONLINT_BIN" -no-color "${ACTIONLINT_CONFIG_ARGS[@]}" -shellcheck= -pyflakes= -- "${FILES[@]}"
 rc=$?
 set -e
 

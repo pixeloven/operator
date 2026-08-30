@@ -260,17 +260,18 @@ The second synchronization merged the current upstream default branch before app
 | | |
 |---|---|
 | Our `main` before | `61539eb05602b9b2859c94ee73a47bff2b328e3b` |
-| Upstream `main` | `c731c36c381ea0886fa5aabf6a3be761534d3f30` |
+| Upstream `main` | `9e3df47b4a5f228d8e3bf2b889e7119f95b85be5` |
 | Previous pin and merge base | `bdae21ed09d2cca4f57caed4bda9d30d8f9d9be8` |
-| Behind by | **83 commits**, accumulated over **12 days** |
+| Behind by | **85 commits**, accumulated over **12 days** |
 | **Conflicts** | **zero** |
-| **Merge wall-clock** | **0.3 s** |
+| **Merge wall-clock** | **0.5 s total across two clean merge commands** |
 | **Conflict-resolution time** | **none** |
-| Files changed by upstream | 281 |
-| Diff size | 53,688 insertions, 8,420 deletions |
+| Files changed by upstream | 273 |
+| Diff size | 54,348 insertions, 8,600 deletions |
 
-Git's `ort` strategy auto-merged `README.md` and reported no conflict.
-The merge commit has first parent `61539eb` and second parent `c731c36`, so current upstream remains an ancestor and every PixelOven-only commit remains in ordinary history.
+Git's `ort` strategy first integrated `c731c36`, auto-merging `README.md` without conflict.
+Upstream advanced by two commits during validation, so a second clean merge integrated `9e3df47` and auto-merged `CONTRIBUTING.md`, `bin/fm-bootstrap.sh`, and `bin/fm-test-run.sh` without conflict.
+The final tree keeps `9e3df47` as an ancestor and retains every PixelOven-only commit in ordinary history.
 
 This synchronization is consumer-visible and brings substantial runtime, supervision, backend, documentation, and test behavior.
 The next `operator` release therefore needs at least a minor version bump under the existing release policy.
@@ -279,7 +280,7 @@ The same task deliberately introduces ADR-0010 after the pure merge.
 That decision expands the future contact surface from the README banner to an exact set of source-selection, CI acquisition, documentation-audience, and regression files.
 Future synchronizations review those paths by behavior and ownership rather than choosing an upstream or downstream side wholesale.
 
-The 83-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
+The 85-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
 The existing recommendation of every two weeks or roughly 15 commits remains the upper bound, and the commit trigger should win whenever upstream is moving quickly.
 
 ## 5. Merge log
@@ -287,4 +288,4 @@ The existing recommendation of every two weeks or roughly 15 commits remains the
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
 | 2026-08-17 | `6789876442d0` (fork point) | `bdae21ed09d2` | 8 | **0** | 0.031 s | Task A1.4 rehearsal. Cut after `v0.1.0`. Only contact surface was `README.md` (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added). |
-| 2026-08-29 | `bdae21ed09d2` | `c731c36c381e` | 83 | **0** | 0.3 s | Second synchronization. `README.md` auto-merged cleanly. Companion-fork distribution changes followed as separate downstream commits under ADR-0010. |
+| 2026-08-29 | `bdae21ed09d2` | `9e3df47b4a5f` | 85 | **0** | 0.5 s | Second synchronization used two clean merge checkpoints because upstream advanced during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |

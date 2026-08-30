@@ -5,7 +5,7 @@
 > **soft fork** of [`kunchenguid/firstmate`](https://github.com/kunchenguid/firstmate)
 > (MIT, © 2026 Kun Chen) at commit `6789876442d0`, with upstream history preserved intact.
 >
-> **The fork contract is additions by default, with only the reviewed downstream distribution overrides listed in ADR-0010.**
+> **The fork contract is additions by default, with reviewed downstream exceptions recorded in ADRs.**
 > Our owned namespaces and exact exceptions are listed in the contract.
 > Upstream merges are scheduled, reviewed pull requests, never automatic.
 > `operator` cuts its own semver tags from `v0.1.0`; consumers pin **our** tags, never upstream and never a raw SHA.
