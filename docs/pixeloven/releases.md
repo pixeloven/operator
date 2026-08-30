@@ -222,7 +222,7 @@ any organization or repository move.
 
 `Require no-mistakes` fails on any pull request whose body lacks the upstream-authored pipeline signature.
 That is the inherited enforcement that contributions arrive through the `no-mistakes` pipeline, and **it working is evidence for task A1.3**, not a defect.
-ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the same pinned commit.
+ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the selected downstream commit `70185bf682521ed1822e51dc09fa327b85b87e79`.
 The repository has no branch protection (private, free plan), so `gh-axi pr merge --squash` still merges; note the red check in the PR body.
 
 ## 5. Release log
@@ -231,8 +231,5 @@ The repository has no branch protection (private, free plan), so `gh-axi pr merg
 |---|---|---|---|
 | `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
 
-The **next** tag will carry the A1.4 upstream merge (8 upstream commits through
-`bdae21ed09d2`). Per §2 it is a **minor** bump — `v0.2.0` — because
-[`upstream-merges.md`](upstream-merges.md) records consumer-visible behaviour
-changes in it (`/stow` gains open-record persistence; `CLAUDE.md` changes shape
-from a symlink to an `@AGENTS.md` pointer file).
+The **next** tag will carry both completed upstream synchronizations: the 8-commit A1.4 merge through `bdae21ed09d2` and the subsequent 86-commit synchronization through `1fbc7bb1fba2`.
+Per §2 it is a **minor** bump - `v0.2.0` - because [`upstream-merges.md`](upstream-merges.md) records consumer-visible behavior across runtime, supervision, backends, documentation, and tests, including `/stow` open-record persistence and the `CLAUDE.md` pointer-file change.
