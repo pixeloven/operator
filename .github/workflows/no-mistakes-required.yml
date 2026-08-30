@@ -28,4 +28,4 @@ jobs:
       github.event.pull_request.user.login != 'dependabot[bot]'
     steps:
       - name: Verify no-mistakes signature and pipeline attestation
-        uses: pixeloven/no-mistakes/.github/actions/require-no-mistakes@32d396ac0f29135daf7fcb9964aba9d5f4e796d6 # post-v1.57.1, untagged (action added upstream in #819)
+        uses: pixeloven/no-mistakes/.github/actions/require-no-mistakes@70185bf682521ed1822e51dc09fa327b85b87e79

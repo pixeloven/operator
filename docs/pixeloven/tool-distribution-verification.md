@@ -27,7 +27,7 @@ The no-mistakes shared-action commit selected by `.github/workflows/no-mistakes-
 
 ```sh
 gh-axi api HEAD \
-  '/repos/pixeloven/no-mistakes/contents/.github/actions/require-no-mistakes/verify.py?ref=32d396ac0f29135daf7fcb9964aba9d5f4e796d6' \
+  '/repos/pixeloven/no-mistakes/contents/.github/actions/require-no-mistakes/verify.py?ref=70185bf682521ed1822e51dc09fa327b85b87e79' \
   --full
 ```
 
@@ -54,7 +54,7 @@ bin/fm-install-pixeloven-tool.sh no-mistakes <prefix>
 <prefix>/bin/no-mistakes --version
 ```
 
-The installed binary reported `no-mistakes version v1.60.1-9-g70185bf (70185bf) 2026-08-30T02:10:43Z`.
+The installed binary reported `no-mistakes version v1.60.1 (70185bf) 2026-08-30T02:10:43Z`.
 The source-install command made no daemon lifecycle call.
 
 Portable regression coverage uses:
