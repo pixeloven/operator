@@ -68,19 +68,30 @@ case " $* " in
     for target in "$@"; do :; done
     name=$(sed -n 's/.*"name":"\([^"]*\)".*/\1/p' package.json)
     version=$(sed -n 's/.*"version":"\([^"]*\)".*/\1/p' package.json)
+    deployed_version=${FM_INSTALL_TEST_DEPLOY_VERSION:-$version}
     bin=$(node -e 'const p=require("./package.json"); process.stdout.write(p.bin[p.name])')
     bin=${bin#./}
     mkdir -p "$target/${bin%/*}" "$target/node_modules/axi-sdk-js"
     {
       printf '%s\n' '#!/usr/bin/env bash'
-      printf 'printf '\''%%s\\n'\'' '\''%s'\''\n' "$version"
+      printf 'printf '\''%%s\\n'\'' '\''%s'\''\n' "$deployed_version"
     } > "$target/$bin"
-    cp package.json "$target/package.json"
+    /bin/cp package.json "$target/package.json"
     printf '%s\n' '{"name":"axi-sdk-js","version":"0.1.10"}' \
       > "$target/node_modules/axi-sdk-js/package.json"
     ;;
 esac
 exit 0
+SH
+
+cat > "$FAKEBIN/cp" <<'SH'
+#!/usr/bin/env bash
+set -eu
+for last_arg in "$@"; do :; done
+if [ "${FM_INSTALL_TEST_CP_FAIL:-0}" = 1 ]; then
+  case "$last_arg" in */.gh-axi.new.*) exit 28 ;; esac
+fi
+exec /bin/cp "$@"
 SH
 
 cat > "$FAKEBIN/npm" <<'SH'
@@ -145,7 +156,7 @@ mkdir -p "$repo_dir/bin"
 chmod 0755 "$repo_dir/bin/no-mistakes"
 SH
 
-chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/make"
+chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/cp" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/make"
 
 test_source_inventory_is_exact_and_downstream() {
   local out
@@ -205,6 +216,34 @@ test_unsafe_manifest_bin_is_refused_before_replacing_install() {
   pass 'unsafe manifest executable paths are refused before replacement'
 }
 
+test_failed_npm_replacement_preserves_existing_install() {
+  local mode prefix install_dir existing output status
+  for mode in copy version; do
+    prefix="$TMP_ROOT/prefix-failed-$mode"
+    install_dir="$prefix/lib/node_modules/gh-axi"
+    mkdir -p "$install_dir/dist/bin" "$prefix/bin"
+    existing="$install_dir/dist/bin/gh-axi.js"
+    printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" existing' > "$existing"
+    chmod 0755 "$existing"
+    ln -s ../lib/node_modules/gh-axi/dist/bin/gh-axi.js "$prefix/bin/gh-axi"
+    status=0
+    case "$mode" in
+      copy)
+        output=$(FM_INSTALL_TEST_CALLS="$CALLS" FM_INSTALL_TEST_CP_FAIL=1 \
+          PATH="$FAKEBIN:$ORIGINAL_PATH" /bin/bash "$INSTALLER" gh-axi "$prefix" 2>&1) || status=$?
+        ;;
+      version)
+        output=$(FM_INSTALL_TEST_CALLS="$CALLS" FM_INSTALL_TEST_DEPLOY_VERSION=9.9.9 \
+          PATH="$FAKEBIN:$ORIGINAL_PATH" /bin/bash "$INSTALLER" gh-axi "$prefix" 2>&1) || status=$?
+        ;;
+    esac
+    [ "$status" -ne 0 ] || fail "$mode failure unexpectedly installed a replacement"
+    [ "$("$prefix/bin/gh-axi")" = existing ] \
+      || fail "$mode failure broke the existing installation"
+  done
+  pass 'copy and version failures preserve the existing npm installation'
+}
+
 test_no_mistakes_build_never_drives_the_daemon() {
   local prefix output calls
   prefix="$TMP_ROOT/prefix-no-mistakes"
@@ -229,5 +268,6 @@ test_unknown_tool_is_refused() {
 test_source_inventory_is_exact_and_downstream
 test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork
 test_unsafe_manifest_bin_is_refused_before_replacing_install
+test_failed_npm_replacement_preserves_existing_install
 test_no_mistakes_build_never_drives_the_daemon
 test_unknown_tool_is_refused

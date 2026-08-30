@@ -54,7 +54,7 @@ bin/fm-install-pixeloven-tool.sh no-mistakes <prefix>
 <prefix>/bin/no-mistakes --version
 ```
 
-The installed binary reported `no-mistakes version v1.60.1 (70185bf) 2026-08-30T02:10:43Z`.
+The installed binary reported `no-mistakes version v1.60.1 (70185bf) 2026-08-30T02:08:45+00:00`.
 The source-install command made no daemon lifecycle call.
 
 Portable regression coverage uses:
@@ -65,4 +65,4 @@ bin/fm-test-run.sh tests/fm-bootstrap.test.sh
 bin/fm-test-run.sh tests/fm-no-mistakes-required.test.sh
 ```
 
-The first test executes the installer's public source inventory, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, unsafe executable-path refusal before replacement, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.
+The first test executes the installer's public source inventory, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, failure-safe replacement, unsafe executable-path refusal, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.

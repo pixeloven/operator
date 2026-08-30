@@ -139,7 +139,14 @@ case "$SOURCE_KIND" in
 esac
 
 TEMP_ROOT=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/fm-pixeloven-tool.XXXXXX")
-trap 'rm -rf "$TEMP_ROOT"' EXIT
+STAGED_DIR=
+STAGED_LINK_DIR=
+cleanup() {
+  rm -rf "$TEMP_ROOT"
+  [ -z "$STAGED_DIR" ] || rm -rf "$STAGED_DIR"
+  [ -z "$STAGED_LINK_DIR" ] || rm -rf "$STAGED_LINK_DIR"
+}
+trap cleanup EXIT
 SOURCE_DIR=$TEMP_ROOT/source
 
 git init -q "$SOURCE_DIR"
@@ -187,11 +194,48 @@ if [ "$SOURCE_KIND" = npm ]; then
   INSTALL_PARENT=$PREFIX/lib/node_modules
   INSTALL_DIR=$INSTALL_PARENT/$TOOL
   mkdir -p "$INSTALL_PARENT" "$PREFIX/bin"
-  rm -f "$PREFIX/bin/$TOOL"
-  rm -rf "$INSTALL_DIR"
-  cp -R "$TEMP_ROOT/deploy" "$INSTALL_DIR"
-  chmod 0755 "$INSTALL_DIR/$MANIFEST_BIN"
-  ln -sf "../lib/node_modules/$TOOL/$MANIFEST_BIN" "$PREFIX/bin/$TOOL"
+  [ ! -d "$PREFIX/bin/$TOOL" ] || die "$PREFIX/bin/$TOOL is a directory"
+  STAGED_DIR=$(mktemp -d "$INSTALL_PARENT/.${TOOL}.new.XXXXXX")
+  cp -R "$TEMP_ROOT/deploy/." "$STAGED_DIR"
+  chmod 0755 "$STAGED_DIR/$MANIFEST_BIN"
+  VERSION_OUTPUT=$("$STAGED_DIR/$MANIFEST_BIN" --version 2>&1) \
+    || die "staged $TOOL executable did not report its version"
+  INSTALLED_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -oE '[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+  [ "$INSTALLED_VERSION" = "$EXPECTED_VERSION" ] \
+    || die "staged $TOOL reports '${INSTALLED_VERSION:-<empty>}', expected '$EXPECTED_VERSION'"
+  STAGED_LINK_DIR=$(mktemp -d "$PREFIX/bin/.${TOOL}.new.XXXXXX")
+  ln -s "../lib/node_modules/$TOOL/$MANIFEST_BIN" "$STAGED_LINK_DIR/$TOOL"
+
+  BACKUP_DIR=$(mktemp -d "$INSTALL_PARENT/.${TOOL}.old.XXXXXX")
+  HAD_PREVIOUS=0
+  if [ -e "$INSTALL_DIR" ] || [ -L "$INSTALL_DIR" ]; then
+    mv "$INSTALL_DIR" "$BACKUP_DIR/install" \
+      || die "could not preserve the previous $TOOL installation"
+    HAD_PREVIOUS=1
+  fi
+  STAGE_PATH=$STAGED_DIR
+  if ! mv "$STAGED_DIR" "$INSTALL_DIR"; then
+    if [ "$HAD_PREVIOUS" -eq 1 ]; then
+      mv "$BACKUP_DIR/install" "$INSTALL_DIR" \
+        || die "could not restore the previous $TOOL installation from $BACKUP_DIR/install"
+    fi
+    rm -rf "$BACKUP_DIR"
+    die "could not activate the staged $TOOL installation"
+  fi
+  STAGED_DIR=
+  if ! mv -f "$STAGED_LINK_DIR/$TOOL" "$PREFIX/bin/$TOOL"; then
+    if mv "$INSTALL_DIR" "$STAGE_PATH"; then
+      STAGED_DIR=$STAGE_PATH
+    fi
+    if [ "$HAD_PREVIOUS" -eq 1 ]; then
+      mv "$BACKUP_DIR/install" "$INSTALL_DIR" \
+        || die "could not restore the previous $TOOL installation from $BACKUP_DIR/install"
+    fi
+    rm -rf "$BACKUP_DIR"
+    die "could not activate the staged $TOOL executable"
+  fi
+  rm -rf "$STAGED_LINK_DIR" "$BACKUP_DIR"
+  STAGED_LINK_DIR=
 else
   SOURCE_DATE=$(git -C "$SOURCE_DIR" show -s --format=%cI "$SOURCE_COMMIT") \
     || die "could not read the source date for $TOOL"
@@ -200,15 +244,15 @@ else
     VERSION="v$EXPECTED_VERSION" COMMIT="$SOURCE_SHORT" DATE="$SOURCE_DATE"
   mkdir -p "$PREFIX/bin"
   install -m 0755 "$SOURCE_DIR/bin/no-mistakes" "$PREFIX/bin/no-mistakes"
+  VERSION_OUTPUT=$("$PREFIX/bin/$TOOL" --version 2>&1) \
+    || die "$PREFIX/bin/$TOOL did not report its version after installation"
+  INSTALLED_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -oE '[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+  [ "$INSTALLED_VERSION" = "$EXPECTED_VERSION" ] \
+    || die "$PREFIX/bin/$TOOL reports '${INSTALLED_VERSION:-<empty>}', expected '$EXPECTED_VERSION'"
 fi
 
 INSTALLED_BIN=$PREFIX/bin/$TOOL
 [ -x "$INSTALLED_BIN" ] || die "$INSTALLED_BIN was not installed as an executable"
-VERSION_OUTPUT=$("$INSTALLED_BIN" --version 2>&1) \
-  || die "$INSTALLED_BIN did not report its version after installation"
-INSTALLED_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -oE '[0-9]+(\.[0-9]+)+' | head -n 1 || true)
-[ "$INSTALLED_VERSION" = "$EXPECTED_VERSION" ] \
-  || die "$INSTALLED_BIN reports '${INSTALLED_VERSION:-<empty>}', expected '$EXPECTED_VERSION'"
 
 printf 'fm-install-pixeloven-tool.sh: installed %s %s from %s@%s at %s\n' \
   "$TOOL" "$INSTALLED_VERSION" "$SOURCE_REPO" "$SOURCE_COMMIT" "$INSTALLED_BIN" >&2
