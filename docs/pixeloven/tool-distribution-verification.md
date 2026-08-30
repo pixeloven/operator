@@ -65,4 +65,4 @@ bin/fm-test-run.sh tests/fm-bootstrap.test.sh
 bin/fm-test-run.sh tests/fm-no-mistakes-required.test.sh
 ```
 
-The first test executes the installer's public source inventory, all five npm build/deploy/install paths with lockfile-selected production dependencies, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.
+The first test executes the installer's public source inventory, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, unsafe executable-path refusal before replacement, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.

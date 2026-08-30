@@ -35,15 +35,17 @@ case "$1 $2" in
     source_url=$(cat "$repo_dir/.source-url")
     tool=${source_url##*/}
     case "$tool" in
-      gh-axi) version=0.1.34 ;;
-      chrome-devtools-axi) version=0.1.33 ;;
-      lavish-axi) version=0.1.63 ;;
-      tasks-axi) version=0.2.5 ;;
-      quota-axi) version=0.1.34 ;;
+      gh-axi) version=0.1.34; bin=./dist/bin/gh-axi.js ;;
+      chrome-devtools-axi) version=0.1.33; bin=dist/bin/chrome-devtools-axi.js ;;
+      lavish-axi) version=0.1.63; bin=dist/cli.mjs ;;
+      tasks-axi) version=0.2.5; bin=dist/bin/tasks-axi.js ;;
+      quota-axi) version=0.1.34; bin=./dist/bin/quota-axi.js ;;
       no-mistakes) version=1.60.1 ;;
       *) exit 2 ;;
     esac
-    printf '{"name":"%s","version":"%s"}\n' "$tool" "$version" > "$repo_dir/package.json"
+    bin=${FM_INSTALL_TEST_BIN_OVERRIDE:-${bin:-}}
+    printf '{"name":"%s","version":"%s","bin":{"%s":"%s"}}\n' \
+      "$tool" "$version" "$tool" "$bin" > "$repo_dir/package.json"
     ;;
   'rev-parse FETCH_HEAD')
     cat "$repo_dir/.commit"
@@ -66,11 +68,14 @@ case " $* " in
     for target in "$@"; do :; done
     name=$(sed -n 's/.*"name":"\([^"]*\)".*/\1/p' package.json)
     version=$(sed -n 's/.*"version":"\([^"]*\)".*/\1/p' package.json)
-    mkdir -p "$target/dist/bin" "$target/node_modules/axi-sdk-js"
+    bin=$(node -e 'const p=require("./package.json"); process.stdout.write(p.bin[p.name])')
+    bin=${bin#./}
+    mkdir -p "$target/${bin%/*}" "$target/node_modules/axi-sdk-js"
     {
       printf '%s\n' '#!/usr/bin/env bash'
       printf 'printf '\''%%s\\n'\'' '\''%s'\''\n' "$version"
-    } > "$target/dist/bin/$name.js"
+    } > "$target/$bin"
+    cp package.json "$target/package.json"
     printf '%s\n' '{"name":"axi-sdk-js","version":"0.1.10"}' \
       > "$target/node_modules/axi-sdk-js/package.json"
     ;;
@@ -157,7 +162,7 @@ test_source_inventory_is_exact_and_downstream() {
 }
 
 test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork() {
-  local tool prefix output runtime_version corepack_calls
+  local tool prefix output runtime_version installed_bin corepack_calls
   for tool in gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi; do
     prefix="$TMP_ROOT/prefix-$tool"
     output=$(FM_INSTALL_TEST_CALLS="$CALLS" PATH="$FAKEBIN:$ORIGINAL_PATH" \
@@ -168,6 +173,11 @@ test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork() {
       || fail "$tool runtime dependency tree was not materialized"
     [ "$runtime_version" = 0.1.10 ] \
       || fail "$tool installed an unlocked axi-sdk-js version: $runtime_version"
+    installed_bin=$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.bin[p.name].replace(/^\.\//, ""))' \
+      "$prefix/lib/node_modules/$tool/package.json") \
+      || fail "$tool deployed manifest could not be read"
+    [ "$(readlink "$prefix/bin/$tool")" = "../lib/node_modules/$tool/$installed_bin" ] \
+      || fail "$tool executable did not follow its deployed manifest"
     assert_contains "$output" "installed $tool" "$tool success did not name the tool"
   done
   assert_contains "$(cat "$CALLS/git.log")" 'remote add origin https://github.com/pixeloven/gh-axi' 'gh-axi was not fetched from its PixelOven fork'
@@ -177,6 +187,22 @@ test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork() {
   assert_contains "$corepack_calls" 'deploy --legacy' 'the locked production tree was not deployed'
   [ ! -e "$CALLS/npm.log" ] || fail 'npm performed a second dependency resolution'
   pass 'every npm companion tool installs its lockfile-selected runtime tree'
+}
+
+test_unsafe_manifest_bin_is_refused_before_replacing_install() {
+  local prefix output status=0 existing
+  prefix="$TMP_ROOT/prefix-unsafe-bin"
+  mkdir -p "$prefix/bin"
+  existing="$prefix/bin/gh-axi"
+  printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" existing' > "$existing"
+  chmod 0755 "$existing"
+  output=$(FM_INSTALL_TEST_CALLS="$CALLS" FM_INSTALL_TEST_BIN_OVERRIDE=../escape \
+    PATH="$FAKEBIN:$ORIGINAL_PATH" /bin/bash "$INSTALLER" gh-axi "$prefix" 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'an escaping manifest bin path was accepted'
+  assert_contains "$output" "does not declare a safe 'gh-axi' executable" \
+    'unsafe manifest bin refusal was not actionable'
+  [ "$("$existing")" = existing ] || fail 'unsafe manifest replaced the existing installation'
+  pass 'unsafe manifest executable paths are refused before replacement'
 }
 
 test_no_mistakes_build_never_drives_the_daemon() {
@@ -202,5 +228,6 @@ test_unknown_tool_is_refused() {
 
 test_source_inventory_is_exact_and_downstream
 test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork
+test_unsafe_manifest_bin_is_refused_before_replacing_install
 test_no_mistakes_build_never_drives_the_daemon
 test_unknown_tool_is_refused

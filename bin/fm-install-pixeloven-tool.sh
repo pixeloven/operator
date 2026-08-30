@@ -162,6 +162,16 @@ if [ "$SOURCE_KIND" = npm ]; then
     || die "source package is '$MANIFEST_NAME', expected '$TOOL'"
   [ "$MANIFEST_VERSION" = "$EXPECTED_VERSION" ] \
     || die "source version is '$MANIFEST_VERSION', expected '$EXPECTED_VERSION'"
+  MANIFEST_BIN=$(node -e '
+    const path = require("path").posix;
+    const manifest = require(process.argv[1]);
+    const declared = typeof manifest.bin === "string" ? manifest.bin : manifest.bin?.[process.argv[2]];
+    if (typeof declared !== "string" || declared.length === 0 || path.isAbsolute(declared)) process.exit(1);
+    const normalized = path.normalize(declared);
+    if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.endsWith("/")) process.exit(1);
+    process.stdout.write(normalized);
+  ' "$SOURCE_DIR/package.json" "$TOOL") \
+    || die "source package does not declare a safe '$TOOL' executable"
 
   (
     cd "$SOURCE_DIR"
@@ -172,14 +182,16 @@ if [ "$SOURCE_KIND" = npm ]; then
       --filter "$TOOL" --prod --offline --frozen-lockfile \
       --store-dir "$TEMP_ROOT/pnpm-store" deploy --legacy "$TEMP_ROOT/deploy"
   )
+  [ -f "$TEMP_ROOT/deploy/$MANIFEST_BIN" ] && [ ! -L "$TEMP_ROOT/deploy/$MANIFEST_BIN" ] \
+    || die "deployed $TOOL executable '$MANIFEST_BIN' is missing or unsafe"
   INSTALL_PARENT=$PREFIX/lib/node_modules
   INSTALL_DIR=$INSTALL_PARENT/$TOOL
   mkdir -p "$INSTALL_PARENT" "$PREFIX/bin"
   rm -f "$PREFIX/bin/$TOOL"
   rm -rf "$INSTALL_DIR"
   cp -R "$TEMP_ROOT/deploy" "$INSTALL_DIR"
-  chmod 0755 "$INSTALL_DIR/dist/bin/$TOOL.js"
-  ln -sf "../lib/node_modules/$TOOL/dist/bin/$TOOL.js" "$PREFIX/bin/$TOOL"
+  chmod 0755 "$INSTALL_DIR/$MANIFEST_BIN"
+  ln -sf "../lib/node_modules/$TOOL/$MANIFEST_BIN" "$PREFIX/bin/$TOOL"
 else
   SOURCE_DATE=$(git -C "$SOURCE_DIR" show -s --format=%cI "$SOURCE_COMMIT") \
     || die "could not read the source date for $TOOL"
