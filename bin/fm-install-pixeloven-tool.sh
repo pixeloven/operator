@@ -12,9 +12,9 @@
 #   fm-install-pixeloven-tool.sh --help
 #
 # The default prefix is ${FM_PIXELOVEN_TOOL_PREFIX:-$HOME/.local}.
-# npm tools are fetched at an exact commit, built with their committed pnpm
-# lockfile, packed, and installed into the prefix without relying on an npm
-# registry publication by the upstream author.
+# npm tools are fetched at an exact commit, built and deployed with their
+# committed pnpm lockfile, and installed into the prefix without relying on an
+# npm registry publication by the upstream author.
 # no-mistakes is built from its exact source commit because GitHub forks do not
 # inherit release assets.
 # The no-mistakes path only builds and installs the CLI; it never starts, stops,
@@ -119,13 +119,13 @@ else
 fi
 [ -n "$PREFIX" ] || die 'install prefix must not be empty'
 
-for required_command in git mktemp install grep sed; do
+for required_command in git mktemp install grep sed cp ln rm; do
   command -v "$required_command" >/dev/null 2>&1 \
     || die "$required_command is required to install $TOOL"
 done
 case "$SOURCE_KIND" in
   npm)
-    for required_command in node npm corepack; do
+    for required_command in node corepack; do
       command -v "$required_command" >/dev/null 2>&1 \
         || die "$required_command is required to install $TOOL"
     done
@@ -168,13 +168,18 @@ if [ "$SOURCE_KIND" = npm ]; then
     COREPACK_HOME="$TEMP_ROOT/corepack" corepack pnpm install \
       --frozen-lockfile --ignore-scripts --store-dir "$TEMP_ROOT/pnpm-store"
     COREPACK_HOME="$TEMP_ROOT/corepack" corepack pnpm run build
-    npm_config_cache="$TEMP_ROOT/npm-cache" npm pack \
-      --ignore-scripts --pack-destination "$TEMP_ROOT" >/dev/null
+    COREPACK_HOME="$TEMP_ROOT/corepack" corepack pnpm \
+      --filter "$TOOL" --prod --offline --frozen-lockfile \
+      --store-dir "$TEMP_ROOT/pnpm-store" deploy --legacy "$TEMP_ROOT/deploy"
   )
-  set -- "$TEMP_ROOT"/*.tgz
-  [ "$#" -eq 1 ] && [ -f "$1" ] \
-    || die "the $TOOL source build did not produce exactly one npm archive"
-  npm_config_cache="$TEMP_ROOT/npm-cache" npm install --global --prefix "$PREFIX" "$1"
+  INSTALL_PARENT=$PREFIX/lib/node_modules
+  INSTALL_DIR=$INSTALL_PARENT/$TOOL
+  mkdir -p "$INSTALL_PARENT" "$PREFIX/bin"
+  rm -f "$PREFIX/bin/$TOOL"
+  rm -rf "$INSTALL_DIR"
+  cp -R "$TEMP_ROOT/deploy" "$INSTALL_DIR"
+  chmod 0755 "$INSTALL_DIR/dist/bin/$TOOL.js"
+  ln -sf "../lib/node_modules/$TOOL/dist/bin/$TOOL.js" "$PREFIX/bin/$TOOL"
 else
   SOURCE_DATE=$(git -C "$SOURCE_DIR" show -s --format=%cI "$SOURCE_COMMIT") \
     || die "could not read the source date for $TOOL"

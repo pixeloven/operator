@@ -61,6 +61,20 @@ cat > "$FAKEBIN/corepack" <<'SH'
 #!/usr/bin/env bash
 set -eu
 printf 'corepack %s\n' "$*" >> "$FM_INSTALL_TEST_CALLS/corepack.log"
+case " $* " in
+  *' deploy --legacy '*)
+    for target in "$@"; do :; done
+    name=$(sed -n 's/.*"name":"\([^"]*\)".*/\1/p' package.json)
+    version=$(sed -n 's/.*"version":"\([^"]*\)".*/\1/p' package.json)
+    mkdir -p "$target/dist/bin" "$target/node_modules/axi-sdk-js"
+    {
+      printf '%s\n' '#!/usr/bin/env bash'
+      printf 'printf '\''%%s\\n'\'' '\''%s'\''\n' "$version"
+    } > "$target/dist/bin/$name.js"
+    printf '%s\n' '{"name":"axi-sdk-js","version":"0.1.10"}' \
+      > "$target/node_modules/axi-sdk-js/package.json"
+    ;;
+esac
 exit 0
 SH
 
@@ -142,18 +156,27 @@ test_source_inventory_is_exact_and_downstream() {
   pass 'the public source inventory selects six exact PixelOven fork commits'
 }
 
-test_every_npm_tool_builds_then_installs_from_its_fork() {
-  local tool prefix output
+test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork() {
+  local tool prefix output runtime_version corepack_calls
   for tool in gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi; do
     prefix="$TMP_ROOT/prefix-$tool"
     output=$(FM_INSTALL_TEST_CALLS="$CALLS" PATH="$FAKEBIN:$ORIGINAL_PATH" \
       /bin/bash "$INSTALLER" "$tool" "$prefix" 2>&1) || fail "$tool install failed: $output"
     [ -x "$prefix/bin/$tool" ] || fail "$tool executable was not installed"
+    runtime_version=$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.version)' \
+      "$prefix/lib/node_modules/$tool/node_modules/axi-sdk-js/package.json") \
+      || fail "$tool runtime dependency tree was not materialized"
+    [ "$runtime_version" = 0.1.10 ] \
+      || fail "$tool installed an unlocked axi-sdk-js version: $runtime_version"
     assert_contains "$output" "installed $tool" "$tool success did not name the tool"
   done
   assert_contains "$(cat "$CALLS/git.log")" 'remote add origin https://github.com/pixeloven/gh-axi' 'gh-axi was not fetched from its PixelOven fork'
-  assert_contains "$(cat "$CALLS/npm.log")" 'install --global --prefix' 'the built npm archive was not installed into the requested prefix'
-  pass 'every npm companion tool is built and installed from its exact fork source'
+  corepack_calls=$(cat "$CALLS/corepack.log")
+  assert_contains "$corepack_calls" 'pnpm install --frozen-lockfile --ignore-scripts' 'the source dependency tree was not frozen'
+  assert_contains "$corepack_calls" '--prod --offline --frozen-lockfile' 'the installed production tree could re-resolve dependencies'
+  assert_contains "$corepack_calls" 'deploy --legacy' 'the locked production tree was not deployed'
+  [ ! -e "$CALLS/npm.log" ] || fail 'npm performed a second dependency resolution'
+  pass 'every npm companion tool installs its lockfile-selected runtime tree'
 }
 
 test_no_mistakes_build_never_drives_the_daemon() {
@@ -178,6 +201,6 @@ test_unknown_tool_is_refused() {
 }
 
 test_source_inventory_is_exact_and_downstream
-test_every_npm_tool_builds_then_installs_from_its_fork
+test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork
 test_no_mistakes_build_never_drives_the_daemon
 test_unknown_tool_is_refused
