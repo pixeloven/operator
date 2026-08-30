@@ -114,7 +114,7 @@ PR #12 was squash-merged, discarding the required upstream merge topology. The c
 - first parent (PixelOven main): `0d88b5db13442389e9255f104f43cbd96d20a2e8`
 - second parent (verified upstream pin): `1fbc7bb1fba262ef38a4dedf321d18c54669b129`
 
-PR #13 is graph-only and **MUST be merged with GitHub's `Create a merge commit` method** (never squash, rebase, or fast-forward).
+PR #13 carries this graph-only repair commit and also includes this minimal documentation evidence commit; it **MUST be merged with GitHub's `Create a merge commit` method** (never squash, rebase, or fast-forward).
 
 ## 3. Rehearsal — 2026-08-17
 
