@@ -103,16 +103,17 @@ Five workflows run here, and they have very different characters:
 | Workflow | Owner | Fires on | Character |
 |---|---|---|---|
 | `ci.yml` | upstream suite, with ADR-0011's GitHub-hosted routing and ADR-0010's bounded tasks-axi acquisition hunk | push to `main`, every PR; native macOS is manual/non-blocking | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
-| `no-mistakes-required.yml` | **upstream**, with ADR-0010's bounded PixelOven action source hunk | every PR | asserts the PR body carries the `no-mistakes` pipeline signature |
+| `no-mistakes-required.yml` | **upstream**, with ADR-0010's bounded PixelOven action source hunk | every PR | enforces the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
 | `windows-herdr-spike.yml` | **upstream** — never edited (O-1) | `workflow_dispatch` only | costs nothing unless invoked |
 | `pixeloven-gates.yml` | **ours** | push to `main`, every PR | 2 jobs, both seconds of real work |
 | `pixeloven-release.yml` | **ours** | `push: tags: ['v*']` | 1 job |
 
 ### The cost finding — measured, not estimated
 
-The native macOS compatibility job is intentionally non-blocking for routine PR delivery and is run manually (or on pushes to `main`). Releases affecting shell portability must have recent native macOS evidence, or equivalent current upstream evidence, recorded before release. This repository is **private, on a free-plan org** — 2,000 included Actions
-minutes per month, and private-repo minutes bill against them. GitHub bills each
-**job** rounded up to the minute, and `macos` bills at **10×**.
+The native macOS compatibility job is intentionally non-blocking for routine PR delivery and is run manually or on pushes to `main`.
+Releases affecting shell portability must have recent native macOS evidence, or equivalent current upstream evidence, recorded before release.
+The following billing figures are historical evidence from the repository's private, free-plan period, when the organization had 2,000 included Actions minutes per month and private-repository jobs consumed that allowance.
+At that time GitHub billed each job rounded up to the minute and applied a 10x multiplier to macOS jobs.
 
 Measured on the first real run (PR #3, 2026-08-17):
 
@@ -140,10 +141,8 @@ are ~10–12 min each**, not the ~4.8 min the workflow comment implies, and the
 **Herdr lane finishes in ~7 min**, not the 15–40 min its old comment estimated
 (upstream's own #2413 says the same, merged in A1.4).
 
-`ci.yml` fires on **both** the pull request and the subsequent push to `main`, so
-**one landed PR costs ≈ 172 billed minutes** — **8.6 % of the monthly allowance
-per PR**, or **≈ 11 PRs before the budget is gone**. Our own gates are **1.2 %**
-of one `ci.yml` run.
+During that private-repository period, `ci.yml` fired on both the pull request and the subsequent push to `main`, so one landed PR consumed approximately 172 billed minutes, or 8.6 percent of the monthly allowance.
+The PixelOven gates consumed approximately 1.2 percent of one `ci.yml` run.
 
 ### The historical documentation-audience failure - resolved 2026-08-29
 
@@ -175,12 +174,12 @@ The measured suite remains expensive, but executable validation is required for 
 Do not disable the required suite as a cost workaround.
 If hosted-runner billing or capacity blocks execution, treat that as an operational blocker rather than routing untrusted code to private infrastructure.
 
-### Expected red check on every PR
+### Required no-mistakes check
 
-`Require no-mistakes` fails on any pull request whose body lacks the upstream-authored pipeline signature.
-That is the inherited enforcement that contributions arrive through the `no-mistakes` pipeline, and **it working is evidence for task A1.3**, not a defect.
+[`CONTRIBUTING.md`](../../CONTRIBUTING.md) owns the signature and current-head attestation contract enforced by `Require no-mistakes`.
+The check is expected to be green before merge.
 ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the selected downstream commit `70185bf682521ed1822e51dc09fa327b85b87e79`.
-The repository has no branch protection (private, free plan), so `gh-axi pr merge --squash` still merges; note the red check in the PR body.
+Upstream ancestry and corrective ancestry pull requests additionally follow the merge-commit contract in [`upstream-merges.md`](upstream-merges.md).
 
 ## 5. Release log
 

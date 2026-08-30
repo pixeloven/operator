@@ -16,9 +16,9 @@
 # tool versions and do not assume mutable runner image contents.
 #
 # ── Cost ──────────────────────────────────────────────────────────────────────
-# Private repo on a free-plan org: Actions minutes are a real budget. Deliberately
-# TWO jobs, no aggregator, concurrency-cancelling. The inherited `ci.yml` is the
-# expensive suite here; see docs/pixeloven/releases.md for the measurement.
+# The historical private-repository billing measurement remains in
+# docs/pixeloven/releases.md. Keep two concurrency-cancelling jobs and no
+# aggregator so the distinct gate results stay visible.
 #
 # ── Gate selection (judgement calls, recorded) ────────────────────────────────
 #   gitleaks      YES  — required. Pinned release binary + SHA256, NOT the
@@ -48,10 +48,8 @@
 #                        job would report zero findings instead of a useful scan.
 #
 # ── Follow-ups ────────────────────────────────────────────────────────────────
-#   * If org rulesets ever require checks on this repo, add a `re-actors/alls-green`
-#     aggregator job so there is one stable required check name. Omitted today:
-#     the repo has no branch protection (private free plan), so it would be a
-#     third billed job for zero current value.
+#   * If org rulesets ever require one stable aggregate check name, add a
+#     `re-actors/alls-green` aggregator job deliberately.
 name: PixelOven gates
 
 on:
