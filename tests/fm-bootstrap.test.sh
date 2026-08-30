@@ -939,14 +939,16 @@ test_routine_bootstrap_contract_runs_under_system_bash() {
 # split is a PARTITION: `skip` plus `only` together do exactly what `all` does,
 # with no step dropped and no step run twice.
 test_network_phase_partitions_the_run() {
-  local case_dir fakebin all_out skip_out only_out combined
+  local case_dir fakebin all_out skip_out only_out combined FM_FAKE_NODE_VERSION
   case_dir="$TMP_ROOT/network-phase"
   mkdir -p "$case_dir/home/config"
   printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
   fakebin=$(make_fake_toolchain "$case_dir")
   # Break the two diagnostics that stand for the two halves: a local tool floor
-  # and the network GitHub-auth probe.
-  rm -f "$fakebin/node"
+  # and the network GitHub-auth probe. Keep the fake Node on PATH with an old
+  # version so an ambient system Node cannot make this case host-dependent.
+  FM_FAKE_NODE_VERSION=v20.0.0
+  export FM_FAKE_NODE_VERSION
   cat > "$fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 exit 1
