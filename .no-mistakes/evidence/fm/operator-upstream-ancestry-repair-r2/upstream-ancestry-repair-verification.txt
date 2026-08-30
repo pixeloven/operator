@@ -1,0 +1,34 @@
+User-intent verification for target 48b68b57911e90e9a1bef8ab1db6822f7d53ce5b
+
+repair object: f0b708eb2e4afece1712454b7bbc4b091d13caa2 (content-address verified)
+ordered parents: 0d88b5db13442389e9255f104f43cbd96d20a2e8 1fbc7bb1fba262ef38a4dedf321d18c54669b129
+repair tree: acb1b9f1a88e4ef4d70c877c1466b48c8655a6c4
+base tree:   acb1b9f1a88e4ef4d70c877c1466b48c8655a6c4
+target contains repair: yes
+recorded upstream pin: 1fbc7bb1fba262ef38a4dedf321d18c54669b129
+target contains upstream pin: yes
+base-to-target changed files: docs/pixeloven/upstream-merges.md
+documentation commits after repair:
+  d10b13e446dbb99a335cd9c29114783c267b514c docs: record corrective upstream ancestry repair
+  48b68b57911e90e9a1bef8ab1db6822f7d53ce5b no-mistakes(review): Captain, clarify PR #13 documentation scope
+documentation diff summary:
+ 1 file changed, 9 insertions(+)
+
+Repository fork-contract consumer:
+== A7 - the recorded upstream pin is real and is contained in this tree
+A7 PASS: recorded upstream pin is a real ancestor of HEAD
+
+Pinned no-mistakes attestation verifier:
+ok - shared action accepts a matching head_sha with completed required steps
+ok - shared action rejects a mismatched head_sha and names both SHAs
+ok - shared action rejects an attestation with no head_sha
+
+Read-only GitHub state observed during the test phase:
+PR #13 is OPEN at https://github.com/pixeloven/operator/pull/13
+base: main
+head branch: fm/operator-upstream-ancestry-repair-r2
+remote head at test time: d10b13e446dbb99a335cd9c29114783c267b514c
+
+The test phase made no remote mutation. The outer no-mistakes push/PR phases own
+publishing target 48b68b57911e90e9a1bef8ab1db6822f7d53ce5b and binding PR #13's
+attestation to that published current head.
