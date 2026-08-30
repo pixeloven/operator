@@ -253,25 +253,26 @@ first.** Argued from what was measured, not from habit:
 
 The second measurement is below.
 
-## 4. Second synchronization - 2026-08-29
+## 4. Second synchronization - 2026-08-30
 
 The second synchronization merged the current upstream default branch before applying any new downstream distribution change.
 
 | | |
 |---|---|
 | Our `main` before | `61539eb05602b9b2859c94ee73a47bff2b328e3b` |
-| Upstream `main` | `9e3df47b4a5f228d8e3bf2b889e7119f95b85be5` |
+| Upstream `main` | `1fbc7bb1fba262ef38a4dedf321d18c54669b129` |
 | Previous pin and merge base | `bdae21ed09d2cca4f57caed4bda9d30d8f9d9be8` |
-| Behind by | **85 commits**, accumulated over **12 days** |
+| Behind by | **86 commits**, accumulated over **13 days** |
 | **Conflicts** | **zero** |
-| **Merge wall-clock** | **0.5 s total across two clean merge commands** |
+| **Merge wall-clock** | **0.54 s total across three clean merge commands** |
 | **Conflict-resolution time** | **none** |
-| Files changed by upstream | 273 |
-| Diff size | 54,348 insertions, 8,600 deletions |
+| Files changed by upstream | 283 |
+| Diff size | 61,171 insertions, 8,723 deletions |
 
 Git's `ort` strategy first integrated `c731c36`, auto-merging `README.md` without conflict.
-Upstream advanced by two commits during validation, so a second clean merge integrated `9e3df47` and auto-merged `CONTRIBUTING.md`, `bin/fm-bootstrap.sh`, and `bin/fm-test-run.sh` without conflict.
-The final tree keeps `9e3df47` as an ancestor and retains every PixelOven-only commit in ordinary history.
+Upstream then advanced twice during validation, so two more clean merges integrated `9e3df47` and `1fbc7bb`.
+Those merges auto-merged the overlapping downstream surfaces without conflict, including `README.md`, `bin/fm-test-run.sh`, `docs/configuration.md`, and `docs/documentation-audiences.json`.
+The final tree keeps `1fbc7bb` as an ancestor and retains every PixelOven-only commit in ordinary history.
 
 This synchronization is consumer-visible and brings substantial runtime, supervision, backend, documentation, and test behavior.
 The next `operator` release therefore needs at least a minor version bump under the existing release policy.
@@ -280,7 +281,7 @@ The same task deliberately introduces ADR-0010 after the pure merge.
 That decision expands the future contact surface from the README banner to an exact set of source-selection, CI acquisition, documentation-audience, and regression files.
 Future synchronizations review those paths by behavior and ownership rather than choosing an upstream or downstream side wholesale.
 
-The 85-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
+The 86-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
 The existing recommendation of every two weeks or roughly 15 commits remains the upper bound, and the commit trigger should win whenever upstream is moving quickly.
 
 ## 5. Merge log
@@ -288,4 +289,4 @@ The existing recommendation of every two weeks or roughly 15 commits remains the
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
 | 2026-08-17 | `6789876442d0` (fork point) | `bdae21ed09d2` | 8 | **0** | 0.031 s | Task A1.4 rehearsal. Cut after `v0.1.0`. Only contact surface was `README.md` (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added). |
-| 2026-08-29 | `bdae21ed09d2` | `9e3df47b4a5f` | 85 | **0** | 0.5 s | Second synchronization used two clean merge checkpoints because upstream advanced during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |
+| 2026-08-30 | `bdae21ed09d2` | `1fbc7bb1fba2` | 86 | **0** | 0.54 s | Second synchronization used three clean merge checkpoints because upstream advanced twice during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |

@@ -1,7 +1,7 @@
 # Companion tool distribution verification
 
 - **Observed:** 2026-08-29
-- **`operator` upstream:** `kunchenguid/firstmate@9e3df47b4a5f228d8e3bf2b889e7119f95b85be5`
+- **`operator` upstream:** `kunchenguid/firstmate@1fbc7bb1fba262ef38a4dedf321d18c54669b129`
 - **Contract owner:** [`tool-distribution.md`](tool-distribution.md)
 - **Executable inventory:** [`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh)
 
