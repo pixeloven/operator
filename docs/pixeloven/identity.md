@@ -122,7 +122,7 @@ Our default surface is new files in namespaces upstream can never collide with:
 | Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` |
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008 through 0010 add exact existing-file allowlists for autonomous delivery, ARC routing, companion distribution, and documentation-audience ownership.
+ADRs 0008 through 0011 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, and documentation-audience ownership.
 Anything outside those lists needs a **new ADR**, not a silent change.
 See [fork-contract.md](fork-contract.md).
 
@@ -201,7 +201,7 @@ No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/actionlint\.yaml$|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows)\.sh$|tests/(fm-bootstrap|fm-no-mistakes-required|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows)\.sh$|tests/(fm-bootstrap|fm-lint-workflows|fm-no-mistakes-required|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what

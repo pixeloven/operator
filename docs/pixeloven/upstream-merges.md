@@ -101,14 +101,9 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 3. **Is any merged change consumer-visible?** That decides the semver bump on
    our next tag ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md),
    [`releases.md`](releases.md) §2).
-4. **Does upstream's own suite still pass on the merged tree?** Upstream's
-   `ci.yml` is the only thing that can answer this, and an upstream merge is the
-   one occasion where it earns its cost — so it is **re-enabled for the whole
-   merge PR** and disabled again afterwards ([`releases.md`](releases.md) §4).
-   Read it as a *diff of which tests fail*, not as pass/fail: one shard is
-   **known red on every run** because our documents are not in upstream's
-   documentation-audience inventory, a pre-existing condition dating from the
-   first PixelOven commit and written up in [`releases.md`](releases.md) §4.
+4. **Does upstream's own suite still pass on the merged tree?**
+   Upstream's `ci.yml` is the only thing that can answer this, so it remains enabled for the whole merge PR and afterwards ([`releases.md`](releases.md) §4).
+   Treat any failure as current evidence to investigate rather than relying on the resolved historical documentation-audience failure.
 5. **Anything new in the supply chain?** New network calls, new installers, new
    telemetry, a changed pin. Feeds [`supply-chain-read.md`](supply-chain-read.md).
 
@@ -283,6 +278,15 @@ Future synchronizations review those paths by behavior and ownership rather than
 
 The 86-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
 The existing recommendation of every two weeks or roughly 15 commits remains the upper bound, and the commit trigger should win whenever upstream is moving quickly.
+
+### Corrective ancestry merge after the PR #11 squash
+
+PR #11 was squash-merged as `0e9bc603abcbd557c111cb4a798aceddde85087e` after its branch had already integrated the upstream pin.
+The squash preserved the synchronized file tree but synthesized one new commit whose only parent was the prior PixelOven `main`, so `1fbc7bb1fba262ef38a4dedf321d18c54669b129` was no longer reachable and A7 failed.
+
+The corrective merge records `0e9bc603abcbd557c111cb4a798aceddde85087e` as its first parent and the pinned upstream commit as its second parent.
+It uses Git's `ours` merge strategy because the squash had already landed the reviewed file content, preserving tree `facc2dabfbffcdf7aae862aac8b9822d820ae897` exactly while restoring the missing ancestry edge.
+The follow-up PR must itself be merged with GitHub's merge-commit method because squashing or rebasing it would discard the corrective merge topology again.
 
 ## 5. Merge log
 

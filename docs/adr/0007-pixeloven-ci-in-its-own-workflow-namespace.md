@@ -26,10 +26,7 @@ Two further forces shaped the content rather than the location:
    organization-owned repositories, and we hold no license key. The
    github-hosted template in the harmony-ci action library carries exactly that
    caveat in a comment.
-2. **ARC routing is a separate organization-owned concern.** The repository was
-   initially created before the PixelOven ARC pool was available, so its first
-   workflows used GitHub-hosted runners. The later ARC migration is recorded in
-   ADR-0009.
+2. **Runner routing is a separate concern.** The repository initially used GitHub-hosted runners, [ADR-0009](0009-operator-arc-runner-routing.md) recorded the later ARC migration, and [ADR-0011](0011-operator-github-hosted-runner-routing.md) supersedes that migration with the current hosted-runner contract.
 
 ## Decision
 
@@ -50,8 +47,7 @@ Two further forces shaped the content rather than the location:
   commit SHA.
 - gitleaks runs with `--redact` so a candidate secret is never echoed into a log
   (G-3).
-- Linux jobs now use the organization-owned `lattice` ARC pool. Native macOS
-  and Windows jobs retain `macos-latest` and `windows-latest` respectively.
+- Runner selection is owned by [ADR-0011](0011-operator-github-hosted-runner-routing.md), not this workflow-namespace decision.
 - The fork contract's own assertions — the diff-against-the-fork-point check and
   the G-7 naming rule — run as a step in `pixeloven-gates.yml`, so task A1.1's
   "grep clean" acceptance is continuously enforced rather than claimed once.
@@ -72,14 +68,9 @@ Two further forces shaped the content rather than the location:
   the fork contract exists to prevent.
 - We carry a small maintenance obligation: two pinned tool digests to bump.
   That is the price of not depending on a licensed action.
-- **The inherited `ci.yml` remains expensive and is not ours to fix by editing.**
-  Its measured cost and the settings-level options are recorded in
-  [`docs/pixeloven/releases.md`](../pixeloven/releases.md); the choice among them
-  is the operator's, and is a repository setting, not a file change.
-- `no-mistakes-required.yml` will fail on our own pull requests until this
-  repository is registered in the project registry with posture `no-mistakes`
-  (task A1.3, [ADR-0005](0005-agent-self-improvement-is-pr-gated.md)). That red
-  check is expected, and is evidence the enforcement works.
+- **The inherited `ci.yml` remains expensive.**
+  Its measured historical cost and current validation posture are recorded in [`docs/pixeloven/releases.md`](../pixeloven/releases.md).
+- Current `no-mistakes-required.yml` behavior is also documented in [`docs/pixeloven/releases.md`](../pixeloven/releases.md).
 
 ## Alternatives considered
 
@@ -110,9 +101,7 @@ Two further forces shaped the content rather than the location:
   outside our declared namespaces. The markdown check that earns its place is a
   relative-link check over our two doc trees, which needs no config and catches
   the defect class a cross-linked ADR set actually suffers.
-- **`semgrep`.** Deferred: registry rulesets are login-gated (zero findings
-  without a token) and the harmony baseline ruleset is baked into the private
-  ARC runner image. Revisit with the ARC migration.
+- **`semgrep`.** Deferred because registry rulesets are login-gated and an unauthenticated job would report zero findings instead of a useful scan.
 - **Wait for ARC before adding any gates.** Rejected: G-6 says gates from day
   one, and task A1.2 gates task P1.2. GitHub-hosted labels were the initial
   fallback; ADR-0009 records the later Linux migration to `lattice`.

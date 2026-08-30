@@ -13,8 +13,8 @@ permissions:
 jobs:
   lint:
     name: Lint shell scripts
-    # Linux jobs use the organization's PixelOven ARC pool.
-    runs-on: lattice
+    # Public and untrusted Linux work runs only on standard GitHub-hosted runners.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Install pinned ShellCheck
@@ -38,7 +38,7 @@ jobs:
   # and that the portable serial CI shards partition that serial lane exactly.
   test-coverage:
     name: Test coverage guard
-    runs-on: lattice
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Prove complete regression partition
@@ -48,7 +48,7 @@ jobs:
   # set only. Composition owner: bin/fm-test-run.sh (docs/fm-test-portable-shards.md).
   tests-portable-parallel-1:
     name: Behavior portable parallel 1
-    runs-on: lattice
+    runs-on: ubuntu-latest
     # Measured shard wall is ~1 min of serial sum on proven scripts; this cap is
     # a hang tripwire with margin, not the expected healthy end of the lane.
     timeout-minutes: 10
@@ -91,7 +91,7 @@ jobs:
 
   tests-portable-parallel-2:
     name: Behavior portable parallel 2
-    runs-on: lattice
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -138,7 +138,7 @@ jobs:
   # whose "ofN" disagrees with it (docs/fm-test-portable-shards.md).
   tests-portable-serial:
     name: Behavior portable serial ${{ matrix.shard }}
-    runs-on: lattice
+    runs-on: ubuntu-latest
     # Measured whole remainder is ~19 min of serial work; the balanced shards
     # are ~4.8 min each. Cap is a hang tripwire with roughly 3x margin, not the
     # expected healthy end of the lane.
@@ -205,7 +205,7 @@ jobs:
   # the failure evidence and move the job to macOS rather than skip assertions.
   tests-herdr:
     name: Behavior tests (Herdr)
-    runs-on: lattice
+    runs-on: ubuntu-latest
     # Healthy runs finish around 7 minutes. This job cap is a last-resort hang
     # tripwire, not the expected end of the lane. The family-run step owns the
     # tighter bound so a wedged suite fails fast with always() cleanup and
@@ -325,7 +325,7 @@ jobs:
   # Aggregate per-lane timing into one summary artifact for critical-path review.
   tests-timing-aggregate:
     name: Behavior timing aggregate
-    runs-on: lattice
+    runs-on: ubuntu-latest
     needs:
       - tests-portable-parallel-1
       - tests-portable-parallel-2
@@ -408,7 +408,7 @@ jobs:
 
   invariants:
     name: Repo invariants
-    runs-on: lattice
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Compatibility pointers must stay intact

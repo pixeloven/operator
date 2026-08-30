@@ -11,14 +11,14 @@
 # adapted where this repository differs from that template's assumptions.
 #
 # ── Runner ────────────────────────────────────────────────────────────────────
-# Linux gates use the organization's PixelOven ARC pool via the `lattice` label.
-# The pinned binary installs remain intentional: these gates own their tool
-# versions and do not assume the ARC image contents.
+# Linux gates use standard GitHub-hosted runners.
+# The pinned binary installs remain intentional because these gates own their
+# tool versions and do not assume mutable runner image contents.
 #
 # ── Cost ──────────────────────────────────────────────────────────────────────
-# Private repo on a free-plan org: Actions minutes are a real budget. Deliberately
-# TWO jobs, no aggregator, concurrency-cancelling. The inherited `ci.yml` is the
-# expensive suite here; see docs/pixeloven/releases.md for the measurement.
+# The historical private-repository billing measurement remains in
+# docs/pixeloven/releases.md. Keep two concurrency-cancelling jobs and no
+# aggregator so the distinct gate results stay visible.
 #
 # ── Gate selection (judgement calls, recorded) ────────────────────────────────
 #   gitleaks      YES  — required. Pinned release binary + SHA256, NOT the
@@ -44,16 +44,12 @@
 #                        gates would be decorative. A tripwire below fails the
 #                        build the moment a real manifest or lockfile appears, so
 #                        this decision cannot silently rot.
-#   semgrep       NO   — registry rulesets are login-gated (zero findings without a
-#                        token) and the harmony baseline ruleset is baked into the
-#                        private ARC image. Revisit with the ARC migration.
+#   semgrep       NO   — registry rulesets are login-gated, so an unauthenticated
+#                        job would report zero findings instead of a useful scan.
 #
 # ── Follow-ups ────────────────────────────────────────────────────────────────
-#   * ARC migration once M0.1 lands (see Runner above).
-#   * If org rulesets ever require checks on this repo, add a `re-actors/alls-green`
-#     aggregator job so there is one stable required check name. Omitted today:
-#     the repo has no branch protection (private free plan), so it would be a
-#     third billed job for zero current value.
+#   * If org rulesets ever require one stable aggregate check name, add a
+#     `re-actors/alls-green` aggregator job deliberately.
 name: PixelOven gates
 
 on:
@@ -80,7 +76,7 @@ env:
 jobs:
   secret-scan:
     name: gitleaks (secret scan)
-    runs-on: lattice
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -107,7 +103,7 @@ jobs:
 
   lint:
     name: workflows · docs · fork contract
-    runs-on: lattice
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -233,7 +229,7 @@ jobs:
 
           echo "== A4 - O-1: the diff against upstream $PIN stays inside PixelOven namespaces and accepted ADR overrides"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/actionlint\.yaml$|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows)\.sh$|tests/(fm-bootstrap|fm-no-mistakes-required|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows)\.sh$|tests/(fm-bootstrap|fm-lint-workflows|fm-no-mistakes-required|fm-pr-check-security|fm-secondmate-sync|fm-startup-memory-budget|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: path is outside PixelOven namespaces and accepted ADR override sets"; }
 
           echo '== A5 - the README exception stays one bounded banner block'

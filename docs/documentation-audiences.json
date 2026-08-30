@@ -305,6 +305,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0011-operator-github-hosted-runner-routing.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

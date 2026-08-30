@@ -96,15 +96,13 @@ because only one of them is visible in this repository:
 |---|---|---|
 | Registry posture | `$FM_HOME/data/projects.md` (machine-local) | What the fleet *intends* — consumed by `fm-fleet-sync.sh`, `fm-home-seed.sh`, and `fm-spawn.sh`'s registry-deviation notice |
 | The gate itself | `no-mistakes init` state under `~/.no-mistakes/` | The pipeline a change must pass to become a PR |
-| `Require no-mistakes` | `.github/workflows/no-mistakes-required.yml` (inherited, with ADR-0010's bounded PixelOven action source) | **Server-side refusal** of any PR whose body lacks the pipeline signature |
+| `Require no-mistakes` | `.github/workflows/no-mistakes-required.yml` (inherited, with ADR-0010's bounded PixelOven action source) | **Server-side enforcement** of the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
 
-The third is the one that cannot be bypassed by a mistake on the workstation, and it is
-the reason O-4 is a property of the repository rather than of one machine's configuration.
+The third is the one that cannot be bypassed by a mistake on the workstation, and it is the reason O-4 is a property of the repository rather than of one machine's configuration.
 It remains upstream-owned except for ADR-0010's exact reusable-action source hunk.
 
-A useful consequence, observed during Phase 1: PRs raised by hand — including this
-program's own bootstrap PRs — show that check **red**. That is the control working, not a
-defect. A red `Require no-mistakes` on a hand-raised PR is evidence the gate is live.
+A pull request raised without the delivery evidence defined in [`CONTRIBUTING.md`](../../CONTRIBUTING.md) is rejected by `Require no-mistakes`.
+A pipeline-delivered pull request is expected to make that check green before merge.
 
 ## 5. Verification
 

@@ -1,6 +1,6 @@
 # ADR-0009: `operator` Linux CI routes through the PixelOven ARC pool
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0011
 - **Date:** 2026-08-25
 - **Deciders:** Brian Gebel (the operator)
 - **Source:** Captain-approved PR #10 remediation
