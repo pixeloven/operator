@@ -136,6 +136,17 @@ cat > "$FAKEBIN/go" <<'SH'
 printf 'go version go1.25.0 test/test\n'
 SH
 
+cat > "$FAKEBIN/install" <<'SH'
+#!/usr/bin/env bash
+set -eu
+for last_arg in "$@"; do :; done
+if [ "${FM_INSTALL_TEST_INSTALL_FAIL:-0}" = 1 ]; then
+  printf '%s\n' partial > "$last_arg"
+  exit 28
+fi
+exec /usr/bin/install "$@"
+SH
+
 cat > "$FAKEBIN/make" <<'SH'
 #!/usr/bin/env bash
 set -eu
@@ -149,14 +160,15 @@ for arg in "$@"; do
   previous=$arg
 done
 mkdir -p "$repo_dir/bin"
+built_version=${FM_INSTALL_TEST_NO_MISTAKES_VERSION:-$version}
 {
   printf '%s\n' '#!/usr/bin/env bash'
-  printf 'printf '\''%%s\\n'\'' '\''no-mistakes version v%s (test) 2026-08-29T00:00:00Z'\''\n' "$version"
+  printf 'printf '\''%%s\\n'\'' '\''no-mistakes version v%s (test) 2026-08-29T00:00:00Z'\''\n' "$built_version"
 } > "$repo_dir/bin/no-mistakes"
 chmod 0755 "$repo_dir/bin/no-mistakes"
 SH
 
-chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/cp" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/make"
+chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/cp" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/install" "$FAKEBIN/make"
 
 test_source_inventory_is_exact_and_downstream() {
   local out
@@ -244,6 +256,32 @@ test_failed_npm_replacement_preserves_existing_install() {
   pass 'copy and version failures preserve the existing npm installation'
 }
 
+test_failed_no_mistakes_replacement_preserves_existing_install() {
+  local mode prefix existing output status
+  for mode in install version; do
+    prefix="$TMP_ROOT/prefix-failed-no-mistakes-$mode"
+    mkdir -p "$prefix/bin"
+    existing="$prefix/bin/no-mistakes"
+    printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" existing' > "$existing"
+    chmod 0755 "$existing"
+    status=0
+    case "$mode" in
+      install)
+        output=$(FM_INSTALL_TEST_CALLS="$CALLS" FM_INSTALL_TEST_INSTALL_FAIL=1 \
+          PATH="$FAKEBIN:$ORIGINAL_PATH" /bin/bash "$INSTALLER" no-mistakes "$prefix" 2>&1) || status=$?
+        ;;
+      version)
+        output=$(FM_INSTALL_TEST_CALLS="$CALLS" FM_INSTALL_TEST_NO_MISTAKES_VERSION=9.9.9 \
+          PATH="$FAKEBIN:$ORIGINAL_PATH" /bin/bash "$INSTALLER" no-mistakes "$prefix" 2>&1) || status=$?
+        ;;
+    esac
+    [ "$status" -ne 0 ] || fail "$mode failure unexpectedly installed a no-mistakes replacement"
+    [ "$("$existing")" = existing ] \
+      || fail "$mode failure broke the existing no-mistakes installation"
+  done
+  pass 'install and version failures preserve the existing no-mistakes installation'
+}
+
 test_no_mistakes_build_never_drives_the_daemon() {
   local prefix output calls
   prefix="$TMP_ROOT/prefix-no-mistakes"
@@ -269,5 +307,6 @@ test_source_inventory_is_exact_and_downstream
 test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork
 test_unsafe_manifest_bin_is_refused_before_replacing_install
 test_failed_npm_replacement_preserves_existing_install
+test_failed_no_mistakes_replacement_preserves_existing_install
 test_no_mistakes_build_never_drives_the_daemon
 test_unknown_tool_is_refused

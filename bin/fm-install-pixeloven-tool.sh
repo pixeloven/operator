@@ -141,10 +141,12 @@ esac
 TEMP_ROOT=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/fm-pixeloven-tool.XXXXXX")
 STAGED_DIR=
 STAGED_LINK_DIR=
+STAGED_FILE=
 cleanup() {
   rm -rf "$TEMP_ROOT"
   [ -z "$STAGED_DIR" ] || rm -rf "$STAGED_DIR"
   [ -z "$STAGED_LINK_DIR" ] || rm -rf "$STAGED_LINK_DIR"
+  [ -z "$STAGED_FILE" ] || rm -f "$STAGED_FILE"
 }
 trap cleanup EXIT
 SOURCE_DIR=$TEMP_ROOT/source
@@ -243,12 +245,17 @@ else
   make -C "$SOURCE_DIR" build \
     VERSION="v$EXPECTED_VERSION" COMMIT="$SOURCE_SHORT" DATE="$SOURCE_DATE"
   mkdir -p "$PREFIX/bin"
-  install -m 0755 "$SOURCE_DIR/bin/no-mistakes" "$PREFIX/bin/no-mistakes"
-  VERSION_OUTPUT=$("$PREFIX/bin/$TOOL" --version 2>&1) \
-    || die "$PREFIX/bin/$TOOL did not report its version after installation"
+  [ ! -d "$PREFIX/bin/$TOOL" ] || die "$PREFIX/bin/$TOOL is a directory"
+  STAGED_FILE=$(mktemp "$PREFIX/bin/.${TOOL}.new.XXXXXX")
+  install -m 0755 "$SOURCE_DIR/bin/no-mistakes" "$STAGED_FILE"
+  VERSION_OUTPUT=$("$STAGED_FILE" --version 2>&1) \
+    || die "staged $TOOL executable did not report its version"
   INSTALLED_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -oE '[0-9]+(\.[0-9]+)+' | head -n 1 || true)
   [ "$INSTALLED_VERSION" = "$EXPECTED_VERSION" ] \
-    || die "$PREFIX/bin/$TOOL reports '${INSTALLED_VERSION:-<empty>}', expected '$EXPECTED_VERSION'"
+    || die "staged $TOOL reports '${INSTALLED_VERSION:-<empty>}', expected '$EXPECTED_VERSION'"
+  mv -f "$STAGED_FILE" "$PREFIX/bin/$TOOL" \
+    || die "could not activate the staged $TOOL executable"
+  STAGED_FILE=
 fi
 
 INSTALLED_BIN=$PREFIX/bin/$TOOL
