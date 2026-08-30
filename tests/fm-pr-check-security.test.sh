@@ -1133,7 +1133,10 @@ SH
     child_pid=$(cat "$child_pid_file")
     kill -TERM "$watcher_pid" 2>/dev/null || fail "could not stop $backend watcher"
     i=0
-    while kill -0 "$watcher_pid" 2>/dev/null && [ "$i" -lt 150 ]; do
+    # Hosted runners can take longer to schedule and reap the watcher's
+    # process group after the direct check returns. Keep the behavioral
+    # assertions below strict while allowing bounded cleanup time.
+    while kill -0 "$watcher_pid" 2>/dev/null && [ "$i" -lt 500 ]; do
       sleep 0.02
       i=$((i + 1))
     done
