@@ -65,7 +65,7 @@ resolve_source() {
       EXPECTED_VERSION=0.1.34
       ;;
     no-mistakes)
-      SOURCE_COMMIT=554474f66423ad3f6021fc934077cc3a54e20158
+      SOURCE_COMMIT=70185bf682521ed1822e51dc09fa327b85b87e79
       EXPECTED_VERSION=1.60.1
       SOURCE_KIND=go
       ;;

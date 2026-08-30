@@ -137,7 +137,7 @@ test_source_inventory_is_exact_and_downstream() {
   assert_contains "$out" "lavish-axi$(printf '\t')https://github.com/pixeloven/lavish-axi$(printf '\t')ffd7aacff563b8bca09eb7ebfb17c14faeb968ce$(printf '\t')0.1.63$(printf '\t')npm" 'lavish-axi source is not exact'
   assert_contains "$out" "tasks-axi$(printf '\t')https://github.com/pixeloven/tasks-axi$(printf '\t')d9175b6d083d693c5b6ca21652454d52e4b312d9$(printf '\t')0.2.5$(printf '\t')npm" 'tasks-axi source is not exact'
   assert_contains "$out" "quota-axi$(printf '\t')https://github.com/pixeloven/quota-axi$(printf '\t')bbc3deb4fca6a172db0217fd26d990fad8b4202e$(printf '\t')0.1.34$(printf '\t')npm" 'quota-axi source is not exact'
-  assert_contains "$out" "no-mistakes$(printf '\t')https://github.com/pixeloven/no-mistakes$(printf '\t')554474f66423ad3f6021fc934077cc3a54e20158$(printf '\t')1.60.1$(printf '\t')go" 'no-mistakes source is not exact'
+  assert_contains "$out" "no-mistakes$(printf '\t')https://github.com/pixeloven/no-mistakes$(printf '\t')70185bf682521ed1822e51dc09fa327b85b87e79$(printf '\t')1.60.1$(printf '\t')go" 'no-mistakes source is not exact'
   assert_not_contains "$out" 'kunchenguid/' 'the selected distribution inventory still points at upstream'
   pass 'the public source inventory selects six exact PixelOven fork commits'
 }
@@ -162,9 +162,9 @@ test_no_mistakes_build_never_drives_the_daemon() {
   output=$(FM_INSTALL_TEST_CALLS="$CALLS" PATH="$FAKEBIN:$ORIGINAL_PATH" \
     /bin/bash "$INSTALLER" no-mistakes "$prefix" 2>&1) || fail "no-mistakes install failed: $output"
   [ -x "$prefix/bin/no-mistakes" ] || fail 'no-mistakes executable was not installed'
-  assert_contains "$output" 'installed no-mistakes 1.60.1 from pixeloven/no-mistakes@554474f66423ad3f6021fc934077cc3a54e20158' 'no-mistakes success did not preserve fork provenance'
+  assert_contains "$output" 'installed no-mistakes 1.60.1 from pixeloven/no-mistakes@70185bf682521ed1822e51dc09fa327b85b87e79' 'no-mistakes success did not preserve fork provenance'
   calls=$(cat "$CALLS/make.log")
-  assert_contains "$calls" 'build VERSION=v1.60.1 COMMIT=554474f' 'no-mistakes build metadata was not pinned'
+  assert_contains "$calls" 'build VERSION=v1.60.1 COMMIT=70185bf' 'no-mistakes build metadata was not pinned'
   assert_not_contains "$calls" 'daemon' 'the no-mistakes source install drove daemon lifecycle behavior'
   pass 'no-mistakes is source-built without starting, stopping, or restarting its daemon'
 }

@@ -1,6 +1,6 @@
 # Companion tool distribution verification
 
-- **Observed:** 2026-08-29
+- **Observed:** 2026-08-30
 - **`operator` upstream:** `kunchenguid/firstmate@1fbc7bb1fba262ef38a4dedf321d18c54669b129`
 - **Contract owner:** [`tool-distribution.md`](tool-distribution.md)
 - **Executable inventory:** [`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh)
@@ -19,7 +19,8 @@ gh-axi api /repos/pixeloven/<tool>/compare/main...kunchenguid:main --jq \
 ```
 
 All six repositories reported `visibility: public`, `fork: true`, the matching `kunchenguid/<tool>` parent, and `default_branch: main`.
-All six comparisons reported `status: identical`, `ahead_by: 0`, and `behind_by: 0` at the selected commits.
+The five AXI comparisons reported `status: identical`, `ahead_by: 0`, and `behind_by: 0` at the selected commits.
+The no-mistakes comparison proved that `pixeloven/no-mistakes@70185bf682521ed1822e51dc09fa327b85b87e79` contains current upstream `1a3f74d86d2646967d6f1e7dce8853023c41768c` plus five downstream commits.
 All six release listings reported `count: 0` and `releases: []`, proving that an installer could not select a PixelOven release asset at this observation.
 
 The no-mistakes shared-action commit selected by `.github/workflows/no-mistakes-required.yml` was also checked at the downstream source:
@@ -53,8 +54,8 @@ bin/fm-install-pixeloven-tool.sh no-mistakes <prefix>
 <prefix>/bin/no-mistakes --version
 ```
 
-The installed binary reported `no-mistakes version v1.60.1 (554474f) 2026-08-28T22:33:54-07:00`.
-The command made no daemon lifecycle call, and the running shared v1.53 service was neither restarted nor upgraded.
+The installed binary reported `no-mistakes version v1.60.1-9-g70185bf (70185bf) 2026-08-30T02:10:43Z`.
+The source-install command made no daemon lifecycle call.
 
 Portable regression coverage uses:
 
