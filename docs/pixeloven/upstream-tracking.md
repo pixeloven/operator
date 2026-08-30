@@ -23,6 +23,7 @@ git diff --stat main..upstream/main                 # the conflict surface
 |------|-----------|-----------------|-----------|-------|-------|
 | 2026-08-16 | `6789876442d0` | `ef35d799a846` | **4 commits** | fork point (task A0.1) | Baseline. Recorded for the A1.4 merge rehearsal. **No merge performed** — Phase 0 seeds only. |
 | 2026-08-17 | `d6d7f85` (= `v0.1.0`) | `bdae21ed09d2` | **8 commits** | **first merge** (task A1.4) | Clean: **zero conflicts**, merge wall **0.031 s**. Full record in [`upstream-merges.md`](upstream-merges.md). Pin advanced to `bdae21ed09d2`. |
+| 2026-08-30 | `61539eb` | `1fbc7bb1fba2` | **86 commits** | **second merge** | Three clean merge checkpoints, **zero conflicts**, combined merge wall **0.54 s**. Upstream advanced twice during validation, and the pin was refreshed after each merge. |
 
 The machine-readable half of this ledger is [`upstream-pin`](upstream-pin) — a
 single line holding the upstream commit our tree currently contains. The

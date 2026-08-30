@@ -1,11 +1,10 @@
 ---
 # PixelOven gates — task A1.2 · requirements O-1, O-3, G-2, G-3, G-6.
 #
-# A workflow PixelOven OWNS. It is additive: upstream's own `ci.yml`,
-# `no-mistakes-required.yml` and `windows-herdr-spike.yml` are never edited
-# (requirement O-1), and every check here is scoped so that it grades OUR files
-# only. A gate that failed on upstream's code would create pressure to edit
-# upstream's code, which is the thing the fork contract forbids.
+# A workflow PixelOven OWNS. ADR-0010 permits bounded companion-source hunks in
+# upstream's `ci.yml` and `no-mistakes-required.yml`; every other inherited
+# workflow remains upstream-owned. The checks here grade PixelOven's surfaces
+# and those exact exceptions rather than treating inherited code as ours.
 #
 # Composed from the harmony-ci action library's github-hosted template
 # (https://github.com/ductiletoaster/harmony-ci, templates/ci-github-hosted.yml),
@@ -128,10 +127,10 @@ jobs:
           "$RUNNER_TEMP/bin/actionlint" -version
 
       - name: Lint the workflows PixelOven owns
-        # Scoped to pixeloven-*.yml ON PURPOSE. Upstream's three workflows are
-        # upstream's to lint; grading them here would manufacture pressure to
-        # edit them, which O-1 forbids. shellcheck is on PATH on ubuntu-latest,
-        # so actionlint also shellchecks our `run:` blocks.
+        # Scoped to pixeloven-*.yml on purpose. The complete upstream lint owner
+        # separately checks every workflow, including ADR-0010's bounded hunks.
+        # shellcheck is on PATH on ubuntu-latest, so actionlint also shellchecks
+        # our `run:` blocks.
         run: |
           set -euo pipefail
           shellcheck --version | head -2
@@ -221,7 +220,7 @@ jobs:
 
           echo '== A2 - every self-referential PixelOven URL is a real PixelOven repo'
           out=$(corpus | grep -oE 'github\.com/pixeloven/[A-Za-z0-9._-]+' | sed 's/\.git$//' | sort -u \
-                | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci)$' || true)
+                | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci|gh-axi|chrome-devtools-axi|lavish-axi|tasks-axi|quota-axi|no-mistakes)$' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A2: unexpected pixeloven/* repository reference"; }
 
           echo '== A3 - the project is never capitalized as a proper noun (G-7)'
@@ -232,10 +231,10 @@ jobs:
                      | xargs -0 grep -nE '\bOperator\b'; } 2>/dev/null || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A3: 'Operator' used as a proper noun - write operator in code style"; }
 
-          echo "== A4 - O-1: the diff against upstream $PIN touches only PixelOven namespaces"
+          echo "== A4 - O-1: the diff against upstream $PIN stays inside PixelOven namespaces and accepted ADR overrides"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|\.github/workflows/ci\.yml$|\.github/workflows/no-mistakes-required\.yml$|\.github/workflows/pixeloven-release\.yml$|bin/backends/|\.agents/skills/po-|README\.md$|NOTICE$|bin/fm-spawn\.sh$|bin/fm-delivery-lane\.sh$|tests/fm-task-delivery\.test\.sh$|docs/verification/delivery-lane\.md$|docs/documentation-audiences\.json$)' || true)
-          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: upstream file(s) modified - O-1 violation, needs a new ADR"; }
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/actionlint\.yaml$|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows)\.sh$|tests/(fm-bootstrap|fm-no-mistakes-required|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: path is outside PixelOven namespaces and accepted ADR override sets"; }
 
           echo '== A5 - the README exception stays one bounded banner block'
           git show "$PIN":README.md > "$RUNNER_TEMP/upstream-README.md"
@@ -254,6 +253,15 @@ jobs:
           elif ! git merge-base --is-ancestor "$PIN" HEAD; then
             bad "A7: docs/pixeloven/upstream-pin ($PIN) is not an ancestor of HEAD - the pin was advanced without merging"
           fi
+
+          echo '== A8 - the companion source inventory selects exactly six matching PixelOven forks'
+          source_rows=$(bin/fm-install-pixeloven-tool.sh --list 2>/dev/null) \
+            || { source_rows=; bad 'A8: companion source inventory could not be read'; }
+          source_names=$(printf '%s\n' "$source_rows" | awk -F '\t' 'BEGIN { ORS="" } { if (NR > 1) printf ","; printf "%s", $1 }')
+          [ "$source_names" = 'gh-axi,chrome-devtools-axi,lavish-axi,tasks-axi,quota-axi,no-mistakes' ] \
+            || bad "A8: unexpected companion source names or order: $source_names"
+          out=$(printf '%s\n' "$source_rows" | awk -F '\t' 'NF != 5 || $2 != "https://github.com/pixeloven/" $1 { print }')
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad 'A8: a companion source does not select its matching PixelOven fork'; }
 
           [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
           echo 'fork-contract assertions PASSED'

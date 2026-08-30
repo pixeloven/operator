@@ -1,4 +1,4 @@
-# ADR-0009: Operator Linux CI routes through the PixelOven ARC pool
+# ADR-0009: `operator` Linux CI routes through the PixelOven ARC pool
 
 - **Status:** Accepted
 - **Date:** 2026-08-25
@@ -11,12 +11,12 @@ The PixelOven organization now has a working ARC pool exposed through the
 `lattice` runner label.
 
 A successful `pixeloven/lattice` run reached ephemeral ARC runners with
-`runs-on: lattice`, while PR #10's Operator Linux jobs requested
+`runs-on: lattice`, while PR #10's `operator` Linux jobs requested
 `ubuntu-latest` and could not reach that pool.
 
 ## Decision
 
-Route every intended Linux job in the Operator workflows through
+Route every intended Linux job in the `operator` workflows through
 `runs-on: lattice`.
 
 This includes the inherited CI suite, the no-mistakes PR-body check, the

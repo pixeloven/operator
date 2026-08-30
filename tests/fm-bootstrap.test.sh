@@ -29,6 +29,7 @@ set -u
 BASE_PATH=${FM_TEST_BASE_PATH:-/usr/bin:/bin:/usr/sbin:/sbin}
 TMP_ROOT=$(fm_test_tmproot fm-bootstrap-tests)
 export FM_BACKEND_CMUX_BUNDLE_BIN="$TMP_ROOT/no-bundled-cmux"
+printf -v PIXELOVEN_INSTALLER '%q' "$ROOT/bin/fm-install-pixeloven-tool.sh"
 
 # Hermetic runtime-backend detection. These cases pin the backend per-home via
 # config/backend; the dev shell's ambient runtime markers ($TMUX inside tmux,
@@ -44,7 +45,8 @@ unset TMUX TMUX_PANE HERDR_ENV HERDR_PANE_ID HERDR_SESSION HERDR_SOCKET_PATH \
 make_fake_toolchain() {
   local dir=$1 fakebin
   fakebin=$(fm_fakebin "$dir")
-  fm_fake_exit0 "$fakebin" tmux node chrome-devtools-axi
+  fm_fake_exit0 "$fakebin" tmux chrome-devtools-axi
+  fm_fake_version_tool "$fakebin" node FM_FAKE_NODE_VERSION v22.19.0
   fm_fake_version_tool "$fakebin" lavish-axi FM_FAKE_LAVISH_AXI_VERSION 0.1.46
   cat > "$fakebin/gh-axi" <<'SH'
 #!/usr/bin/env bash
@@ -79,7 +81,7 @@ SH
   cat > "$fakebin/no-mistakes" <<'SH'
 #!/usr/bin/env bash
 if [ "${1:-}" = --version ]; then
-  printf '%s\n' "${FM_FAKE_NO_MISTAKES_VERSION:-no-mistakes version v1.31.2 (fake) 2026-06-27T00:02:18Z}"
+  printf '%s\n' "${FM_FAKE_NO_MISTAKES_VERSION:-no-mistakes version v1.46.0 (fake) 2026-06-27T00:02:18Z}"
   exit 0
 fi
 exit 0
@@ -282,6 +284,7 @@ test_bootstrap_reporting() {
     # FM_ROOT_OVERRIDE points the worktree-tangle check at the non-git home dir so
     # it stays inert: this suite pins tool detection, not the tangle guard, and the
     # ambient checkout (CI runs on a feature branch) must not leak a TANGLE line in.
+    expect=${expect//@PIXELOVEN_INSTALLER@/$PIXELOVEN_INSTALLER}
     out=$(PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
       FM_FAKE_TREEHOUSE_LEASE_HELP="$lease" "$ROOT/bin/fm-bootstrap.sh")
     case "$mode" in
@@ -300,12 +303,12 @@ test_bootstrap_reporting() {
 treehouse --lease support is accepted silently^1^0.2.4^1^manual^empty^^
 treehouse without --lease reports an upgrade, gh auth is fine^0^0.2.4^1^-^grep^MISSING: treehouse (install: curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh)^NEEDS_GH_AUTH
 compatible tasks-axi is silent by default^1^0.2.4^1^-^empty^^
-missing tasks-axi is required by default^1^-^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-incompatible tasks-axi is required by default^1^0.1.0^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-tasks-axi without archive-body is required by default^1^0.2.4:noarchive^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-tasks-axi without multi-id mv is required by default^1^0.2.4:nomulti^1^-^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
-missing quota-axi is required by default^1^0.2.4^0^manual^exact^MISSING: quota-axi (install: npm install -g quota-axi)^
-manual backlog backend still requires missing tasks-axi^1^-^1^manual^exact^MISSING: tasks-axi (install: npm install -g tasks-axi)^
+missing tasks-axi is required by default^1^-^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+incompatible tasks-axi is required by default^1^0.1.0^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+tasks-axi without archive-body is required by default^1^0.2.4:noarchive^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+tasks-axi without multi-id mv is required by default^1^0.2.4:nomulti^1^-^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
+missing quota-axi is required by default^1^0.2.4^0^manual^exact^MISSING: quota-axi (install: @PIXELOVEN_INSTALLER@ quota-axi)^
+manual backlog backend still requires missing tasks-axi^1^-^1^manual^exact^MISSING: tasks-axi (install: @PIXELOVEN_INSTALLER@ tasks-axi)^
 manual backlog backend suppresses tasks-axi availability^1^0.2.4^1^manual^empty^^
 ROWS
   pass "bootstrap reports treehouse lease + tasks-axi/quota-axi bootstrap contracts"
@@ -313,7 +316,7 @@ ROWS
 
 test_no_mistakes_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: no-mistakes (install: curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh)'
+  missing="MISSING: no-mistakes (install: $PIXELOVEN_INSTALLER no-mistakes)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -332,18 +335,67 @@ test_no_mistakes_min_version() {
         [ "$out" = "$missing" ] || fail "$label: expected '$missing', got: $out" ;;
     esac
   done <<'ROWS'
-minimum no-mistakes version is accepted^no-mistakes version v1.31.2 (fake)^empty
-newer no-mistakes minor is accepted^no-mistakes version v1.32.0 (fake)^empty
+minimum no-mistakes version is accepted^no-mistakes version v1.46.0 (fake)^empty
+newer no-mistakes minor is accepted^no-mistakes version v1.47.0 (fake)^empty
 newer no-mistakes major is accepted^no-mistakes version v2.0.0 (fake)^empty
-older no-mistakes patch reports an upgrade^no-mistakes version v1.31.1 (fake)^missing
+older no-mistakes patch reports an upgrade^no-mistakes version v1.45.4 (fake)^missing
 unparseable no-mistakes version reports an upgrade^no-mistakes development build^missing
 ROWS
   pass "bootstrap enforces no-mistakes minimum version"
 }
 
+test_node_min_version() {
+  local label version mode case_dir fakebin out missing n
+  missing="MISSING: node (install: brew install node  # or the platform's package manager)"
+  n=0
+  while IFS='^' read -r label version mode; do
+    [ -n "$label" ] || continue
+    n=$((n + 1))
+    case_dir="$TMP_ROOT/node-$n"
+    mkdir -p "$case_dir/home/config"
+    printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
+    fakebin=$(make_fake_toolchain "$case_dir")
+    out=$(PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+      FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_FAKE_NODE_VERSION="$version" "$ROOT/bin/fm-bootstrap.sh")
+    case "$mode" in
+      empty)
+        [ -z "$out" ] || fail "$label: expected silence, got: $out" ;;
+      missing)
+        [ "$out" = "$missing" ] || fail "$label: expected '$missing', got: $out" ;;
+    esac
+  done <<'ROWS'
+minimum Node version is accepted^v22.19.0^empty
+newer Node patch is accepted^v22.19.1^empty
+newer Node major is accepted^v23.0.0^empty
+older Node minor reports an upgrade^v22.18.9^missing
+older Node major reports an upgrade^v20.19.0^missing
+unparseable Node version reports an upgrade^development^missing
+ROWS
+  pass "bootstrap enforces the universal Node minimum version"
+}
+
+test_chrome_devtools_axi_install_hint() {
+  local case_dir linked_root fakebin out installer expected
+  case_dir="$TMP_ROOT/chrome-devtools-axi-hint"
+  linked_root="$case_dir/operator root"
+  mkdir -p "$case_dir/home/config"
+  printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
+  ln -s "$ROOT" "$linked_root"
+  fakebin=$(make_fake_toolchain "$case_dir")
+  rm -f "$fakebin/chrome-devtools-axi"
+  printf -v installer '%q' "$linked_root/bin/fm-install-pixeloven-tool.sh"
+  expected="MISSING: chrome-devtools-axi (install: $installer chrome-devtools-axi && $HOME/.local/bin/chrome-devtools-axi setup hooks)"
+  out=$(cd "$case_dir" && PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" \
+    FM_ROOT_OVERRIDE="$case_dir/home" FM_FAKE_TREEHOUSE_LEASE_HELP=1 \
+    "$linked_root/bin/fm-bootstrap.sh")
+  [ "$out" = "$expected" ] \
+    || fail "chrome-devtools-axi hint was not cwd-independent and shell-quoted: $out"
+  pass "bootstrap reports a cwd-independent chrome-devtools-axi install hint"
+}
+
 test_gh_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: gh-axi (install: npm install -g gh-axi && gh-axi setup hooks)'
+  missing="MISSING: gh-axi (install: $PIXELOVEN_INSTALLER gh-axi && $HOME/.local/bin/gh-axi setup hooks)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -374,7 +426,7 @@ ROWS
 
 test_lavish_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: lavish-axi (install: npm install -g lavish-axi && lavish-axi setup hooks)'
+  missing="MISSING: lavish-axi (install: $PIXELOVEN_INSTALLER lavish-axi && $HOME/.local/bin/lavish-axi setup hooks)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -405,7 +457,7 @@ ROWS
 
 test_tasks_axi_min_version() {
   local label version mode case_dir fakebin out missing n archive_body multi_id
-  missing='MISSING: tasks-axi (install: npm install -g tasks-axi)'
+  missing="MISSING: tasks-axi (install: $PIXELOVEN_INSTALLER tasks-axi)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -455,7 +507,7 @@ ROWS
 # --version: below the floor produces MISSING, while at or above is silent.
 test_quota_axi_min_version() {
   local label version mode case_dir fakebin out missing n
-  missing='MISSING: quota-axi (install: npm install -g quota-axi)'
+  missing="MISSING: quota-axi (install: $PIXELOVEN_INSTALLER quota-axi)"
   n=0
   while IFS='^' read -r label version mode; do
     [ -n "$label" ] || continue
@@ -887,14 +939,16 @@ test_routine_bootstrap_contract_runs_under_system_bash() {
 # split is a PARTITION: `skip` plus `only` together do exactly what `all` does,
 # with no step dropped and no step run twice.
 test_network_phase_partitions_the_run() {
-  local case_dir fakebin all_out skip_out only_out combined
+  local case_dir fakebin all_out skip_out only_out combined FM_FAKE_NODE_VERSION
   case_dir="$TMP_ROOT/network-phase"
   mkdir -p "$case_dir/home/config"
   printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
   fakebin=$(make_fake_toolchain "$case_dir")
   # Break the two diagnostics that stand for the two halves: a local tool floor
-  # and the network GitHub-auth probe.
-  rm -f "$fakebin/node"
+  # and the network GitHub-auth probe. Keep the fake Node on PATH with an old
+  # version so an ambient system Node cannot make this case host-dependent.
+  FM_FAKE_NODE_VERSION=v20.0.0
+  export FM_FAKE_NODE_VERSION
   cat > "$fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 exit 1
@@ -1149,7 +1203,9 @@ ROWS
 }
 
 test_bootstrap_reporting
+test_node_min_version
 test_no_mistakes_min_version
+test_chrome_devtools_axi_install_hint
 test_gh_axi_min_version
 test_lavish_axi_min_version
 test_tasks_axi_min_version

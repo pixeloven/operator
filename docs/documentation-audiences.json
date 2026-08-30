@@ -161,6 +161,54 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/harness-adapters/references/common/control-and-recovery.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/common/dispatch.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/common/model-and-effort.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/common/primary-hooks.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/claude.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/codex.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/cursor.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/grok.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/kimi.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/muse.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/opencode.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/harness-adapters/references/harness/pi.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/process-event-sources/SKILL.md",
       "audience": "agent-runtime"
     },
@@ -217,6 +265,54 @@
       "audience": "public-product"
     },
     {
+      "path": "docs/adr/0001-soft-fork-of-firstmate.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0002-seeded-with-full-upstream-history.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0003-pixeloven-org-private-until-review.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0004-the-name-operator.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0005-agent-self-improvement-is-pr-gated.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0006-operator-cuts-its-own-release-tags.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0007-pixeloven-ci-in-its-own-workflow-namespace.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0008-autonomous-delivery-lane.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0009-operator-arc-runner-routing.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0010-pixeloven-companion-forks-own-distribution.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/_template.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/agent-control.md",
       "audience": "maintainer-architecture"
     },
@@ -261,7 +357,19 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/extension-bindings.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/examples/crew-dispatch.json",
+      "audience": "operator-example"
+    },
+    {
+      "path": "docs/examples/process-event-extension/file-signal.mjs",
+      "audience": "operator-example"
+    },
+    {
+      "path": "docs/examples/process-event-extension/firstmate-extension.json",
       "audience": "operator-example"
     },
     {
@@ -295,6 +403,42 @@
     {
       "path": "docs/pi-supervision-branch.md",
       "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/fork-contract.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/identity.md",
+      "audience": "public-product"
+    },
+    {
+      "path": "docs/pixeloven/releases.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/self-registration.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/supply-chain-read.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/tool-distribution-verification.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/tool-distribution.md",
+      "audience": "operator-current"
+    },
+    {
+      "path": "docs/pixeloven/upstream-merges.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/upstream-tracking.md",
+      "audience": "maintainer-verification"
     },
     {
       "path": "docs/remote-secondmates.md",
@@ -353,6 +497,10 @@
       "audience": "operator-current"
     },
     {
+      "path": "docs/verification/delivery-lane.md",
+      "audience": "maintainer-verification"
+    },
+    {
       "path": "docs/verification/dispatch-auth.md",
       "audience": "maintainer-verification"
     },
@@ -403,82 +551,6 @@
     {
       "path": "skills/stow/SKILL.md",
       "audience": "public-product"
-    },
-    {
-      "path": "docs/verification/delivery-lane.md",
-      "audience": "maintainer-verification"
-    },
-    {
-      "path": "docs/adr/0001-soft-fork-of-firstmate.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0002-seeded-with-full-upstream-history.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0003-pixeloven-org-private-until-review.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0004-the-name-operator.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0005-agent-self-improvement-is-pr-gated.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0006-operator-cuts-its-own-release-tags.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0007-pixeloven-ci-in-its-own-workflow-namespace.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/README.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/_template.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0008-autonomous-delivery-lane.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/adr/0009-operator-arc-runner-routing.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/pixeloven/fork-contract.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/pixeloven/identity.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/pixeloven/releases.md",
-      "audience": "maintainer-verification"
-    },
-    {
-      "path": "docs/pixeloven/self-registration.md",
-      "audience": "operator-current"
-    },
-    {
-      "path": "docs/pixeloven/supply-chain-read.md",
-      "audience": "maintainer-verification"
-    },
-    {
-      "path": "docs/pixeloven/upstream-merges.md",
-      "audience": "maintainer-architecture"
-    },
-    {
-      "path": "docs/pixeloven/upstream-tracking.md",
-      "audience": "maintainer-architecture"
     }
   ]
 }
