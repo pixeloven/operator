@@ -5,8 +5,9 @@
 [ADR-0001](../adr/0001-soft-fork-of-firstmate.md),
 [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md), and the bounded exceptions in
 [ADR-0008](../adr/0008-autonomous-delivery-lane.md),
-[ADR-0009](../adr/0009-operator-arc-runner-routing.md), and
-[ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
+[ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md), and
+[ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md), which supersedes
+[ADR-0009](../adr/0009-operator-arc-runner-routing.md).
 
 ## The rule, in one line
 
@@ -42,7 +43,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` | executable source and lifecycle contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008 through 0010 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008 through 0011 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed — not the `fm-*` scripts, not the
 `FM_*` variables, not the captain/crewmate vocabulary. The reasoning, and the
@@ -63,7 +64,7 @@ ADR-0010 separately permits the exact source-selection, CI acquisition, contribu
 Those are behavior-owned hunks, not permission for renames, cleanup, or unrelated downstream edits.
 The companion source and sync policy is owned by [`tool-distribution.md`](tool-distribution.md).
 
-ADR-0008 owns the isolated unsigned delivery lane, and ADR-0009 owns the exact Linux ARC workflow routing exceptions.
+ADR-0008 owns the isolated unsigned delivery lane, ADR-0010 owns companion distribution, and ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions.
 
 ## Taking upstream changes
 

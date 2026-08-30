@@ -13,8 +13,7 @@
 # SHAs to maintain, smaller supply-chain surface on a job that holds a
 # write-capable token.
 #
-# Runner: ubuntu-latest for the same reason as pixeloven-gates.yml - the pixeloven
-# org has no ARC runners yet (Phase 0.5 / M0.1). Migrating is a follow-up.
+# Runner: standard GitHub-hosted Linux, with no private-runner fallback.
 name: PixelOven release
 
 on:
@@ -27,8 +26,8 @@ permissions:
 jobs:
   release:
     name: Cut GitHub release
-    # Release validation uses the organization's PixelOven ARC pool.
-    runs-on: lattice
+    # Release validation uses a standard GitHub-hosted runner.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       # Creating a release writes to the repository.

@@ -20,8 +20,9 @@ Use [`_template.md`](_template.md).
 | [0006](0006-operator-cuts-its-own-release-tags.md) | operator cuts its own release tags | Accepted | Program plan O-3 |
 | [0007](0007-pixeloven-ci-in-its-own-workflow-namespace.md) | PixelOven CI lives in its own workflow namespace | Accepted | Task A1.2; O-1, G-2, G-6 |
 | [0008](0008-autonomous-delivery-lane.md) | Autonomous delivery lane | Accepted | Separate interactive human signing from autonomous delivery |
-| [0009](0009-operator-arc-runner-routing.md) | `operator` Linux CI routes through the PixelOven ARC pool | Accepted | PR #10 remediation |
+| [0009](0009-operator-arc-runner-routing.md) | `operator` Linux CI routes through the PixelOven ARC pool | Superseded by ADR-0011 | PR #10 remediation |
 | [0010](0010-pixeloven-companion-forks-own-distribution.md) | PixelOven companion forks own distribution | Accepted | `operator` upstream synchronization and companion-fork migration |
+| [0011](0011-operator-github-hosted-runner-routing.md) | `operator` CI uses standard GitHub-hosted runners | Accepted | Hosted-runner remediation after PR #11 |
 
 ## Conventions
 

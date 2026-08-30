@@ -145,6 +145,34 @@ jobs:
 YAML
 }
 
+write_private_runner_workflow() {
+  local path=$1
+  cat > "$path" <<'YAML'
+name: Private runner fixture
+on: push
+jobs:
+  x:
+    runs-on: lattice
+    steps:
+      - run: echo should-not-run
+YAML
+}
+
+workflow_to_json() {
+  local path=$1
+  if command -v yq >/dev/null 2>&1; then
+    yq -o=json '.' "$path"
+  elif command -v ruby >/dev/null 2>&1; then
+    ruby -ryaml -rjson -e 'puts JSON.generate(YAML.load_file(ARGV.fetch(0)))' "$path"
+  elif command -v python3 >/dev/null 2>&1 \
+    && python3 -c 'import yaml' >/dev/null 2>&1; then
+    python3 -c 'import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1]))))' "$path"
+  else
+    printf '%s\n' 'yq, Ruby with YAML, or Python with PyYAML is required to parse workflow policy' >&2
+    return 1
+  fi
+}
+
 # #2512-class breakage: a heredoc body at column 0 inside a `run: |` block.
 write_col0_heredoc_workflow() {
   local path=$1
@@ -174,6 +202,82 @@ test_current_workflows_pass() {
   assert_contains "$out" "workflow files valid" \
     "current-workflow lint did not report a valid count"
   pass "current .github/workflows YAML files parse"
+}
+
+test_current_workflow_model_is_hosted_and_node_ready() {
+  local workflow model invalid bad='' ci_model installer_jobs job serial_listing
+  command -v jq >/dev/null 2>&1 || fail 'jq is required to inspect the normalized workflow model'
+
+  for workflow in "$ROOT"/.github/workflows/*.yml "$ROOT"/.github/workflows/*.yaml; do
+    [ -f "$workflow" ] || continue
+    model=$(workflow_to_json "$workflow") \
+      || fail "could not parse the workflow model for ${workflow#"$ROOT"/}"
+    invalid=$(printf '%s\n' "$model" | jq -r '
+      .jobs | to_entries[]
+      | . as $job
+      | ($job.value["runs-on"]) as $runner
+      | select(
+          ($runner | type) != "string"
+          or (["ubuntu-latest", "macos-latest", "windows-latest"] | index($runner)) == null
+        )
+      | "\($job.key)=\($runner | tojson)"
+    ') || fail "could not inspect runner labels in ${workflow#"$ROOT"/}"
+    if [ -n "$invalid" ]; then
+      bad="${bad}${workflow#"$ROOT"/}: ${invalid}"$'\n'
+    fi
+  done
+  [ -z "$bad" ] || fail "workflow jobs escaped the standard GitHub-hosted runner allowlist"$'\n'"$bad"
+
+  ci_model=$(workflow_to_json "$ROOT/.github/workflows/ci.yml") \
+    || fail 'could not parse the CI workflow model'
+  installer_jobs=$(printf '%s\n' "$ci_model" | jq -r '
+    .jobs | to_entries[]
+    | select(any(.value.steps[]?; (.run? // "") | contains("bin/fm-install-pixeloven-tool.sh")))
+    | .key
+  ') || fail 'could not identify CI jobs that execute the PixelOven source installer'
+  [ -n "$installer_jobs" ] || fail 'no CI job executes the PixelOven source installer'
+  while IFS= read -r job; do
+    [ -n "$job" ] || continue
+    printf '%s\n' "$ci_model" | jq -e --arg job "$job" '
+      .jobs[$job].steps
+      | any(.[];
+          ((.uses? // "") | startswith("actions/setup-node@"))
+          and ((.with["node-version"]? // "") == "22.19.0")
+        )
+    ' >/dev/null || fail "$job executes the source installer without Node 22.19.0"
+  done <<EOF
+$installer_jobs
+EOF
+
+  serial_listing=$("$ROOT/bin/fm-test-run.sh" --list --lane portable-serial) \
+    || fail 'could not inspect the portable serial lane'
+  assert_contains "$serial_listing" 'tests/fm-install-pixeloven-tool.test.sh' \
+    'the source-installer integration test is not scheduled in the portable serial lane'
+  printf '%s\n' "$ci_model" | jq -e '
+    .jobs["tests-portable-serial"].steps
+    | any(.[];
+        ((.uses? // "") | startswith("actions/setup-node@"))
+        and ((.with["node-version"]? // "") == "22.19.0")
+      )
+  ' >/dev/null || fail 'the source-installer integration-test lane lacks Node 22.19.0'
+
+  pass 'workflow jobs use standard GitHub-hosted runners and Node-dependent lanes provision 22.19.0'
+}
+
+test_private_runner_label_is_rejected_by_repository_lint() {
+  local tmp out rc
+  tmp=$(fm_test_tmproot fm-lint-wf-private-runner)
+  mkdir -p "$tmp/.github/workflows"
+  write_private_runner_workflow "$tmp/.github/workflows/ci.yml"
+  if [ -f "$ROOT/.github/actionlint.yaml" ]; then
+    cp "$ROOT/.github/actionlint.yaml" "$tmp/.github/actionlint.yaml"
+  fi
+  rc=0
+  out=$("$LINT_WF" --root "$tmp" 2>&1) || rc=$?
+  [ "$rc" -ne 0 ] || fail "repository workflow lint accepted the private lattice label"$'\n'"$out"
+  assert_contains "$out" 'label "lattice" is unknown' \
+    'private-label rejection did not come from actionlint runner-label validation'
+  pass 'repository workflow lint rejects a private runner label'
 }
 
 test_col0_heredoc_fails_with_clear_error() {
@@ -516,6 +620,8 @@ SH
 
 test_pins_an_explicit_version
 test_current_workflows_pass
+test_current_workflow_model_is_hosted_and_node_ready
+test_private_runner_label_is_rejected_by_repository_lint
 test_col0_heredoc_fails_with_clear_error
 test_valid_fixture_passes
 test_empty_workflows_dir_fails
