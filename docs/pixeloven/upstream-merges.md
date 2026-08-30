@@ -284,6 +284,15 @@ Future synchronizations review those paths by behavior and ownership rather than
 The 86-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.
 The existing recommendation of every two weeks or roughly 15 commits remains the upper bound, and the commit trigger should win whenever upstream is moving quickly.
 
+### Corrective ancestry merge after the PR #11 squash
+
+PR #11 was squash-merged as `0e9bc603abcbd557c111cb4a798aceddde85087e` after its branch had already integrated the upstream pin.
+The squash preserved the synchronized file tree but synthesized one new commit whose only parent was the prior PixelOven `main`, so `1fbc7bb1fba262ef38a4dedf321d18c54669b129` was no longer reachable and A7 failed.
+
+The corrective merge records `0e9bc603abcbd557c111cb4a798aceddde85087e` as its first parent and the pinned upstream commit as its second parent.
+It uses Git's `ours` merge strategy because the squash had already landed the reviewed file content, preserving tree `facc2dabfbffcdf7aae862aac8b9822d820ae897` exactly while restoring the missing ancestry edge.
+The follow-up PR must itself be merged with GitHub's merge-commit method because squashing or rebasing it would discard the corrective merge topology again.
+
 ## 5. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
