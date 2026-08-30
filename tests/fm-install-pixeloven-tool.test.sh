@@ -84,6 +84,18 @@ esac
 exit 0
 SH
 
+cat > "$FAKEBIN/node" <<'SH'
+#!/usr/bin/env bash
+set -eu
+if [ "${1:-}" = --version ] && [ -n "${FM_INSTALL_TEST_NODE_VERSION:-}" ]; then
+  printf '%s\n' "$FM_INSTALL_TEST_NODE_VERSION"
+  exit 0
+fi
+PATH=${PATH#*:}
+export PATH
+exec node "$@"
+SH
+
 cat > "$FAKEBIN/cp" <<'SH'
 #!/usr/bin/env bash
 set -eu
@@ -168,7 +180,7 @@ built_version=${FM_INSTALL_TEST_NO_MISTAKES_VERSION:-$version}
 chmod 0755 "$repo_dir/bin/no-mistakes"
 SH
 
-chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/cp" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/install" "$FAKEBIN/make"
+chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/node" "$FAKEBIN/cp" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/install" "$FAKEBIN/make"
 
 test_source_inventory_is_exact_and_downstream() {
   local out
@@ -182,6 +194,19 @@ test_source_inventory_is_exact_and_downstream() {
   assert_contains "$out" "no-mistakes$(printf '\t')https://github.com/pixeloven/no-mistakes$(printf '\t')70185bf682521ed1822e51dc09fa327b85b87e79$(printf '\t')1.60.1$(printf '\t')go" 'no-mistakes source is not exact'
   assert_not_contains "$out" 'kunchenguid/' 'the selected distribution inventory still points at upstream'
   pass 'the public source inventory selects six exact PixelOven fork commits'
+}
+
+test_old_node_is_refused_before_source_fetch() {
+  local output status=0
+  rm -f "$CALLS/git.log"
+  output=$(FM_INSTALL_TEST_CALLS="$CALLS" FM_INSTALL_TEST_NODE_VERSION=v20.19.0 \
+    PATH="$FAKEBIN:$ORIGINAL_PATH" /bin/bash "$INSTALLER" tasks-axi \
+    "$TMP_ROOT/prefix-old-node" 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'Node 20 unexpectedly started an AXI source install'
+  assert_contains "$output" 'Node 22.19 or newer is required to install tasks-axi; found v20.19.0' \
+    'the Node floor refusal was not actionable'
+  [ ! -e "$CALLS/git.log" ] || fail 'the installer fetched source before refusing old Node'
+  pass 'AXI source installs refuse Node below the supported floor before fetching'
 }
 
 test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork() {
@@ -304,6 +329,7 @@ test_unknown_tool_is_refused() {
 }
 
 test_source_inventory_is_exact_and_downstream
+test_old_node_is_refused_before_source_fetch
 test_every_npm_tool_builds_then_installs_locked_runtime_from_its_fork
 test_unsafe_manifest_bin_is_refused_before_replacing_install
 test_failed_npm_replacement_preserves_existing_install

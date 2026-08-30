@@ -65,4 +65,5 @@ bin/fm-test-run.sh tests/fm-bootstrap.test.sh
 bin/fm-test-run.sh tests/fm-no-mistakes-required.test.sh
 ```
 
-The first test executes the installer's public source inventory, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, failure-safe npm and no-mistakes replacement, unsafe executable-path refusal, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.
+The first test executes the installer's public source inventory, the pre-fetch Node 22.19 floor refusal, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, failure-safe npm and no-mistakes replacement, unsafe executable-path refusal, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.
+The bootstrap regression reports Node below 22.19 through the existing install-consent diagnostic and accepts the floor and newer runtimes silently.

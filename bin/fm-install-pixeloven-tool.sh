@@ -22,6 +22,8 @@
 # Hook setup is also deliberately separate from installation.
 set -eu
 
+MINIMUM_NODE_VERSION=22.19
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -32,6 +34,7 @@ Usage:
 
 Supported tools: gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi, no-mistakes.
 The default prefix is $FM_PIXELOVEN_TOOL_PREFIX when set, otherwise $HOME/.local.
+AXI source builds require Node 22.19 or newer and Corepack.
 EOF
 }
 
@@ -129,6 +132,27 @@ case "$SOURCE_KIND" in
       command -v "$required_command" >/dev/null 2>&1 \
         || die "$required_command is required to install $TOOL"
     done
+    NODE_VERSION_OUTPUT=$(node --version 2>/dev/null) \
+      || die "could not determine the Node version required to install $TOOL"
+    NODE_VERSION=${NODE_VERSION_OUTPUT#v}
+    NODE_MAJOR=${NODE_VERSION%%.*}
+    NODE_REMAINDER=${NODE_VERSION#*.}
+    [ "$NODE_REMAINDER" != "$NODE_VERSION" ] \
+      || die "could not parse Node version '$NODE_VERSION_OUTPUT'"
+    NODE_MINOR=${NODE_REMAINDER%%.*}
+    case "$NODE_MAJOR" in
+      ''|*[!0-9]*) die "could not parse Node version '$NODE_VERSION_OUTPUT'" ;;
+    esac
+    case "$NODE_MINOR" in
+      ''|*[!0-9]*) die "could not parse Node version '$NODE_VERSION_OUTPUT'" ;;
+    esac
+    MINIMUM_NODE_MAJOR=${MINIMUM_NODE_VERSION%%.*}
+    MINIMUM_NODE_MINOR=${MINIMUM_NODE_VERSION#*.}
+    if [ "$NODE_MAJOR" -lt "$MINIMUM_NODE_MAJOR" ] \
+      || { [ "$NODE_MAJOR" -eq "$MINIMUM_NODE_MAJOR" ] \
+        && [ "$NODE_MINOR" -lt "$MINIMUM_NODE_MINOR" ]; }; then
+      die "Node $MINIMUM_NODE_VERSION or newer is required to install $TOOL; found $NODE_VERSION_OUTPUT"
+    fi
     ;;
   go)
     for required_command in go make; do

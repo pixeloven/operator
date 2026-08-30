@@ -20,6 +20,7 @@ The script's header owns acquisition, build, destination, and no-mistakes daemon
 
 The AXI forks do not publish separate npm packages and their default branches do not contain built `dist/` output.
 The installer therefore fetches each exact PixelOven commit, installs dependencies from its committed pnpm lockfile, builds it, and deploys the production runtime from that same frozen lockfile into the requested prefix.
+AXI source builds require Node 22.19 or newer, the engine floor of the selected companion set, and refuse an older runtime before fetching source.
 
 The no-mistakes fork has no inherited GitHub Release assets.
 Its path builds the exact fork commit with the version and commit metadata pinned by the installer, installs only the CLI, and never starts, stops, restarts, or updates a running daemon.
