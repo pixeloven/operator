@@ -28,6 +28,9 @@ Actionlint's standard runner-label model therefore rejects undeclared private la
 
 CI jobs that execute `bin/fm-install-pixeloven-tool.sh` or its integration tests provision Node.js 22.19.0 explicitly.
 
+The inherited-file exception is limited to `.github/workflows/ci.yml`, `.github/workflows/no-mistakes-required.yml`, `bin/fm-lint-workflows.sh`, `tests/fm-lint-workflows.test.sh`, and the documentation-audience entry needed for this ADR.
+PixelOven-owned workflows and documentation remain within their existing downstream namespaces.
+
 ## Consequences
 
 Required pull-request and default-branch checks can execute without private runner-group, ARC scale-set, Harmony tenant, App, or PAT dependencies.
