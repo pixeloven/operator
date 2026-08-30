@@ -1,0 +1,18 @@
+=== Corrective merge topology ===
+merge=083b0ed0b4277ed09ebfcd7a1f43745ae5bab64f
+first_parent=0e9bc603abcbd557c111cb4a798aceddde85087e
+second_parent=1fbc7bb1fba262ef38a4dedf321d18c54669b129
+merge_tree=facc2dabfbffcdf7aae862aac8b9822d820ae897
+required_tree=facc2dabfbffcdf7aae862aac8b9822d820ae897
+upstream_pin_is_ancestor=yes
+=== Normalized workflow trust and routing model ===
+.github/workflows/ci.yml: pull_request=true permissions={'contents': 'read'} runners=[lint=ubuntu-latest, test-coverage=ubuntu-latest, tests-portable-parallel-1=ubuntu-latest, tests-portable-parallel-2=ubuntu-latest, tests-portable-serial=ubuntu-latest, tests-herdr=ubuntu-latest, tests-timing-aggregate=ubuntu-latest, macos-stock-bash=macos-latest, invariants=ubuntu-latest]
+.github/workflows/no-mistakes-required.yml: pull_request=true permissions={'contents': 'read'} runners=[check=ubuntu-latest]
+.github/workflows/pixeloven-gates.yml: pull_request=true permissions={'contents': 'read'} runners=[secret-scan=ubuntu-latest, lint=ubuntu-latest]
+.github/workflows/pixeloven-release.yml: pull_request=false permissions={'contents': 'read'} runners=[release=ubuntu-latest]
+.github/workflows/windows-herdr-spike.yml: pull_request=false permissions={'contents': 'read'} runners=[measure=windows-latest]
+workflow_model=PASS (standard hosted labels; PR workflows contents:read with no secret expressions)
+=== Executable fork contract ===
+pin=1fbc7bb1fba262ef38a4dedf321d18c54669b129
+A4_authorized_paths=PASS
+A7_pin_contained=PASS
