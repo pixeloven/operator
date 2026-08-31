@@ -1,0 +1,25 @@
+Operator upstream ancestry repair acceptance transcript
+origin/main: 0d88b5db13442389e9255f104f43cbd96d20a2e8
+repair commit: f0b708eb2e4afece1712454b7bbc4b091d13caa2
+repair parents: 0d88b5db13442389e9255f104f43cbd96d20a2e8 1fbc7bb1fba262ef38a4dedf321d18c54669b129
+base tree: acb1b9f1a88e4ef4d70c877c1466b48c8655a6c4
+repair tree: acb1b9f1a88e4ef4d70c877c1466b48c8655a6c4
+repair tree equality: PASS (byte-for-byte identical Git tree; empty diff)
+upstream pin and repair containment: PASS
+local branch: 6a8a0d6b023e431abd7cc4ce6801e50e70cce718
+remote branch: 6a8a0d6b023e431abd7cc4ce6801e50e70cce718
+PR unmerged: PASS (target is not contained by origin/main)
+base-to-target changed paths:
+M	docs/pixeloven/upstream-merges.md
+dedicated scope: PASS (documentation only; no executable, workflow, or settings changes)
+worktree cleanliness: PASS
+
+Published merge-method contract:
+The corrective graph-only merge commit `f0b708eb2e4afece1712454b7bbc4b091d13caa2` preserves the exact tree of `0d88b5db13442389e9255f104f43cbd96d20a2e8` byte-for-byte and has parents, in order:
+
+- first parent (PixelOven main): `0d88b5db13442389e9255f104f43cbd96d20a2e8`
+- second parent (verified upstream pin): `1fbc7bb1fba262ef38a4dedf321d18c54669b129`
+
+PR #13 carries this graph-only repair commit and also includes this minimal documentation evidence commit; it **MUST be merged with GitHub's `Create a merge commit` method** (never squash, rebase, or fast-forward).
+
+## 3. Rehearsal — 2026-08-17
