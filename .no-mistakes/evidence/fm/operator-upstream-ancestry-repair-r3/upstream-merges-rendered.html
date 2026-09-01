@@ -1,0 +1,423 @@
+<h1 dir="auto">Upstream merges - standing procedure and measurements</h1>
+<ul dir="auto">
+<li><strong>Task:</strong> A1.4</li>
+<li><strong>Satisfies:</strong> <strong>O-2</strong> (upstream merges are scheduled, reviewed PRs — never<br>
+automatic) · <strong>G-5</strong> (nothing is ever posted upstream)</li>
+<li><strong>Related:</strong> <a href="upstream-tracking.md"><code class="notranslate">upstream-tracking.md</code></a> (the distance<br>
+ledger) · <a href="fork-contract.md"><code class="notranslate">fork-contract.md</code></a> · <a href="releases.md"><code class="notranslate">releases.md</code></a><br>
+(how a merge becomes a version number)</li>
+</ul>
+<p dir="auto"><code class="notranslate">upstream-tracking.md</code> records <em>how far behind we are</em>. This page records <em>what<br>
+it costs to catch up, and how to do it</em>.</p>
+<hr>
+<h2 dir="auto">1. The rule that keeps this reviewable</h2>
+<p dir="auto"><strong>We add by default and keep every existing-file exception exact and reviewed.</strong><br>
+<a href="../adr/0001-soft-fork-of-firstmate.md">ADR-0001</a> owns the additive default, while <a href="../adr/0010-pixeloven-companion-forks-own-distribution.md">ADR-0010</a> owns the bounded companion-distribution exception.<br>
+Every merge is a live test of both rules.</p>
+<p dir="auto"><strong>G-5, absolutely: this is a PULL ONLY.</strong> Nothing is pushed, opened, commented,<br>
+or otherwise posted to <code class="notranslate">kunchenguid/*</code>. The <code class="notranslate">upstream</code> remote exists to fetch.<br>
+Any upstream contribution is a separate, per-instance operator decision.</p>
+<h2 dir="auto">2. The standing procedure</h2>
+<div class="highlight highlight-source-shell" dir="auto"><pre class="notranslate"><span class="pl-c"><span class="pl-c">#</span> 1. Measure first - the ledger row is written before the merge, not after.</span>
+git remote add upstream https://github.com/kunchenguid/firstmate.git   <span class="pl-c"><span class="pl-c">#</span> once</span>
+git fetch --no-tags upstream main
+git rev-list --count main..upstream/main
+git log   --oneline            main..upstream/main
+
+<span class="pl-c"><span class="pl-c">#</span> 2. Merge on a branch. Never on main, never with a bot, never automatically.</span>
+git checkout -b <span class="pl-s"><span class="pl-pds">"</span>upstream-merge/<span class="pl-s"><span class="pl-pds">$(</span>date +%Y-%m-%d<span class="pl-pds">)</span></span><span class="pl-pds">"</span></span>
+git merge --no-ff --no-edit upstream/main
+
+<span class="pl-c"><span class="pl-c">#</span> 3. Advance the machine-readable pin - the gates read this file (A4/A5/A7).</span>
+git rev-parse upstream/main <span class="pl-k">&gt;</span> docs/pixeloven/upstream-pin
+
+<span class="pl-c"><span class="pl-c">#</span> 4. Record the ledger row in upstream-tracking.md and the merge row below.</span>
+
+<span class="pl-c"><span class="pl-c">#</span> 5. Open a PR. Review it as code, not as a formality: this repository's files</span>
+<span class="pl-c"><span class="pl-c">#</span>    execute inside every agent turn, and workers launch with their harness</span>
+<span class="pl-c"><span class="pl-c">#</span>    permission gates disabled (see supply-chain-read.md).</span>
+<span class="pl-c"><span class="pl-c">#</span></span>
+<span class="pl-c"><span class="pl-c">#</span> 6. Merge it with a REAL MERGE COMMIT. Not --squash, not a rebase.</span>
+gh-axi pr merge <span class="pl-k">&lt;</span>n<span class="pl-k">&gt;</span> --merge</pre></div>
+<p dir="auto"><strong>Step 3 is not optional.</strong> <code class="notranslate">docs/pixeloven/upstream-pin</code> is what the<br>
+fork-contract assertions diff against. Skipping it makes A4 report upstream's own<br>
+commits as O-1 violations; advancing it without merging is caught by A7.</p>
+<blockquote>
+<h3 dir="auto">⛔ Never rebase an upstream-merge branch — and never squash-merge one</h3>
+<p dir="auto"><strong>Two habits that are correct for every other PR in this repository will<br>
+silently destroy this one.</strong> Both flatten the merge commit away:</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Habit</th>
+<th>What it does here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="notranslate">git rebase origin/main</code> before opening the PR</td>
+<td>replays upstream's commits as fresh cherry-picks</td>
+</tr>
+<tr>
+<td><code class="notranslate">gh-axi pr merge --squash</code> (the repo's normal merge mode)</td>
+<td>collapses the whole branch, merge commit included, into one commit on <code class="notranslate">main</code></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p dir="auto"><strong>An upstream-merge PR is merged with a real merge commit - <code class="notranslate">gh-axi pr merge --merge</code>.</strong></p>
+<p dir="auto">The house habit of <code class="notranslate">git fetch origin &amp;&amp; git rebase origin/main</code> before opening a<br>
+PR is <strong>wrong here, and silently so.</strong> <code class="notranslate">git rebase</code> drops the merge commit and<br>
+replays upstream's commits as fresh cherry-picks with new SHAs. The result looks<br>
+fine — same tree, same files — but:</p>
+<ul dir="auto">
+<li><code class="notranslate">upstream/main</code> is <strong>no longer an ancestor</strong>, so the merge base with upstream<br>
+is gone and the <em>next</em> merge re-presents every one of these commits;</li>
+<li>upstream's authorship SHAs are rewritten, which is exactly what<br>
+<a href="../adr/0002-seeded-with-full-upstream-history.md">ADR-0002</a> seeded whole<br>
+history to avoid;</li>
+<li>assertion <strong>A7 fails</strong>, which is how this was caught the first time it<br>
+happened — during this very rehearsal.</li>
+</ul>
+<p dir="auto">The merge branch is cut from <code class="notranslate">main</code> and merges upstream into it, so it is<br>
+already current with <code class="notranslate">main</code> by construction; there is nothing to rebase onto.<br>
+If <code class="notranslate">main</code> genuinely moves underneath it, <strong>merge <code class="notranslate">main</code> in</strong> (<code class="notranslate">git merge origin/main</code>) or redo the upstream merge from a fresh branch. If a branch has<br>
+already been flattened, recover it from the reflog rather than pushing it.</p>
+<p dir="auto">The check below is the same one A7 runs. Run it <strong>after</strong> the PR lands, too — a<br>
+squash-merge passes every gate on the PR and only shows up as a failure on the<br>
+<em>next</em> PR, by which point the merge base is already gone.</p>
+<div class="highlight highlight-source-shell" dir="auto"><pre class="notranslate">git merge-base --is-ancestor <span class="pl-s"><span class="pl-pds">"</span><span class="pl-s"><span class="pl-pds">$(</span>cat docs/pixeloven/upstream-pin<span class="pl-pds">)</span></span><span class="pl-pds">"</span></span> HEAD \
+  <span class="pl-k">&amp;&amp;</span> <span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>merge topology intact<span class="pl-pds">"</span></span></pre></div>
+</blockquote>
+<h3 dir="auto">What the review is actually looking for</h3>
+<ol dir="auto">
+<li><strong>Did anything conflict?</strong> Under the contract nothing should. If something<br>
+does, <em>the contract is leaking</em> — that is the finding, not the conflict.</li>
+<li><strong>Did upstream touch a file we also touch?</strong> Today there is exactly one:<br>
+<code class="notranslate">README.md</code>. See §4.</li>
+<li><strong>Is any merged change consumer-visible?</strong> That decides the semver bump on<br>
+our next tag (<a href="../adr/0006-operator-cuts-its-own-release-tags.md">ADR-0006</a>,<br>
+<a href="releases.md"><code class="notranslate">releases.md</code></a> §2).</li>
+<li><strong>Does upstream's own suite still pass on the merged tree?</strong><br>
+Upstream's <code class="notranslate">ci.yml</code> is the only thing that can answer this, so it remains enabled for the whole merge PR and afterwards (<a href="releases.md"><code class="notranslate">releases.md</code></a> §4).<br>
+Treat any failure as current evidence to investigate rather than relying on the resolved historical documentation-audience failure.</li>
+<li><strong>Anything new in the supply chain?</strong> New network calls, new installers, new<br>
+telemetry, a changed pin. Feeds <a href="supply-chain-read.md"><code class="notranslate">supply-chain-read.md</code></a>.</li>
+</ol>
+<h2 dir="auto">Corrective ancestry repair - PR <a class="issue-link js-issue-link" data-error-text="Failed to load title" data-id="5294050043" data-permission-text="Title is private" data-url="https://github.com/pixeloven/operator/issues/13" data-hovercard-type="pull_request" data-hovercard-url="/pixeloven/operator/pull/13/hovercard" href="https://github.com/pixeloven/operator/pull/13">#13</a> (2026-08-30)</h2>
+<p dir="auto">PR <a class="issue-link js-issue-link" data-error-text="Failed to load title" data-id="5290923889" data-permission-text="Title is private" data-url="https://github.com/pixeloven/operator/issues/12" data-hovercard-type="pull_request" data-hovercard-url="/pixeloven/operator/pull/12/hovercard" href="https://github.com/pixeloven/operator/pull/12">#12</a> was squash-merged, discarding the required upstream merge topology.<br>
+The corrective graph-only merge commit <code class="notranslate">f0b708eb2e4afece1712454b7bbc4b091d13caa2</code> preserves the exact tree of <code class="notranslate">0d88b5db13442389e9255f104f43cbd96d20a2e8</code> byte-for-byte and has parents, in order:</p>
+<ul dir="auto">
+<li>first parent (PixelOven main): <code class="notranslate">0d88b5db13442389e9255f104f43cbd96d20a2e8</code></li>
+<li>second parent (verified upstream pin): <code class="notranslate">1fbc7bb1fba262ef38a4dedf321d18c54669b129</code></li>
+</ul>
+<p dir="auto">PR <a class="issue-link js-issue-link" data-error-text="Failed to load title" data-id="5294050043" data-permission-text="Title is private" data-url="https://github.com/pixeloven/operator/issues/13" data-hovercard-type="pull_request" data-hovercard-url="/pixeloven/operator/pull/13/hovercard" href="https://github.com/pixeloven/operator/pull/13">#13</a> carries this graph-only repair commit and also includes this minimal documentation evidence commit; it <strong>MUST be merged with GitHub's <code class="notranslate">Create a merge commit</code> method</strong> (never squash, rebase, or fast-forward).</p>
+<h2 dir="auto">3. Rehearsal — 2026-08-17</h2>
+<p dir="auto">The first merge, run as task A1.4 immediately after <code class="notranslate">v0.1.0</code> was tagged.</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our <code class="notranslate">main</code> before</td>
+<td><code class="notranslate">d6d7f85</code> (= <code class="notranslate">v0.1.0</code>)</td>
+</tr>
+<tr>
+<td>Upstream <code class="notranslate">main</code></td>
+<td><code class="notranslate">bdae21ed09d2cca4f57caed4bda9d30d8f9d9be8</code></td>
+</tr>
+<tr>
+<td>Previous pin</td>
+<td><code class="notranslate">6789876442d0fb6da9f70d86399a2930c5073ae2</code> (fork point, 2026-08-13)</td>
+</tr>
+<tr>
+<td>Behind by</td>
+<td><strong>8 commits</strong>, accumulated over <strong>4 days</strong></td>
+</tr>
+<tr>
+<td>Merge base</td>
+<td><code class="notranslate">6789876442d0…</code> — exactly the fork point</td>
+</tr>
+<tr>
+<td><strong>Conflicts</strong></td>
+<td><strong>zero</strong></td>
+</tr>
+<tr>
+<td><strong>Merge wall-clock</strong></td>
+<td><strong>0.031 s</strong></td>
+</tr>
+<tr>
+<td><strong>Conflict-resolution time</strong></td>
+<td><strong>none — there was nothing to resolve</strong></td>
+</tr>
+<tr>
+<td>Files changed by upstream</td>
+<td>35</td>
+</tr>
+<tr>
+<td>Of those, in a PixelOven namespace</td>
+<td><strong>0</strong></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p dir="auto">The merge base being <em>exactly</em> the pin is worth stating plainly: it confirms<br>
+<a href="../adr/0002-seeded-with-full-upstream-history.md">ADR-0002</a>'s call to seed with<br>
+full upstream history rather than a squash. A squashed seed would have had no<br>
+merge base at all and this operation would not have been a merge.</p>
+<h3 dir="auto">What came in</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Commit</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="notranslate">bdae21e</code></td>
+<td><code class="notranslate">fix(ci): keep CLAUDE.md pointer check valid (#2515)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">4913723</code></td>
+<td><code class="notranslate">fix(memory): emit a real @AGENTS.md pointer instead of a CLAUDE.md symlink (#2512)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">362c508</code></td>
+<td><code class="notranslate">fix(decisions): close decision holds at answer time via one general keyed-answer path (#2490)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">e518906</code></td>
+<td><code class="notranslate">feat(stow): add open-record persistence to /stow before reset (#2488)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">ef35d79</code></td>
+<td><code class="notranslate">fix(calm): keep Pi's export confirmation visible (#2461)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">196fb65</code></td>
+<td><code class="notranslate">docs(skills): add remote-secondmate recovery hint for false-negative verdicts (#2456)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">7a3259e</code></td>
+<td><code class="notranslate">fix: keep the public promise reachable when work is routed to a second mate (#2457)</code></td>
+</tr>
+<tr>
+<td><code class="notranslate">f1a4af4</code></td>
+<td><code class="notranslate">fix(ci): fail hung Herdr behavior runs in 20 minutes (#2413)</code></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p dir="auto">Spread: <code class="notranslate">bin/</code> 8 files · <code class="notranslate">tests/</code> 7 · <code class="notranslate">docs/</code> 7 · <code class="notranslate">.agents/skills/</code> 7 · plus<br>
+<code class="notranslate">AGENTS.md</code>, <code class="notranslate">CONTRIBUTING.md</code>, <code class="notranslate">CLAUDE.md</code>, <code class="notranslate">README.md</code>, <code class="notranslate">.pi/</code>, and<br>
+<code class="notranslate">.github/workflows/ci.yml</code>. <strong>1,584 insertions, 101 deletions.</strong></p>
+<p dir="auto">Two are worth flagging beyond the diff:</p>
+<ul dir="auto">
+<li><strong><code class="notranslate">CLAUDE.md</code> changed file mode <code class="notranslate">120000 → 100644</code></strong> (#2512): it is no longer a<br>
+symlink to <code class="notranslate">AGENTS.md</code> but a real file containing an <code class="notranslate">@AGENTS.md</code> import<br>
+pointer. #2515 updates upstream's own <code class="notranslate">invariants</code> job to assert the new shape.<br>
+Both arrived together, so the merged tree is self-consistent — but a mode<br>
+change is exactly the kind of thing that would have conflicted had we ever<br>
+"tidied" that file.</li>
+<li><strong><code class="notranslate">ci.yml</code> gained a 20-minute step timeout on the Herdr lane</strong> (#2413), and<br>
+upstream's comment states the healthy wall is <strong>~7 minutes</strong>, not the 15–40 the<br>
+old comment estimated. That materially improves the cost picture recorded in<br>
+<a href="releases.md"><code class="notranslate">releases.md</code></a> §4 — an upstream merge paying for itself in<br>
+information about our own budget.</li>
+</ul>
+<h3 dir="auto">The conflict surface, and why it was empty</h3>
+<p dir="auto">Not luck. Of the 35 files upstream changed, <strong>exactly one is a file we also<br>
+touch: <code class="notranslate">README.md</code>.</strong> Our change there is the delimited banner block at the very<br>
+top; upstream's change was a table row at line 178. Git merged both without a<br>
+murmur.</p>
+<p dir="auto">That single file is the fork's <strong>entire file-level contact surface with<br>
+upstream</strong>, and it is the place the first real conflict will eventually appear —<br>
+if upstream restructures the head of <code class="notranslate">README.md</code>. When it does, the resolution is<br>
+mechanical (keep the banner block, take upstream's body wholesale) and assertion<br>
+A5 proves the result byte-for-byte. Everything else we own lives in namespaces<br>
+upstream cannot collide with by construction.</p>
+<h3 dir="auto">The finding: the gate was anchored to the wrong commit</h3>
+<p dir="auto"><strong>The merge was clean. The gate was not.</strong> Running the fork-contract assertions<br>
+on the merged tree failed:</p>
+<ul dir="auto">
+<li><strong>A4</strong> listed all 35 upstream-changed files as O-1 violations.</li>
+<li><strong>A5</strong> reported <code class="notranslate">README.md</code> differing from "upstream" outside the banner.</li>
+</ul>
+<p dir="auto">Both were anchored on the <strong>frozen fork point</strong>, which stops being the right<br>
+baseline the moment we merge. The question A4 and A5 ask is <em>"what have we<br>
+changed on top of upstream"</em>, and after a merge that baseline is the newly merged<br>
+upstream commit, not the fork point.</p>
+<p dir="auto"><strong>Fix, landed in this same PR:</strong> <code class="notranslate">docs/pixeloven/upstream-pin</code> holds the upstream<br>
+commit the tree currently contains; A4 and A5 read it; <strong>A7</strong> (new) refuses a pin<br>
+that is not a real commit contained in this history, so it cannot be advanced<br>
+without an actual merge. Advancing the pin is now step 3 of the procedure above,<br>
+which also keeps <code class="notranslate">upstream-tracking.md</code> from going stale while the gate keeps<br>
+passing.</p>
+<p dir="auto">This is precisely the class of defect a rehearsal exists to surface: it would<br>
+otherwise have been discovered by a red gate on a real merge, under time<br>
+pressure, with the wrong remedy (weaken the assertion) close to hand.</p>
+<h3 dir="auto">The second finding: the rebase habit destroys the merge</h3>
+<p dir="auto">Immediately after the fix landed, the routine pre-PR <code class="notranslate">git rebase origin/main</code><br>
+flattened the merge commit into eight cherry-picks and severed the merge base<br>
+with upstream. <strong>A7 — added minutes earlier — caught it</strong>, which is the cheapest<br>
+possible validation of a new assertion. The branch was restored from the reflog<br>
+and the prohibition is now written into the procedure above.</p>
+<p dir="auto">Worth stating plainly because it generalises: the standard "rebase before you<br>
+open a PR" advice is safe for every PR in this repository <strong>except</strong> the one kind<br>
+of PR this document is about.</p>
+<h3 dir="auto">The third finding: upstream's own suite has never been green here</h3>
+<p dir="auto">Re-enabling <code class="notranslate">ci.yml</code> for the merge (its one earning occasion) surfaced that<br>
+upstream's documentation-audience test fails on <strong>every</strong> PixelOven commit,<br>
+because it enumerates every tracked <code class="notranslate">*.md</code> repo-wide and requires each to be<br>
+classified in an upstream-owned inventory. It is green at the fork point and red<br>
+from the first PixelOven commit onward — nothing to do with this merge. It needs<br>
+an operator decision and is written up in <a href="releases.md"><code class="notranslate">releases.md</code></a> §4.</p>
+<h3 dir="auto">Cost, and the recommended cadence</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mechanical merge</td>
+<td><strong>0.031 s</strong></td>
+</tr>
+<tr>
+<td>Conflict resolution</td>
+<td><strong>0</strong></td>
+</tr>
+<tr>
+<td>Review (8 commits, 35 files, 1,584 insertions)</td>
+<td>the real cost — one focused reading</td>
+</tr>
+<tr>
+<td>Gate correction found by this rehearsal</td>
+<td>one-off, now paid</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p dir="auto"><strong>Recommended cadence: every two weeks, or ~15 commits behind, whichever comes<br>
+first.</strong> Argued from what was measured, not from habit:</p>
+<ul dir="auto">
+<li><strong>The mechanical cost is nil and does not scale with distance</strong> — the merge is<br>
+milliseconds because our surfaces do not overlap, and that stays true whether<br>
+we are 8 commits behind or 80.</li>
+<li><strong>The review cost scales linearly with commits</strong>, and it is the only real cost.<br>
+8 commits over 4 days was one comfortable reading. Upstream is running ~2<br>
+commits/day, so two weeks is ~28 commits — near the top of what stays one<br>
+sitting. Fifteen commits is the earlier trigger when upstream sprints.</li>
+<li><strong>Merging more often is not free either</strong>: each merge PR costs a full run of<br>
+upstream's expensive <code class="notranslate">ci.yml</code> (see <a href="releases.md"><code class="notranslate">releases.md</code></a> §4), and each<br>
+needs a tag classification. Weekly would roughly double that overhead to buy<br>
+freshness nobody is waiting on.</li>
+<li><strong>Not slower than two weeks</strong>, because the review is the bottleneck and review<br>
+quality falls off a cliff past ~30 commits — which is exactly when a merge<br>
+stops being a merge and becomes an audit.</li>
+</ul>
+<p dir="auto">The second measurement is below.</p>
+<h2 dir="auto">4. Second synchronization - 2026-08-30</h2>
+<p dir="auto">The second synchronization merged the current upstream default branch before applying any new downstream distribution change.</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our <code class="notranslate">main</code> before</td>
+<td><code class="notranslate">61539eb05602b9b2859c94ee73a47bff2b328e3b</code></td>
+</tr>
+<tr>
+<td>Upstream <code class="notranslate">main</code></td>
+<td><code class="notranslate">1fbc7bb1fba262ef38a4dedf321d18c54669b129</code></td>
+</tr>
+<tr>
+<td>Previous pin and merge base</td>
+<td><code class="notranslate">bdae21ed09d2cca4f57caed4bda9d30d8f9d9be8</code></td>
+</tr>
+<tr>
+<td>Behind by</td>
+<td><strong>86 commits</strong>, accumulated over <strong>13 days</strong></td>
+</tr>
+<tr>
+<td><strong>Conflicts</strong></td>
+<td><strong>zero</strong></td>
+</tr>
+<tr>
+<td><strong>Merge wall-clock</strong></td>
+<td><strong>0.54 s total across three clean merge commands</strong></td>
+</tr>
+<tr>
+<td><strong>Conflict-resolution time</strong></td>
+<td><strong>none</strong></td>
+</tr>
+<tr>
+<td>Files changed by upstream</td>
+<td>283</td>
+</tr>
+<tr>
+<td>Diff size</td>
+<td>61,171 insertions, 8,723 deletions</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p dir="auto">Git's <code class="notranslate">ort</code> strategy first integrated <code class="notranslate">c731c36</code>, auto-merging <code class="notranslate">README.md</code> without conflict.<br>
+Upstream then advanced twice during validation, so two more clean merges integrated <code class="notranslate">9e3df47</code> and <code class="notranslate">1fbc7bb</code>.<br>
+Those merges auto-merged the overlapping downstream surfaces without conflict, including <code class="notranslate">README.md</code>, <code class="notranslate">bin/fm-test-run.sh</code>, <code class="notranslate">docs/configuration.md</code>, and <code class="notranslate">docs/documentation-audiences.json</code>.<br>
+The final tree keeps <code class="notranslate">1fbc7bb</code> as an ancestor and retains every PixelOven-only commit in ordinary history.</p>
+<p dir="auto">This synchronization is consumer-visible and brings substantial runtime, supervision, backend, documentation, and test behavior.<br>
+The next <code class="notranslate">operator</code> release therefore needs at least a minor version bump under the existing release policy.</p>
+<p dir="auto">The same task deliberately introduces ADR-0010 after the pure merge.<br>
+That decision expands the future contact surface from the README banner to an exact set of source-selection, CI acquisition, documentation-audience, and regression files.<br>
+Future synchronizations review those paths by behavior and ownership rather than choosing an upstream or downstream side wholesale.</p>
+<p dir="auto">The 86-commit distance was mechanically cheap but materially larger to review than the first eight-commit rehearsal.<br>
+The existing recommendation of every two weeks or roughly 15 commits remains the upper bound, and the commit trigger should win whenever upstream is moving quickly.</p>
+<h3 dir="auto">Corrective ancestry merge after the PR <a class="issue-link js-issue-link" data-error-text="Failed to load title" data-id="5290478048" data-permission-text="Title is private" data-url="https://github.com/pixeloven/operator/issues/11" data-hovercard-type="pull_request" data-hovercard-url="/pixeloven/operator/pull/11/hovercard" href="https://github.com/pixeloven/operator/pull/11">#11</a> squash</h3>
+<p dir="auto">PR <a class="issue-link js-issue-link" data-error-text="Failed to load title" data-id="5290478048" data-permission-text="Title is private" data-url="https://github.com/pixeloven/operator/issues/11" data-hovercard-type="pull_request" data-hovercard-url="/pixeloven/operator/pull/11/hovercard" href="https://github.com/pixeloven/operator/pull/11">#11</a> was squash-merged as <code class="notranslate">0e9bc603abcbd557c111cb4a798aceddde85087e</code> after its branch had already integrated the upstream pin.<br>
+The squash preserved the synchronized file tree but synthesized one new commit whose only parent was the prior PixelOven <code class="notranslate">main</code>, so <code class="notranslate">1fbc7bb1fba262ef38a4dedf321d18c54669b129</code> was no longer reachable and A7 failed.</p>
+<p dir="auto">The corrective merge records <code class="notranslate">0e9bc603abcbd557c111cb4a798aceddde85087e</code> as its first parent and the pinned upstream commit as its second parent.<br>
+It uses Git's <code class="notranslate">ours</code> merge strategy because the squash had already landed the reviewed file content, preserving tree <code class="notranslate">facc2dabfbffcdf7aae862aac8b9822d820ae897</code> exactly while restoring the missing ancestry edge.<br>
+The follow-up PR must itself be merged with GitHub's merge-commit method because squashing or rebasing it would discard the corrective merge topology again.</p>
+<h2 dir="auto">5. Merge log</h2>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Date</th>
+<th>From</th>
+<th>To</th>
+<th>Commits</th>
+<th>Conflicts</th>
+<th>Merge wall</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-17</td>
+<td><code class="notranslate">6789876442d0</code> (fork point)</td>
+<td><code class="notranslate">bdae21ed09d2</code></td>
+<td>8</td>
+<td><strong>0</strong></td>
+<td>0.031 s</td>
+<td>Task A1.4 rehearsal. Cut after <code class="notranslate">v0.1.0</code>. Only contact surface was <code class="notranslate">README.md</code> (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added).</td>
+</tr>
+<tr>
+<td>2026-08-30</td>
+<td><code class="notranslate">bdae21ed09d2</code></td>
+<td><code class="notranslate">1fbc7bb1fba2</code></td>
+<td>86</td>
+<td><strong>0</strong></td>
+<td>0.54 s</td>
+<td>Second synchronization used three clean merge checkpoints because upstream advanced twice during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010.</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<h2 dir="auto">Corrective ancestry restoration</h2>
+<p dir="auto">The replacement repair branch restores upstream ancestry with a graph-only merge whose first parent is current <code class="notranslate">main</code> and second parent is upstream pin <code class="notranslate">1fbc7bb1fba262ef38a4dedf321d18c54669b129</code>; the PR <strong>MUST be merged with GitHub's Create a merge commit method</strong>, never squash or rebase.</p>
