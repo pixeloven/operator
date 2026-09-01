@@ -1,0 +1,35 @@
+Operator upstream ancestry repair — end-to-end evidence
+target HEAD: 30106c750aa66e877deb9108c385592e8e689e14
+PASS: tested checkout is the requested target commit
+repair parents: 0d88b5db13442389e9255f104f43cbd96d20a2e8 -> 1fbc7bb1fba262ef38a4dedf321d18c54669b129
+PASS: repair parent order is PixelOven main first, verified upstream pin second
+base tree:   acb1b9f1a88e4ef4d70c877c1466b48c8655a6c4
+repair tree: acb1b9f1a88e4ef4d70c877c1466b48c8655a6c4
+PASS: repair commit preserves the exact pre-repair tree
+PASS: verified upstream pin is an ancestor of the repair commit
+PASS: repair commit remains in target history
+post-repair changed paths: .github/workflows/no-mistakes-required.yml, docs/pixeloven/upstream-merges.md, tests/fm-no-mistakes-required.test.sh
+PASS: post-repair changes are limited to workflow pin, evidence documentation, and focused regression
+workflow action: pixeloven/no-mistakes/.github/actions/require-no-mistakes
+workflow ref:    0e546529579f7a862f6f2fecef4905ddd10e2494
+PASS: workflow still invokes the same no-mistakes action
+PASS: workflow selects the required immutable full commit SHA
+PASS: the exact workflow-pinned verifier is fetchable
+matching attestation exit: 0
+Found no-mistakes signature in PR #3006 body.
+Found structurally compliant pipeline step attestation.
+::warning::PR-body attestation is author-editable and is not cryptographic proof that no-mistakes produced it.
+PASS: pinned verifier accepts a complete attestation bound to the current head
+mismatched attestation exit: 1
+Found no-mistakes signature in PR #3006 body.
+::error::Pipeline attestation head_sha does not match the current PR head.
+
+attestation.head_sha: 1111111111111111111111111111111111111111
+PR head: 2222222222222222222222222222222222222222
+
+A later push must not pass on an older attestation. Re-run 'git push no-mistakes' so the PR body attestation binds to the current head.
+
+See CONTRIBUTING.md for setup and the full workflow.
+
+PR author: regression
+PASS: pinned verifier rejects stale-head attestations and identifies both SHAs

@@ -1,0 +1,8 @@
+No-mistakes verifier behavior equivalence
+previous ref: 70185bf682521ed1822e51dc09fa327b85b87e79
+repair ref:   0e546529579f7a862f6f2fecef4905ddd10e2494
+matching-current-head: previous=0 repair=0 identical_output=true
+stale-head: previous=1 repair=1 identical_output=true
+missing-head: previous=1 repair=1 identical_output=true
+incomplete-steps: previous=1 repair=1 identical_output=true
+PASS: the repair-pinned verifier preserves exit status and user-facing output across success, stale-head, missing-head, and incomplete-step cases
