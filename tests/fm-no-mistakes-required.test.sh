@@ -26,7 +26,8 @@ fetch_shared_verifier() {
 
 run_verifier() {
   local body=$1 head=$2
-  PR_BODY="$body" PR_HEAD_SHA="$head" PR_AUTHOR=regression PR_NUMBER=3006 \
+  GITHUB_EVENT_NAME='' GITHUB_EVENT_PATH='' \
+    PR_BODY="$body" PR_HEAD_SHA="$head" PR_AUTHOR=regression PR_NUMBER=3006 \
     python3 "$VERIFY" 2>&1
 }
 
