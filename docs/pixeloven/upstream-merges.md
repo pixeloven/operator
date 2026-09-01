@@ -107,15 +107,15 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 5. **Anything new in the supply chain?** New network calls, new installers, new
    telemetry, a changed pin. Feeds [`supply-chain-read.md`](supply-chain-read.md).
 
-## Corrective ancestry repair - PR #13 (2026-08-30)
+## Corrective ancestry restoration
 
-PR #12 was squash-merged, discarding the required upstream merge topology.
-The corrective graph-only merge commit `f0b708eb2e4afece1712454b7bbc4b091d13caa2` preserves the exact tree of `0d88b5db13442389e9255f104f43cbd96d20a2e8` byte-for-byte and has parents, in order:
+PR #13 was squash-merged as `f4d52442776fa9d584cbb4a32018c0be8b518c58`, discarding its corrective graph-only merge topology.
+The replacement graph-only merge commit `04a819b8596d69cf99c4f71dc6ac67aa8becb1d6` preserves the exact tree `5cd3bdce7a5b877d49b30b84513d7a1e02c6f81f` of that current `main` byte-for-byte and has parents, in order:
 
-- first parent (PixelOven main): `0d88b5db13442389e9255f104f43cbd96d20a2e8`
+- first parent (PixelOven `main`): `f4d52442776fa9d584cbb4a32018c0be8b518c58`
 - second parent (verified upstream pin): `1fbc7bb1fba262ef38a4dedf321d18c54669b129`
 
-PR #13 carries this graph-only repair commit and also includes this minimal documentation evidence commit; it **MUST be merged with GitHub's `Create a merge commit` method** (never squash, rebase, or fast-forward).
+The replacement PR **MUST be merged with GitHub's `Create a merge commit` method** (never squash, rebase, or fast-forward).
 
 ## 3. Rehearsal — 2026-08-17
 
@@ -294,9 +294,9 @@ The existing recommendation of every two weeks or roughly 15 commits remains the
 PR #11 was squash-merged as `0e9bc603abcbd557c111cb4a798aceddde85087e` after its branch had already integrated the upstream pin.
 The squash preserved the synchronized file tree but synthesized one new commit whose only parent was the prior PixelOven `main`, so `1fbc7bb1fba262ef38a4dedf321d18c54669b129` was no longer reachable and A7 failed.
 
-The corrective merge records `0e9bc603abcbd557c111cb4a798aceddde85087e` as its first parent and the pinned upstream commit as its second parent.
-It uses Git's `ours` merge strategy because the squash had already landed the reviewed file content, preserving tree `facc2dabfbffcdf7aae862aac8b9822d820ae897` exactly while restoring the missing ancestry edge.
-The follow-up PR must itself be merged with GitHub's merge-commit method because squashing or rebasing it would discard the corrective merge topology again.
+The first corrective branch's merge recorded `0e9bc603abcbd557c111cb4a798aceddde85087e` as its first parent and the pinned upstream commit as its second parent.
+That branch used Git's `ours` merge strategy because the squash had already landed the reviewed file content, preserving tree `facc2dabfbffcdf7aae862aac8b9822d820ae897` exactly while restoring the missing ancestry edge.
+The current replacement repair and required merge method are recorded in [Corrective ancestry restoration](#corrective-ancestry-restoration).
 
 ## 5. Merge log
 
