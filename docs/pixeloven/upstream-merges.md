@@ -304,3 +304,7 @@ The follow-up PR must itself be merged with GitHub's merge-commit method because
 |------|------|----|---------|-----------|------------|-------|
 | 2026-08-17 | `6789876442d0` (fork point) | `bdae21ed09d2` | 8 | **0** | 0.031 s | Task A1.4 rehearsal. Cut after `v0.1.0`. Only contact surface was `README.md` (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added). |
 | 2026-08-30 | `bdae21ed09d2` | `1fbc7bb1fba2` | 86 | **0** | 0.54 s | Second synchronization used three clean merge checkpoints because upstream advanced twice during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |
+
+## Corrective ancestry restoration
+
+The replacement repair branch restores upstream ancestry with a graph-only merge whose first parent is current `main` and second parent is upstream pin `1fbc7bb1fba262ef38a4dedf321d18c54669b129`; the PR **MUST be merged with GitHub's Create a merge commit method**, never squash or rebase.
