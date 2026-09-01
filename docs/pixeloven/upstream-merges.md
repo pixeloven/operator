@@ -107,6 +107,16 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 5. **Anything new in the supply chain?** New network calls, new installers, new
    telemetry, a changed pin. Feeds [`supply-chain-read.md`](supply-chain-read.md).
 
+## Corrective ancestry repair - PR #13 (2026-08-30)
+
+PR #12 was squash-merged, discarding the required upstream merge topology.
+The corrective graph-only merge commit `f0b708eb2e4afece1712454b7bbc4b091d13caa2` preserves the exact tree of `0d88b5db13442389e9255f104f43cbd96d20a2e8` byte-for-byte and has parents, in order:
+
+- first parent (PixelOven main): `0d88b5db13442389e9255f104f43cbd96d20a2e8`
+- second parent (verified upstream pin): `1fbc7bb1fba262ef38a4dedf321d18c54669b129`
+
+PR #13 carries this graph-only repair commit and also includes this minimal documentation evidence commit; it **MUST be merged with GitHub's `Create a merge commit` method** (never squash, rebase, or fast-forward).
+
 ## 3. Rehearsal — 2026-08-17
 
 The first merge, run as task A1.4 immediately after `v0.1.0` was tagged.

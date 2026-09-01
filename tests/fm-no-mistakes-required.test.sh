@@ -5,7 +5,7 @@ set -u
 # shellcheck source=tests/lib.sh disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-ACTION_REF=70185bf682521ed1822e51dc09fa327b85b87e79
+ACTION_REF=0e546529579f7a862f6f2fecef4905ddd10e2494
 TMP_ROOT=$(fm_test_tmproot fm-no-mistakes-required)
 VERIFY="$TMP_ROOT/verify.py"
 OLD_SHA=1111111111111111111111111111111111111111
@@ -26,7 +26,8 @@ fetch_shared_verifier() {
 
 run_verifier() {
   local body=$1 head=$2
-  PR_BODY="$body" PR_HEAD_SHA="$head" PR_AUTHOR=regression PR_NUMBER=3006 \
+  GITHUB_EVENT_NAME='' GITHUB_EVENT_PATH='' \
+    PR_BODY="$body" PR_HEAD_SHA="$head" PR_AUTHOR=regression PR_NUMBER=3006 \
     python3 "$VERIFY" 2>&1
 }
 

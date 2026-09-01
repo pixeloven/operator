@@ -178,7 +178,7 @@ If hosted-runner billing or capacity blocks execution, treat that as an operatio
 
 [`CONTRIBUTING.md`](../../CONTRIBUTING.md) owns the signature and current-head attestation contract enforced by `Require no-mistakes`.
 The check is expected to be green before merge.
-ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the selected downstream commit `70185bf682521ed1822e51dc09fa327b85b87e79`.
+ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the selected downstream commit `0e546529579f7a862f6f2fecef4905ddd10e2494`.
 Upstream ancestry and corrective ancestry pull requests additionally follow the merge-commit contract in [`upstream-merges.md`](upstream-merges.md).
 
 ## 5. Release log
