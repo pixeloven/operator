@@ -369,10 +369,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.19.0
+      - name: Install tasks-axi
+        run: |
+          set -eu
+          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+          echo "$RUNNER_TEMP/fm-tools/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/fm-tools/bin/tasks-axi" --version
       - name: Run snapshot consumers with stock Bash
         shell: /bin/bash {0}
-        env:
-          PATH: /bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin
         run: |
           set -eu
           case "$BASH_VERSION" in
@@ -406,10 +413,6 @@ jobs:
             exit 1
           }
 
-          command -v npm >/dev/null || { echo "::error::npm is required to install tasks-axi"; exit 1; }
-          npm install -g tasks-axi@0.2.5 >/dev/null
-          PATH="$(npm prefix -g)/bin:$PATH"
-          export PATH
           command -v tasks-axi >/dev/null || { echo "::error::tasks-axi is required for the public-followup bash 3.2 register regression"; exit 1; }
 
           # The full public-followup suite is not a stock-bash snapshot; run only
