@@ -94,10 +94,8 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 
 ### What the review is actually looking for
 
-1. **Did anything conflict?** Under the contract nothing should. If something
-   does, *the contract is leaking* — that is the finding, not the conflict.
-2. **Did upstream touch a file we also touch?** Today there is exactly one:
-   `README.md`. See §4.
+1. **Did anything conflict?** Resolve overlap in an ADR-accepted contact surface by behavior and ownership; a conflict anywhere else means the contract is leaking.
+2. **Did upstream touch a file we also touch?** Review `README.md` plus the exact existing-file exceptions owned by the accepted ADRs; never choose one side wholesale.
 3. **Is any merged change consumer-visible?** That decides the semver bump on
    our next tag ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md),
    [`releases.md`](releases.md) §2).
@@ -298,9 +296,23 @@ The first corrective branch's merge recorded `0e9bc603abcbd557c111cb4a798aceddde
 That branch used Git's `ours` merge strategy because the squash had already landed the reviewed file content, preserving tree `facc2dabfbffcdf7aae862aac8b9822d820ae897` exactly while restoring the missing ancestry edge.
 The current replacement repair and required merge method are recorded in [Corrective ancestry restoration](#corrective-ancestry-restoration).
 
-## 5. Merge log
+## 5. Third synchronization - 2026-09-01
+
+The third synchronization preserved the ordinary two-parent merge topology, with PixelOven `0c1b6e3c15bd` as the first parent and upstream `355f46fe5528` as the second.
+It advanced from `1fbc7bb1fba2` by 10 upstream commits over two days, changing 58 files with 7,971 insertions and 324 deletions before merge resolution.
+The merge wall time was not recorded.
+
+Two content conflicts required review.
+In `docs/configuration.md`, the resolution retained ADR-0010's PixelOven installer commands while accepting upstream's automatic backlog-transition contract.
+In `tests/fm-pr-check-security.test.sh`, the resolution retained the downstream hosted-runner wait bound while taking upstream's semantic non-zombie liveness check.
+
+The synchronization is consumer-visible: it adds atomic backlog transitions, bounded pane-churn absorb, promoted-worker definition-of-done rendering, quota selection and monitoring helpers, structured Lavish capture reading, custom-check unregistration, a Bash 3.2 public-followup fix, and isolated Herdr server environments.
+Upstream's stock macOS lane also introduced a registry acquisition of `tasks-axi`; the same branch replaced that acquisition with `bin/fm-install-pixeloven-tool.sh tasks-axi` under Node 22.19, preserving ADR-0010's companion-distribution boundary without rewriting the merge commit.
+
+## 6. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
 | 2026-08-17 | `6789876442d0` (fork point) | `bdae21ed09d2` | 8 | **0** | 0.031 s | Task A1.4 rehearsal. Cut after `v0.1.0`. Only contact surface was `README.md` (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added). |
 | 2026-08-30 | `bdae21ed09d2` | `1fbc7bb1fba2` | 86 | **0** | 0.54 s | Second synchronization used three clean merge checkpoints because upstream advanced twice during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |
+| 2026-09-01 | `1fbc7bb1fba2` | `355f46fe5528` | 10 | **2 files** | not recorded | Third synchronization preserved the two-parent merge, resolved configuration and test overlap, and corrected the new stock-macOS `tasks-axi` acquisition to the pinned PixelOven installer on the same branch. |

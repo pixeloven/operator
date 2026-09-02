@@ -187,5 +187,5 @@ Upstream ancestry and corrective ancestry pull requests additionally follow the 
 |---|---|---|---|
 | `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
 
-The **next** tag will carry both completed upstream synchronizations: the 8-commit A1.4 merge through `bdae21ed09d2` and the subsequent 86-commit synchronization through `1fbc7bb1fba2`.
-Per §2 it is a **minor** bump - `v0.2.0` - because [`upstream-merges.md`](upstream-merges.md) records consumer-visible behavior across runtime, supervision, backends, documentation, and tests, including `/stow` open-record persistence and the `CLAUDE.md` pointer-file change.
+The **next** tag will carry three completed upstream synchronizations: the 8-commit A1.4 merge through `bdae21ed09d2`, the subsequent 86-commit synchronization through `1fbc7bb1fba2`, and the 10-commit synchronization through `355f46fe5528`.
+Per §2 it is a **minor** bump - `v0.2.0` - because [`upstream-merges.md`](upstream-merges.md) records consumer-visible behavior across runtime, supervision, backends, documentation, and tests, including `/stow` open-record persistence, the `CLAUDE.md` pointer-file change, atomic backlog transitions, quota helpers, and bounded pane-churn absorb.
