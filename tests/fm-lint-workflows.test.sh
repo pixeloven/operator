@@ -233,7 +233,8 @@ test_current_workflow_model_is_hosted_and_node_ready() {
   installer_contract='[
     {"job":"tests-portable-parallel-1","step":"Install tasks-axi"},
     {"job":"tests-portable-parallel-2","step":"Install tasks-axi"},
-    {"job":"tests-portable-serial","step":"Install tasks-axi for backlog-handoff delegation"}
+    {"job":"tests-portable-serial","step":"Install tasks-axi for backlog-handoff delegation"},
+    {"job":"macos-stock-bash","step":"Install tasks-axi"}
   ]'
   printf '%s\n' "$ci_model" | jq -e --argjson expected "$installer_contract" '
     [
