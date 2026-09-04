@@ -9,6 +9,19 @@ Verified on 2026-07-31 on macOS (Darwin 25.5.0) with `lavish-axi` 0.1.45 install
 Generic keyed-answer feed verified on 2026-08-16 on the same platform, against the same published poll response shape.
 Cross-origin keyed-answer feed verified on 2026-08-19 through the real runner and Lavish adapter interface.
 Trusted external `process-event-adapter/1` binding conformance and the runnable `file-signal` example were verified on 2026-08-27 on macOS (Darwin 25.5.0) with Node v25.9.0.
+Atomic pending-publication convergence and the Pi successor-loop regression verified on 2026-08-30 on Linux through the real wake library, process runner, watcher arm, and mocked Pi delivery interface.
+That verification used Linux 7.0.0-30-generic x86_64, GNU Bash 5.3.9, and Node.js 22.23.2.
+
+The exact focused commands and terminal results were:
+
+```text
+$ bin/fm-test-run.sh tests/fm-wake-queue.test.sh
+FM_TEST_END 2026-08-30T02:29:27Z tests/fm-wake-queue.test.sh exit=0 duration_ms=113770 gate_skip=false
+$ bin/fm-test-run.sh tests/fm-procevent.test.sh
+FM_TEST_END 2026-08-30T02:31:54Z tests/fm-procevent.test.sh exit=0 duration_ms=96197 gate_skip=false
+$ bin/fm-test-run.sh tests/fm-pi-watch-extension.test.sh
+FM_TEST_END 2026-08-30T02:33:40Z tests/fm-pi-watch-extension.test.sh exit=0 duration_ms=106284 gate_skip=false
+```
 
 ## The published Lavish poll interface the adapter wraps
 
@@ -92,7 +105,7 @@ Exercised by `tests/fm-procevent.test.sh` against a fake blocking source whose c
 | --- | --- |
 | capture before publication | the captured result exists at `0600` and its event names its committed sequence only afterward |
 | proactive delivery of a captured result | a real capture into an isolated home queues its `check` record, and a healthy watcher with a fresh beacon then exits reporting that queued result as an actionable check, before any manual drain |
-| single delivery per source and sequence | after that first proactive wake, a still-unhandled result keeps being re-announced onto the durable queue but never wakes the watcher again; once existing records receive the drain's post-handling acknowledgement and the source result is acknowledged, it is neither re-announced nor reported |
+| single pending publication per source and sequence | after the first proactive wake, repeated and simultaneous reconciliation observes the same still-queued keyed row without advancing the sequence, reopening downtime, or sending another Pi follow-up; distinct sources and sequences retain independent rows |
 | proactive-delivery crash and drain boundaries | dotted and underscored source ids at the same sequence receive distinct markers; a concurrent drain cannot consume between queue revalidation and marker commit; failed output, failed marker commit, and a crash before marker commit leave replay available, while successful output still ends the actionable cycle and a crash after marker commit suppresses a duplicate |
 | adapter-owned terminal verdict | two fixture adapters - one that ends on any result, one with no terminal knowledge - decide the outcome alone: the first has its registration and claim retired automatically after one capture and is never restarted, the second stays armed |
 | adapter-owned application of a captured result | a remote-secondmate reply captured through the real relay in an isolated home reaches that secondmate's local status mirror, settles its correlated pending-reply expectation, re-arms the next cursor-anchored source, and is acknowledged, with no handler step or duplicate `check` wake; its new mirrored bytes remain visible to the watcher's signal gate, while a cursor-loss whole-log recapture that adds no bytes is acknowledged quietly; for an already-escalated request, the same path closes the exact decision so the open-decision fold clears and remains clear; a capture whose adapter application fails because local storage for a referenced remote document is obstructed is left unacknowledged and receives the fallback `check` wake, and the handler's own `handle` still applies it in full after storage recovers |
@@ -102,9 +115,9 @@ Exercised by `tests/fm-procevent.test.sh` against a fake blocking source whose c
 | terminal retirement preserves the result | the retired source's captured output, its announced event, its handled acknowledgement, and later explicit `retire` all still behave normally |
 | registration-generation retirement | an old terminal runner preserves a concurrently replaced registration and releases ownership so the replacement runs independently; injected registration-removal failure retains a terminal claim, performs no second poll, and completes idempotently once removal recovers |
 | one `Send & End`, one result | an armed Lavish source driven against a stand-in for the published poll, which delivers the final `session_ended` feedback once and empty ended sessions afterward, polls exactly once, captures exactly one result, publishes one distinct event, and retires itself |
-| bounded re-announcement until handled | a durably captured result with no handled acknowledgement is re-announced by `reconcile` with the same source and sequence on every call - not only the first restart after a crash - and a presented-but-unacknowledged wake resurfaces identically after a simulated replacement session |
+| bounded re-announcement until handled | a durably captured result with no handled acknowledgement keeps one queued publication across repeated reconciliation, receives exactly one replacement after the prior row's post-handling acknowledgement, and resurfaces with the same source and sequence after a simulated replacement session |
 | handled acknowledgement | `fm-procevent.sh handled <source-id> <sequence>` atomically and idempotently records handling at mode `0600`, fails without leaving a marker when private-mode enforcement fails, reports the first call distinctly from every repeat, stops further re-announcement once recorded, and never authorizes a paired effect twice across repeat calls |
-| publication-and-acknowledgement serialization | a concurrent `reconcile` cannot append a wake after `handled` wins the shared per-source boundary, so an acknowledged result is not re-announced by a publication race |
+| publication-and-acknowledgement serialization | the wake-queue lock atomically couples same-key presence with publication, so concurrent producers append one row; acknowledgement either leaves that row observable or removes it before one replacement append, while the source lock prevents a wake after `handled` wins |
 | acknowledgement precondition | `handled` is refused, with no marker created, unless matching captured result and adapter records already exist, so a premature or mistyped acknowledgement cannot suppress a future result |
 | immutable adapter identity | a captured result retains its adapter after its mutable registration is removed |
 | trusted classification boundary | Lavish lifecycle classification reads the leading response envelope, so prompt payload text that resembles a missing-session error cannot override a valid session status |

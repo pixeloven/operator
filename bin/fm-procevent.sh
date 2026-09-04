@@ -495,13 +495,13 @@ cmd_register_extension() {
   printf 'retire: bin/fm-procevent.sh retire %s --if-owner %s\n' "$id" "$registration_token"
 }
 
-# Publish every durably captured result with no handled acknowledgement yet.
-# Capture already happened, so this only turns durable state into durable
-# events - and it republishes on every call regardless of any earlier
-# publication, so a result stays eligible for re-announcement across restarts
-# and drains until `fm_procevent_mark_handled` records it.
+# Ensure every durably captured result with no handled acknowledgement has one
+# queued publication. Reconciliation observes an existing pending row without
+# appending another; acknowledgement of that row permits one replacement replay.
+FM_PROCEVENT_PUBLISH_RESULT=
 publish_result() {  # <result-file>
-  local result=$1 id seq adapter line status=1
+  local result=$1 id seq adapter line announcement status=1
+  FM_PROCEVENT_PUBLISH_RESULT=
   id=$(fm_procevent_result_source_id "$result")
   seq=$(fm_procevent_result_sequence "$result")
   fm_procevent_source_id_valid "$id" || return 1
@@ -529,8 +529,13 @@ publish_result() {  # <result-file>
       esac
     fi
     unset FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD
-    if fm_wake_append check "procevent:$id:$seq" "check: $line"; then
-      status=0
+    if announcement=$(fm_wake_ensure_queued check "procevent:$id:$seq" "check: $line"); then
+      case "$announcement" in
+        appended|already-queued)
+          FM_PROCEVENT_PUBLISH_RESULT=$announcement
+          status=0
+          ;;
+      esac
     fi
   fi
   fm_procevent_source_lock_release "$id"
@@ -538,15 +543,18 @@ publish_result() {  # <result-file>
 }
 
 publish_pending() {  # [result-file-to-skip]
-  local skip=${1-} result published=0
+  local skip=${1-} result published=0 queued=0
   while IFS= read -r result; do
     [ -n "$result" ] || continue
     [ "$result" = "$skip" ] && continue
     if publish_result "$result"; then
-      published=$((published + 1))
+      case "$FM_PROCEVENT_PUBLISH_RESULT" in
+        appended) published=$((published + 1)) ;;
+        already-queued) queued=$((queued + 1)) ;;
+      esac
     fi
   done < <(fm_procevent_pending "$STATE")
-  printf '%s\n' "$published"
+  printf '%s\t%s\n' "$published" "$queued"
 }
 
 isolate_runner() {  # <wait|detach> <source-id>
@@ -890,8 +898,8 @@ detach_runner() {  # <source-id>
 }
 
 cmd_reconcile() {
-  local rec id published started=0 stopped=0 uncertain=0 claim owner pid token identity claim_state stop_state
-  published=$(publish_pending)
+  local rec id published queued started=0 stopped=0 uncertain=0 claim owner pid token identity claim_state stop_state
+  IFS=$'\t' read -r published queued < <(publish_pending)
 
   # Stop a runner this home owns whose source is no longer registered. Without
   # this, unregistering a source that never completes leaves its child blocked
@@ -1000,7 +1008,8 @@ cmd_reconcile() {
       fm_procevent_source_lock_release "$id"
     done
   fi
-  printf 'reconciled: published=%s started=%s stopped=%s uncertain=%s\n' "$published" "$started" "$stopped" "$uncertain"
+  printf 'reconciled: published=%s started=%s stopped=%s uncertain=%s queued=%s\n' \
+    "$published" "$started" "$stopped" "$uncertain" "$queued"
 }
 
 # Stop a runner and the child it is blocked on. A runner started by reconcile is

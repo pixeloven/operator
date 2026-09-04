@@ -17,6 +17,52 @@ GRANT="$ROOT/bin/fm-wake-grant.sh"
 
 TMP_ROOT=$(fm_test_tmproot fm-wake-tests)
 
+ensure_wake() {  # <state> <kind> <key> <payload>
+  local state=$1 kind=$2 key=$3 payload=$4 lib="$ROOT/bin/fm-wake-lib.sh"
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_wake_ensure_queued "$2" "$3" "$4"
+  ' _ "$lib" "$kind" "$key" "$payload"
+}
+
+
+test_concurrent_keyed_ensure_keeps_one_pending_row() {
+  local dir state result pids i pid count appended queued
+  dir=$(make_case concurrent-keyed-ensure)
+  state="$dir/state"
+  pids=
+  i=1
+  while [ "$i" -le 40 ]; do
+    ensure_wake "$state" check procevent:source-a:1 \
+      'check: process-event result captured: procevent:source-a:1' > "$dir/ensure-$i.out" &
+    pids="$pids $!"
+    i=$((i + 1))
+  done
+  for pid in $pids; do
+    wait "$pid" || fail "concurrent keyed ensure subprocess failed"
+  done
+
+  count=$(awk -F '\t' '$3 == "check" && $4 == "procevent:source-a:1" { count++ } END { print count + 0 }' \
+    "$state/.wake-queue")
+  [ "$count" -eq 1 ] || fail "equivalent concurrent publications produced $count pending rows"
+  appended=$(grep -l '^appended$' "$dir"/ensure-*.out | wc -l | tr -d '[:space:]')
+  queued=$(grep -l '^already-queued$' "$dir"/ensure-*.out | wc -l | tr -d '[:space:]')
+  [ "$appended" -eq 1 ] && [ "$queued" -eq 39 ] \
+    || fail "concurrent keyed results were not one append plus 39 observations: appended=$appended queued=$queued"
+  [ "$(cat "$state/.wake-queue.seq")" = 1 ] \
+    || fail "equivalent concurrent publications advanced the sequence more than once"
+
+  result=$(ensure_wake "$state" check procevent:source-a:2 \
+    'check: process-event result captured: procevent:source-a:2') \
+    || fail "a distinct keyed publication failed"
+  [ "$result" = appended ] || fail "a distinct keyed publication was suppressed: $result"
+  count=$(awk -F '\t' '$3 == "check" { count++ } END { print count + 0 }' "$state/.wake-queue")
+  [ "$count" -eq 2 ] || fail "a distinct keyed publication did not retain its own row"
+  [ "$(cat "$state/.wake-queue.seq")" = 2 ] \
+    || fail "the distinct keyed publication did not receive the next sequence"
+  pass "atomic keyed ensure keeps one equivalent pending row without suppressing distinct publications"
+}
+
 
 test_concurrent_append_and_drain() {
   local dir state out1 out2 pids i pid count unique malformed sequence generation
@@ -1200,6 +1246,7 @@ test_acknowledged_stall_publication_survives_pre_marker_crash
 test_empty_prefix_mate_preserves_other_mate_receipt
 test_self_announced_append_guards
 test_historical_annotation_skips_announced_status
+test_concurrent_keyed_ensure_keeps_one_pending_row
 test_concurrent_append_and_drain
 test_signal_catchup_without_running_watcher
 test_stale_enqueue_before_suppressor

@@ -423,6 +423,82 @@ EOF
   pass "Pi actionable close starts one successor before wake delivery settles"
 }
 
+test_pi_process_result_reconcile_does_not_flood_successor_prompts() {
+  local repo home plugin out status
+  repo="$TMP_ROOT/pi-process-result-reconcile-root"
+  home="$TMP_ROOT/pi-process-result-reconcile-home"
+  mkdir -p "$home/state/procevent" "$home/state/procevent-inbox" "$home/config"
+  install_pi_watch_extension_fixture "$repo"
+  plugin="$repo/.pi/extensions/fm-primary-pi-watch.ts"
+  printf 'captured fixture result\n' > "$home/state/procevent-inbox/lab-source.1.result"
+  printf 'lavish\n' > "$home/state/procevent-inbox/lab-source.1.adapter"
+  chmod 0600 "$home/state/procevent-inbox/lab-source.1.result" \
+    "$home/state/procevent-inbox/lab-source.1.adapter"
+
+  out=$(PLUGIN="$plugin" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
+    FM_PROCEVENT_CLAIM_ROOT="$home/claims" FM_POLL=1 FM_SIGNAL_GRACE=0 \
+    FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 node --input-type=module 2>&1 <<'EOF'
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
+const lifecycle = new Map();
+const prompts = [];
+let tool = null;
+const pi = {
+  on(name, handler) {
+    lifecycle.set(name, handler);
+  },
+  registerCommand() {},
+  registerTool(candidate) {
+    if (candidate.name === "fm_watch_arm_pi") tool = candidate;
+  },
+  sendUserMessage: async (message) => {
+    prompts.push(message);
+  },
+};
+writeFileSync(`${process.env.FM_HOME}/state/.lock`, `${process.pid}\n`);
+const mod = await import(pathToFileURL(process.env.PLUGIN).href);
+mod.default(pi);
+await tool.execute("tool-call-process-result-reconcile", {}, undefined, undefined, {});
+for (let i = 0; i < 750 && prompts.length === 0; i += 1) {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+if (prompts.length !== 1 || !prompts[0].includes("procevent:lab-source:1")) {
+  throw new Error(`initial process-result prompt was not delivered once: ${prompts.join(" | ")}`);
+}
+
+// Leave the captured result unhandled and its durable row unacknowledged while
+// the real Pi-owned successor runs several real watcher reconcile cycles.
+await new Promise((resolve) => setTimeout(resolve, 5000));
+if (prompts.length !== 1) {
+  throw new Error(`pending process result flooded Pi follow-ups: ${prompts.join(" | ")}`);
+}
+const rows = readFileSync(`${process.env.FM_HOME}/state/.wake-queue`, "utf8")
+  .trim()
+  .split("\n")
+  .filter(Boolean);
+if (rows.length !== 1 || !rows[0].includes("\tcheck\tprocevent:lab-source:1\t")) {
+  throw new Error(`pending process result did not retain exactly one durable row: ${rows.join(" | ")}`);
+}
+if (readFileSync(`${process.env.FM_HOME}/state/.wake-queue.seq`, "utf8").trim() !== "1") {
+  throw new Error("successor reconciliation advanced the durable sequence");
+}
+
+lifecycle.get("session_shutdown")?.();
+for (let i = 0; i < 100 && existsSync(`${process.env.FM_HOME}/state/.watch.lock`); i += 1) {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+if (existsSync(`${process.env.FM_HOME}/state/.watch.lock`)) {
+  throw new Error("Pi process-result fixture did not retire its watcher child");
+}
+EOF
+  )
+  status=$?
+  expect_code 0 "$status" "Pi process-result reconciliation must keep one prompt while its keyed row stays pending: $out"
+  [ -z "$out" ] || fail "Pi process-result reconcile test printed output: $out"
+  pass "Pi process-result reconciliation keeps one durable row and one follow-up across successor cycles"
+}
+
 test_pi_branch_offer_owns_actionable_wake() {
   local repo home plugin log stop out status
   repo="$TMP_ROOT/pi-branch-offer-root"
@@ -2809,6 +2885,7 @@ test_pi_tool_returns_agent_tool_result
 test_pi_redundant_tool_call_is_owned_noop
 test_pi_scheduled_retry_call_is_owned_noop
 test_pi_actionable_close_starts_single_successor_before_delivery
+test_pi_process_result_reconcile_does_not_flood_successor_prompts
 test_pi_branch_offer_owns_actionable_wake
 test_pi_branch_offer_flags_heartbeat
 test_pi_heartbeat_is_not_ridden_into_main_by_a_co_present_check
