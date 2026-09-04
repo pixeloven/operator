@@ -22,6 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DRAIN_TMP=
 DRAIN_VIEW_TMP=
+DRAIN_PRESENTED_TMP=
 DRAIN_LOCK_HELD=false
 RAW_ROWS=
 RECOVERY_MARKER="$STATE/.watcher-down"
@@ -59,6 +60,7 @@ ACTOR=$(fm_lease_actor) || exit 2
 ELIGIBLE_ROWS_FILE="$STATE/.branch-eligible-rows"
 ELIGIBLE_OWNER_FILE="$STATE/.branch-eligible-owner"
 MAIN_ROWS_FILE="$STATE/.main-eligible-rows"
+PRESENTED_ROWS_FILE="$STATE/.wake-presented-rows"
 
 rows_file_valid() {
   [ -s "$1" ] && awk 'BEGIN { ok=1 } !/^[0-9]+$/ || seen[$0]++ { ok=0 } END { exit !ok }' "$1"
@@ -96,6 +98,87 @@ write_rows_file_locked() { # <target> <source>
   fi
   chmod 0600 "$source" || return 1
   _fm_atomic_replace "$source" "$target"
+}
+
+presented_rows_valid() {
+  [ ! -e "$PRESENTED_ROWS_FILE" ] && [ ! -L "$PRESENTED_ROWS_FILE" ] && return 0
+  [ -f "$PRESENTED_ROWS_FILE" ] && [ ! -L "$PRESENTED_ROWS_FILE" ] \
+    && awk -F '\t' '
+      BEGIN { ok=1 }
+      NF != 3 || $1 !~ /^[0-9]+$/ || $2 !~ /^(main|branch)$/ \
+        || $3 !~ /^[A-Za-z0-9._-]+$/ || seen[$1 SUBSEP $2]++ { ok=0 }
+      END { exit !ok }
+    ' "$PRESENTED_ROWS_FILE"
+}
+
+write_presented_rows_locked() { # <source>
+  local source=$1
+  chmod 0600 "$source" || return 1
+  if [ -s "$source" ]; then
+    _fm_atomic_replace "$source" "$PRESENTED_ROWS_FILE"
+  else
+    rm -f -- "$PRESENTED_ROWS_FILE" || return 1
+    rm -f -- "$source"
+  fi
+}
+
+filter_unpresented_rows_locked() { # <actor-rows> <generation> <output>
+  local rows=$1 generation=$2 output=$3 claims=$PRESENTED_ROWS_FILE
+  presented_rows_valid || return 1
+  [ -e "$claims" ] || claims=/dev/null
+  awk -F '\t' -v seqs="$rows" -v claims="$claims" \
+    -v actor="$ACTOR" -v generation="$generation" '
+    BEGIN {
+      while ((getline line < seqs) > 0) keep[line]=1
+      while ((getline line < claims) > 0) {
+        split(line, field, "\t")
+        if (field[2] == actor && field[3] == generation) presented[field[1]]=1
+      }
+    }
+    NF >= 5 && ($2 in keep) && !($2 in presented)
+  ' "$FM_WAKE_QUEUE" > "$output"
+}
+
+commit_presented_rows_locked() { # <presented-view> <generation>
+  local rows=$1 generation=$2 claims=$PRESENTED_ROWS_FILE
+  [ -e "$claims" ] || claims=/dev/null
+  DRAIN_PRESENTED_TMP=$(mktemp "$STATE/.wake-presented-rows.tmp.XXXXXX") || return 1
+  awk -F '\t' -v queue="$FM_WAKE_QUEUE" -v rows="$rows" -v actor="$ACTOR" '
+    BEGIN {
+      while ((getline line < queue) > 0) {
+        split(line, field, "\t")
+        if (field[2] ~ /^[0-9]+$/) queued[field[2]]=1
+      }
+      while ((getline line < rows) > 0) {
+        split(line, field, "\t")
+        if (field[2] ~ /^[0-9]+$/) newly[field[2]]=1
+      }
+    }
+    NF == 3 && ($1 in queued) && !($2 == actor && ($1 in newly)) { print }
+  ' "$claims" > "$DRAIN_PRESENTED_TMP" || return 1
+  awk -F '\t' -v actor="$ACTOR" -v generation="$generation" '
+    NF >= 5 && $2 ~ /^[0-9]+$/ && !seen[$2]++ { print $2 "\t" actor "\t" generation }
+  ' "$rows" >> "$DRAIN_PRESENTED_TMP" || return 1
+  write_presented_rows_locked "$DRAIN_PRESENTED_TMP" || return 1
+  DRAIN_PRESENTED_TMP=
+}
+
+prune_presented_rows_locked() {
+  local claims=$PRESENTED_ROWS_FILE
+  presented_rows_valid || return 1
+  [ -e "$claims" ] || claims=/dev/null
+  DRAIN_PRESENTED_TMP=$(mktemp "$STATE/.wake-presented-rows.tmp.XXXXXX") || return 1
+  awk -F '\t' -v queue="$FM_WAKE_QUEUE" '
+    BEGIN {
+      while ((getline line < queue) > 0) {
+        split(line, field, "\t")
+        if (field[2] ~ /^[0-9]+$/) queued[field[2]]=1
+      }
+    }
+    NF == 3 && ($1 in queued)
+  ' "$claims" > "$DRAIN_PRESENTED_TMP" || return 1
+  write_presented_rows_locked "$DRAIN_PRESENTED_TMP" || return 1
+  DRAIN_PRESENTED_TMP=
 }
 
 claim_main_rows_locked() {
@@ -384,6 +467,7 @@ cleanup() {
   local status=$?
   [ -z "$DRAIN_TMP" ] || rm -f -- "$DRAIN_TMP" 2>/dev/null || true
   [ -z "$DRAIN_VIEW_TMP" ] || rm -f -- "$DRAIN_VIEW_TMP" 2>/dev/null || true
+  [ -z "$DRAIN_PRESENTED_TMP" ] || rm -f -- "$DRAIN_PRESENTED_TMP" 2>/dev/null || true
   if [ "$DRAIN_LOCK_HELD" = true ]; then
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   fi
@@ -478,6 +562,7 @@ if [ -n "$ACK_THROUGH" ]; then
     exit 1
   fi
   DRAIN_TMP=
+  prune_presented_rows_locked || exit 1
   if [ "$ACTOR" = branch ]; then
     consume_actor_rows_locked "$ELIGIBLE_ROWS_FILE" "$ACK_THROUGH" || exit 1
   else
@@ -560,13 +645,20 @@ if [ "$ACTOR" = branch ]; then
 else
   ACTOR_ROWS_FILE=$MAIN_ROWS_FILE
 fi
-awk -F '\t' -v seqs="$ACTOR_ROWS_FILE" '
-  BEGIN { while ((getline line < seqs) > 0) keep[line]=1 }
-  NF >= 5 && ($2 in keep)
-' "$FM_WAKE_QUEUE" > "$DRAIN_VIEW_TMP" || exit 1
+filter_unpresented_rows_locked "$ACTOR_ROWS_FILE" "${RECOVERY_MARKER_TOKEN##*:}" "$DRAIN_VIEW_TMP" || {
+  echo "wake drain: presented-row claim state is invalid" >&2
+  exit 1
+}
+if [ ! -s "$DRAIN_VIEW_TMP" ]; then
+  rm -f -- "$DRAIN_VIEW_TMP"
+  DRAIN_VIEW_TMP=
+  fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+  DRAIN_LOCK_HELD=false
+  (print_status_presentation) || true
+  assert_watcher_liveness
+  exit 0
+fi
 RAW_ROWS=$(fm_wake_print_deduped "$DRAIN_VIEW_TMP") || exit "$?"
-rm -f -- "$DRAIN_VIEW_TMP" || exit 1
-DRAIN_VIEW_TMP=
 ACK_THROUGH=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' '$2 ~ /^[0-9]+$/ && $2 > max { max=$2 } END { print max + 0 }') || exit 1
 case "${FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT:-0}" in
   0) ;;
@@ -576,6 +668,16 @@ esac
 if [ -n "$RAW_ROWS" ]; then
   printf '%s\n' "$RAW_ROWS" || exit "$?"
 fi
+if ! fm_recovery_marker_mark_announced "$RECOVERY_MARKER" "${RECOVERY_MARKER_TOKEN##*:}"; then
+  echo "wake drain: durable presentation could not be committed safely" >&2
+  exit 1
+fi
+commit_presented_rows_locked "$DRAIN_VIEW_TMP" "${RECOVERY_MARKER_TOKEN##*:}" || {
+  echo "wake drain: durable presentation claim could not be committed safely" >&2
+  exit 1
+}
+rm -f -- "$DRAIN_VIEW_TMP" || exit 1
+DRAIN_VIEW_TMP=
 fm_recovery_marker_snapshot "$RECOVERY_MARKER" || exit 1
 RECOVERY_MARKER_TOKEN=$FM_RECOVERY_MARKER_TOKEN
 case "$RECOVERY_MARKER_TOKEN" in

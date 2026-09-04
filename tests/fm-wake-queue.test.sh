@@ -65,7 +65,7 @@ test_concurrent_keyed_ensure_keeps_one_pending_row() {
 
 
 test_concurrent_append_and_drain() {
-  local dir state out1 out2 pids i pid count unique malformed sequence generation
+  local dir state out1 out2 pids i pid count unique malformed generation
   dir=$(make_case concurrent)
   state="$dir/state"
   out1="$dir/drain-one.out"
@@ -77,23 +77,23 @@ test_concurrent_append_and_drain() {
     pids="$pids $!"
     i=$((i + 1))
   done
-  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$out1" &
+  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$out1" 2> "$dir/drain-one.err" &
   pids="$pids $!"
   for pid in $pids; do
     wait "$pid" || fail "concurrent append/drain subprocess failed"
   done
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$out2" 2> "$dir/drain-two.err" || fail "final drain failed"
-  count=$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$out2")
-  [ "$count" -eq 40 ] || fail "expected final replay of 40 durable records, got $count"
-  malformed=$(awk -F '\t' 'NF && NF != 5 { bad++ } END { print bad + 0 }' "$out2")
+  count=$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$out1" "$out2")
+  [ "$count" -eq 40 ] || fail "concurrent append and drains presented $count rows instead of 40"
+  malformed=$(awk -F '\t' 'NF && NF != 5 { bad++ } END { print bad + 0 }' "$out1" "$out2")
   [ "$malformed" -eq 0 ] || fail "drained records had malformed fields"
-  unique=$(awk -F '\t' 'NF == 5 { keys[$4] = 1 } END { for (k in keys) count++; print count + 0 }' "$out2")
+  unique=$(awk -F '\t' 'NF == 5 { keys[$4] = 1 } END { for (k in keys) count++; print count + 0 }' "$out1" "$out2")
   [ "$unique" -eq 40 ] || fail "expected 40 unique keys, got $unique"
   [ -s "$state/.wake-queue" ] || fail "concurrent drain consumed records before handling acknowledgement"
-  sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/drain-two.err")
-  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/drain-two.err")
-  [ -n "$sequence" ] && [ -n "$generation" ] || fail "final replay omitted its acknowledgement boundary"
-  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$sequence" --recovery-generation "$generation" \
+  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' \
+    "$dir/drain-one.err" "$dir/drain-two.err" | head -1)
+  [ -n "$generation" ] || fail "concurrent presentation omitted its acknowledgement generation"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through 40 --recovery-generation "$generation" \
     || fail "concurrent records could not be acknowledged"
   [ ! -s "$state/.wake-queue" ] || fail "acknowledged concurrent records remained queued"
   pass "concurrent append plus drain preserves durable records through acknowledgement"
@@ -224,7 +224,7 @@ SH
 }
 
 test_atomic_double_drain() {
-  local dir state out1 out2 count1 count2 sequence generation leftover
+  local dir state out1 out2 count1 count2 overlap sequence generation leftover
   dir=$(make_case double-drain)
   state="$dir/state"
   out1="$dir/drain-one.out"
@@ -240,19 +240,22 @@ test_atomic_double_drain() {
   wait "$pid2" || fail "second drain failed"
   count1=$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$out1")
   count2=$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$out2")
-  [ "$count1" -eq 3 ] && [ "$count2" -eq 3 ] \
-    || fail "unacknowledged concurrent drains did not replay all three records"
-  cmp -s "$out1" "$out2" || fail "concurrent pre-ack replays were not deterministic"
+  [ $((count1 + count2)) -eq 3 ] \
+    || fail "concurrent drains presented $((count1 + count2)) rows instead of three"
+  overlap=$(awk -F '\t' 'NF == 5 { seen[$2]++ } END { for (seq in seen) if (seen[seq] > 1) count++; print count + 0 }' \
+    "$out1" "$out2")
+  [ "$overlap" -eq 0 ] || fail "concurrent drains both presented $overlap exact rows"
   [ -s "$state/.wake-queue" ] || fail "concurrent drains consumed records before acknowledgement"
-  sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/drain-two.err")
-  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/drain-two.err")
+  sequence=$(awk -F '\t' 'NF == 5 && $2 > max { max=$2 } END { print max + 0 }' "$out1" "$out2")
+  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' \
+    "$dir/drain-one.err" "$dir/drain-two.err" | head -1)
   [ -n "$sequence" ] && [ -n "$generation" ] || fail "concurrent replay omitted its acknowledgement boundary"
   FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$sequence" --recovery-generation "$generation" \
     || fail "concurrent replay acknowledgement failed"
   [ ! -s "$state/.wake-queue" ] || fail "acknowledgement did not consume replayed records"
   leftover=$(FM_STATE_OVERRIDE="$state" "$DRAIN" | awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }')
   [ "$leftover" -eq 0 ] || fail "acknowledged records replayed again"
-  pass "concurrent drains replay until one post-handling acknowledgement consumes records"
+  pass "concurrent drains claim each exact row once before acknowledgement"
 }
 
 test_drain_dedupes_obvious_duplicates() {
@@ -888,7 +891,7 @@ SH
 }
 
 test_legacy_generationless_wake_is_adopted() {
-  local dir state row sequence generation
+  local dir state row sequence generation replay_sequence replay_generation
   dir=$(make_case legacy-generationless-wake)
   state="$dir/state"
   row=$(printf '1700000000\t7\tcheck\tlegacy-process-event\tcheck: legacy process-event')
@@ -902,15 +905,27 @@ test_legacy_generationless_wake_is_adopted() {
   generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/first.err")
   [ "$sequence" = 7 ] && [ -n "$generation" ] \
     || fail "legacy wake adoption omitted its generation-bound acknowledgement"
-  [ "$(cat "$state/.watcher-down" 2>/dev/null || true)" = "pending:handling:$generation" ] \
+  [ "$(cat "$state/.watcher-down" 2>/dev/null || true)" = "announced:handling:$generation" ] \
     || fail "legacy wake was not adopted into durable handling recovery"
 
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/replay.out" 2> "$dir/replay.err" \
-    || fail "unacknowledged adopted wake could not be re-drained"
-  grep -F "$row" "$dir/replay.out" >/dev/null \
-    || fail "unacknowledged adopted wake was lost"
-  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$sequence" \
-    --recovery-generation "$generation" \
+    || fail "routine adopted-wake recheck failed"
+  ! grep -F "$row" "$dir/replay.out" >/dev/null \
+    || fail "a routine recheck repeated the adopted row in one generation"
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_recovery_marker_reopen_announced "$2"
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$state/.watcher-down" \
+    || fail "interrupted adopted wake could not open a replay generation"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/recovered.out" 2> "$dir/recovered.err" \
+    || fail "interrupted adopted wake could not be re-drained"
+  grep -F "$row" "$dir/recovered.out" >/dev/null \
+    || fail "interrupted adopted wake was not replayed"
+  replay_sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/recovered.err")
+  replay_generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/recovered.err")
+  [ "$replay_generation" != "$generation" ] || fail "interruption replay reused the presented generation"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$replay_sequence" \
+    --recovery-generation "$replay_generation" \
     || fail "adopted legacy wake could not be acknowledged"
   [ ! -s "$state/.wake-queue" ] || fail "acknowledged legacy wake remained queued"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/after-ack.out" 2> "$dir/after-ack.err" \
@@ -956,7 +971,7 @@ test_stale_recovery_generation_cannot_touch_a_newer_episode() {
   grep "$(printf '\tcheck\tthird\t')" "$state/.wake-queue" >/dev/null \
     || fail "the second row above the acknowledged sequence was consumed"
   case "$(cat "$state/.watcher-down")" in
-    pending:*) ;;
+    pending:*|announced:*) ;;
     *) fail "an episode with rows still queued was retired" ;;
   esac
 
@@ -1084,6 +1099,11 @@ test_interruption_before_and_after_raw_commit() {
   set +e
   wait "$pid"
   set -e
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_recovery_marker_reopen_announced "$2"
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$state/.watcher-down" \
+    || fail "interrupted handling could not open a replay generation"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$empty_out" 2> "$dir/after-replay.err" \
     || fail "drain after post-presentation interruption failed"
   count=$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$empty_out")

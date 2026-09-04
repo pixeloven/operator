@@ -64,6 +64,7 @@ An acknowledged episode does not freeze the generation, because the next downtim
 `bin/fm-wake-drain.sh` consumes the queue per actor, not per whole-queue cutoff, using `bin/fm-lease-lib.sh`'s existing `fm_lease_actor` identity (`FM_SUPERVISION_ACTOR`, unset or `main` for every non-Pi harness and Pi's own main session; `branch` only inside the Pi supervision branch's own bash tool calls, injected deterministically by the extension - never agent memory).
 Every presented row is claimed to exactly one actor under the durable queue lock.
 Main records its presented set in `state/.main-eligible-rows`.
+A successful raw presentation atomically records each exact row, actor, and recovery generation in `state/.wake-presented-rows` before releasing that lock, so another drain in the same generation skips the row while a failed pre-commit presentation or a fresh interruption-recovery generation can replay it.
 A branch grant is published through `bin/fm-wake-grant.sh` under that same lock in `state/.branch-eligible-rows`, bound to the live branch process and extension generation recorded in `state/.branch-eligible-owner`, and publication is refused if main already claimed any requested row.
 A main drain validates that owner evidence under the queue lock and reclaims the grant when its process is gone or its identity no longer matches.
 A main drain claims every currently unclaimed row and excludes an active branch grant from both presentation and acknowledgement.
