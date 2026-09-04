@@ -228,6 +228,21 @@ load_ack_claim_rows_locked() {
   chmod 0600 "$DRAIN_ACK_ROWS" || return 1
 }
 
+ack_claim_rows_current_locked() {
+  local claims=$PRESENTED_ROWS_FILE
+  presented_rows_valid || return 1
+  [ -e "$claims" ] || claims=/dev/null
+  awk -F '\t' -v expected="$DRAIN_ACK_ROWS" -v actor="$ACTOR" \
+    -v generation="$ACK_GENERATION" -v claim="$ACK_THROUGH" '
+    BEGIN { while ((getline line < expected) > 0) required[line]=1 }
+    NF == 4 && $2 == actor && $3 == generation && $4 == claim \
+      && ($1 in required) { current[$1]=1 }
+    END {
+      for (seq in required) if (!(seq in current)) exit 1
+    }
+  ' "$claims"
+}
+
 # A branch-actor drain or ack requires a snapshot to already exist and name at
 # least one row. The extension always writes a non-empty snapshot before it
 # ever prompts the branch (an empty eligible set means no prompt at all), so a
@@ -531,8 +546,20 @@ if [ -n "$ACK_THROUGH" ]; then
     echo "wake drain: inactive outcome receipt could not be recorded safely" >&2
     exit 1
   fi
+  if [ -n "${FM_WAKE_ACK_TEST_AFTER_RECEIPTS_MARKER:-}" ]; then
+    printf 'ready\n' > "$FM_WAKE_ACK_TEST_AFTER_RECEIPTS_MARKER" || exit 1
+  fi
+  case "${FM_WAKE_ACK_TEST_DELAY_AFTER_RECEIPTS:-0}" in
+    0) ;;
+    *[!0-9]*|'') exit 2 ;;
+    *) sleep "$FM_WAKE_ACK_TEST_DELAY_AFTER_RECEIPTS" ;;
+  esac
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   DRAIN_LOCK_HELD=true
+  if ! ack_claim_rows_current_locked; then
+    echo "wake drain: presented-row acknowledgement claim changed during receipt processing; re-run bin/fm-wake-drain.sh and use the new WAKE_ACK_REQUIRED command" >&2
+    exit 1
+  fi
   DRAIN_TMP=$(mktemp "$STATE/.wake-queue.ack.XXXXXX") || exit 1
   chmod 0600 "$DRAIN_TMP" || exit 1
   awk -F '\t' -v seqs="$DRAIN_ACK_ROWS" '

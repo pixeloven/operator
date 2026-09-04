@@ -296,6 +296,51 @@ test_disjoint_presentation_acknowledgement_is_claim_bound() {
   pass "disjoint acknowledgements consume only their exact presentation claims"
 }
 
+test_acknowledgement_revalidates_replayed_row_claim() {
+  local dir state sequence generation replay_sequence replay_generation ack_pid rc
+  dir=$(make_case acknowledgement-revalidates-claim)
+  state="$dir/state"
+  append_wake "$state" check first 'check: first presentation' \
+    || fail "first presentation wake append failed"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/first.out" 2> "$dir/first.err" \
+    || fail "first presentation drain failed"
+  sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/first.err")
+  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/first.err")
+
+  FM_STATE_OVERRIDE="$state" FM_WAKE_ACK_TEST_AFTER_RECEIPTS_MARKER="$dir/ack-ready" \
+    FM_WAKE_ACK_TEST_DELAY_AFTER_RECEIPTS=5 "$DRAIN" --ack-through "$sequence" \
+    --recovery-generation "$generation" > "$dir/old-ack.out" 2> "$dir/old-ack.err" &
+  ack_pid=$!
+  wait_for_file_text "$dir/ack-ready" ready \
+    || { kill "$ack_pid" 2>/dev/null || true; fail "old acknowledgement did not reach its unlocked receipt boundary"; }
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_recovery_marker_reopen_announced "$2"
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$state/.watcher-down" \
+    || { kill "$ack_pid" 2>/dev/null || true; fail "interrupted handling could not open a replay generation"; }
+  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/replay.out" 2> "$dir/replay.err" \
+    || { kill "$ack_pid" 2>/dev/null || true; fail "new handler could not reclaim the durable row"; }
+  grep "$(printf '\tcheck\tfirst\t')" "$dir/replay.out" >/dev/null \
+    || { kill "$ack_pid" 2>/dev/null || true; fail "new handler did not receive the replayed row"; }
+  replay_sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/replay.err")
+  replay_generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/replay.err")
+
+  rc=0
+  wait "$ack_pid" || rc=$?
+  [ "$rc" -ne 0 ] || fail "old acknowledgement accepted a replaced presentation claim"
+  grep -F 'acknowledgement claim changed during receipt processing' "$dir/old-ack.err" >/dev/null \
+    || fail "old acknowledgement did not report its lost claim"
+  grep "$(printf '\tcheck\tfirst\t')" "$state/.wake-queue" >/dev/null \
+    || fail "old acknowledgement consumed the new handler's row"
+
+  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$replay_sequence" \
+    --recovery-generation "$replay_generation" \
+    || fail "new handler could not acknowledge its exact claim"
+  [ ! -s "$state/.wake-queue" ] || fail "new handler acknowledgement left its row queued"
+  pass "acknowledgement revalidates exact ownership after receipt processing"
+}
+
 test_drain_dedupes_obvious_duplicates() {
   local dir state out count
   dir=$(make_case dedupe)
@@ -1312,6 +1357,7 @@ test_not_working_stale_enqueue_before_suppressor
 test_check_output_is_queued
 test_atomic_double_drain
 test_disjoint_presentation_acknowledgement_is_claim_bound
+test_acknowledgement_revalidates_replayed_row_claim
 test_drain_dedupes_obvious_duplicates
 test_drain_asserts_watcher_liveness
 test_structural_signal_enrichment_preserves_raw_rows
