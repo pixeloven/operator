@@ -755,15 +755,15 @@ test_moved_generation_acknowledgement_is_self_healing() {
   [ "$(cat "$state/.watcher-down" 2>/dev/null || true)" = "pending:downtime:$second_generation" ] \
     || fail "a stale acknowledgement retired the newer recovery episode"
 
-  # The sequence alone owns consumption, so the handled rows go even while the
-  # generation is stale, and only the episode stays pending.
+  # An arbitrary cutoff with the stale generation owns no exact presentation
+  # claim, so it cannot consume the newer handler's row.
   FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through 999 \
     --recovery-generation "$first_generation" 2> "$dir/stale-consume.err" \
-    || fail "a stale acknowledgement refused to consume the rows it was given"
-  [ ! -s "$state/.wake-queue" ] \
-    || fail "a stale acknowledgement left its handled rows on the durable queue"
+    || fail "a stale acknowledgement failed instead of preserving the newer claim"
+  grep "$(printf '\tsignal\tsecond.status\t')" "$state/.wake-queue" >/dev/null \
+    || fail "an unclaimed stale cutoff consumed the newer durable row"
   [ "$(cat "$state/.watcher-down" 2>/dev/null || true)" = "pending:downtime:$second_generation" ] \
-    || fail "row consumption under a stale generation retired the pending episode"
+    || fail "an unclaimed stale cutoff retired the pending episode"
 
   # Following the printed remedy closes the episode, so the loop is self-healing.
   FM_HOME="$home" FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/redrain.out" \
@@ -777,7 +777,7 @@ test_moved_generation_acknowledgement_is_self_healing() {
     acked:*) ;;
     *) fail "following the printed remedy did not retire the newer recovery episode" ;;
   esac
-  pass "watch-arm: a moved recovery generation consumes handled rows and names its remedy"
+  pass "watch-arm: a moved recovery generation preserves exact claims and names its remedy"
 }
 
 test_downtime_marker_does_not_follow_symlink() {
