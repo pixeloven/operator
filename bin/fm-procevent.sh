@@ -42,9 +42,10 @@
 #            captured result ends the source and retires the registration when it
 #            says so, so a source that has ended stops being restarted.
 # reconcile  Idempotent liveness entry the watcher calls on its ordinary cycle:
-#            republish every durably captured result with no handled
-#            acknowledgement yet - regardless of any earlier publication - and
-#            start a runner for any registered source that has no live owner.
+#            keep one keyed wake queued for each durably captured result with no
+#            handled acknowledgement, replaying it only after the prior wake is
+#            acknowledged, and start a runner for any registered source that has
+#            no live owner.
 #            This is liveness repair only - it never discovers results by
 #            polling the source, because the child blocks on the source itself.
 # handled    Durably and idempotently record that a captured result has been
@@ -53,8 +54,8 @@
 #            "already-handled: id seq" on every repeat call, atomically
 #            deduplicated so a paired external effect is never authorized
 #            twice. Until this is called, the result stays eligible for
-#            bounded re-announcement on every reconcile. Marking a result
-#            handled does not retire its source registration or claim.
+#            bounded replay after its queued wake is acknowledged. Marking a
+#            result handled does not retire its source registration or claim.
 # retire     Drop a registration, stop a runner this home owns, release the claim.
 #            Idempotent, and still the supported explicit path after a source has
 #            already retired itself on its adapter's terminal verdict. Existing
@@ -123,8 +124,8 @@
 # announcement and a byte-identical replay produces none at all. Every other
 # adapter keeps the strict publish-before-apply order, because without a
 # declared downstream channel an applied-and-acknowledged result would otherwise
-# go silent. An unhandled result stays eligible for bounded re-announcement on
-# every reconcile in both modes, exactly as before.
+# go silent. An unhandled result stays eligible for bounded replay after its
+# queued wake is acknowledged in both modes.
 #
 # Keyed captain answers from built-in adapters use one more seam of the same kind,
 # and this runner still decides nothing about them. Some sources carry the
@@ -151,9 +152,9 @@
 # stale: reconcile stops that surviving group and releases its generation before
 # any replacement starts, and keeps the claim for a later retry when it cannot.
 #
-# Durability boundary: see bin/fm-procevent-lib.sh. This runner proves capture
-# before publication and bounded re-announcement until handled, and nothing
-# about the source side of the handoff.
+# Operating durability contract: see docs/configuration.md "Process-to-event
+# sources". This runner proves capture before publication and bounded replay
+# until handled, and nothing about the source side of the handoff.
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1804,8 +1804,8 @@ assert_contains "$adapter_help" "read <result-file>" \
   "the adapter's help publishes the structured read command"
 
 runner_help=$("$ROOT/bin/fm-procevent.sh" --help 2>&1 || true)
-assert_contains "$runner_help" "Durability boundary" \
-  "the runner's help scopes what it actually proves"
+assert_contains "$runner_help" "Operating durability contract: see docs/configuration.md" \
+  "the runner's help points to the owned operating contract"
 assert_not_contains "$runner_help" "exactly-once" \
   "the runner's help claims no exactly-once delivery"
 pass "the published interfaces state the loss limitation and claim no lossless delivery"
