@@ -220,12 +220,12 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-**A7 — the recorded upstream pin is real and is contained in this tree.** Stops
-the pin being advanced without an actual merge, which would silently blind A4
-and A5:
+**A7 - every recorded upstream pin is a canonical upstream ancestor contained in this tree.**
+This prevents a locally injected or foreign commit from becoming the baseline for A4 and A5.
+The executable registry owns each companion's canonical upstream mapping, and the check fetches only the required default-branch ref before proving ancestry:
 
 ```sh
-git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
+bin/fm-pixeloven-upstream-check.sh
 ```
 
 **A8 - the executable companion inventory selects exactly the six matching PixelOven forks.**
@@ -243,7 +243,7 @@ contains. It starts at the fork point and is advanced by **every upstream-merge
 PR** — which is the point: the pin is the machine-readable half of
 [`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
 stale while the gate keeps passing. A7 refuses a pin that is not a real commit
-contained in this history, so it cannot be advanced without an actual merge.
+contained in this history and not an ancestor of its canonical upstream default branch.
 
 ### Re-measuring §3
 

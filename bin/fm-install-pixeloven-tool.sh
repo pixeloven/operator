@@ -2,13 +2,14 @@
 # fm-install-pixeloven-tool.sh - install Operator's pinned companion tool forks.
 #
 # This file is the single owner of the exact PixelOven repository, source
-# commit, and expected version selected for gh-axi, chrome-devtools-axi,
-# lavish-axi, tasks-axi, quota-axi, and no-mistakes.
+# commit, canonical upstream repository/ref, and expected version selected for
+# gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi, and no-mistakes.
 #
 # Usage:
 #   fm-install-pixeloven-tool.sh <tool> [prefix]
 #   fm-install-pixeloven-tool.sh --source <tool>
 #   fm-install-pixeloven-tool.sh --list
+#   fm-install-pixeloven-tool.sh --upstream-list
 #   fm-install-pixeloven-tool.sh --help
 #
 # The default prefix is ${FM_PIXELOVEN_TOOL_PREFIX:-$HOME/.local}.
@@ -30,6 +31,7 @@ Usage:
   fm-install-pixeloven-tool.sh <tool> [prefix]
   fm-install-pixeloven-tool.sh --source <tool>
   fm-install-pixeloven-tool.sh --list
+  fm-install-pixeloven-tool.sh --upstream-list
   fm-install-pixeloven-tool.sh --help
 
 Supported tools: gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi, no-mistakes.
@@ -49,26 +51,44 @@ resolve_source() {
   case "$TOOL" in
     gh-axi)
       SOURCE_COMMIT=84112b7897fc1d0833f2727a817ecc91a297c3ef
+      UPSTREAM_PIN=84112b7897fc1d0833f2727a817ecc91a297c3ef
+      UPSTREAM_REPO=kunchenguid/gh-axi
+      UPSTREAM_REF=refs/heads/main
       EXPECTED_VERSION=0.1.34
       ;;
     chrome-devtools-axi)
       SOURCE_COMMIT=351be6bb8665fda10168242d965a966596d66772
+      UPSTREAM_PIN=351be6bb8665fda10168242d965a966596d66772
+      UPSTREAM_REPO=kunchenguid/chrome-devtools-axi
+      UPSTREAM_REF=refs/heads/main
       EXPECTED_VERSION=0.1.33
       ;;
     lavish-axi)
       SOURCE_COMMIT=ffd7aacff563b8bca09eb7ebfb17c14faeb968ce
+      UPSTREAM_PIN=ffd7aacff563b8bca09eb7ebfb17c14faeb968ce
+      UPSTREAM_REPO=kunchenguid/lavish-axi
+      UPSTREAM_REF=refs/heads/main
       EXPECTED_VERSION=0.1.63
       ;;
     tasks-axi)
       SOURCE_COMMIT=d9175b6d083d693c5b6ca21652454d52e4b312d9
+      UPSTREAM_PIN=d9175b6d083d693c5b6ca21652454d52e4b312d9
+      UPSTREAM_REPO=kunchenguid/tasks-axi
+      UPSTREAM_REF=refs/heads/main
       EXPECTED_VERSION=0.2.5
       ;;
     quota-axi)
       SOURCE_COMMIT=bbc3deb4fca6a172db0217fd26d990fad8b4202e
+      UPSTREAM_PIN=bbc3deb4fca6a172db0217fd26d990fad8b4202e
+      UPSTREAM_REPO=kunchenguid/quota-axi
+      UPSTREAM_REF=refs/heads/main
       EXPECTED_VERSION=0.1.34
       ;;
     no-mistakes)
       SOURCE_COMMIT=70185bf682521ed1822e51dc09fa327b85b87e79
+      UPSTREAM_PIN=1a3f74d86d2646967d6f1e7dce8853023c41768c
+      UPSTREAM_REPO=kunchenguid/no-mistakes
+      UPSTREAM_REF=refs/heads/main
       EXPECTED_VERSION=1.60.1
       SOURCE_KIND=go
       ;;
@@ -76,12 +96,19 @@ resolve_source() {
   esac
   SOURCE_REPO="pixeloven/$TOOL"
   SOURCE_URL="https://github.com/$SOURCE_REPO"
+  UPSTREAM_URL="https://github.com/$UPSTREAM_REPO.git"
 }
 
 print_source() {
   resolve_source "$1"
   printf '%s\t%s\t%s\t%s\t%s\n' \
     "$TOOL" "$SOURCE_URL" "$SOURCE_COMMIT" "$EXPECTED_VERSION" "$SOURCE_KIND"
+}
+
+print_upstream() {
+  resolve_source "$1"
+  printf '%s\t%s\t%s\t%s\n' \
+    "$TOOL" "$UPSTREAM_URL" "$UPSTREAM_REF" "$UPSTREAM_PIN"
 }
 
 case "${1:-}" in
@@ -94,6 +121,13 @@ case "${1:-}" in
     [ "$#" -eq 1 ] || { usage >&2; exit 2; }
     for listed_tool in gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes; do
       print_source "$listed_tool"
+    done
+    exit 0
+    ;;
+  --upstream-list)
+    [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+    for listed_tool in gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes; do
+      print_upstream "$listed_tool"
     done
     exit 0
     ;;

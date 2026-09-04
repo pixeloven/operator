@@ -193,7 +193,10 @@ test_source_inventory_is_exact_and_downstream() {
   assert_contains "$out" "quota-axi$(printf '\t')https://github.com/pixeloven/quota-axi$(printf '\t')bbc3deb4fca6a172db0217fd26d990fad8b4202e$(printf '\t')0.1.34$(printf '\t')npm" 'quota-axi source is not exact'
   assert_contains "$out" "no-mistakes$(printf '\t')https://github.com/pixeloven/no-mistakes$(printf '\t')70185bf682521ed1822e51dc09fa327b85b87e79$(printf '\t')1.60.1$(printf '\t')go" 'no-mistakes source is not exact'
   assert_not_contains "$out" 'kunchenguid/' 'the selected distribution inventory still points at upstream'
-  pass 'the public source inventory selects six exact PixelOven fork commits'
+  upstream=$(/bin/bash "$INSTALLER" --upstream-list) || fail '--upstream-list failed'
+  [ "$(printf '%s\n' "$upstream" | wc -l | tr -d ' ')" = 6 ] || fail '--upstream-list did not report six tools'
+  assert_contains "$upstream" $'no-mistakes\thttps://github.com/kunchenguid/no-mistakes.git\trefs/heads/main\t1a3f74d86d2646967d6f1e7dce8853023c41768c' 'canonical no-mistakes upstream mapping is not exact'
+  pass 'the public source inventory selects six exact PixelOven fork commits and canonical upstream pins'
 }
 
 test_old_node_is_refused_before_source_fetch() {
