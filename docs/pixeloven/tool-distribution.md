@@ -12,8 +12,9 @@ The upstream projects remain the original works, and their histories, licenses, 
 - [`pixeloven/quota-axi`](https://github.com/pixeloven/quota-axi), forked from [`kunchenguid/quota-axi`](https://github.com/kunchenguid/quota-axi).
 - [`pixeloven/no-mistakes`](https://github.com/pixeloven/no-mistakes), forked from [`kunchenguid/no-mistakes`](https://github.com/kunchenguid/no-mistakes).
 
-[`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh) is the executable source inventory.
+[`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh) is the executable source and canonical-upstream inventory.
 Run `bin/fm-install-pixeloven-tool.sh --list` for the exact commit and expected version currently selected for each fork.
+Run `bin/fm-install-pixeloven-tool.sh --upstream-list` for each fork's canonical upstream repository and default-branch ref.
 The script's header owns acquisition, build, destination, and no-mistakes daemon-safety mechanics.
 
 ## Installation and updates
@@ -37,3 +38,5 @@ Contributing a fix upstream is welcome when useful, but optional, and upstream a
 
 The bounded exception to `operator`'s additive soft-fork contract is recorded in [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
 Current acquisition evidence lives in [`tool-distribution-verification.md`](tool-distribution-verification.md).
+The pull-request fork-contract gate runs `bin/fm-pixeloven-upstream-check.sh`, which fetches the mapped canonical default-branch refs and requires every recorded pin to be their ancestor.
+Unavailable, malformed, or ambiguous canonical evidence fails the check rather than weakening it.
