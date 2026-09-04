@@ -65,7 +65,7 @@ test_concurrent_keyed_ensure_keeps_one_pending_row() {
 
 
 test_concurrent_append_and_drain() {
-  local dir state out1 out2 pids i pid count unique malformed generation
+  local dir state out1 out2 pids i pid count unique malformed err
   dir=$(make_case concurrent)
   state="$dir/state"
   out1="$dir/drain-one.out"
@@ -90,11 +90,11 @@ test_concurrent_append_and_drain() {
   unique=$(awk -F '\t' 'NF == 5 { keys[$4] = 1 } END { for (k in keys) count++; print count + 0 }' "$out1" "$out2")
   [ "$unique" -eq 40 ] || fail "expected 40 unique keys, got $unique"
   [ -s "$state/.wake-queue" ] || fail "concurrent drain consumed records before handling acknowledgement"
-  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' \
-    "$dir/drain-one.err" "$dir/drain-two.err" | head -1)
-  [ -n "$generation" ] || fail "concurrent presentation omitted its acknowledgement generation"
-  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through 40 --recovery-generation "$generation" \
-    || fail "concurrent records could not be acknowledged"
+  for err in "$dir/drain-one.err" "$dir/drain-two.err"; do
+    if grep -F 'WAKE_ACK_REQUIRED:' "$err" >/dev/null; then
+      ack_drain_err "$state" "$err" || fail "a concurrent presentation claim could not be acknowledged"
+    fi
+  done
   [ ! -s "$state/.wake-queue" ] || fail "acknowledged concurrent records remained queued"
   pass "concurrent append plus drain preserves durable records through acknowledgement"
 }
@@ -224,7 +224,7 @@ SH
 }
 
 test_atomic_double_drain() {
-  local dir state out1 out2 count1 count2 overlap sequence generation leftover
+  local dir state out1 out2 count1 count2 overlap leftover err
   dir=$(make_case double-drain)
   state="$dir/state"
   out1="$dir/drain-one.out"
@@ -246,16 +246,54 @@ test_atomic_double_drain() {
     "$out1" "$out2")
   [ "$overlap" -eq 0 ] || fail "concurrent drains both presented $overlap exact rows"
   [ -s "$state/.wake-queue" ] || fail "concurrent drains consumed records before acknowledgement"
-  sequence=$(awk -F '\t' 'NF == 5 && $2 > max { max=$2 } END { print max + 0 }' "$out1" "$out2")
-  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' \
-    "$dir/drain-one.err" "$dir/drain-two.err" | head -1)
-  [ -n "$sequence" ] && [ -n "$generation" ] || fail "concurrent replay omitted its acknowledgement boundary"
-  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$sequence" --recovery-generation "$generation" \
-    || fail "concurrent replay acknowledgement failed"
+  for err in "$dir/drain-one.err" "$dir/drain-two.err"; do
+    if grep -F 'WAKE_ACK_REQUIRED:' "$err" >/dev/null; then
+      ack_drain_err "$state" "$err" || fail "concurrent presentation acknowledgement failed"
+    fi
+  done
   [ ! -s "$state/.wake-queue" ] || fail "acknowledgement did not consume replayed records"
   leftover=$(FM_STATE_OVERRIDE="$state" "$DRAIN" | awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }')
   [ "$leftover" -eq 0 ] || fail "acknowledged records replayed again"
   pass "concurrent drains claim each exact row once before acknowledgement"
+}
+
+test_disjoint_presentation_acknowledgement_is_claim_bound() {
+  local dir state first_pid first_sequence first_generation second_sequence second_generation
+  dir=$(make_case disjoint-presentation-ack)
+  state="$dir/state"
+  printf 'done: first presenter\n' > "$state/first.status"
+  append_wake "$state" signal first.status "signal: first" || fail "first wake append failed"
+
+  FM_STATE_OVERRIDE="$state" FM_WAKE_ENRICH_TEST_DELAY=5 "$DRAIN" \
+    > "$dir/first.out" 2> "$dir/first.err" &
+  first_pid=$!
+  wait_for_file_text "$dir/first.out" "$(printf '\tsignal\tfirst.status\t')" \
+    || { kill "$first_pid" 2>/dev/null || true; fail "first presenter did not commit its row"; }
+
+  append_wake "$state" check second 'check: second presenter' || fail "second wake append failed"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/second.out" 2> "$dir/second.err" \
+    || fail "second presenter failed"
+  ! grep "$(printf '\tsignal\tfirst.status\t')" "$dir/second.out" >/dev/null \
+    || fail "second presenter reclaimed the first presenter's row"
+  grep "$(printf '\tcheck\tsecond\t')" "$dir/second.out" >/dev/null \
+    || fail "second presenter did not receive its new row"
+
+  second_sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/second.err")
+  second_generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/second.err")
+  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$second_sequence" \
+    --recovery-generation "$second_generation" || fail "second presentation acknowledgement failed"
+  grep "$(printf '\tsignal\tfirst.status\t')" "$state/.wake-queue" >/dev/null \
+    || fail "second acknowledgement consumed the first presenter's unhandled row"
+  ! grep "$(printf '\tcheck\tsecond\t')" "$state/.wake-queue" >/dev/null \
+    || fail "second acknowledgement left its own handled row queued"
+
+  wait "$first_pid" || fail "first presenter did not finish"
+  first_sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/first.err")
+  first_generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/first.err")
+  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$first_sequence" \
+    --recovery-generation "$first_generation" || fail "first presentation acknowledgement failed"
+  [ ! -s "$state/.wake-queue" ] || fail "exact acknowledgements left a handled row queued"
+  pass "disjoint acknowledgements consume only their exact presentation claims"
 }
 
 test_drain_dedupes_obvious_duplicates() {
@@ -1273,6 +1311,7 @@ test_stale_enqueue_before_suppressor
 test_not_working_stale_enqueue_before_suppressor
 test_check_output_is_queued
 test_atomic_double_drain
+test_disjoint_presentation_acknowledgement_is_claim_bound
 test_drain_dedupes_obvious_duplicates
 test_drain_asserts_watcher_liveness
 test_structural_signal_enrichment_preserves_raw_rows
