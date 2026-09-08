@@ -1025,40 +1025,53 @@ scan_signals() {
   return 0
 }
 
-# Deliver durably queued process-event rows to firstmate. Publication remains
-# owned by bin/fm-procevent.sh; docs/configuration.md "Process-to-event sources"
-# owns the exact-row presentation contract. This path holds the queue lock from
-# row selection through actionable output and marker commit, so concurrent
-# presenters cannot both claim one sequence. A failed output or pre-marker crash
-# leaves replay available, while a later queue row for the same source has a new
-# sequence and therefore stays independently eligible.
-procevent_surfaced_marker() {  # <queue-sequence>
-  case "$1" in ''|*[!0-9]*) return 1 ;; esac
-  printf '%s/.seen-procevent-row-%s' "$STATE" "$1"
+# Deliver durably queued process-event rows under the client presentation
+# contract owned by docs/configuration.md "Process-to-event sources".
+procevent_surfaced_marker() {  # <canonical-event-key>
+  case "$1" in procevent:*) ;; *) return 1 ;; esac
+  printf '%s/.seen-procevent-id-%s' "$STATE" "$(printf '%s' "$1" | LC_ALL=C od -An -tx1 | tr -d ' \n')"
 }
 
-procevent_surface_marker_matches() {  # <queue-sequence>
-  local sequence=$1 marker
-  marker=$(procevent_surfaced_marker "$sequence") || return 1
-  [ -f "$marker" ] && [ ! -L "$marker" ] \
-    && [ "$(cat "$marker" 2>/dev/null || true)" = "$sequence" ]
+procevent_surface_marker_matches() {  # <queue-sequence> <canonical-event-key>
+  local sequence=$1 key=$2 marker stored_sequence stored_key extra
+  marker=$(procevent_surfaced_marker "$key") || return 1
+  [ -f "$marker" ] && [ ! -L "$marker" ] || return 1
+  IFS=$(printf '\t') read -r stored_sequence stored_key extra < "$marker" || return 1
+  case "$stored_sequence" in ''|*[!0-9]*) return 1 ;; esac
+  [ -z "$extra" ] && [ "$stored_key" = "$key" ] && [ "$sequence" -le "$stored_sequence" ]
+}
+
+procevent_identity_queued_through() {  # <queue-sequence> <canonical-event-key>
+  local sequence=$1 key=$2 queued_sequence queued_key
+  while IFS=$(printf '\t') read -r queued_sequence queued_key; do
+    [ "$queued_key" = "$key" ] || continue
+    [ "$queued_sequence" -le "$sequence" ]
+    return
+  done <<EOF
+$PROCEVENT_QUEUED_ROWS
+EOF
+  return 1
 }
 
 procevent_prune_surfaced_markers_locked() {
-  local marker marker_name sequence status=0
+  local marker marker_name sequence key extra status=0
   for marker in "$STATE"/.seen-procevent-*; do
     [ -e "$marker" ] || [ -L "$marker" ] || continue
     marker_name=${marker##*/.seen-procevent-}
     case "$marker_name" in
-      row-*)
-        sequence=${marker_name#row-}
-        case "$sequence" in ''|*[!0-9]*) continue ;; esac
-        case "$PROCEVENT_QUEUED_ROWS" in
-          *$'\n'"$sequence"$'\n'*) continue ;;
-        esac
+      id-*)
+        if [ -f "$marker" ] && [ ! -L "$marker" ]; then
+          IFS=$(printf '\t') read -r sequence key extra < "$marker" || sequence=
+          case "$sequence" in ''|*[!0-9]*) ;; *)
+            if [ -z "$extra" ] && procevent_identity_queued_through "$sequence" "$key"; then
+              continue
+            fi
+            ;;
+          esac
+        fi
         ;;
-      ''|*[!0-9a-f]*) continue ;;
-      *) ;; # Retire legacy source-key markers; they cannot identify exact rows.
+      row-*|[0-9a-f]*) ;;
+      *) continue ;;
     esac
     if [ -L "$marker" ]; then
       rm -f -- "$marker" || status=1
@@ -1070,13 +1083,13 @@ procevent_prune_surfaced_markers_locked() {
 }
 
 procevent_surface_after_output() {
-  local output_status=$1 sequence _key marker tmp status=0
+  local output_status=$1 sequence key marker tmp status=0
   if [ "$output_status" -eq 0 ]; then
-    while IFS=$'\t' read -r sequence _key; do
+    while IFS=$'\t' read -r sequence key; do
       [ -n "$sequence" ] || continue
-      marker=$(procevent_surfaced_marker "$sequence") || { status=1; continue; }
+      marker=$(procevent_surfaced_marker "$key") || { status=1; continue; }
       tmp=$(umask 077; mktemp "$STATE/.seen-procevent.XXXXXX") || { status=1; continue; }
-      if ! printf '%s\n' "$sequence" > "$tmp" \
+      if ! printf '%s\t%s\n' "$sequence" "$key" > "$tmp" \
         || ! chmod 0600 "$tmp" \
         || ! mv -f -- "$tmp" "$marker"; then
         rm -f -- "$tmp"
@@ -1089,8 +1102,8 @@ procevent_surface_after_output() {
 }
 
 procevent_surface_queued() {
-  local _epoch sequence kind key _payload reason
-  PROCEVENT_QUEUED_ROWS=$'\n'
+  local sequence key reason
+  PROCEVENT_QUEUED_ROWS=
   PROCEVENT_SURFACED_ROWS=
   reason="check: process-event result captured:"
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
@@ -1099,19 +1112,25 @@ procevent_surface_queued() {
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
     return 0
   fi
-  while IFS=$'\t' read -r _epoch sequence kind key _payload; do
-    [ "$kind" = check ] || continue
-    case "$key" in procevent:*) ;; *) continue ;; esac
-    case "$sequence" in ''|*[!0-9]*) continue ;; esac
-    case "$PROCEVENT_QUEUED_ROWS" in
-      *$'\n'"$sequence"$'\n'*) continue ;;
-    esac
-    PROCEVENT_QUEUED_ROWS="${PROCEVENT_QUEUED_ROWS}${sequence}"$'\n'
-    procevent_surface_marker_matches "$sequence" && continue
+  PROCEVENT_QUEUED_ROWS=$(awk -F '\t' '
+    $2 ~ /^[0-9]+$/ && $3 == "check" && $4 ~ /^procevent:/ {
+      if (!seen[$4]++) order[++count]=$4
+      if ($2 > newest[$4]) newest[$4]=$2
+    }
+    END { for (i=1; i<=count; i++) print newest[order[i]] "\t" order[i] }
+  ' "$FM_WAKE_QUEUE") || {
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    return 1
+  }
+  procevent_prune_surfaced_markers_locked || true
+  while IFS=$(printf '\t') read -r sequence key; do
+    [ -n "$sequence" ] || continue
+    procevent_surface_marker_matches "$sequence" "$key" && continue
     PROCEVENT_SURFACED_ROWS="${PROCEVENT_SURFACED_ROWS}${sequence}"$'\t'"${key}"$'\n'
     reason="$reason row=$sequence key=$key"
-  done < "$FM_WAKE_QUEUE"
-  procevent_prune_surfaced_markers_locked || true
+  done <<EOF
+$PROCEVENT_QUEUED_ROWS
+EOF
   if [ -z "$PROCEVENT_SURFACED_ROWS" ]; then
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
     return 0

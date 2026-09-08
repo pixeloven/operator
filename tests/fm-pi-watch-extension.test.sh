@@ -423,7 +423,7 @@ EOF
   pass "Pi actionable close starts one successor before wake delivery settles"
 }
 
-test_pi_process_result_reconcile_tracks_exact_rows_without_flooding() {
+test_pi_process_result_reconcile_tracks_canonical_events_without_flooding() {
   local repo home plugin out status
   repo="$TMP_ROOT/pi-process-result-reconcile-root"
   home="$TMP_ROOT/pi-process-result-reconcile-home"
@@ -434,6 +434,14 @@ test_pi_process_result_reconcile_tracks_exact_rows_without_flooding() {
   printf 'lavish\n' > "$home/state/procevent-inbox/lab-source.1.adapter"
   chmod 0600 "$home/state/procevent-inbox/lab-source.1.result" \
     "$home/state/procevent-inbox/lab-source.1.adapter"
+  FM_STATE_OVERRIDE="$home/state" bash -c '
+    . "$1"
+    fm_wake_append "$2" "$3" "$4"
+  ' _ "$ROOT/bin/fm-wake-lib.sh" check "procevent:lab-source:1" "check: legacy process-result row one"
+  FM_STATE_OVERRIDE="$home/state" bash -c '
+    . "$1"
+    fm_wake_append "$2" "$3" "$4"
+  ' _ "$ROOT/bin/fm-wake-lib.sh" check "procevent:lab-source:1" "check: legacy process-result row two"
 
   out=$(PLUGIN="$plugin" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
     FM_PROCEVENT_CLAIM_ROOT="$home/claims" FM_POLL=1 FM_SIGNAL_GRACE=0 \
@@ -464,8 +472,8 @@ await tool.execute("tool-call-process-result-reconcile", {}, undefined, undefine
 for (let i = 0; i < 750 && prompts.length === 0; i += 1) {
   await new Promise((resolve) => setTimeout(resolve, 20));
 }
-if (prompts.length !== 1 || !prompts[0].includes("row=1 key=procevent:lab-source:1")) {
-  throw new Error(`initial process-result row was not delivered once with its identity: ${prompts.join(" | ")}`);
+if (prompts.length !== 1 || !prompts[0].includes("row=2 key=procevent:lab-source:1")) {
+  throw new Error(`legacy equivalent process-result rows were not coalesced by identity: ${prompts.join(" | ")}`);
 }
 
 const fmEnv = {
@@ -502,8 +510,8 @@ let rows = readFileSync(`${process.env.FM_HOME}/state/.wake-queue`, "utf8")
   .trim()
   .split("\n")
   .filter(Boolean);
-if (rows.length !== 1 || !rows[0].includes("\t1\tcheck\tprocevent:lab-source:1\t")) {
-  throw new Error(`pending process result did not retain exactly its first durable row: ${rows.join(" | ")}`);
+if (rows.length !== 2 || !rows.every((row) => row.includes("\tcheck\tprocevent:lab-source:1\t"))) {
+  throw new Error(`legacy server rows were rewritten instead of retained: ${rows.join(" | ")}`);
 }
 
 // Queue acknowledgement is not result handling. Reconciliation must mint a new
@@ -513,7 +521,7 @@ drainAndAcknowledge();
 for (let i = 0; i < 500 && prompts.length < 2; i += 1) {
   await new Promise((resolve) => setTimeout(resolve, 20));
 }
-if (prompts.length !== 2 || !prompts[1].includes("row=2 key=procevent:lab-source:1")) {
+if (prompts.length !== 2 || !prompts[1].includes("row=3 key=procevent:lab-source:1")) {
   throw new Error(`fresh same-source row was not delivered once with its new identity: ${prompts.join(" | ")}`);
 }
 await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -524,8 +532,8 @@ rows = readFileSync(`${process.env.FM_HOME}/state/.wake-queue`, "utf8")
   .trim()
   .split("\n")
   .filter(Boolean);
-if (rows.length !== 1 || !rows[0].includes("\t2\tcheck\tprocevent:lab-source:1\t")) {
-  throw new Error(`the same-source replay did not retain exactly row 2: ${rows.join(" | ")}`);
+if (rows.length !== 1 || !rows[0].includes("\t3\tcheck\tprocevent:lab-source:1\t")) {
+  throw new Error(`the same-source replay did not retain exactly row 3: ${rows.join(" | ")}`);
 }
 
 runFm("fm-procevent.sh", ["handled", "lab-source", "1"]);
@@ -550,9 +558,9 @@ if (existsSync(`${process.env.FM_HOME}/state/.watch.lock`)) {
 EOF
   )
   status=$?
-  expect_code 0 "$status" "Pi process-result presentation must deduplicate exact rows and admit a fresh same-source row: $out"
+  expect_code 0 "$status" "Pi process-result presentation must coalesce canonical events and admit a fresh same-source emission: $out"
   [ -z "$out" ] || fail "Pi process-result reconcile test printed output: $out"
-  pass "Pi process-result presentation deduplicates exact rows, replays after acknowledgement, and retires handled markers"
+  pass "Pi process-result presentation coalesces canonical events, replays after acknowledgement, and retires handled markers"
 }
 
 test_pi_branch_offer_owns_actionable_wake() {
@@ -2941,7 +2949,7 @@ test_pi_tool_returns_agent_tool_result
 test_pi_redundant_tool_call_is_owned_noop
 test_pi_scheduled_retry_call_is_owned_noop
 test_pi_actionable_close_starts_single_successor_before_delivery
-test_pi_process_result_reconcile_tracks_exact_rows_without_flooding
+test_pi_process_result_reconcile_tracks_canonical_events_without_flooding
 test_pi_branch_offer_owns_actionable_wake
 test_pi_branch_offer_flags_heartbeat
 test_pi_heartbeat_is_not_ridden_into_main_by_a_co_present_check

@@ -680,10 +680,12 @@ Registration writes one private record under `state/procevent/`, and a completed
 By default, results are published as ordinary `check` wakes carrying the source id and committed result sequence through the existing durable wake queue, so the runner adds no second notification control plane.
 The self-announcing adapter exception and its fail-safe ordering are defined below.
 The watcher delivers a queued result on its ordinary cycle by reporting it as an actionable `check` wake, so a default or fallback publication reaches firstmate through the same rewake path every other wake uses and never waits for a manual drain.
-A captured source and sequence has at most one `check` row queued at a time: concurrent producers atomically observe the pending keyed row instead of appending another or reopening watcher downtime.
-Proactive process-result presentation is keyed by the durable queue row sequence rather than the reusable source key or payload.
-The watcher selects rows and commits exact per-row presentation markers under the queue lock only after successful output, so concurrent presenters cannot both claim one row, interruption before commit replays it, routine rechecks do not repeat it, and a later row for the same source remains eligible.
-Presentation markers retire after their exact rows leave the queue; the durable row itself remains authoritative until the ordinary drain's generation-bound post-handling acknowledgement consumes it.
+A captured source and result sequence is the stable canonical event identity, serialized as the `procevent:<source-id>:<result-sequence>` queue key, and prospective producers keep at most one `check` row for that identity queued at a time by atomically observing its pending keyed row instead of appending another or reopening watcher downtime.
+Pre-upgrade equivalent queue rows remain valid at-least-once server deliveries and are never migrated, rewritten, or deleted by reconciliation.
+Repository-owned clients coalesce simultaneously queued rows with the same canonical event identity, while the queue-row sequence distinguishes a new durable emission after an earlier row was acknowledged and a different result sequence from the same source is always a different event identity; external clients must apply the same rule.
+The watcher selects each canonical identity's newest queued row and commits its identity plus queue-sequence high-water under the queue lock only after successful output, so concurrent presenters cannot both claim one client event, interruption before commit replays it, routine rechecks and legacy duplicates do not repeat it, and a later durable emission remains eligible.
+Presentation markers retire once no queued row at or below their identity-bound high-water remains; sequence allocation recovers its floor from queued rows and live markers so a new durable emission cannot reuse a still-marked identity.
+The durable server rows remain authoritative until the ordinary drain's generation-bound post-handling acknowledgement consumes them.
 A durable handled acknowledgement stops future source re-announcement.
 
 Discovery is never a timer.
@@ -747,7 +749,7 @@ Default and fallback `check` publication retains one pending row for the same so
 Handlers still deduplicate the source-and-sequence identity because a crash after a paired effect but before the durable handled acknowledgement can legitimately replay it.
 The runner proves nothing about the source side, and the handled acknowledgement proves nothing about a paired external effect performed before it: a crash between that effect and the acknowledgement call can still repeat the effect on replay, so this is never a generic exactly-once guarantee.
 The published `lavish-axi poll` clears feedback destructively before returning it, so a result lost between that clearing and the runner reading process output is unrecoverable.
-Never describe this path as at-least-once, no-loss, or lossless.
+Never describe source capture as at-least-once, no-loss, or lossless; only results already stored by the runner receive the at-least-once server-delivery behavior above.
 `docs/verification/process-event-sources.md` holds the measurements and `.agents/skills/process-event-sources/SKILL.md` owns the handling procedure.
 
 ## Spoken interface and captain inbox (config/voice-*, config/inbox-*)

@@ -3459,21 +3459,24 @@ test_procevent_unacknowledged_result_redrains_until_handled() {
   pass "an unacknowledged process-event result re-drains until handling is acknowledged"
 }
 
-test_procevent_markers_follow_exact_queue_rows() {
+test_procevent_markers_follow_canonical_events() {
   local dir state out pid marker_count
   dir=$(make_case procevent-marker-identity); state="$dir/state"; out="$dir/watch.out"
   append_wake "$state" check "procevent:same-source:1" "check: first row for one captured result"
   append_wake "$state" check "procevent:same-source:1" "check: later row for the same captured result"
+  append_wake "$state" check "procevent:same-source:2" "check: distinct captured result from the same source"
   : > "$state/.seen-procevent-70726f636576656e743a73616d652d736f757263653a31"
   procevent_watch_bg "$dir" "$out"
   pid=$!
-  wait_for_exit "$pid" 100 || fail "two durable rows for one process-event key were not surfaced"
-  grep -F "row=1 key=procevent:same-source:1" "$out" >/dev/null \
-    || fail "the first durable row identity was omitted from the actionable reason"
+  wait_for_exit "$pid" 100 || fail "legacy duplicate process-event rows were not surfaced"
+  ! grep -F "row=1 key=procevent:same-source:1" "$out" >/dev/null \
+    || fail "legacy equivalent rows produced more than one client presentation"
   grep -F "row=2 key=procevent:same-source:1" "$out" >/dev/null \
-    || fail "the later durable row identity was suppressed by its reusable source key"
+    || fail "the canonical event did not use its newest queued emission"
+  grep -F "row=3 key=procevent:same-source:2" "$out" >/dev/null \
+    || fail "a distinct result identity from the same source was suppressed"
   marker_count=$(find "$state" -maxdepth 1 -name '.seen-procevent-*' -type f | awk 'END { print NR + 0 }')
-  [ "$marker_count" = 2 ] || fail "two exact durable rows produced $marker_count seen markers or retained the legacy key marker"
+  [ "$marker_count" = 2 ] || fail "two canonical events produced $marker_count client markers or retained the legacy key marker"
   [ ! -e "$state/.seen-procevent-70726f636576656e743a73616d652d736f757263653a31" ] \
     || fail "the superseded source-key marker was not retired"
 
@@ -3489,6 +3492,20 @@ test_procevent_markers_follow_exact_queue_rows() {
 
   ack_stopped_cycle "$state" >/dev/null 2>&1 \
     || fail "the exact-row marker fixture could not acknowledge its handled rows"
+  marker_count=$(find "$state" -maxdepth 1 -name '.seen-procevent-*' -type f | awk 'END { print NR + 0 }')
+  [ "$marker_count" = 2 ] || fail "acknowledgement retired $marker_count live sequence-allocation markers"
+
+  rm -f "$state/.wake-queue.seq"
+  append_wake "$state" check "procevent:same-source:1" "check: fresh row for the same captured result"
+  : > "$out"
+  procevent_watch_bg "$dir" "$out"
+  pid=$!
+  wait_for_exit "$pid" 100 || fail "a fresh row for the same source was suppressed"
+  grep -F "row=4 key=procevent:same-source:1" "$out" >/dev/null \
+    || fail "the fresh emission reused a live marker's queue sequence"
+
+  ack_stopped_cycle "$state" >/dev/null 2>&1 \
+    || fail "the fresh emission could not be acknowledged"
   : > "$out"
   PATH="$dir/fakebin:$PATH" FM_HOME="$dir" FM_PROCEVENT_CLAIM_ROOT="$dir/claims" \
     FM_CREW_STATE_BIN="$dir/fakebin/fm-crew-state.sh" FM_WATCH_HANDLING_SUCCESSOR=1 \
@@ -3499,16 +3516,8 @@ test_procevent_markers_follow_exact_queue_rows() {
     || fail "handled-row marker retirement emitted an unrelated actionable wake: $(cat "$out")"
   reap "$pid"
   marker_count=$(find "$state" -maxdepth 1 -name '.seen-procevent-*' -type f | awk 'END { print NR + 0 }')
-  [ "$marker_count" = 0 ] || fail "handled-row retirement retained $marker_count exact presentation markers"
-
-  append_wake "$state" check "procevent:same-source:1" "check: fresh row for the same captured result"
-  : > "$out"
-  procevent_watch_bg "$dir" "$out"
-  pid=$!
-  wait_for_exit "$pid" 100 || fail "a fresh row for the same source was suppressed"
-  grep -F "row=3 key=procevent:same-source:1" "$out" >/dev/null \
-    || fail "the fresh same-source row did not retain its new durable identity"
-  pass "process-event presentation follows exact queue rows, retires handled markers, and admits a fresh same-source row"
+  [ "$marker_count" = 0 ] || fail "handled-row retirement retained $marker_count presentation markers"
+  pass "process-event clients coalesce legacy duplicates, distinguish result identities, and prevent marked sequence reuse"
 }
 
 install_marker_mv_fault() {  # <dir>
@@ -3912,7 +3921,7 @@ test_terminal_first_sight_drops_a_finished_write_deferral_chain
 test_triage_log_size_cap_accepts_spaced_wc_counts
 test_procevent_captured_result_surfaces_proactively
 test_procevent_unacknowledged_result_redrains_until_handled
-test_procevent_markers_follow_exact_queue_rows
+test_procevent_markers_follow_canonical_events
 test_procevent_surface_serializes_with_drain
 test_procevent_surface_crash_boundaries
 test_procevent_marker_failure_exits_and_replays
