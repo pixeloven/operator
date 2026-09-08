@@ -543,52 +543,55 @@ publish_result() {  # <result-file>
   return "$status"
 }
 
+pending_source_ids() {
+  local result id
+  while IFS= read -r result; do
+    [ -n "$result" ] || continue
+    id=$(fm_procevent_result_source_id "$result")
+    fm_procevent_source_id_valid "$id" && printf '%s\n' "$id"
+  done | LC_ALL=C sort -u
+}
+
 publish_pending() {  # [result-file-to-skip]
-  local skip=${1-} pending result id seq locked_ids= lock_status=0 records= batch_out announcement
+  local skip=${1-} pending result id seq failed_lock_id= lock_status=0 announcement
   local published=0 queued=0
   pending=$(fm_procevent_pending "$STATE")
   while IFS= read -r id; do
     [ -n "$id" ] || continue
-    if fm_procevent_source_lock_acquire "$id"; then
-      locked_ids="${locked_ids}${id}"$'\n'
-    else
+    if ! fm_procevent_source_lock_acquire "$id"; then
+      failed_lock_id=$id
       lock_status=1
       break
     fi
-  done < <(
-    while IFS= read -r result; do
-      [ -n "$result" ] || continue
-      id=$(fm_procevent_result_source_id "$result")
-      fm_procevent_source_id_valid "$id" && printf '%s\n' "$id"
-    done <<< "$pending" | LC_ALL=C sort -u
-  )
+  done < <(pending_source_ids <<< "$pending")
 
   if [ "$lock_status" -eq 0 ]; then
-    while IFS= read -r result; do
-      [ -n "$result" ] || continue
-      [ "$result" = "$skip" ] && continue
-      id=$(fm_procevent_result_source_id "$result")
-      seq=$(fm_procevent_result_sequence "$result")
-      fm_procevent_source_id_valid "$id" || continue
-      if prepare_result_locked "$result" "$id" "$seq"; then
-        records="${records}${FM_PROCEVENT_PUBLISH_KEY}"$'\t'"${FM_PROCEVENT_PUBLISH_PAYLOAD}"$'\n'
-      fi
-    done <<< "$pending"
-    if [ -n "$records" ]; then
-      batch_out=$(printf '%s' "$records" | fm_wake_ensure_queued_batch check) || true
-      while IFS= read -r announcement; do
-        case "$announcement" in
-          appended) published=$((published + 1)) ;;
-          already-queued) queued=$((queued + 1)) ;;
-        esac
-      done <<< "$batch_out"
-    fi
+    while IFS= read -r announcement; do
+      case "$announcement" in
+        appended) published=$((published + 1)) ;;
+        already-queued) queued=$((queued + 1)) ;;
+      esac
+    done < <(
+      fm_wake_ensure_queued_batch check < <(
+        while IFS= read -r result; do
+          [ -n "$result" ] || continue
+          [ "$result" = "$skip" ] && continue
+          id=$(fm_procevent_result_source_id "$result")
+          seq=$(fm_procevent_result_sequence "$result")
+          fm_procevent_source_id_valid "$id" || continue
+          if prepare_result_locked "$result" "$id" "$seq"; then
+            printf '%s\t%s\n' "$FM_PROCEVENT_PUBLISH_KEY" "$FM_PROCEVENT_PUBLISH_PAYLOAD"
+          fi
+        done <<< "$pending"
+      )
+    )
   fi
 
   while IFS= read -r id; do
     [ -n "$id" ] || continue
+    [ "$id" = "$failed_lock_id" ] && break
     fm_procevent_source_lock_release "$id"
-  done <<< "$locked_ids"
+  done < <(pending_source_ids <<< "$pending")
   if [ "$lock_status" -ne 0 ]; then
     while IFS= read -r result; do
       [ -n "$result" ] || continue

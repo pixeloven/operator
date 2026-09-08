@@ -1473,43 +1473,25 @@ fm_wake_ensure_queued() {
 }
 
 fm_wake_ensure_queued_batch() {
-  local kind=$1 key payload clean_key clean_payload records= classified result epoch status=0
+  local kind=$1 key payload result epoch queue_present=0 complete=0 status=0
   case "$kind" in
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_ensure_queued_batch: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
   esac
 
-  while IFS=$'\t' read -r key payload; do
-    [ -n "$key" ] || continue
-    clean_key=$(printf '%s' "$key" | fm_wake_clean_field)
-    clean_payload=$(printf '%s' "$payload" | fm_wake_clean_field)
-    records="${records}${clean_key}"$'\t'"${clean_payload}"$'\n'
-  done
-  [ -n "$records" ] || return 0
-
   epoch=$(date +%s)
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
     [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || status=1
-  fi
-  if [ "$status" -eq 0 ]; then
-    classified=$({
-      fm_wake_queued_keys_locked "$kind"
-      printf '\t\n'
-      printf '%s' "$records"
-    } | awk -F '\t' '
-      $0 == "\t" { indexed = 1; next }
-      !indexed { queued[$0] = 1; next }
-      {
-        result = ($1 in queued) ? "already-queued" : "appended"
-        queued[$1] = 1
-        print result "\t" $0
-      }
-    ') || status=$?
+    [ "$status" -ne 0 ] || queue_present=1
   fi
   if [ "$status" -eq 0 ]; then
     while IFS=$'\t' read -r result key payload; do
-      [ -n "$result" ] || continue
+      case "$result" in
+        batch-complete) complete=1; continue ;;
+        appended|already-queued) ;;
+        *) status=1; break ;;
+      esac
       if [ "$result" = appended ]; then
         if _fm_wake_append_locked "$kind" "$key" "$payload" "$epoch"; then
           :
@@ -1519,9 +1501,39 @@ fm_wake_ensure_queued_batch() {
         fi
       fi
       printf '%s\n' "$result"
-    done <<EOF
-$classified
-EOF
+    done < <(
+      awk -F '\t' -v queue="$FM_WAKE_QUEUE" -v queue_present="$queue_present" -v kind="$kind" '
+        BEGIN {
+          if (queue_present) {
+            while ((read_status = getline line < queue) > 0) {
+              count = split(line, fields, "\t")
+              if (count >= 5 && fields[3] == kind) queued[fields[4]] = 1
+            }
+            close(queue)
+            if (read_status < 0) exit 1
+          }
+        }
+        {
+          separator = index($0, "\t")
+          if (separator) {
+            key = substr($0, 1, separator - 1)
+            payload = substr($0, separator + 1)
+          } else {
+            key = $0
+            payload = ""
+          }
+          gsub(/\r/, " ", key)
+          gsub(/[\t\r]/, " ", payload)
+          if (!length(key)) next
+          result = (key in queued) ? "already-queued" : "appended"
+          queued[key] = 1
+          print result "\t" key "\t" payload
+        }
+      ' && printf 'batch-complete\n'
+    )
+    if [ "$status" -eq 0 ] && [ "$complete" -ne 1 ]; then
+      status=1
+    fi
   fi
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   return "$status"
