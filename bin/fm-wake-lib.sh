@@ -1372,32 +1372,34 @@ _fm_wake_append_locked() {  # <kind> <clean-key> <clean-payload> <epoch>
   recovery_marker="$STATE/.watcher-down"
   _fm_recovery_marker_publish "$recovery_marker" downtime || status=$?
   if [ "$status" -eq 0 ]; then
-    seq=$(cat "$seq_file" 2>/dev/null || echo 0)
+    seq=$(cat "$seq_file" 2>/dev/null) || seq=
     case "$seq" in
-      ''|*[!0-9]*) seq=0 ;;
+      ''|*[!0-9]*)
+        seq=0
+        candidate=0
+        if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
+          [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 1
+          candidate=$(awk -F '\t' '
+            NF >= 5 && $2 ~ /^[0-9]+$/ && $2 > max { max=$2 }
+            END { print max + 0 }
+          ' "$FM_WAKE_QUEUE") || return 1
+        fi
+        [ "$candidate" -le "$seq" ] || seq=$candidate
+        for marker in "$STATE"/.seen-procevent-*; do
+          [ -f "$marker" ] && [ ! -L "$marker" ] || continue
+          marker_name=${marker##*/.seen-procevent-}
+          case "$marker_name" in
+            row-*) candidate=${marker_name#row-} ;;
+            id-*)
+              IFS=$(printf '\t') read -r candidate _ < "$marker" || continue
+              ;;
+            *) continue ;;
+          esac
+          case "$candidate" in ''|*[!0-9]*) continue ;; esac
+          [ "$candidate" -le "$seq" ] || seq=$candidate
+        done
+        ;;
     esac
-    candidate=0
-    if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
-      [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 1
-      candidate=$(awk -F '\t' '
-        NF >= 5 && $2 ~ /^[0-9]+$/ && $2 > max { max=$2 }
-        END { print max + 0 }
-      ' "$FM_WAKE_QUEUE") || return 1
-    fi
-    [ "$candidate" -le "$seq" ] || seq=$candidate
-    for marker in "$STATE"/.seen-procevent-*; do
-      [ -f "$marker" ] && [ ! -L "$marker" ] || continue
-      marker_name=${marker##*/.seen-procevent-}
-      case "$marker_name" in
-        row-*) candidate=${marker_name#row-} ;;
-        id-*)
-          IFS=$(printf '\t') read -r candidate _ < "$marker" || continue
-          ;;
-        *) continue ;;
-      esac
-      case "$candidate" in ''|*[!0-9]*) continue ;; esac
-      [ "$candidate" -le "$seq" ] || seq=$candidate
-    done
     seq=$((seq + 1))
     printf '%s\n' "$seq" > "$seq_file" || status=$?
   fi

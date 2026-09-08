@@ -65,10 +65,9 @@
 #                          (bin/fm-task-inbox-lib.sh owns the ladder policy)
 #   check: <script>: <out> authenticated check output, always actionable
 #   check: process-event result captured: row=<sequence> key=<key> ...
-#                          a durably captured process-to-event result row is
-#                          queued and has not been surfaced yet; each exact row
-#                          is reported once, while a later row for the same
-#                          source remains independently eligible
+#                          see docs/configuration.md "Process-to-event sources"
+#                          for the authoritative durability and client-coalescing
+#                          contract
 #   check: rejected unauthenticated state checks: <paths>
 #                          unsafe state checks were refused without execution
 #   check: rejected unauthenticated PR poll retirement receipts: <paths>
