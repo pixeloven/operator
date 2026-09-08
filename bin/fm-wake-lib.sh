@@ -800,6 +800,12 @@ fm_lock_try_acquire() {
   if fm_lock_try_create "$lockdir"; then
     return 0
   fi
+  # A contending owner may release between our failed create and this read.
+  # That is ordinary contention, not an ownerless stale lock to recover
+  # through another .steal level; let a waiting caller retry the same lock.
+  if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
+    return 1
+  fi
 
   # Compare against ${BASHPID:-$$} inline, never via a command substitution:
   # $() forks a subshell whose BASHPID is not this frame's pid.
