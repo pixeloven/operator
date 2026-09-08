@@ -1,0 +1,12 @@
+DURABLE QUEUE BEFORE CLIENT PRESENTATION
+row=1 kind=check key=procevent:demo-source:1 payload=check: legacy retained row one
+row=2 kind=check key=procevent:demo-source:1 payload=check: legacy retained row two
+row=3 kind=check key=procevent:demo-source:2 payload=check: new result from the same source
+
+USER-FACING WATCHER PRESENTATION
+check: process-event result captured: row=2 key=procevent:demo-source:1 row=3 key=procevent:demo-source:2
+
+OBSERVED CONTRACT
+server_rows_retained=3
+canonical_demo_source_1_presentations=1
+same_source_new_result_presentations=1
