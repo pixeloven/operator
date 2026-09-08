@@ -52,7 +52,7 @@ prose rule that "the operator" means the human (G-7), are in
 [`identity.md`](identity.md).
 
 The contract is **enforced on every pull request** by [`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml).
-It fails the build if the diff against the current upstream pin touches anything outside the owned namespaces and accepted ADR allowlists, if `README.md` differs from upstream outside the banner block, if every recorded pin is not an ancestor of its canonical upstream default branch, or if the companion source inventory selects anything other than the six matching PixelOven forks.
+It fails the build if the diff against the current upstream pin touches anything outside the owned namespaces and accepted ADR allowlists, if `README.md` differs from upstream outside the banner block, or if the companion source inventory selects anything other than the six matching PixelOven forks.
 The assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
 
 ## Bounded upstream-file exceptions
