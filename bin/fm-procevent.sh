@@ -500,88 +500,107 @@ cmd_register_extension() {
 # queued publication. Reconciliation observes an existing pending row without
 # appending another; acknowledgement of that row permits one replacement replay.
 FM_PROCEVENT_PUBLISH_RESULT=
-publish_result() {  # <result-file> [already-queued-hint]
-  local result=$1 queued_hint=${2:-0} id seq adapter line key announcement status=1
+FM_PROCEVENT_PUBLISH_KEY=
+FM_PROCEVENT_PUBLISH_PAYLOAD=
+prepare_result_locked() {  # <result-file> <source-id> <sequence>
+  local result=$1 id=$2 seq=$3 adapter line
+  FM_PROCEVENT_PUBLISH_RESULT=
+  FM_PROCEVENT_PUBLISH_KEY=
+  FM_PROCEVENT_PUBLISH_PAYLOAD=
+  adapter=$(fm_procevent_result_adapter "$result" 2>/dev/null || true)
+  [ -n "$adapter" ] || return 1
+  line=$(fm_procevent_event_line "$adapter" "$id" "$seq") || return 1
+  fm_procevent_is_handled "$STATE" "$id" "$seq" && return 1
+  export FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD=1
+  if adapter_result_is_silent "$adapter" "$result"; then
+    unset FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD
+    fm_procevent_mark_handled "$STATE" "$id" "$seq"
+    case "$?" in 0|1) return 1 ;; esac
+  fi
+  unset FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD
+  FM_PROCEVENT_PUBLISH_KEY="procevent:$id:$seq"
+  FM_PROCEVENT_PUBLISH_PAYLOAD="check: $line"
+  return 0
+}
+
+publish_result() {  # <result-file>
+  local result=$1 id seq announcement status=1
   FM_PROCEVENT_PUBLISH_RESULT=
   id=$(fm_procevent_result_source_id "$result")
   seq=$(fm_procevent_result_sequence "$result")
   fm_procevent_source_id_valid "$id" || return 1
-  adapter=$(fm_procevent_result_adapter "$result" 2>/dev/null || true)
-  [ -n "$adapter" ] || return 1
-  line=$(fm_procevent_event_line "$adapter" "$id" "$seq") || return 1
   fm_procevent_source_lock_acquire "$id" || return 1
-  if ! fm_procevent_is_handled "$STATE" "$id" "$seq"; then
-    # A result its own adapter declares a routine no-op is recorded as handled
-    # and never announced, so it neither wakes a handler now nor comes back on
-    # a later reconcile's re-announcement. Recording it is what makes that
-    # silence durable, so both a newly written marker (0) and one a concurrent
-    # caller already wrote (1) settle it; only an unrecordable silence (2)
-    # falls through and announces, because a silence nothing remembers would
-    # otherwise be re-evaluated on every reconcile forever.
-    export FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD=1
-    if adapter_result_is_silent "$adapter" "$result"; then
-      unset FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD
-      fm_procevent_mark_handled "$STATE" "$id" "$seq"
-      case "$?" in
-        0|1)
-          fm_procevent_source_lock_release "$id"
-          return 1
-          ;;
-      esac
-    fi
-    unset FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD
-    key="procevent:$id:$seq"
-    if [ "$queued_hint" = 1 ]; then
-      announcement=already-queued
-    elif announcement=$(fm_wake_ensure_queued check "$key" "check: $line"); then
-      :
-    else
-      announcement=
-    fi
-    if [ -n "$announcement" ]; then
-      case "$announcement" in
-        appended|already-queued)
-          FM_PROCEVENT_PUBLISH_RESULT=$announcement
-          status=0
-          ;;
-      esac
-    fi
+  if prepare_result_locked "$result" "$id" "$seq" \
+    && announcement=$(fm_wake_ensure_queued check "$FM_PROCEVENT_PUBLISH_KEY" "$FM_PROCEVENT_PUBLISH_PAYLOAD"); then
+    case "$announcement" in
+      appended|already-queued)
+        FM_PROCEVENT_PUBLISH_RESULT=$announcement
+        status=0
+        ;;
+    esac
   fi
   fm_procevent_source_lock_release "$id"
   return "$status"
 }
 
 publish_pending() {  # [result-file-to-skip]
-  local skip=${1-} result id seq queued_hint published=0 queued=0
-  while IFS=$'\t' read -r queued_hint result; do
-    [ -n "$result" ] || continue
-    [ "$result" = "$skip" ] && continue
-    if publish_result "$result" "$queued_hint"; then
-      case "$FM_PROCEVENT_PUBLISH_RESULT" in
-        appended) published=$((published + 1)) ;;
-        already-queued) queued=$((queued + 1)) ;;
-      esac
+  local skip=${1-} pending result id seq locked_ids= lock_status=0 records= batch_out announcement
+  local published=0 queued=0
+  pending=$(fm_procevent_pending "$STATE")
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    if fm_procevent_source_lock_acquire "$id"; then
+      locked_ids="${locked_ids}${id}"$'\n'
+    else
+      lock_status=1
+      break
     fi
   done < <(
-    {
-      fm_wake_queued_keys check
-      printf '\t\n'
-      while IFS= read -r result; do
-        [ -n "$result" ] || continue
-        id=$(fm_procevent_result_source_id "$result")
-        seq=$(fm_procevent_result_sequence "$result")
-        printf 'procevent:%s:%s\t%s\n' "$id" "$seq" "$result"
-      done < <(fm_procevent_pending "$STATE")
-    } | awk -F '\t' '
-      $0 == "\t" { indexed = 1; next }
-      !indexed { queued[$0] = 1; next }
-      {
-        key = $1
-        sub(/^[^\t]*\t/, "")
-        print (key in queued ? 1 : 0) "\t" $0
-      }
-    '
+    while IFS= read -r result; do
+      [ -n "$result" ] || continue
+      id=$(fm_procevent_result_source_id "$result")
+      fm_procevent_source_id_valid "$id" && printf '%s\n' "$id"
+    done <<< "$pending" | LC_ALL=C sort -u
   )
+
+  if [ "$lock_status" -eq 0 ]; then
+    while IFS= read -r result; do
+      [ -n "$result" ] || continue
+      [ "$result" = "$skip" ] && continue
+      id=$(fm_procevent_result_source_id "$result")
+      seq=$(fm_procevent_result_sequence "$result")
+      fm_procevent_source_id_valid "$id" || continue
+      if prepare_result_locked "$result" "$id" "$seq"; then
+        records="${records}${FM_PROCEVENT_PUBLISH_KEY}"$'\t'"${FM_PROCEVENT_PUBLISH_PAYLOAD}"$'\n'
+      fi
+    done <<< "$pending"
+    if [ -n "$records" ]; then
+      batch_out=$(printf '%s' "$records" | fm_wake_ensure_queued_batch check) || true
+      while IFS= read -r announcement; do
+        case "$announcement" in
+          appended) published=$((published + 1)) ;;
+          already-queued) queued=$((queued + 1)) ;;
+        esac
+      done <<< "$batch_out"
+    fi
+  fi
+
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    fm_procevent_source_lock_release "$id"
+  done <<< "$locked_ids"
+  if [ "$lock_status" -ne 0 ]; then
+    while IFS= read -r result; do
+      [ -n "$result" ] || continue
+      [ "$result" = "$skip" ] && continue
+      if publish_result "$result"; then
+        case "$FM_PROCEVENT_PUBLISH_RESULT" in
+          appended) published=$((published + 1)) ;;
+          already-queued) queued=$((queued + 1)) ;;
+        esac
+      fi
+    done <<< "$pending"
+  fi
   printf '%s\t%s\n' "$published" "$queued"
 }
 

@@ -378,6 +378,34 @@ assert_present "$HRACE/state/procevent-inbox/racing-src.1.handled" "the concurre
 assert_absent "$HRACE/state/.wake-queue" "an acknowledged result was appended after handling completed"
 pass "publication cannot race a handled acknowledgement"
 
+HREQUEUE="$TMP_ROOT/hrequeue"; new_home "$HREQUEUE"
+mkdir -p "$HREQUEUE/state/procevent-inbox"
+printf 'requeue result\n' > "$HREQUEUE/state/procevent-inbox/requeue-src.1.result"
+printf 'lavish\n' > "$HREQUEUE/state/procevent-inbox/requeue-src.1.adapter"
+chmod 0600 "$HREQUEUE/state/procevent-inbox/requeue-src.1.result" \
+  "$HREQUEUE/state/procevent-inbox/requeue-src.1.adapter"
+out=$(pe "$HREQUEUE" reconcile)
+assert_contains "$out" "published=1" "the requeue race fixture did not publish its initial row"
+REQUEUE_READY="$TMP_ROOT/requeue-ready"
+REQUEUE_RELEASE="$TMP_ROOT/requeue-release"
+REQUEUE_OUT="$TMP_ROOT/requeue.out"
+hold_source_lock requeue-src "$REQUEUE_READY" "$REQUEUE_RELEASE"
+REQUEUE_HOLDER_PID=$HOLDER_PID
+wait_for "$REQUEUE_READY" || fail "requeue race barrier did not acquire the source lock"
+pe "$HREQUEUE" reconcile > "$REQUEUE_OUT" &
+REQUEUE_PID=$!
+sleep 0.3
+ack_queue_without_handling "$HREQUEUE" || fail "requeue race could not acknowledge the observed row"
+[ ! -s "$HREQUEUE/state/.wake-queue" ] || fail "requeue race did not remove the observed row"
+: > "$REQUEUE_RELEASE"
+wait "$REQUEUE_HOLDER_PID" || fail "requeue race barrier did not release the source lock"
+wait "$REQUEUE_PID" || fail "reconcile failed after concurrent queue acknowledgement"
+assert_contains "$(cat "$REQUEUE_OUT")" "published=1" "reconcile trusted a stale queued-key observation"
+requeued_rows=$(awk -F '\t' '$3 == "check" && $4 == "procevent:requeue-src:1" { count++ } END { print count + 0 }' \
+  "$HREQUEUE/state/.wake-queue")
+[ "$requeued_rows" -eq 1 ] || fail "atomic batch reconciliation retained $requeued_rows replacement rows"
+pass "reconciliation atomically revalidates and replaces an acknowledged pending row"
+
 HPRIVATE="$TMP_ROOT/hprivate"; new_home "$HPRIVATE"
 mkdir -p "$HPRIVATE/state/procevent-inbox"
 printf 'private result\n' > "$HPRIVATE/state/procevent-inbox/private-src.1.result"
