@@ -220,11 +220,14 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-**A7 - every recorded upstream pin is a canonical upstream ancestor contained in this tree.**
+**A7 - every recorded upstream pin is a canonical upstream ancestor, and the operator pin is contained in this tree.**
 This prevents a locally injected or foreign commit from becoming the baseline for A4 and A5.
-The executable registry owns each companion's canonical upstream mapping, and the check fetches only the required default-branch ref before proving ancestry:
+The executable registry owns each companion's canonical upstream mapping.
+The lineage check rejects malformed mappings before network access, ignores ambient Git configuration, fetches only each credential-free GitHub default-branch ref's commit history, and fails when canonical evidence is unavailable or ambiguous:
 
 ```sh
+git cat-file -e "${PIN}^{commit}" &&
+git merge-base --is-ancestor "$PIN" HEAD &&
 bin/fm-pixeloven-upstream-check.sh
 ```
 
@@ -242,8 +245,8 @@ The gate requires six rows, the fixed tool-name order, and `https://github.com/p
 contains. It starts at the fork point and is advanced by **every upstream-merge
 PR** — which is the point: the pin is the machine-readable half of
 [`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
-stale while the gate keeps passing. A7 refuses a pin that is not a real commit
-contained in this history and not an ancestor of its canonical upstream default branch.
+stale while the gate keeps passing.
+A7 requires this pin to be a real commit contained in this history and every pin to be an ancestor of its canonical upstream default branch.
 
 ### Re-measuring §3
 
