@@ -1472,15 +1472,39 @@ fm_wake_ensure_queued() {
   printf '%s\n' "$result"
 }
 
-fm_wake_ensure_queued_batch() {
-  local kind=$1 key payload result epoch queue_present=0 complete=0 status=0
+fm_wake_ensure_queued_batch() (
+  local kind=$1 key payload result epoch manifest= queue_present=0 complete=0 status=0
+  local lock_held=0
   case "$kind" in
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_ensure_queued_batch: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
   esac
 
+  manifest=$(umask 077; mktemp "$STATE/.wake-ensure-batch.XXXXXX") || return 1
+  trap '[ "$lock_held" -eq 0 ] || fm_lock_release "$FM_WAKE_QUEUE_LOCK"; rm -f -- "$manifest"' EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  awk '
+    {
+      separator = index($0, "\t")
+      if (separator) {
+        key = substr($0, 1, separator - 1)
+        payload = substr($0, separator + 1)
+      } else {
+        key = $0
+        payload = ""
+      }
+      gsub(/\r/, " ", key)
+      gsub(/[\t\r]/, " ", payload)
+      if (length(key)) print key "\t" payload
+    }
+  ' > "$manifest" || return 1
+  [ -s "$manifest" ] || return 0
+
   epoch=$(date +%s)
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
+  lock_held=1
   if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
     [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || status=1
     [ "$status" -ne 0 ] || queue_present=1
@@ -1514,30 +1538,20 @@ fm_wake_ensure_queued_batch() {
           }
         }
         {
-          separator = index($0, "\t")
-          if (separator) {
-            key = substr($0, 1, separator - 1)
-            payload = substr($0, separator + 1)
-          } else {
-            key = $0
-            payload = ""
-          }
-          gsub(/\r/, " ", key)
-          gsub(/[\t\r]/, " ", payload)
-          if (!length(key)) next
-          result = (key in queued) ? "already-queued" : "appended"
-          queued[key] = 1
-          print result "\t" key "\t" payload
+          result = ($1 in queued) ? "already-queued" : "appended"
+          queued[$1] = 1
+          print result "\t" $0
         }
-      ' && printf 'batch-complete\n'
+      ' "$manifest" && printf 'batch-complete\n'
     )
     if [ "$status" -eq 0 ] && [ "$complete" -ne 1 ]; then
       status=1
     fi
   fi
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+  lock_held=0
   return "$status"
-}
+)
 
 # fm_wake_queued_keys <kind>
 # Print the distinct keys currently queued for <kind>, oldest first. Read under

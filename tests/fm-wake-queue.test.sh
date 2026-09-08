@@ -25,6 +25,51 @@ ensure_wake() {  # <state> <kind> <key> <payload>
   ' _ "$lib" "$kind" "$key" "$payload"
 }
 
+test_batch_input_does_not_hold_queue_lock() {
+  local dir state ready release batch_out append_status=0 batch_pid append_pid i
+  dir=$(make_case batch-input-lock)
+  state="$dir/state"
+  ready="$dir/input-ready"
+  release="$dir/input-release"
+  batch_out="$dir/batch.out"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    {
+      printf "ready\n" > "$2"
+      while [ ! -e "$3" ]; do sleep 0.05; done
+      printf "procevent:slow:1\tcheck: slow classification completed\n"
+    } | fm_wake_ensure_queued_batch check
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$ready" "$release" > "$batch_out" &
+  batch_pid=$!
+  i=0
+  while [ ! -s "$ready" ] && [ "$i" -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -s "$ready" ] || {
+    : > "$release"
+    wait "$batch_pid" 2>/dev/null || true
+    fail "batch input fixture never reached its classification barrier"
+  }
+  sleep 0.2
+
+  append_wake "$state" signal immediate 'signal: immediate' &
+  append_pid=$!
+  wait_for_exit "$append_pid" 10 || append_status=$?
+  : > "$release"
+  wait "$batch_pid" || fail "batch append failed after classification completed"
+
+  [ "$append_status" -eq 0 ] || fail "slow batch classification held the shared wake-queue lock"
+  [ "$(cat "$batch_out")" = appended ] || fail "prepared batch record was not appended"
+  [ "$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$state/.wake-queue")" -eq 2 ] \
+    || fail "concurrent immediate and batch wakes were not both retained"
+  if compgen -G "$state/.wake-ensure-batch.*" >/dev/null; then
+    fail "batch manifest was not removed after publication"
+  fi
+  pass "batch input is prepared before the shared queue lock"
+}
+
 
 test_concurrent_keyed_ensure_keeps_one_pending_row() {
   local dir state result pids i pid count appended queued
@@ -1246,6 +1291,7 @@ test_acknowledged_stall_publication_survives_pre_marker_crash
 test_empty_prefix_mate_preserves_other_mate_receipt
 test_self_announced_append_guards
 test_historical_annotation_skips_announced_status
+test_batch_input_does_not_hold_queue_lock
 test_concurrent_keyed_ensure_keeps_one_pending_row
 test_concurrent_append_and_drain
 test_signal_catchup_without_running_watcher
