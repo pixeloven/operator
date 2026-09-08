@@ -500,8 +500,8 @@ cmd_register_extension() {
 # queued publication. Reconciliation observes an existing pending row without
 # appending another; acknowledgement of that row permits one replacement replay.
 FM_PROCEVENT_PUBLISH_RESULT=
-publish_result() {  # <result-file>
-  local result=$1 id seq adapter line announcement status=1
+publish_result() {  # <result-file> [already-queued-hint]
+  local result=$1 queued_hint=${2:-0} id seq adapter line key announcement status=1
   FM_PROCEVENT_PUBLISH_RESULT=
   id=$(fm_procevent_result_source_id "$result")
   seq=$(fm_procevent_result_sequence "$result")
@@ -530,7 +530,15 @@ publish_result() {  # <result-file>
       esac
     fi
     unset FM_PROCEVENT_CAPTURE_SOURCE_LOCK_HELD
-    if announcement=$(fm_wake_ensure_queued check "procevent:$id:$seq" "check: $line"); then
+    key="procevent:$id:$seq"
+    if [ "$queued_hint" = 1 ]; then
+      announcement=already-queued
+    elif announcement=$(fm_wake_ensure_queued check "$key" "check: $line"); then
+      :
+    else
+      announcement=
+    fi
+    if [ -n "$announcement" ]; then
       case "$announcement" in
         appended|already-queued)
           FM_PROCEVENT_PUBLISH_RESULT=$announcement
@@ -544,17 +552,36 @@ publish_result() {  # <result-file>
 }
 
 publish_pending() {  # [result-file-to-skip]
-  local skip=${1-} result published=0 queued=0
-  while IFS= read -r result; do
+  local skip=${1-} result id seq queued_hint published=0 queued=0
+  while IFS=$'\t' read -r queued_hint result; do
     [ -n "$result" ] || continue
     [ "$result" = "$skip" ] && continue
-    if publish_result "$result"; then
+    if publish_result "$result" "$queued_hint"; then
       case "$FM_PROCEVENT_PUBLISH_RESULT" in
         appended) published=$((published + 1)) ;;
         already-queued) queued=$((queued + 1)) ;;
       esac
     fi
-  done < <(fm_procevent_pending "$STATE")
+  done < <(
+    {
+      fm_wake_queued_keys check
+      printf '\t\n'
+      while IFS= read -r result; do
+        [ -n "$result" ] || continue
+        id=$(fm_procevent_result_source_id "$result")
+        seq=$(fm_procevent_result_sequence "$result")
+        printf 'procevent:%s:%s\t%s\n' "$id" "$seq" "$result"
+      done < <(fm_procevent_pending "$STATE")
+    } | awk -F '\t' '
+      $0 == "\t" { indexed = 1; next }
+      !indexed { queued[$0] = 1; next }
+      {
+        key = $1
+        sub(/^[^\t]*\t/, "")
+        print (key in queued ? 1 : 0) "\t" $0
+      }
+    '
+  )
   printf '%s\t%s\n' "$published" "$queued"
 }
 

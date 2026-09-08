@@ -3480,6 +3480,19 @@ test_procevent_markers_follow_canonical_events() {
   [ ! -e "$state/.seen-procevent-70726f636576656e743a73616d652d736f757263653a31" ] \
     || fail "the superseded source-key marker was not retired"
 
+  append_wake "$state" check "procevent:same-source:1" "check: late legacy row for the presented result"
+  append_wake "$state" check "procevent:same-source:3" "check: later distinct result from the same source"
+  : > "$out"
+  procevent_watch_bg "$dir" "$out"
+  pid=$!
+  wait_for_exit "$pid" 100 || fail "a later distinct result was suppressed"
+  ! grep -F "row=4 key=procevent:same-source:1" "$out" >/dev/null \
+    || fail "a late legacy row repeated a covered canonical event"
+  grep -F "row=5 key=procevent:same-source:3" "$out" >/dev/null \
+    || fail "a later distinct result did not remain independently eligible"
+  marker_count=$(find "$state" -maxdepth 1 -name '.seen-procevent-*' -type f | awk 'END { print NR + 0 }')
+  [ "$marker_count" = 3 ] || fail "late legacy coalescing produced $marker_count canonical event markers"
+
   : > "$out"
   PATH="$dir/fakebin:$PATH" FM_HOME="$dir" FM_PROCEVENT_CLAIM_ROOT="$dir/claims" \
     FM_CREW_STATE_BIN="$dir/fakebin/fm-crew-state.sh" FM_WATCH_HANDLING_SUCCESSOR=1 \
@@ -3493,7 +3506,7 @@ test_procevent_markers_follow_canonical_events() {
   ack_stopped_cycle "$state" >/dev/null 2>&1 \
     || fail "the exact-row marker fixture could not acknowledge its handled rows"
   marker_count=$(find "$state" -maxdepth 1 -name '.seen-procevent-*' -type f | awk 'END { print NR + 0 }')
-  [ "$marker_count" = 2 ] || fail "acknowledgement retired $marker_count live sequence-allocation markers"
+  [ "$marker_count" = 3 ] || fail "acknowledgement retired $marker_count live sequence-allocation markers"
 
   rm -f "$state/.wake-queue.seq"
   append_wake "$state" check "procevent:same-source:1" "check: fresh row for the same captured result"
@@ -3501,7 +3514,7 @@ test_procevent_markers_follow_canonical_events() {
   procevent_watch_bg "$dir" "$out"
   pid=$!
   wait_for_exit "$pid" 100 || fail "a fresh row for the same source was suppressed"
-  grep -F "row=4 key=procevent:same-source:1" "$out" >/dev/null \
+  grep -F "row=6 key=procevent:same-source:1" "$out" >/dev/null \
     || fail "the fresh emission reused a live marker's queue sequence"
 
   ack_stopped_cycle "$state" >/dev/null 2>&1 \

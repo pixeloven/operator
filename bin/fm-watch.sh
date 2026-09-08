@@ -1037,7 +1037,9 @@ procevent_surface_marker_matches() {  # <queue-sequence> <canonical-event-key>
   [ -f "$marker" ] && [ ! -L "$marker" ] || return 1
   IFS=$(printf '\t') read -r stored_sequence stored_key extra < "$marker" || return 1
   case "$stored_sequence" in ''|*[!0-9]*) return 1 ;; esac
-  [ -z "$extra" ] && [ "$stored_key" = "$key" ] && [ "$sequence" -le "$stored_sequence" ]
+  [ -z "$extra" ] && [ "$stored_key" = "$key" ] || return 1
+  [ "$sequence" -le "$stored_sequence" ] \
+    || procevent_identity_queued_through "$stored_sequence" "$key"
 }
 
 procevent_identity_queued_through() {  # <queue-sequence> <canonical-event-key>
@@ -1103,6 +1105,7 @@ procevent_surface_after_output() {
 procevent_surface_queued() {
   local sequence key reason
   PROCEVENT_QUEUED_ROWS=
+  PROCEVENT_PRESENTABLE_ROWS=
   PROCEVENT_SURFACED_ROWS=
   reason="check: process-event result captured:"
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
@@ -1113,11 +1116,19 @@ procevent_surface_queued() {
   fi
   PROCEVENT_QUEUED_ROWS=$(awk -F '\t' '
     $2 ~ /^[0-9]+$/ && $3 == "check" && $4 ~ /^procevent:/ {
-      if (!seen[$4]++) order[++count]=$4
-      if ($2 > newest[$4]) newest[$4]=$2
+      print $2 "\t" $4
+    }
+  ' "$FM_WAKE_QUEUE") || {
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    return 1
+  }
+  PROCEVENT_PRESENTABLE_ROWS=$(printf '%s\n' "$PROCEVENT_QUEUED_ROWS" | awk -F '\t' '
+    NF >= 2 {
+      if (!seen[$2]++) order[++count]=$2
+      if ($1 > newest[$2]) newest[$2]=$1
     }
     END { for (i=1; i<=count; i++) print newest[order[i]] "\t" order[i] }
-  ' "$FM_WAKE_QUEUE") || {
+  ') || {
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
     return 1
   }
@@ -1128,7 +1139,7 @@ procevent_surface_queued() {
     PROCEVENT_SURFACED_ROWS="${PROCEVENT_SURFACED_ROWS}${sequence}"$'\t'"${key}"$'\n'
     reason="$reason row=$sequence key=$key"
   done <<EOF
-$PROCEVENT_QUEUED_ROWS
+$PROCEVENT_PRESENTABLE_ROWS
 EOF
   if [ -z "$PROCEVENT_SURFACED_ROWS" ]; then
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
