@@ -423,7 +423,7 @@ EOF
   pass "Pi actionable close starts one successor before wake delivery settles"
 }
 
-test_pi_process_result_reconcile_does_not_flood_successor_prompts() {
+test_pi_process_result_reconcile_tracks_exact_rows_without_flooding() {
   local repo home plugin out status
   repo="$TMP_ROOT/pi-process-result-reconcile-root"
   home="$TMP_ROOT/pi-process-result-reconcile-home"
@@ -438,7 +438,8 @@ test_pi_process_result_reconcile_does_not_flood_successor_prompts() {
   out=$(PLUGIN="$plugin" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
     FM_PROCEVENT_CLAIM_ROOT="$home/claims" FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 node --input-type=module 2>&1 <<'EOF'
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const lifecycle = new Map();
@@ -463,25 +464,80 @@ await tool.execute("tool-call-process-result-reconcile", {}, undefined, undefine
 for (let i = 0; i < 750 && prompts.length === 0; i += 1) {
   await new Promise((resolve) => setTimeout(resolve, 20));
 }
-if (prompts.length !== 1 || !prompts[0].includes("procevent:lab-source:1")) {
-  throw new Error(`initial process-result prompt was not delivered once: ${prompts.join(" | ")}`);
+if (prompts.length !== 1 || !prompts[0].includes("row=1 key=procevent:lab-source:1")) {
+  throw new Error(`initial process-result row was not delivered once with its identity: ${prompts.join(" | ")}`);
 }
 
-// Leave the captured result unhandled and its durable row unacknowledged while
+const fmEnv = {
+  ...process.env,
+  FM_HOME: process.env.FM_HOME,
+  FM_STATE_OVERRIDE: `${process.env.FM_HOME}/state`,
+  FM_ROOT_OVERRIDE: process.env.FM_ROOT_OVERRIDE,
+  FM_PROCEVENT_CLAIM_ROOT: process.env.FM_PROCEVENT_CLAIM_ROOT,
+};
+function runFm(script, args = []) {
+  const result = spawnSync(`${process.env.FM_ROOT_OVERRIDE}/bin/${script}`, args, {
+    encoding: "utf8",
+    env: fmEnv,
+  });
+  if (result.status !== 0) {
+    throw new Error(`${script} ${args.join(" ")} failed (${result.status}): ${result.stdout}\n${result.stderr}`);
+  }
+  return result;
+}
+function drainAndAcknowledge() {
+  const drain = runFm("fm-wake-drain.sh");
+  const match = drain.stderr.match(/WAKE_ACK_REQUIRED:.*--ack-through ([0-9]+) --recovery-generation ([A-Za-z0-9._-]+)/);
+  if (!match) throw new Error(`drain omitted its generation-bound acknowledgement: ${drain.stderr}`);
+  runFm("fm-wake-drain.sh", ["--ack-through", match[1], "--recovery-generation", match[2]]);
+}
+
+// Leave the captured result unhandled and its exact row unacknowledged while
 // the real Pi-owned successor runs several real watcher reconcile cycles.
 await new Promise((resolve) => setTimeout(resolve, 5000));
 if (prompts.length !== 1) {
-  throw new Error(`pending process result flooded Pi follow-ups: ${prompts.join(" | ")}`);
+  throw new Error(`pending process-result row flooded Pi follow-ups: ${prompts.join(" | ")}`);
 }
-const rows = readFileSync(`${process.env.FM_HOME}/state/.wake-queue`, "utf8")
+let rows = readFileSync(`${process.env.FM_HOME}/state/.wake-queue`, "utf8")
   .trim()
   .split("\n")
   .filter(Boolean);
-if (rows.length !== 1 || !rows[0].includes("\tcheck\tprocevent:lab-source:1\t")) {
-  throw new Error(`pending process result did not retain exactly one durable row: ${rows.join(" | ")}`);
+if (rows.length !== 1 || !rows[0].includes("\t1\tcheck\tprocevent:lab-source:1\t")) {
+  throw new Error(`pending process result did not retain exactly its first durable row: ${rows.join(" | ")}`);
 }
-if (readFileSync(`${process.env.FM_HOME}/state/.wake-queue.seq`, "utf8").trim() !== "1") {
-  throw new Error("successor reconciliation advanced the durable sequence");
+
+// Queue acknowledgement is not result handling. Reconciliation must mint a new
+// row for the same captured source, and the presentation path must admit that
+// new row identity rather than suppressing it by the reusable source key.
+drainAndAcknowledge();
+for (let i = 0; i < 500 && prompts.length < 2; i += 1) {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+if (prompts.length !== 2 || !prompts[1].includes("row=2 key=procevent:lab-source:1")) {
+  throw new Error(`fresh same-source row was not delivered once with its new identity: ${prompts.join(" | ")}`);
+}
+await new Promise((resolve) => setTimeout(resolve, 3000));
+if (prompts.length !== 2) {
+  throw new Error(`the second exact row flooded Pi follow-ups: ${prompts.join(" | ")}`);
+}
+rows = readFileSync(`${process.env.FM_HOME}/state/.wake-queue`, "utf8")
+  .trim()
+  .split("\n")
+  .filter(Boolean);
+if (rows.length !== 1 || !rows[0].includes("\t2\tcheck\tprocevent:lab-source:1\t")) {
+  throw new Error(`the same-source replay did not retain exactly row 2: ${rows.join(" | ")}`);
+}
+
+runFm("fm-procevent.sh", ["handled", "lab-source", "1"]);
+drainAndAcknowledge();
+await new Promise((resolve) => setTimeout(resolve, 2000));
+if (prompts.length !== 2) {
+  throw new Error(`handled-row retirement generated another Pi follow-up: ${prompts.join(" | ")}`);
+}
+const markers = readdirSync(`${process.env.FM_HOME}/state`)
+  .filter((name) => name.startsWith(".seen-procevent-"));
+if (markers.length !== 0) {
+  throw new Error(`handled-row retirement retained presentation markers: ${markers.join(" | ")}`);
 }
 
 lifecycle.get("session_shutdown")?.();
@@ -494,9 +550,9 @@ if (existsSync(`${process.env.FM_HOME}/state/.watch.lock`)) {
 EOF
   )
   status=$?
-  expect_code 0 "$status" "Pi process-result reconciliation must keep one prompt while its keyed row stays pending: $out"
+  expect_code 0 "$status" "Pi process-result presentation must deduplicate exact rows and admit a fresh same-source row: $out"
   [ -z "$out" ] || fail "Pi process-result reconcile test printed output: $out"
-  pass "Pi process-result reconciliation keeps one durable row and one follow-up across successor cycles"
+  pass "Pi process-result presentation deduplicates exact rows, replays after acknowledgement, and retires handled markers"
 }
 
 test_pi_branch_offer_owns_actionable_wake() {
@@ -2885,7 +2941,7 @@ test_pi_tool_returns_agent_tool_result
 test_pi_redundant_tool_call_is_owned_noop
 test_pi_scheduled_retry_call_is_owned_noop
 test_pi_actionable_close_starts_single_successor_before_delivery
-test_pi_process_result_reconcile_does_not_flood_successor_prompts
+test_pi_process_result_reconcile_tracks_exact_rows_without_flooding
 test_pi_branch_offer_owns_actionable_wake
 test_pi_branch_offer_flags_heartbeat
 test_pi_heartbeat_is_not_ridden_into_main_by_a_co_present_check

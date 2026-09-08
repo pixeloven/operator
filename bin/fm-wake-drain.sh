@@ -4,9 +4,8 @@
 # informational status lines, OPEN DECISIONS, and captain-call record
 # divergence, then assert liveness.
 #
-# Keep presentation-claim-bound row consumption independent from
-# generation-bound episode retirement; docs/watcher-continuity.md owns the
-# recovery contract.
+# Keep sequence-bound row consumption independent from generation-bound episode
+# retirement; docs/watcher-continuity.md owns the recovery contract.
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,8 +22,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DRAIN_TMP=
 DRAIN_VIEW_TMP=
-DRAIN_PRESENTED_TMP=
-DRAIN_ACK_ROWS=
 DRAIN_LOCK_HELD=false
 RAW_ROWS=
 RECOVERY_MARKER="$STATE/.watcher-down"
@@ -62,7 +59,6 @@ ACTOR=$(fm_lease_actor) || exit 2
 ELIGIBLE_ROWS_FILE="$STATE/.branch-eligible-rows"
 ELIGIBLE_OWNER_FILE="$STATE/.branch-eligible-owner"
 MAIN_ROWS_FILE="$STATE/.main-eligible-rows"
-PRESENTED_ROWS_FILE="$STATE/.wake-presented-rows"
 
 rows_file_valid() {
   [ -s "$1" ] && awk 'BEGIN { ok=1 } !/^[0-9]+$/ || seen[$0]++ { ok=0 } END { exit !ok }' "$1"
@@ -102,90 +98,6 @@ write_rows_file_locked() { # <target> <source>
   _fm_atomic_replace "$source" "$target"
 }
 
-presented_rows_valid() {
-  [ ! -e "$PRESENTED_ROWS_FILE" ] && [ ! -L "$PRESENTED_ROWS_FILE" ] && return 0
-  [ -f "$PRESENTED_ROWS_FILE" ] && [ ! -L "$PRESENTED_ROWS_FILE" ] \
-    && awk -F '\t' '
-      BEGIN { ok=1 }
-      NF != 4 || $1 !~ /^[0-9]+$/ || $2 !~ /^(main|branch)$/ \
-        || $3 !~ /^[A-Za-z0-9._-]+$/ || $4 !~ /^[0-9]+$/ \
-        || seen[$1 SUBSEP $2]++ { ok=0 }
-      END { exit !ok }
-    ' "$PRESENTED_ROWS_FILE"
-}
-
-write_presented_rows_locked() { # <source>
-  local source=$1
-  chmod 0600 "$source" || return 1
-  if [ -s "$source" ]; then
-    _fm_atomic_replace "$source" "$PRESENTED_ROWS_FILE"
-  else
-    rm -f -- "$PRESENTED_ROWS_FILE" || return 1
-    rm -f -- "$source"
-  fi
-}
-
-filter_unpresented_rows_locked() { # <actor-rows> <generation> <output>
-  local rows=$1 generation=$2 output=$3 claims=$PRESENTED_ROWS_FILE
-  presented_rows_valid || return 1
-  [ -e "$claims" ] || claims=/dev/null
-  awk -F '\t' -v seqs="$rows" -v claims="$claims" \
-    -v actor="$ACTOR" -v generation="$generation" '
-    BEGIN {
-      while ((getline line < seqs) > 0) keep[line]=1
-      while ((getline line < claims) > 0) {
-        split(line, field, "\t")
-        if (field[2] == actor && field[3] == generation) presented[field[1]]=1
-      }
-    }
-    NF >= 5 && ($2 in keep) && !($2 in presented)
-  ' "$FM_WAKE_QUEUE" > "$output"
-}
-
-commit_presented_rows_locked() { # <presented-view> <generation> <claim>
-  local rows=$1 generation=$2 claim=$3 claims=$PRESENTED_ROWS_FILE
-  [ -e "$claims" ] || claims=/dev/null
-  DRAIN_PRESENTED_TMP=$(mktemp "$STATE/.wake-presented-rows.tmp.XXXXXX") || return 1
-  awk -F '\t' -v queue="$FM_WAKE_QUEUE" -v rows="$rows" -v actor="$ACTOR" '
-    BEGIN {
-      while ((getline line < queue) > 0) {
-        split(line, field, "\t")
-        if (field[2] ~ /^[0-9]+$/) queued[field[2]]=1
-      }
-      while ((getline line < rows) > 0) {
-        split(line, field, "\t")
-        if (field[2] ~ /^[0-9]+$/) newly[field[2]]=1
-      }
-    }
-    NF == 4 && ($1 in queued) && !($2 == actor && ($1 in newly)) { print }
-  ' "$claims" > "$DRAIN_PRESENTED_TMP" || return 1
-  awk -F '\t' -v actor="$ACTOR" -v generation="$generation" -v claim="$claim" '
-    NF >= 5 && $2 ~ /^[0-9]+$/ && !seen[$2]++ {
-      print $2 "\t" actor "\t" generation "\t" claim
-    }
-  ' "$rows" >> "$DRAIN_PRESENTED_TMP" || return 1
-  write_presented_rows_locked "$DRAIN_PRESENTED_TMP" || return 1
-  DRAIN_PRESENTED_TMP=
-}
-
-prune_presented_rows_locked() {
-  local claims=$PRESENTED_ROWS_FILE
-  presented_rows_valid || return 1
-  [ -e "$claims" ] || claims=/dev/null
-  DRAIN_PRESENTED_TMP=$(mktemp "$STATE/.wake-presented-rows.tmp.XXXXXX") || return 1
-  awk -F '\t' -v queue="$FM_WAKE_QUEUE" '
-    BEGIN {
-      while ((getline line < queue) > 0) {
-        split(line, field, "\t")
-        if (field[2] ~ /^[0-9]+$/) queued[field[2]]=1
-      }
-    }
-    NF == 4 && ($1 in queued)
-  ' "$claims" > "$DRAIN_PRESENTED_TMP" || return 1
-  write_presented_rows_locked "$DRAIN_PRESENTED_TMP" || return 1
-  DRAIN_PRESENTED_TMP=
-}
-
 claim_main_rows_locked() {
   DRAIN_TMP=$(mktemp "$STATE/.main-eligible-rows.tmp.XXXXXX") || return 1
   awk -F '\t' -v branch="$ELIGIBLE_ROWS_FILE" -v main="$MAIN_ROWS_FILE" '
@@ -203,44 +115,15 @@ claim_main_rows_locked() {
   DRAIN_TMP=
 }
 
-consume_actor_exact_rows_locked() { # <rows-file> <ack-rows>
-  local rows=$1 ack_rows=$2
+consume_actor_rows_locked() { # <rows-file> <cutoff>
+  local rows=$1 cutoff=$2
   if [ ! -e "$rows" ] && [ ! -L "$rows" ]; then
     return 0
   fi
   DRAIN_TMP=$(mktemp "$STATE/.wake-rows.consume.XXXXXX") || return 1
-  awk -v ack="$ack_rows" '
-    BEGIN { while ((getline line < ack) > 0) consumed[line]=1 }
-    $1 ~ /^[0-9]+$/ && !($1 in consumed) { print $1 }
-  ' "$rows" > "$DRAIN_TMP" || return 1
+  awk -v cutoff="$cutoff" '$1 ~ /^[0-9]+$/ && $1 > cutoff { print $1 }' "$rows" > "$DRAIN_TMP" || return 1
   write_rows_file_locked "$rows" "$DRAIN_TMP" || return 1
   DRAIN_TMP=
-}
-
-load_ack_claim_rows_locked() {
-  local claims=$PRESENTED_ROWS_FILE
-  presented_rows_valid || return 1
-  [ -e "$claims" ] || claims=/dev/null
-  DRAIN_ACK_ROWS=$(mktemp "$STATE/.wake-presented-ack.XXXXXX") || return 1
-  awk -F '\t' -v actor="$ACTOR" -v generation="$ACK_GENERATION" -v claim="$ACK_THROUGH" '
-    NF == 4 && $2 == actor && $3 == generation && $4 == claim { print $1 }
-  ' "$claims" | LC_ALL=C sort -n > "$DRAIN_ACK_ROWS" || return 1
-  chmod 0600 "$DRAIN_ACK_ROWS" || return 1
-}
-
-ack_claim_rows_current_locked() {
-  local claims=$PRESENTED_ROWS_FILE
-  presented_rows_valid || return 1
-  [ -e "$claims" ] || claims=/dev/null
-  awk -F '\t' -v expected="$DRAIN_ACK_ROWS" -v actor="$ACTOR" \
-    -v generation="$ACK_GENERATION" -v claim="$ACK_THROUGH" '
-    BEGIN { while ((getline line < expected) > 0) required[line]=1 }
-    NF == 4 && $2 == actor && $3 == generation && $4 == claim \
-      && ($1 in required) { current[$1]=1 }
-    END {
-      for (seq in required) if (!(seq in current)) exit 1
-    }
-  ' "$claims"
 }
 
 # A branch-actor drain or ack requires a snapshot to already exist and name at
@@ -501,8 +384,6 @@ cleanup() {
   local status=$?
   [ -z "$DRAIN_TMP" ] || rm -f -- "$DRAIN_TMP" 2>/dev/null || true
   [ -z "$DRAIN_VIEW_TMP" ] || rm -f -- "$DRAIN_VIEW_TMP" 2>/dev/null || true
-  [ -z "$DRAIN_PRESENTED_TMP" ] || rm -f -- "$DRAIN_PRESENTED_TMP" 2>/dev/null || true
-  [ -z "$DRAIN_ACK_ROWS" ] || rm -f -- "$DRAIN_ACK_ROWS" 2>/dev/null || true
   if [ "$DRAIN_LOCK_HELD" = true ]; then
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   fi
@@ -519,10 +400,15 @@ reclaim_stale_branch_grant_locked || exit 1
 [ "$ACTOR" != branch ] || require_branch_eligible_rows || exit 1
 
 if [ -n "$ACK_THROUGH" ]; then
-  load_ack_claim_rows_locked || {
-    echo "wake drain: presented-row acknowledgement claim is invalid" >&2
-    exit 1
-  }
+  if [ "$ACTOR" = main ]; then
+    # Preserve main's original whole-cutoff acknowledgement contract: rows may
+    # arrive after presentation but before the printed ack runs, and a direct
+    # or replayed main ack still owns every unreserved row through its cutoff.
+    # Claim again under the queue lock so those rows cannot be stranded merely
+    # because they were not present during the earlier drain. A live branch
+    # grant remains excluded by claim_main_rows_locked.
+    claim_main_rows_locked || exit 1
+  fi
   if [ "$ACTOR" = branch ]; then
     # check-kind rows (inactive-outcome receipts, secondmate stall markers)
     # are never in a branch's eligible snapshot - they are main-only by
@@ -536,8 +422,8 @@ if [ -n "$ACK_THROUGH" ]; then
       echo "wake drain: main acknowledgement has an invalid presented-row claim" >&2
       exit 1
     fi
-    ACK_FINGERPRINTS=$(inactive_outcome_fingerprints "$ACK_THROUGH" 'inactive-outcome:' "$DRAIN_ACK_ROWS") || exit 1
-    ACK_NOTICE_FINGERPRINTS=$(inactive_outcome_fingerprints "$ACK_THROUGH" 'inactive-reconcile:' "$DRAIN_ACK_ROWS") || exit 1
+    ACK_FINGERPRINTS=$(inactive_outcome_fingerprints "$ACK_THROUGH" 'inactive-outcome:' "$MAIN_ROWS_FILE") || exit 1
+    ACK_NOTICE_FINGERPRINTS=$(inactive_outcome_fingerprints "$ACK_THROUGH" 'inactive-reconcile:' "$MAIN_ROWS_FILE") || exit 1
   fi
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   DRAIN_LOCK_HELD=false
@@ -546,28 +432,25 @@ if [ -n "$ACK_THROUGH" ]; then
     echo "wake drain: inactive outcome receipt could not be recorded safely" >&2
     exit 1
   fi
-  if [ -n "${FM_WAKE_ACK_TEST_AFTER_RECEIPTS_MARKER:-}" ]; then
-    printf 'ready\n' > "$FM_WAKE_ACK_TEST_AFTER_RECEIPTS_MARKER" || exit 1
-  fi
-  case "${FM_WAKE_ACK_TEST_DELAY_AFTER_RECEIPTS:-0}" in
-    0) ;;
-    *[!0-9]*|'') exit 2 ;;
-    *) sleep "$FM_WAKE_ACK_TEST_DELAY_AFTER_RECEIPTS" ;;
-  esac
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   DRAIN_LOCK_HELD=true
-  if ! ack_claim_rows_current_locked; then
-    echo "wake drain: presented-row acknowledgement claim changed during receipt processing; re-run bin/fm-wake-drain.sh and use the new WAKE_ACK_REQUIRED command" >&2
-    exit 1
-  fi
   DRAIN_TMP=$(mktemp "$STATE/.wake-queue.ack.XXXXXX") || exit 1
   chmod 0600 "$DRAIN_TMP" || exit 1
-  awk -F '\t' -v seqs="$DRAIN_ACK_ROWS" '
-    BEGIN { while ((getline line < seqs) > 0) claimed[line]=1 }
-    NF < 5 || $2 !~ /^[0-9]+$/ || !($2 in claimed) { print }
-  ' "$FM_WAKE_QUEUE" > "$DRAIN_TMP" || exit 1
-  if [ "$ACTOR" = main ]; then
-    fm_wake_commit_secondmate_stall_receipts_through "$ACK_THROUGH" "$DRAIN_ACK_ROWS" || {
+  if [ "$ACTOR" = branch ]; then
+    require_branch_eligible_rows || exit 1
+    # Delete a row only when its sequence is <= cutoff AND it is named in the
+    # extension's eligible snapshot; every other row - including one whose
+    # sequence is below cutoff but not in the snapshot - is kept untouched.
+    awk -F '\t' -v cutoff="$ACK_THROUGH" -v seqs="$ELIGIBLE_ROWS_FILE" '
+      BEGIN { while ((getline line < seqs) > 0) if (line ~ /^[0-9]+$/) keep[line] = 1 }
+      NF < 5 || $2 !~ /^[0-9]+$/ || $2 > cutoff || !($2 in keep) { print }
+    ' "$FM_WAKE_QUEUE" > "$DRAIN_TMP" || exit 1
+  else
+    awk -F '\t' -v cutoff="$ACK_THROUGH" -v seqs="$MAIN_ROWS_FILE" '
+      BEGIN { while ((getline line < seqs) > 0) owned[line]=1 }
+      NF < 5 || $2 !~ /^[0-9]+$/ || $2 > cutoff || !($2 in owned) { print }
+    ' "$FM_WAKE_QUEUE" > "$DRAIN_TMP" || exit 1
+    fm_wake_commit_secondmate_stall_receipts_through "$ACK_THROUGH" "$MAIN_ROWS_FILE" || {
       echo "wake drain: secondmate stall receipt could not be recorded safely" >&2
       exit 1
     }
@@ -595,14 +478,11 @@ if [ -n "$ACK_THROUGH" ]; then
     exit 1
   fi
   DRAIN_TMP=
-  prune_presented_rows_locked || exit 1
   if [ "$ACTOR" = branch ]; then
-    consume_actor_exact_rows_locked "$ELIGIBLE_ROWS_FILE" "$DRAIN_ACK_ROWS" || exit 1
+    consume_actor_rows_locked "$ELIGIBLE_ROWS_FILE" "$ACK_THROUGH" || exit 1
   else
-    consume_actor_exact_rows_locked "$MAIN_ROWS_FILE" "$DRAIN_ACK_ROWS" || exit 1
+    consume_actor_rows_locked "$MAIN_ROWS_FILE" "$ACK_THROUGH" || exit 1
   fi
-  rm -f -- "$DRAIN_ACK_ROWS" || exit 1
-  DRAIN_ACK_ROWS=
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   DRAIN_LOCK_HELD=false
   if [ "$RECOVERY_ACK_MOVED" = true ]; then
@@ -680,20 +560,13 @@ if [ "$ACTOR" = branch ]; then
 else
   ACTOR_ROWS_FILE=$MAIN_ROWS_FILE
 fi
-filter_unpresented_rows_locked "$ACTOR_ROWS_FILE" "${RECOVERY_MARKER_TOKEN##*:}" "$DRAIN_VIEW_TMP" || {
-  echo "wake drain: presented-row claim state is invalid" >&2
-  exit 1
-}
-if [ ! -s "$DRAIN_VIEW_TMP" ]; then
-  rm -f -- "$DRAIN_VIEW_TMP"
-  DRAIN_VIEW_TMP=
-  fm_lock_release "$FM_WAKE_QUEUE_LOCK"
-  DRAIN_LOCK_HELD=false
-  (print_status_presentation) || true
-  assert_watcher_liveness
-  exit 0
-fi
+awk -F '\t' -v seqs="$ACTOR_ROWS_FILE" '
+  BEGIN { while ((getline line < seqs) > 0) keep[line]=1 }
+  NF >= 5 && ($2 in keep)
+' "$FM_WAKE_QUEUE" > "$DRAIN_VIEW_TMP" || exit 1
 RAW_ROWS=$(fm_wake_print_deduped "$DRAIN_VIEW_TMP") || exit "$?"
+rm -f -- "$DRAIN_VIEW_TMP" || exit 1
+DRAIN_VIEW_TMP=
 ACK_THROUGH=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' '$2 ~ /^[0-9]+$/ && $2 > max { max=$2 } END { print max + 0 }') || exit 1
 case "${FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT:-0}" in
   0) ;;
@@ -703,16 +576,6 @@ esac
 if [ -n "$RAW_ROWS" ]; then
   printf '%s\n' "$RAW_ROWS" || exit "$?"
 fi
-if ! fm_recovery_marker_mark_announced "$RECOVERY_MARKER" "${RECOVERY_MARKER_TOKEN##*:}"; then
-  echo "wake drain: durable presentation could not be committed safely" >&2
-  exit 1
-fi
-commit_presented_rows_locked "$DRAIN_VIEW_TMP" "${RECOVERY_MARKER_TOKEN##*:}" "$ACK_THROUGH" || {
-  echo "wake drain: durable presentation claim could not be committed safely" >&2
-  exit 1
-}
-rm -f -- "$DRAIN_VIEW_TMP" || exit 1
-DRAIN_VIEW_TMP=
 fm_recovery_marker_snapshot "$RECOVERY_MARKER" || exit 1
 RECOVERY_MARKER_TOKEN=$FM_RECOVERY_MARKER_TOKEN
 case "$RECOVERY_MARKER_TOKEN" in

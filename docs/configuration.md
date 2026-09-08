@@ -681,8 +681,10 @@ By default, results are published as ordinary `check` wakes carrying the source 
 The self-announcing adapter exception and its fail-safe ordering are defined below.
 The watcher delivers a queued result on its ordinary cycle by reporting it as an actionable `check` wake, so a default or fallback publication reaches firstmate through the same rewake path every other wake uses and never waits for a manual drain.
 A captured source and sequence has at most one `check` row queued at a time: concurrent producers atomically observe the pending keyed row instead of appending another or reopening watcher downtime.
-A queued `check` delivery is reported at most once per captured source and sequence while that record remains queued.
-A durable handled acknowledgement stops future source re-announcement, while a record already queued remains under the durable queue's authority until the ordinary drain's sequence-bound post-handling acknowledgement consumes it.
+Proactive process-result presentation is keyed by the durable queue row sequence rather than the reusable source key or payload.
+The watcher selects rows and commits exact per-row presentation markers under the queue lock only after successful output, so concurrent presenters cannot both claim one row, interruption before commit replays it, routine rechecks do not repeat it, and a later row for the same source remains eligible.
+Presentation markers retire after their exact rows leave the queue; the durable row itself remains authoritative until the ordinary drain's generation-bound post-handling acknowledgement consumes it.
+A durable handled acknowledgement stops future source re-announcement.
 
 Discovery is never a timer.
 Each registered source has its own child process blocking on that source, and the watcher's per-cycle `reconcile` ensures one queued publication for every captured result with no durable handled acknowledgement, appends one replacement only after the prior row is acknowledged, restarts a source whose owner is gone, and stops this home's runner when reconciliation runs after its registration disappeared unexpectedly.

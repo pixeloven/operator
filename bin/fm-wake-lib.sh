@@ -598,36 +598,6 @@ _fm_recovery_marker_begin_handling() {
   fm_lock_release "$lock"
 }
 
-_fm_recovery_marker_mark_announced() {
-  local marker=$1 expected_generation=$2 lock line generation kind
-  lock="${marker}.lock"
-  fm_lock_acquire_wait "$lock" || return 1
-  if ! fm_recovery_marker_read "$marker"; then
-    fm_lock_release "$lock"
-    return 1
-  fi
-  line=$FM_RECOVERY_MARKER_TOKEN
-  generation=${line##*:}
-  if [ "$generation" != "$expected_generation" ]; then
-    fm_lock_release "$lock"
-    return 3
-  fi
-  case "$line" in
-    pending:handling:*|pending:downtime:*)
-      kind=${line#*:}
-      kind=${kind%%:*}
-      if ! _fm_recovery_marker_write_locked "$marker" "$kind" "$generation" announced; then
-        fm_lock_release "$lock"
-        return 1
-      fi
-      FM_RECOVERY_MARKER_TOKEN="announced:${line#*:}"
-      ;;
-    announced:*) ;;
-    *) fm_lock_release "$lock"; return 1 ;;
-  esac
-  fm_lock_release "$lock"
-}
-
 fm_recovery_marker_snapshot() {
   local marker=$1 lock
   FM_RECOVERY_MARKER_TOKEN=
@@ -811,10 +781,6 @@ fm_recovery_marker_ack() {
 
 fm_recovery_marker_begin_handling() {
   _fm_recovery_marker_begin_handling "$1" "${2:-}"
-}
-
-fm_recovery_marker_mark_announced() {
-  _fm_recovery_marker_mark_announced "$1" "$2"
 }
 
 fm_recovery_marker_arm_check() {
