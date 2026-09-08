@@ -553,7 +553,7 @@ pending_source_ids() {
 }
 
 publish_pending() {  # [result-file-to-skip]
-  local skip=${1-} pending result id seq failed_lock_id= lock_status=0 announcement
+  local skip=${1-} pending result id seq failed_lock_id='' lock_status=0 announcement
   local published=0 queued=0
   pending=$(fm_procevent_pending "$STATE")
   while IFS= read -r id; do

@@ -1473,7 +1473,7 @@ fm_wake_ensure_queued() {
 }
 
 fm_wake_ensure_queued_batch() (
-  local kind=$1 key payload result epoch manifest= queue_present=0 complete=0 status=0
+  local kind=$1 key payload result epoch manifest='' queue_present=0 complete=0 status=0
   local lock_held=0
   case "$kind" in
     signal|stale|check|heartbeat) ;;
