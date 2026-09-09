@@ -309,6 +309,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0012-notification-reconciliation.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

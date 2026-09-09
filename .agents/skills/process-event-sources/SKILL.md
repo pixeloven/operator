@@ -7,9 +7,8 @@ description: >-
   `procevent <adapter> <source-id> <sequence>` check wake.
   Owns the arming commands, the condition->action eligibility boundary, the
   durable result read, which wakes must be routed to their adapter instead of
-  acknowledged generically, the handled acknowledgement contract, the one-owner
-  rule, the precise durability boundary, and the Lavish adapter's loss
-  limitation.
+  acknowledged generically, the handled acknowledgement procedure, the
+  one-owner handling rule, and adapter-specific handling.
 user-invocable: false
 metadata:
   internal: true
@@ -93,7 +92,7 @@ Two rules the commands cannot enforce for you:
   ```sh
   bin/fm-procevent.sh handled <source-id> <sequence>
   ```
-  This call is atomically deduplicated by the exact source and sequence: it prints `handled: <id> <seq>` only the first time and `already-handled: <id> <seq>` on every repeat, so a paired effect gated on that distinction is never authorized twice. Reading the event line or the result file is not handling - only this call durably retires the wake, so call it every time, including on a repeat wake for a sequence you already acted on.
+  This call is atomically deduplicated by the exact source and sequence: it prints `handled: <id> <seq>` only the first time and `already-handled: <id> <seq>` on every repeat, so a paired effect gated on that distinction is never authorized twice. Reading the event line or the result file is not handling - only this call durably stops future source re-announcement, so call it every time, including on a repeat wake for a sequence you already acted on.
 : Ask the adapter what the result means rather than parsing it yourself.
   `bin/fm-procevent.sh classify <result-file>` routes through the immutable built-in or extension identity captured with that result; for Lavish, its existing direct command returns `feedback`, `ended`, `waiting`, `missing`, or `unknown`.
   Consume a Lavish capture with `bin/fm-procevent-lavish.sh read <result-file>` rather than grepping the raw file: that command reports declared and presented item counts plus a completeness verdict, enumerates every captured queued item while retaining supplied element identity, and surfaces a `tag=message` session-ending message as its own field.
@@ -107,29 +106,9 @@ Two rules the commands cannot enforce for you:
 : Never append a raw result to a task's status history; that log is a bounded event record, not a payload channel.
 : A source whose adapter returns a terminal verdict for the captured result has already retired itself, so an ended review needs no cleanup from you and produces no further wake. Retire any other finished source with the adapter's `retire`, which stays safe and idempotent even for one that already retired. Retirement stops future completions; it is independent of acknowledging a result already captured, which only `handled` does.
 
-## What the runner guarantees, exactly
+## Operating contract
 
-Supported by tests:
-
-- output that reached the runner is stored atomically at mode `0600` **before** any event referencing it is published;
-- the remote-reply adapter reads its append-only source non-destructively from an offset plus prefix hash, so a pre-capture retry can derive the same bytes again, while source truncation or replacement is detected rather than silently rebased;
-- proactive delivery, adapter-owned terminal retirement, and adapter-owned automatic application follow the operating contract in [`docs/configuration.md`](../../../docs/configuration.md);
-- a durably captured result with no handled acknowledgement remains eligible for bounded re-announcement across any number of drains and restarts, and repeat wakes retain the same source and sequence for deduplication;
-- the handled acknowledgement is generation-keyed to the exact source and sequence, private, path-safe, durable, and idempotent, and is the only thing that stops re-announcement;
-- one identity-matched owner per canonical source, across homes that share one underlying source store;
-- registration and ownership transitions share one per-source boundary, release is generation-bound, and uncertain process identity preserves the source for retry;
-- ownership moves only once a whole generation is gone, so a crashed runner leader whose owned process group is still running never reads as stale: that surviving group is stopped before any replacement starts, and the claim is kept for retry when it cannot be;
-- stored argv is executed directly, so an argument containing spaces or shell metacharacters is never re-split or interpreted;
-- oversized output is bounded rather than published whole or silently dropped.
-
-The `when` adapter's guarantees are part of the operating contract in [`docs/configuration.md`](../../../docs/configuration.md#process-to-event-sources-stateprocevent).
-
-**Not true, and never to be claimed:** at-least-once, no-loss, or lossless delivery, and no generic exactly-once effect either - the handled acknowledgement only stops re-announcement, it says nothing about whether a paired external effect performed before the acknowledgement call actually completed, so a crash between that effect and the call can still repeat the effect on the next replay.
-
-The currently published `lavish-axi poll` destructively clears feedback before returning it.
-A result lost after that clearing and before the runner reads the process output is unrecoverable, and no firstmate wrapper can close that source-side window.
-The remote-reply adapter removes that particular pre-capture window by never consuming its source, but it cannot recover bytes truly lost from the remote log itself.
-Say these boundaries plainly wherever the behavior is described.
+[`docs/configuration.md`](../../../docs/configuration.md#process-to-event-sources-stateprocevent) is the single owner of runner guarantees, durability boundaries, and source-side loss limitations; this skill owns only the handling procedure above.
 
 ## Talking to the captain about it
 

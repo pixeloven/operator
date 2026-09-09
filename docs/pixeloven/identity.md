@@ -122,7 +122,7 @@ Our default surface is new files in namespaces upstream can never collide with:
 | Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` |
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008 through 0011 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, and documentation-audience ownership.
+ADRs 0008 through 0012 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, and documentation-audience ownership.
 Anything outside those lists needs a **new ADR**, not a silent change.
 See [fork-contract.md](fork-contract.md).
 
@@ -201,7 +201,7 @@ No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows)\.sh$|tests/(fm-bootstrap|fm-lint-workflows|fm-no-mistakes-required|fm-task-delivery)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows|fm-procevent-lib|fm-procevent|fm-task-inbox-lib|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-bootstrap|fm-lint-workflows|fm-no-mistakes-required|fm-pr-check-security|fm-secondmate-reconcile|fm-secondmate-sync|fm-startup-memory-budget|fm-task-delivery|fm-task-inbox|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|remote-secondmates\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what

@@ -17,6 +17,97 @@ GRANT="$ROOT/bin/fm-wake-grant.sh"
 
 TMP_ROOT=$(fm_test_tmproot fm-wake-tests)
 
+ensure_wake() {  # <state> <kind> <key> <payload>
+  local state=$1 kind=$2 key=$3 payload=$4 lib="$ROOT/bin/fm-wake-lib.sh"
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_wake_ensure_queued "$2" "$3" "$4"
+  ' _ "$lib" "$kind" "$key" "$payload"
+}
+
+test_batch_input_does_not_hold_queue_lock() {
+  local dir state ready release batch_out append_status=0 batch_pid append_pid i
+  dir=$(make_case batch-input-lock)
+  state="$dir/state"
+  ready="$dir/input-ready"
+  release="$dir/input-release"
+  batch_out="$dir/batch.out"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    {
+      printf "ready\n" > "$2"
+      while [ ! -e "$3" ]; do sleep 0.05; done
+      printf "procevent:slow:1\tcheck: slow classification completed\n"
+    } | fm_wake_ensure_queued_batch check
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$ready" "$release" > "$batch_out" &
+  batch_pid=$!
+  i=0
+  while [ ! -s "$ready" ] && [ "$i" -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -s "$ready" ] || {
+    : > "$release"
+    wait "$batch_pid" 2>/dev/null || true
+    fail "batch input fixture never reached its classification barrier"
+  }
+  sleep 0.2
+
+  append_wake "$state" signal immediate 'signal: immediate' &
+  append_pid=$!
+  wait_for_exit "$append_pid" 10 || append_status=$?
+  : > "$release"
+  wait "$batch_pid" || fail "batch append failed after classification completed"
+
+  [ "$append_status" -eq 0 ] || fail "slow batch classification held the shared wake-queue lock"
+  [ "$(cat "$batch_out")" = appended ] || fail "prepared batch record was not appended"
+  [ "$(awk -F '\t' 'NF == 5 { count++ } END { print count + 0 }' "$state/.wake-queue")" -eq 2 ] \
+    || fail "concurrent immediate and batch wakes were not both retained"
+  if compgen -G "$state/.wake-ensure-batch.*" >/dev/null; then
+    fail "batch manifest was not removed after publication"
+  fi
+  pass "batch input is prepared before the shared queue lock"
+}
+
+
+test_concurrent_keyed_ensure_keeps_one_pending_row() {
+  local dir state result pids i pid count appended queued
+  dir=$(make_case concurrent-keyed-ensure)
+  state="$dir/state"
+  pids=
+  i=1
+  while [ "$i" -le 40 ]; do
+    ensure_wake "$state" check procevent:source-a:1 \
+      'check: process-event result captured: procevent:source-a:1' > "$dir/ensure-$i.out" &
+    pids="$pids $!"
+    i=$((i + 1))
+  done
+  for pid in $pids; do
+    wait "$pid" || fail "concurrent keyed ensure subprocess failed"
+  done
+
+  count=$(awk -F '\t' '$3 == "check" && $4 == "procevent:source-a:1" { count++ } END { print count + 0 }' \
+    "$state/.wake-queue")
+  [ "$count" -eq 1 ] || fail "equivalent concurrent publications produced $count pending rows"
+  appended=$(grep -l '^appended$' "$dir"/ensure-*.out | wc -l | tr -d '[:space:]')
+  queued=$(grep -l '^already-queued$' "$dir"/ensure-*.out | wc -l | tr -d '[:space:]')
+  [ "$appended" -eq 1 ] && [ "$queued" -eq 39 ] \
+    || fail "concurrent keyed results were not one append plus 39 observations: appended=$appended queued=$queued"
+  [ "$(cat "$state/.wake-queue.seq")" = 1 ] \
+    || fail "equivalent concurrent publications advanced the sequence more than once"
+
+  result=$(ensure_wake "$state" check procevent:source-a:2 \
+    'check: process-event result captured: procevent:source-a:2') \
+    || fail "a distinct keyed publication failed"
+  [ "$result" = appended ] || fail "a distinct keyed publication was suppressed: $result"
+  count=$(awk -F '\t' '$3 == "check" { count++ } END { print count + 0 }' "$state/.wake-queue")
+  [ "$count" -eq 2 ] || fail "a distinct keyed publication did not retain its own row"
+  [ "$(cat "$state/.wake-queue.seq")" = 2 ] \
+    || fail "the distinct keyed publication did not receive the next sequence"
+  pass "atomic keyed ensure keeps one equivalent pending row without suppressing distinct publications"
+}
+
 
 test_concurrent_append_and_drain() {
   local dir state out1 out2 pids i pid count unique malformed sequence generation
@@ -1200,6 +1291,8 @@ test_acknowledged_stall_publication_survives_pre_marker_crash
 test_empty_prefix_mate_preserves_other_mate_receipt
 test_self_announced_append_guards
 test_historical_annotation_skips_announced_status
+test_batch_input_does_not_hold_queue_lock
+test_concurrent_keyed_ensure_keeps_one_pending_row
 test_concurrent_append_and_drain
 test_signal_catchup_without_running_watcher
 test_stale_enqueue_before_suppressor

@@ -13,21 +13,8 @@
 # as an ordinary `check` wake through the existing durable wake queue, which is
 # the same mechanism merge polls and X mode already use.
 #
-# DURABILITY BOUNDARY, stated precisely. This runner proves exactly one thing:
-# once a child process has exited and its output has been read, that output is
-# stored atomically at mode 0600 BEFORE any event referencing it is published,
-# and a captured result with no durable handled acknowledgement remains eligible
-# for bounded re-announcement - including across a restart between publication
-# and handling - until `fm-procevent.sh handled` records it. It proves nothing
-# about the source side of the handoff. In particular the currently published
-# `lavish-axi poll` destructively clears feedback before returning it, so a
-# result lost between that clearing and this runner reading the process output
-# is unrecoverable. A Firstmate wrapper cannot close that window, and marking a
-# result handled says nothing about whether a paired external effect performed
-# before that call actually completed: a crash between the effect and the
-# acknowledgement can still repeat the effect on replay. Never describe this
-# runner as at-least-once, no-loss, or lossless, and never claim generic
-# exactly-once effects from the handled acknowledgement alone.
+# docs/configuration.md "Process-to-event sources" owns the operating durability
+# contract; this library owns its capture, identity, and publication mechanics.
 
 # Machine-wide claim root. Homes can share one underlying source store, so the
 # "one owner per canonical source" rule cannot live inside a single home.

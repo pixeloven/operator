@@ -102,6 +102,18 @@ wait_for_lines() {
   return 1
 }
 
+ack_queue_without_handling() {  # <home>
+  local home=$1 err="$1/state/.test-drain.err" sequence generation
+  FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" FM_ROOT_OVERRIDE="$ROOT" \
+    "$ROOT/bin/fm-wake-drain.sh" >/dev/null 2> "$err" || return 1
+  sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$err")
+  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$err")
+  [ -n "$sequence" ] && [ -n "$generation" ] || return 1
+  FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" FM_ROOT_OVERRIDE="$ROOT" \
+    "$ROOT/bin/fm-wake-drain.sh" --ack-through "$sequence" \
+      --recovery-generation "$generation" >/dev/null
+}
+
 hold_source_lock() {  # <source-id> <ready-file> <release-file>
   local id=$1 ready=$2 release=$3 parent=$$
   FM_HOME="$TMP_ROOT/lock-helper-home" bash -c '
@@ -247,11 +259,10 @@ kill "$shared_sibling" 2>/dev/null || true
 wait "$shared_launcher" || fail "shared caller-group fixture did not exit cleanly"
 pass "public start never claims an inherited caller process group"
 
-# --- an unhandled result remains eligible for re-announcement on restart ----
-# A result is durable but nothing has ever acknowledged handling it. Every
-# reconcile call - not just the first restart after a crash - must keep
-# re-announcing it, because the only thing that stops re-announcement is an
-# explicit handled acknowledgement, never a prior publication.
+# --- an unhandled result retains one queued announcement until acknowledged --
+# A result is durable but nothing has ever acknowledged handling it. Reconcile
+# must keep one announcement pending without appending duplicates; after the
+# queue row is acknowledged, the same result becomes eligible for one replay.
 H2="$TMP_ROOT/h2"; new_home "$H2"
 future_status=0
 future_out=$(pe "$H2" handled src-cut 7 2>&1) || future_status=$?
@@ -264,14 +275,27 @@ printf 'lavish\n' > "$H2/state/procevent-inbox/src-cut.7.adapter"
 chmod 0600 "$H2/state/procevent-inbox/src-cut.7.result" "$H2/state/procevent-inbox/src-cut.7.adapter"
 out=$(pe "$H2" reconcile)
 assert_contains "$out" "published=1" "a durably captured but unhandled result is announced after restart"
+assert_contains "$out" "queued=0" "the first announcement was not misreported as already queued"
 assert_contains "$(wake_payloads "$H2")" "procevent lavish src-cut 7" "durable adapter identity survives without a registration"
 assert_absent "$H2/state/procevent-inbox/src-cut.7.handled" "recovery alone never marks the recovered result handled"
-mv "$H2/state/.wake-queue" "$H2/state/.wake-queue.drained-1"
+cp "$H2/state/.wake-queue" "$H2/state/.wake-queue.before-repeat"
 out=$(pe "$H2" reconcile)
-assert_contains "$out" "published=1" "an unhandled result is re-announced on every reconcile, not only the first"
-assert_contains "$(wake_payloads "$H2")" "procevent lavish src-cut 7" "the repeat wake preserves its deduplication identity"
-[ "$(count_results "$H2" src-cut)" = 1 ] || fail "repeat re-announcement created a second durable copy"
-mv "$H2/state/.wake-queue" "$H2/state/.wake-queue.drained-2"
+assert_contains "$out" "published=0" "a still-queued result was published a second time"
+assert_contains "$out" "queued=1" "reconcile did not report the equivalent pending publication"
+cmp -s "$H2/state/.wake-queue.before-repeat" "$H2/state/.wake-queue" \
+  || fail "repeat reconciliation changed the pending durable row"
+[ "$(cat "$H2/state/.wake-queue.seq")" = 1 ] \
+  || fail "repeat reconciliation advanced the queue sequence"
+[ "$(count_results "$H2" src-cut)" = 1 ] || fail "repeat reconciliation created a second durable result"
+
+ack_queue_without_handling "$H2" || fail "the first queued result could not be acknowledged without handling"
+[ ! -s "$H2/state/.wake-queue" ] || fail "acknowledgement left the first queued result pending"
+out=$(pe "$H2" reconcile)
+assert_contains "$out" "published=1" "an acknowledged but unhandled result was not re-announced"
+assert_contains "$out" "queued=0" "the post-acknowledgement replay was misreported as already queued"
+assert_contains "$(wake_payloads "$H2")" "procevent lavish src-cut 7" "the replay changed the captured source or sequence"
+[ "$(cat "$H2/state/.wake-queue.seq")" = 2 ] \
+  || fail "the post-acknowledgement replay did not receive the next queue sequence"
 
 ack_out=$(pe "$H2" handled src-cut 7)
 assert_contains "$ack_out" "handled: src-cut 7" "the owned handling interface newly authorizes the first acknowledgement"
@@ -279,6 +303,7 @@ assert_present "$H2/state/procevent-inbox/src-cut.7.handled" "acknowledgement du
 before=$(wake_payloads "$H2" | wc -l | tr -d ' ')
 out=$(pe "$H2" reconcile)
 assert_contains "$out" "published=0" "reconcile stops re-announcing once a result is durably handled"
+assert_contains "$out" "queued=0" "a handled result was still counted as a pending publication"
 [ "$(wake_payloads "$H2" | wc -l | tr -d ' ')" = "$before" ] || fail "a handled result was announced again"
 
 repeat_out=$(pe "$H2" handled src-cut 7)
@@ -286,7 +311,49 @@ assert_contains "$repeat_out" "already-handled: src-cut 7" "repeated acknowledge
 case "$repeat_out" in
   handled:*) fail "a repeat acknowledgement re-authorized a second handled effect: $repeat_out" ;;
 esac
-pass "an unhandled result survives restart and repeat drains, and only explicit acknowledgement stops its re-announcement"
+pass "an unhandled result keeps one pending row, replays after queue acknowledgement, and stops only after handling"
+
+# Competing watcher/start recovery paths may reconcile the same captured result
+# simultaneously. The process boundary and the queue boundary together must
+# converge on one pending row, while distinct source/sequence identities remain
+# independent publications.
+HENSURE="$TMP_ROOT/hensure"; new_home "$HENSURE"
+mkdir -p "$HENSURE/state/procevent-inbox"
+printf 'concurrent result\n' > "$HENSURE/state/procevent-inbox/same-src.1.result"
+printf 'lavish\n' > "$HENSURE/state/procevent-inbox/same-src.1.adapter"
+chmod 0600 "$HENSURE/state/procevent-inbox/same-src.1.result" "$HENSURE/state/procevent-inbox/same-src.1.adapter"
+ensure_pids=
+for n in $(seq 1 20); do
+  pe "$HENSURE" reconcile > "$TMP_ROOT/hensure-$n.out" &
+  ensure_pids="$ensure_pids $!"
+done
+for ensure_pid in $ensure_pids; do
+  wait "$ensure_pid" || fail "a concurrent process-result reconcile failed"
+done
+ensure_rows=$(awk -F '\t' '$3 == "check" && $4 == "procevent:same-src:1" { count++ } END { print count + 0 }' \
+  "$HENSURE/state/.wake-queue")
+[ "$ensure_rows" -eq 1 ] || fail "concurrent process-result reconciliation produced $ensure_rows equivalent rows"
+[ "$(cat "$HENSURE/state/.wake-queue.seq")" = 1 ] \
+  || fail "concurrent process-result reconciliation advanced the sequence more than once"
+ensure_published=$(grep -l 'published=1 .*queued=0' "$TMP_ROOT"/hensure-*.out | wc -l | tr -d '[:space:]')
+ensure_queued=$(grep -l 'published=0 .*queued=1' "$TMP_ROOT"/hensure-*.out | wc -l | tr -d '[:space:]')
+[ "$ensure_published" -eq 1 ] && [ "$ensure_queued" -eq 19 ] \
+  || fail "concurrent reconcile reporting did not separate one append from 19 pending observations"
+
+HDISTINCT="$TMP_ROOT/hdistinct"; new_home "$HDISTINCT"
+mkdir -p "$HDISTINCT/state/procevent-inbox"
+for identity in source-a.1 source-a.2 source-b.1; do
+  printf 'distinct %s\n' "$identity" > "$HDISTINCT/state/procevent-inbox/$identity.result"
+  printf 'lavish\n' > "$HDISTINCT/state/procevent-inbox/$identity.adapter"
+  chmod 0600 "$HDISTINCT/state/procevent-inbox/$identity.result" "$HDISTINCT/state/procevent-inbox/$identity.adapter"
+done
+out=$(pe "$HDISTINCT" reconcile)
+assert_contains "$out" "published=3" "distinct source/sequence identities were suppressed"
+assert_contains "$out" "queued=0" "new distinct source/sequence identities were reported as already queued"
+distinct_rows=$(awk -F '\t' '$3 == "check" && $4 ~ /^procevent:/ { seen[$4] = 1 } END { for (key in seen) count++; print count + 0 }' \
+  "$HDISTINCT/state/.wake-queue")
+[ "$distinct_rows" -eq 3 ] || fail "distinct source/sequence identities produced only $distinct_rows queue keys"
+pass "concurrent equivalent reconciliation converges while distinct process-result identities remain independent"
 
 HRACE="$TMP_ROOT/hrace"; new_home "$HRACE"
 mkdir -p "$HRACE/state/procevent-inbox"
@@ -310,6 +377,34 @@ assert_contains "$(cat "$RACE_RECONCILE_OUT")" "published=0" "reconcile rechecks
 assert_present "$HRACE/state/procevent-inbox/racing-src.1.handled" "the concurrent acknowledgement remains durable"
 assert_absent "$HRACE/state/.wake-queue" "an acknowledged result was appended after handling completed"
 pass "publication cannot race a handled acknowledgement"
+
+HREQUEUE="$TMP_ROOT/hrequeue"; new_home "$HREQUEUE"
+mkdir -p "$HREQUEUE/state/procevent-inbox"
+printf 'requeue result\n' > "$HREQUEUE/state/procevent-inbox/requeue-src.1.result"
+printf 'lavish\n' > "$HREQUEUE/state/procevent-inbox/requeue-src.1.adapter"
+chmod 0600 "$HREQUEUE/state/procevent-inbox/requeue-src.1.result" \
+  "$HREQUEUE/state/procevent-inbox/requeue-src.1.adapter"
+out=$(pe "$HREQUEUE" reconcile)
+assert_contains "$out" "published=1" "the requeue race fixture did not publish its initial row"
+REQUEUE_READY="$TMP_ROOT/requeue-ready"
+REQUEUE_RELEASE="$TMP_ROOT/requeue-release"
+REQUEUE_OUT="$TMP_ROOT/requeue.out"
+hold_source_lock requeue-src "$REQUEUE_READY" "$REQUEUE_RELEASE"
+REQUEUE_HOLDER_PID=$HOLDER_PID
+wait_for "$REQUEUE_READY" || fail "requeue race barrier did not acquire the source lock"
+pe "$HREQUEUE" reconcile > "$REQUEUE_OUT" &
+REQUEUE_PID=$!
+sleep 0.3
+ack_queue_without_handling "$HREQUEUE" || fail "requeue race could not acknowledge the observed row"
+[ ! -s "$HREQUEUE/state/.wake-queue" ] || fail "requeue race did not remove the observed row"
+: > "$REQUEUE_RELEASE"
+wait "$REQUEUE_HOLDER_PID" || fail "requeue race barrier did not release the source lock"
+wait "$REQUEUE_PID" || fail "reconcile failed after concurrent queue acknowledgement"
+assert_contains "$(cat "$REQUEUE_OUT")" "published=1" "reconcile trusted a stale queued-key observation"
+requeued_rows=$(awk -F '\t' '$3 == "check" && $4 == "procevent:requeue-src:1" { count++ } END { print count + 0 }' \
+  "$HREQUEUE/state/.wake-queue")
+[ "$requeued_rows" -eq 1 ] || fail "atomic batch reconciliation retained $requeued_rows replacement rows"
+pass "reconciliation atomically revalidates and replaces an acknowledged pending row"
 
 HPRIVATE="$TMP_ROOT/hprivate"; new_home "$HPRIVATE"
 mkdir -p "$HPRIVATE/state/procevent-inbox"
@@ -469,7 +564,8 @@ TERMINAL_RESULT=$(first_result "$HTERM" ends-src || true)
 assert_grep 'terminal payload' "$TERMINAL_RESULT" "automatic retirement retains the captured output verbatim"
 out=$(pe_adapter "$HTERM" reconcile)
 assert_contains "$out" "started=0" "a retired terminal source is never restarted"
-assert_contains "$out" "published=1" "an unhandled terminal result is still re-announced until acknowledged"
+assert_contains "$out" "published=0" "an unhandled terminal result appended a duplicate while its row was queued"
+assert_contains "$out" "queued=1" "an unhandled terminal result was not retained as a pending publication"
 [ "$(count_results "$HTERM" ends-src)" = 1 ] || fail "a retired terminal source ran its poll again"
 out=$(pe_adapter "$HTERM" retire ends-src)
 assert_contains "$out" "retired: ends-src" "explicit retirement stays supported and idempotent after automatic retirement"
@@ -1736,8 +1832,8 @@ assert_contains "$adapter_help" "read <result-file>" \
   "the adapter's help publishes the structured read command"
 
 runner_help=$("$ROOT/bin/fm-procevent.sh" --help 2>&1 || true)
-assert_contains "$runner_help" "Durability boundary" \
-  "the runner's help scopes what it actually proves"
+assert_contains "$runner_help" "Operating durability contract: see docs/configuration.md" \
+  "the runner's help points to the owned operating contract"
 assert_not_contains "$runner_help" "exactly-once" \
   "the runner's help claims no exactly-once delivery"
 pass "the published interfaces state the loss limitation and claim no lossless delivery"
