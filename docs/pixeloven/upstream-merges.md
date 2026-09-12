@@ -83,9 +83,9 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 > origin/main`) or redo the upstream merge from a fresh branch. If a branch has
 > already been flattened, recover it from the reflog rather than pushing it.
 >
-> The check below is the same one A7 runs. Run it **after** the PR lands, too — a
-> squash-merge passes every gate on the PR and only shows up as a failure on the
-> *next* PR, by which point the merge base is already gone.
+> The local topology check below is the operator-history portion of A7.
+> Run it **after** the PR lands, too - a squash-merge passes every gate on the PR and only shows up as a failure on the *next* PR, by which point the merge base is already gone.
+> [`identity.md`](identity.md#5-assertions--the-grep-evidence) owns the complete A7 contract, including canonical upstream and companion-fork lineage.
 >
 > ```sh
 > git merge-base --is-ancestor "$(cat docs/pixeloven/upstream-pin)" HEAD \

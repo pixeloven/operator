@@ -42,6 +42,8 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | CI we own | `.github/workflows/pixeloven-*.yml` | |
 | Companion installer | `bin/fm-install-pixeloven-tool.sh` | closed inventory of six public PixelOven forks |
 | Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` | executable source and lifecycle contract |
+| Upstream lineage check | `bin/fm-pixeloven-upstream-check.sh` | canonical ancestry verification for the operator and companion forks |
+| Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
 ADRs 0008 through 0012 list the exact existing upstream files that may carry their bounded downstream hunks.
@@ -52,8 +54,7 @@ prose rule that "the operator" means the human (G-7), are in
 [`identity.md`](identity.md).
 
 The contract is **enforced on every pull request** by [`pixeloven-gates.yml`](../../.github/workflows/pixeloven-gates.yml).
-It fails the build if the diff against the current upstream pin touches anything outside the owned namespaces and accepted ADR allowlists, if `README.md` differs from upstream outside the banner block, or if the companion source inventory selects anything other than the six matching PixelOven forks.
-The assertions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
+Its complete assertions and failure conditions are documented in [`identity.md`](identity.md#5-assertions--the-grep-evidence).
 
 ## Bounded upstream-file exceptions
 
