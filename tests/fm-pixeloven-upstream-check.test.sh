@@ -21,7 +21,7 @@ make_commit() {
   "$REAL_GIT" -C "$repository" add "$name"
   GIT_AUTHOR_DATE='2026-01-01T00:00:00Z' \
     GIT_COMMITTER_DATE='2026-01-01T00:00:00Z' \
-    "$REAL_GIT" -C "$repository" commit -q -m "$content"
+    "$REAL_GIT" -c commit.gpgsign=false -C "$repository" commit -q -m "$content"
 }
 
 SOURCE="$TMP_ROOT/source"
