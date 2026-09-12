@@ -420,6 +420,14 @@ fm_lock_try_create() {
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
+  # A stale-lock stealer removes the old primary only after publishing its
+  # mutex. Refuse before publishing a competing primary candidate so that a
+  # descheduled claimant cannot make the stealer fail, then remove its own
+  # candidate after the stealer has already given up.
+  if fm_lock_claim_blocked_by_steal "$lockdir" "$allowed_steal_owner"; then
+    fm_lock_discard_owner "$ownerdir"
+    return 1
+  fi
   if ! fm_lock_prepare_owner "$ownerdir"; then
     fm_lock_discard_owner "$ownerdir"
     return 1

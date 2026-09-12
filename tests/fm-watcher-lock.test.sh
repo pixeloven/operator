@@ -268,6 +268,61 @@ test_lock_stale_steal_single_winner_under_concurrency() {
   pass "concurrent stale-lock steal yields exactly one winner"
 }
 
+test_lock_active_steal_never_exposes_competing_primary() {
+  local dir state lockdir fakebin published holder_file holder contender i exposed rc
+  dir=$(make_case lock-active-steal-publish)
+  state="$dir/state"
+  lockdir="$state/.contend.lock"
+  fakebin="$dir/fakebin-ln"
+  published="$dir/published"
+  holder_file="$dir/holder"
+  mkdir -p "$fakebin"
+  cat > "$fakebin/ln" <<'SH'
+#!/usr/bin/env bash
+set -eu
+PATH=/usr/bin:/bin command ln "$@"
+: > "$FM_LN_PUBLISHED"
+sleep 0.5
+SH
+  chmod 0755 "$fakebin/ln"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_acquire "$2.steal" || exit 7
+    printf "%s\n" "${BASHPID:-$$}" > "$3"
+    sleep 1
+    fm_lock_release "$2.steal"
+  ' _ "$LIB" "$lockdir" "$holder_file" &
+  holder=$!
+  i=0
+  while [ "$i" -lt 50 ] && [ ! -s "$holder_file" ]; do
+    sleep 0.02
+    i=$((i + 1))
+  done
+  [ -s "$holder_file" ] || fail "live steal mutex holder did not start"
+
+  FM_LN_PUBLISHED="$published" PATH="$fakebin:$PATH" FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_create "$2"
+  ' _ "$LIB" "$lockdir" &
+  contender=$!
+  i=0
+  while [ "$i" -lt 50 ] && kill -0 "$contender" 2>/dev/null && [ ! -e "$published" ]; do
+    sleep 0.02
+    i=$((i + 1))
+  done
+  exposed=0
+  if [ -e "$published" ] || [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
+    exposed=1
+  fi
+  rc=0
+  wait "$contender" 2>/dev/null || rc=$?
+  wait "$holder" || fail "live steal mutex holder failed"
+  [ "$rc" -ne 0 ] || fail "competing primary claim succeeded while the steal mutex was held"
+  [ "$exposed" -eq 0 ] || fail "competing primary claim was published while the steal mutex was held"
+  pass "an active steal mutex blocks competing primary publication"
+}
+
 test_lock_live_steal_mutex_is_not_reclaimed() {
   local dir state lockdir dead holder_file holder out i lockpid stealpid
   dir=$(make_case lock-live-stealer)
@@ -1109,6 +1164,7 @@ test_msys_pid_identity_uses_proc
 test_stale_watch_lock_reclaimed
 test_stale_watch_reclaim_publishes_before_clear
 test_live_stale_watch_lock_is_actionable
+test_lock_active_steal_never_exposes_competing_primary
 test_guard_warnings
 test_lock_single_winner_under_concurrency
 test_lock_steals_dead_pid_lock
