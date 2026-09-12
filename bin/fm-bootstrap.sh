@@ -1270,7 +1270,13 @@ backlog_record_reconcile() {
     fi
     id=$(basename "$meta" .meta)
     meta_lock=$(fm_meta_lock_path "$meta") || continue
-    fm_lock_try_acquire "$meta_lock" || continue
+    if ! fm_lock_try_acquire "$meta_lock"; then
+      if ! fm_backlog_record_present "$meta" "task record" "$STATE"; then
+        echo "BACKLOG_RECONCILE: $id: post-lock worker record check refused: $FM_BACKLOG_TRANSITION_ERROR"
+        return 2
+      fi
+      continue
+    fi
     if [ -e "$STATE/$id.backlog-close" ] || [ -L "$STATE/$id.backlog-close" ]; then
       fm_lock_release "$meta_lock"
       continue

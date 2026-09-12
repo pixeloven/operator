@@ -800,6 +800,12 @@ fm_lock_try_acquire() {
   if fm_lock_try_create "$lockdir"; then
     return 0
   fi
+  # A contending owner may release between our failed create and this read.
+  # That is ordinary contention, not an ownerless stale lock to recover
+  # through another .steal level; let a waiting caller retry the same lock.
+  if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
+    return 1
+  fi
 
   # Compare against ${BASHPID:-$$} inline, never via a command substitution:
   # $() forks a subshell whose BASHPID is not this frame's pid.
@@ -1365,9 +1371,62 @@ fm_wake_clean_field() {
   LC_ALL=C tr '\t\r\n' '   '
 }
 
+_fm_wake_append_locked() {  # <kind> <clean-key> <clean-payload> <epoch>
+  local kind=$1 clean_key=$2 clean_payload=$3 epoch=$4 seq seq_file status=0
+  local recovery_marker candidate marker marker_name
+  seq_file="$STATE/.wake-queue.seq"
+  recovery_marker="$STATE/.watcher-down"
+  _fm_recovery_marker_publish "$recovery_marker" downtime || status=$?
+  if [ "$status" -eq 0 ]; then
+    seq=$(cat "$seq_file" 2>/dev/null) || seq=
+    case "$seq" in
+      ''|*[!0-9]*)
+        seq=0
+        candidate=0
+        if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
+          [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 1
+          candidate=$(awk -F '\t' '
+            NF >= 5 && $2 ~ /^[0-9]+$/ && $2 > max { max=$2 }
+            END { print max + 0 }
+          ' "$FM_WAKE_QUEUE") || return 1
+        fi
+        [ "$candidate" -le "$seq" ] || seq=$candidate
+        for marker in "$STATE"/.seen-procevent-*; do
+          [ -f "$marker" ] && [ ! -L "$marker" ] || continue
+          marker_name=${marker##*/.seen-procevent-}
+          case "$marker_name" in
+            row-*) candidate=${marker_name#row-} ;;
+            id-*)
+              IFS=$(printf '\t') read -r candidate _ < "$marker" || continue
+              ;;
+            *) continue ;;
+          esac
+          case "$candidate" in ''|*[!0-9]*) continue ;; esac
+          [ "$candidate" -le "$seq" ] || seq=$candidate
+        done
+        ;;
+    esac
+    seq=$((seq + 1))
+    printf '%s\n' "$seq" > "$seq_file" || status=$?
+  fi
+  if [ "$status" -eq 0 ]; then
+    printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
+  fi
+  return "$status"
+}
+
+_fm_wake_key_queued_locked() {  # <kind> <clean-key>
+  local kind=$1 clean_key=$2
+  [ -e "$FM_WAKE_QUEUE" ] || return 1
+  [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 2
+  awk -F '\t' -v kind="$kind" -v key="$clean_key" '
+    NF >= 5 && $3 == kind && $4 == key { found = 1; exit }
+    END { exit(found ? 0 : 1) }
+  ' "$FM_WAKE_QUEUE"
+}
+
 fm_wake_append() {
-  local kind=$1 key=$2 payload=$3 clean_key clean_payload epoch seq seq_file status
-  local recovery_marker
+  local kind=$1 key=$2 payload=$3 clean_key clean_payload epoch status=0
   case "$kind" in
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_append: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
@@ -1376,26 +1435,129 @@ fm_wake_append() {
   clean_key=$(printf '%s' "$key" | fm_wake_clean_field)
   clean_payload=$(printf '%s' "$payload" | fm_wake_clean_field)
   epoch=$(date +%s)
-  seq_file="$STATE/.wake-queue.seq"
-  recovery_marker="$STATE/.watcher-down"
-  status=0
 
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
-  _fm_recovery_marker_publish "$recovery_marker" downtime || status=$?
-  if [ "$status" -eq 0 ]; then
-    seq=$(cat "$seq_file" 2>/dev/null || echo 0)
-    case "$seq" in
-      ''|*[!0-9]*) seq=0 ;;
-    esac
-    seq=$((seq + 1))
-    printf '%s\n' "$seq" > "$seq_file" || status=$?
-  fi
-  if [ "$status" -eq 0 ]; then
-    printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
-  fi
+  _fm_wake_append_locked "$kind" "$clean_key" "$clean_payload" "$epoch"
+  status=$?
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   return "$status"
 }
+
+# Ensure one still-pending durable row exists for this exact kind and key.
+# The presence check, recovery publication, sequence allocation, and append all
+# share the queue lock, so concurrent producers cannot append equivalent rows.
+# Once the row is acknowledged, a later call appends a new sequence for replay.
+fm_wake_ensure_queued() {
+  local kind=$1 key=$2 payload=$3 clean_key clean_payload epoch queued_status status=0 result
+  case "$kind" in
+    signal|stale|check|heartbeat) ;;
+    *) printf 'fm_wake_ensure_queued: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
+  esac
+
+  clean_key=$(printf '%s' "$key" | fm_wake_clean_field)
+  clean_payload=$(printf '%s' "$payload" | fm_wake_clean_field)
+  epoch=$(date +%s)
+
+  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
+  if _fm_wake_key_queued_locked "$kind" "$clean_key"; then
+    result=already-queued
+  else
+    queued_status=$?
+    if [ "$queued_status" -eq 1 ]; then
+      if _fm_wake_append_locked "$kind" "$clean_key" "$clean_payload" "$epoch"; then
+        result=appended
+      else
+        status=$?
+      fi
+    else
+      status=$queued_status
+    fi
+  fi
+  fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+  [ "$status" -eq 0 ] || return "$status"
+  printf '%s\n' "$result"
+}
+
+fm_wake_ensure_queued_batch() (
+  local kind=$1 key payload result epoch manifest='' queue_present=0 complete=0 status=0
+  local lock_held=0
+  case "$kind" in
+    signal|stale|check|heartbeat) ;;
+    *) printf 'fm_wake_ensure_queued_batch: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
+  esac
+
+  manifest=$(umask 077; mktemp "$STATE/.wake-ensure-batch.XXXXXX") || return 1
+  trap '[ "$lock_held" -eq 0 ] || fm_lock_release "$FM_WAKE_QUEUE_LOCK"; rm -f -- "$manifest"' EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  awk '
+    {
+      separator = index($0, "\t")
+      if (separator) {
+        key = substr($0, 1, separator - 1)
+        payload = substr($0, separator + 1)
+      } else {
+        key = $0
+        payload = ""
+      }
+      gsub(/\r/, " ", key)
+      gsub(/[\t\r]/, " ", payload)
+      if (length(key)) print key "\t" payload
+    }
+  ' > "$manifest" || return 1
+  [ -s "$manifest" ] || return 0
+
+  epoch=$(date +%s)
+  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
+  lock_held=1
+  if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
+    [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || status=1
+    [ "$status" -ne 0 ] || queue_present=1
+  fi
+  if [ "$status" -eq 0 ]; then
+    while IFS=$'\t' read -r result key payload; do
+      case "$result" in
+        batch-complete) complete=1; continue ;;
+        appended|already-queued) ;;
+        *) status=1; break ;;
+      esac
+      if [ "$result" = appended ]; then
+        if _fm_wake_append_locked "$kind" "$key" "$payload" "$epoch"; then
+          :
+        else
+          status=$?
+          break
+        fi
+      fi
+      printf '%s\n' "$result"
+    done < <(
+      awk -F '\t' -v queue="$FM_WAKE_QUEUE" -v queue_present="$queue_present" -v kind="$kind" '
+        BEGIN {
+          if (queue_present) {
+            while ((read_status = getline line < queue) > 0) {
+              count = split(line, fields, "\t")
+              if (count >= 5 && fields[3] == kind) queued[fields[4]] = 1
+            }
+            close(queue)
+            if (read_status < 0) exit 1
+          }
+        }
+        {
+          result = ($1 in queued) ? "already-queued" : "appended"
+          queued[$1] = 1
+          print result "\t" $0
+        }
+      ' "$manifest" && printf 'batch-complete\n'
+    )
+    if [ "$status" -eq 0 ] && [ "$complete" -ne 1 ]; then
+      status=1
+    fi
+  fi
+  fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+  lock_held=0
+  return "$status"
+)
 
 # fm_wake_queued_keys <kind>
 # Print the distinct keys currently queued for <kind>, oldest first. Read under

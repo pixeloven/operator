@@ -23,6 +23,7 @@ Use [`_template.md`](_template.md).
 | [0009](0009-operator-arc-runner-routing.md) | `operator` Linux CI routes through the PixelOven ARC pool | Superseded by ADR-0011 | PR #10 remediation |
 | [0010](0010-pixeloven-companion-forks-own-distribution.md) | PixelOven companion forks own distribution | Accepted | `operator` upstream synchronization and companion-fork migration |
 | [0011](0011-operator-github-hosted-runner-routing.md) | `operator` CI uses standard GitHub-hosted runners | Accepted | Hosted-runner remediation after PR #11 |
+| [0012](0012-notification-reconciliation.md) | Notification reconciliation may modify bounded upstream surfaces | Accepted | Process-result notification reliability reconciliation |
 
 ## Conventions
 

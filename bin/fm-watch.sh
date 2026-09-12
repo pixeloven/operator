@@ -64,11 +64,10 @@
 #                          successful attempts never wake firstmate
 #                          (bin/fm-task-inbox-lib.sh owns the ladder policy)
 #   check: <script>: <out> authenticated check output, always actionable
-#   check: process-event result captured: <keys>
-#                          a durably captured process-to-event result is queued
-#                          and has not been surfaced yet; reported once per
-#                          captured generation, never again while that record
-#                          stays queued and never once it is acknowledged
+#   check: process-event result captured: row=<sequence> key=<key> ...
+#                          see docs/configuration.md "Process-to-event sources"
+#                          for the authoritative durability and client-coalescing
+#                          contract
 #   check: rejected unauthenticated state checks: <paths>
 #                          unsafe state checks were refused without execution
 #   check: rejected unauthenticated PR poll retirement receipts: <paths>
@@ -1025,51 +1024,127 @@ scan_signals() {
   return 0
 }
 
-# Deliver a durably queued process-event result to firstmate. Publication is
-# owned by bin/fm-procevent.sh - by the runner at capture time and by reconcile's
-# re-announcement - so this decides only whether a queued check record has been
-# surfaced yet, then reports it through the same actionable exit every other wake
-# uses. Without it a captured result sits on the queue until something else
-# happens to wake firstmate, which is exactly the missed delivery this repairs.
-# Dedup uses the same .seen-* discipline as scan_signals: the durable record is
-# always written before its marker, so nothing is suppressed before it is queued,
-# and re-announcement, drain-time deduplication, and the handled acknowledgement
-# keep their existing owners untouched.
-procevent_surfaced_marker() {  # <queue-key>
-  printf '%s/.seen-procevent-%s' "$STATE" "$(printf '%s' "$1" | LC_ALL=C od -An -tx1 | tr -d ' \n')"
+# Deliver durably queued process-event rows under the client presentation
+# contract owned by docs/configuration.md "Process-to-event sources".
+procevent_surfaced_marker() {  # <canonical-event-key>
+  case "$1" in procevent:*) ;; *) return 1 ;; esac
+  printf '%s/.seen-procevent-id-%s' "$STATE" "$(printf '%s' "$1" | LC_ALL=C od -An -tx1 | tr -d ' \n')"
+}
+
+procevent_surface_marker_matches() {  # <queue-sequence> <canonical-event-key>
+  local sequence=$1 key=$2 marker stored_sequence stored_key extra
+  marker=$(procevent_surfaced_marker "$key") || return 1
+  [ -f "$marker" ] && [ ! -L "$marker" ] || return 1
+  IFS=$(printf '\t') read -r stored_sequence stored_key extra < "$marker" || return 1
+  case "$stored_sequence" in ''|*[!0-9]*) return 1 ;; esac
+  [ -z "$extra" ] && [ "$stored_key" = "$key" ] || return 1
+  [ "$sequence" -le "$stored_sequence" ] \
+    || procevent_identity_queued_through "$stored_sequence" "$key"
+}
+
+procevent_identity_queued_through() {  # <queue-sequence> <canonical-event-key>
+  local sequence=$1 key=$2 queued_sequence queued_key
+  while IFS=$(printf '\t') read -r queued_sequence queued_key; do
+    [ "$queued_key" = "$key" ] || continue
+    [ "$queued_sequence" -le "$sequence" ]
+    return
+  done <<EOF
+$PROCEVENT_QUEUED_ROWS
+EOF
+  return 1
+}
+
+procevent_prune_surfaced_markers_locked() {
+  local marker marker_name sequence key extra status=0
+  for marker in "$STATE"/.seen-procevent-*; do
+    [ -e "$marker" ] || [ -L "$marker" ] || continue
+    marker_name=${marker##*/.seen-procevent-}
+    case "$marker_name" in
+      id-*)
+        if [ -f "$marker" ] && [ ! -L "$marker" ]; then
+          IFS=$(printf '\t') read -r sequence key extra < "$marker" || sequence=
+          case "$sequence" in ''|*[!0-9]*) ;; *)
+            if [ -z "$extra" ] && procevent_identity_queued_through "$sequence" "$key"; then
+              continue
+            fi
+            ;;
+          esac
+        fi
+        ;;
+      row-*|[0-9a-f]*) ;;
+      *) continue ;;
+    esac
+    if [ -L "$marker" ]; then
+      rm -f -- "$marker" || status=1
+    elif [ -f "$marker" ] && [ ! -L "$marker" ]; then
+      rm -f -- "$marker" || status=1
+    fi
+  done
+  return "$status"
 }
 
 procevent_surface_after_output() {
-  local output_status=$1 key marker tmp status=0
+  local output_status=$1 sequence key marker tmp status=0
   if [ "$output_status" -eq 0 ]; then
-    for key in $PROCEVENT_SURFACED; do
-      marker=$(procevent_surfaced_marker "$key")
+    while IFS=$'\t' read -r sequence key; do
+      [ -n "$sequence" ] || continue
+      marker=$(procevent_surfaced_marker "$key") || { status=1; continue; }
       tmp=$(umask 077; mktemp "$STATE/.seen-procevent.XXXXXX") || { status=1; continue; }
-      if ! mv -f -- "$tmp" "$marker"; then
+      if ! printf '%s\t%s\n' "$sequence" "$key" > "$tmp" \
+        || ! chmod 0600 "$tmp" \
+        || ! mv -f -- "$tmp" "$marker"; then
         rm -f -- "$tmp"
         status=1
       fi
-    done
+    done <<< "$PROCEVENT_SURFACED_ROWS"
   fi
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   return "$status"
 }
 
 procevent_surface_queued() {
-  local key reason
-  PROCEVENT_SURFACED=
-  [ -s "$FM_WAKE_QUEUE" ] || return 0
+  local sequence key reason
+  PROCEVENT_QUEUED_ROWS=
+  PROCEVENT_PRESENTABLE_ROWS=
+  PROCEVENT_SURFACED_ROWS=
+  reason="check: process-event result captured:"
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
-  while IFS= read -r key; do
-    case "$key" in procevent:*) ;; *) continue ;; esac
-    [ -e "$(procevent_surfaced_marker "$key")" ] && continue
-    PROCEVENT_SURFACED="$PROCEVENT_SURFACED $key"
-  done < <(fm_wake_queued_keys_locked check)
-  if [ -z "$PROCEVENT_SURFACED" ]; then
+  if [ ! -s "$FM_WAKE_QUEUE" ]; then
+    procevent_prune_surfaced_markers_locked || true
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
     return 0
   fi
-  reason="check: process-event result captured:$PROCEVENT_SURFACED"
+  PROCEVENT_QUEUED_ROWS=$(awk -F '\t' '
+    $2 ~ /^[0-9]+$/ && $3 == "check" && $4 ~ /^procevent:/ {
+      print $2 "\t" $4
+    }
+  ' "$FM_WAKE_QUEUE") || {
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    return 1
+  }
+  PROCEVENT_PRESENTABLE_ROWS=$(printf '%s\n' "$PROCEVENT_QUEUED_ROWS" | awk -F '\t' '
+    NF >= 2 {
+      if (!seen[$2]++) order[++count]=$2
+      if ($1 > newest[$2]) newest[$2]=$1
+    }
+    END { for (i=1; i<=count; i++) print newest[order[i]] "\t" order[i] }
+  ') || {
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    return 1
+  }
+  procevent_prune_surfaced_markers_locked || true
+  while IFS=$(printf '\t') read -r sequence key; do
+    [ -n "$sequence" ] || continue
+    procevent_surface_marker_matches "$sequence" "$key" && continue
+    PROCEVENT_SURFACED_ROWS="${PROCEVENT_SURFACED_ROWS}${sequence}"$'\t'"${key}"$'\n'
+    reason="$reason row=$sequence key=$key"
+  done <<EOF
+$PROCEVENT_PRESENTABLE_ROWS
+EOF
+  if [ -z "$PROCEVENT_SURFACED_ROWS" ]; then
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    return 0
+  fi
   # shellcheck disable=SC2034 # Consumed by wake() in the separately linted transition owner.
   FM_WAKE_POST_OUTPUT_ACTION=procevent_surface_after_output
   wake "$reason"
