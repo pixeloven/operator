@@ -220,10 +220,10 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-**A7 - every recorded upstream pin is a canonical upstream ancestor, and the operator pin is contained in this tree.**
+**A7 - every recorded upstream pin is a canonical upstream ancestor, every selected fork commit descends from its pin, and the operator pin is contained in this tree.**
 This prevents a locally injected or foreign commit from becoming the baseline for A4 and A5.
-The executable registry owns each companion's canonical upstream mapping.
-The lineage check rejects malformed mappings before network access, ignores ambient Git configuration, fetches only each credential-free GitHub default-branch ref's commit history, and fails when canonical evidence is unavailable or ambiguous:
+The executable registry owns each companion's selected fork commit and canonical upstream mapping.
+The lineage check rejects malformed mappings before network access, ignores ambient Git configuration, fetches only each credential-free GitHub default-branch ref and exact selected fork commit's ancestry, and fails when canonical evidence is unavailable or ambiguous:
 
 ```sh
 git cat-file -e "${PIN}^{commit}" &&

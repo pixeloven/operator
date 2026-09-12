@@ -38,7 +38,11 @@ make_commit "$SOURCE" tip.txt tip
 "$REAL_GIT" -C "$FORK" config user.name 'Lineage Test'
 "$REAL_GIT" -C "$FORK" config user.email lineage@example.invalid
 make_commit "$FORK" downstream.txt downstream
-FOREIGN_PIN=$("$REAL_GIT" -C "$FORK" rev-parse HEAD)
+FORK_SOURCE=$("$REAL_GIT" -C "$FORK" rev-parse HEAD)
+FORK_TREE=$("$REAL_GIT" -C "$FORK" rev-parse 'HEAD^{tree}')
+UNRELATED_SOURCE=$(printf '%s\n' unrelated | "$REAL_GIT" -C "$FORK" commit-tree "$FORK_TREE")
+"$REAL_GIT" -C "$FORK" update-ref refs/heads/unrelated "$UNRELATED_SOURCE"
+FOREIGN_PIN=$FORK_SOURCE
 "$REAL_GIT" -C "$FORK" cat-file -e "${FOREIGN_PIN}^{commit}" \
   || fail 'foreign fixture commit is not locally present'
 if "$REAL_GIT" -C "$CANONICAL" cat-file -e "${FOREIGN_PIN}^{commit}" 2>/dev/null; then
@@ -71,6 +75,8 @@ if [ "$is_fetch" -eq 1 ]; then
       https://github.com/*)
         if [ "${FM_UPSTREAM_FETCH_FAIL:-0}" = 1 ]; then
           rewritten+=("$FM_UPSTREAM_MIRROR_ROOT/missing.git")
+        elif [[ "$arg" = https://github.com/pixeloven/* ]]; then
+          rewritten+=("$FM_UPSTREAM_MIRROR_ROOT/fork")
         else
           rewritten+=("$FM_UPSTREAM_MIRROR_ROOT/canonical.git")
         fi
@@ -90,9 +96,12 @@ chmod 0755 "$FAKEBIN/git"
 
 write_inventory() {
   local pin=${1:-$VALID_PIN} url=${2:-https://github.com/kunchenguid/upstream-fixture.git} ref=${3:-refs/heads/main}
+  local source_commit=${4:-$FORK_SOURCE} source_url
   : > "$TMP_ROOT/inventory"
   for tool in gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes; do
-    printf '%s\t%s\t%s\t%s\n' "$tool" "$url" "$ref" "$pin" >> "$TMP_ROOT/inventory"
+    source_url=https://github.com/pixeloven/$tool
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$tool" "$source_url" "$source_commit" "$url" "$ref" "$pin" >> "$TMP_ROOT/inventory"
   done
 }
 
@@ -124,8 +133,20 @@ test_valid_ancestor_passes() {
   assert_contains "$calls" '--no-recurse-submodules' 'canonical fetch did not exclude submodules'
   assert_contains "$calls" '--filter=tree:0' 'canonical fetch transferred more than commit history'
   assert_contains "$calls" '+refs/heads/main:refs/remotes/canonical/upstream' 'canonical fetch did not bind one exact branch ref'
+  assert_contains "$calls" "https://github.com/pixeloven/gh-axi $FORK_SOURCE" 'selected fork commit was not fetched exactly'
   assert_contains "$calls" 'config_global=/dev/null config_nosystem=1 config_count=' 'ambient Git configuration was not isolated'
   pass 'a real canonical ancestor and existing legitimate fork history pass'
+}
+
+test_unrelated_selected_source_fails() {
+  write_inventory "$VALID_PIN" 'https://github.com/kunchenguid/upstream-fixture.git' \
+    refs/heads/main "$UNRELATED_SOURCE"
+  write_pin
+  local output status=0
+  output=$(run_check 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'selected fork commit unrelated to its upstream pin was accepted'
+  assert_contains "$output" 'does not descend from upstream pin' 'unrelated fork source failure was unclear'
+  pass 'an unrelated selected fork source fails real ancestry validation'
 }
 
 test_local_foreign_commit_fails() {
@@ -170,6 +191,24 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
 
   status=0
   write_inventory
+  {
+    printf 'gh-axi\thttps://github.com/pixeloven/gh-axi\t%s\thttps://github.com/kunchenguid/upstream-fixture.git\trefs/heads/main\t%s' \
+      "$FORK_SOURCE" "${VALID_PIN:0:20}"
+    printf '\0'
+    printf '%s\n' "${VALID_PIN:20}"
+    for tool in chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes; do
+      printf '%s\thttps://github.com/pixeloven/%s\t%s\thttps://github.com/kunchenguid/upstream-fixture.git\trefs/heads/main\t%s\n' \
+        "$tool" "$tool" "$FORK_SOURCE" "$VALID_PIN"
+    done
+  } > "$TMP_ROOT/inventory"
+  : > "$FETCH_LOG"
+  output=$(run_check 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'NUL-spliced inventory pin was accepted'
+  assert_contains "$output" 'non-text bytes are not allowed' 'NUL-spliced inventory failure was unclear'
+  assert_no_fetch 'NUL-spliced inventory triggered a canonical fetch'
+
+  status=0
+  write_inventory
   printf '%s %s\n' "${VALID_PIN:0:20}" "${VALID_PIN:20}" > "$TMP_ROOT/operator-pin"
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
@@ -206,6 +245,7 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
 }
 
 test_valid_ancestor_passes
+test_unrelated_selected_source_fails
 test_local_foreign_commit_fails
 test_ambient_repository_injection_fails
 test_missing_canonical_evidence_fails
