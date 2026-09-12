@@ -30,7 +30,8 @@ Usage:
   fm-pixeloven-upstream-check.sh --inventory <file> --operator-pin <file>
 
 Proves the operator pin and every companion-tool pin are ancestors of the
-canonical upstream default-branch history recorded by their registries.
+canonical upstream default-branch history recorded by their registries, and
+that every selected companion fork commit descends from its pin.
 EOF
 }
 
@@ -100,7 +101,7 @@ git_clean() (
     command git "$@"
 )
 
-validate_mapping() {
+validate_canonical_mapping() {
   local name=$1 pin=$2 url=$3 ref=$4 slug owner repository
   case "$name" in ''|*[!A-Za-z0-9._-]*) die "malformed upstream inventory name: $name" ;; esac
   case "$pin" in
@@ -130,8 +131,20 @@ validate_mapping() {
     || die "canonical upstream ref for $name is malformed: $ref"
 }
 
+validate_mapping() {
+  local name=$1 source_url=$2 source_commit=$3 url=$4 ref=$5 pin=$6
+  [ "$source_url" = "https://github.com/pixeloven/$name" ] \
+    || die "source URL for $name is not its authoritative credential-free PixelOven fork"
+  case "$source_commit" in
+    ''|*[!0-9a-f]*) die "malformed source commit for $name: $source_commit" ;;
+  esac
+  [ "${#source_commit}" -eq 40 ] \
+    || die "source commit for $name must be a full 40-character commit: $source_commit"
+  validate_canonical_mapping "$name" "$pin" "$url" "$ref"
+}
+
 check_lineage() {
-  local name=$1 pin=$2 url=$3 ref=$4 repository head
+  local name=$1 source_url=$2 source_commit=$3 pin=$4 url=$5 ref=$6 repository head source_head
   repository=$TEMP_ROOT/repository-$name
   mkdir -p "$repository" \
     || die "could not create validation repository for $name"
@@ -149,27 +162,45 @@ check_lineage() {
   git_clean -C "$repository" merge-base --is-ancestor "$pin" "$head" \
     || die "upstream pin for $name ($pin) is not an ancestor of canonical upstream $ref"
   printf 'upstream lineage: %s %s is an ancestor of %s\n' "$name" "$pin" "$url $ref"
+  [ -n "$source_url" ] || return 0
+  GIT_ALLOW_PROTOCOL=https git_clean -C "$repository" fetch \
+    --quiet --no-tags --no-recurse-submodules --filter=tree:0 \
+    "$source_url" "$source_commit" \
+    || die "selected fork source unavailable for $name ($source_url $source_commit)"
+  source_head=$(git_clean -C "$repository" rev-parse --verify 'FETCH_HEAD^{commit}' 2>/dev/null) \
+    || die "selected fork source did not resolve unambiguously to a commit for $name"
+  [ "$source_head" = "$source_commit" ] \
+    || die "selected fork source resolved to $source_head for $name, expected $source_commit"
+  git_clean -C "$repository" merge-base --is-ancestor "$pin" "$source_head" \
+    || die "selected fork source for $name ($source_commit) does not descend from upstream pin $pin"
+  printf 'fork lineage: %s %s descends from upstream pin %s\n' "$name" "$source_commit" "$pin"
 }
 
-validate_mapping operator "$operator_pin" "$OPERATOR_URL" "$OPERATOR_REF"
+validate_canonical_mapping operator "$operator_pin" "$OPERATOR_URL" "$OPERATOR_REF"
 
-awk -F '\t' 'NF != 4 { exit 1 }' "$INVENTORY" \
-  || die 'malformed upstream inventory: every row must contain four tab-separated fields'
+INVENTORY_BYTES=$TEMP_ROOT/inventory-bytes
+LC_ALL=C od -v -An -tu1 "$INVENTORY" > "$INVENTORY_BYTES" \
+  || die "upstream inventory could not be read: $INVENTORY"
+awk '{ for (field = 1; field <= NF; field++) if ($field != 9 && $field != 10 && ($field < 32 || $field > 126)) exit 1 }' "$INVENTORY_BYTES" \
+  || die 'malformed upstream inventory: non-text bytes are not allowed'
+awk -F '\t' 'NF != 6 { exit 1 }' "$INVENTORY" \
+  || die 'malformed upstream inventory: every row must contain six tab-separated fields'
 expected='gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes'
 seen=
 VALIDATED_INVENTORY=$TEMP_ROOT/validated-inventory
 : > "$VALIDATED_INVENTORY"
-while IFS=$'\t' read -r name url ref pin; do
+while IFS=$'\t' read -r name source_url source_commit url ref pin; do
   case " $expected " in *" $name "*) ;; *) die "unexpected upstream inventory name: $name" ;; esac
   case "$seen" in *" $name"*) die "duplicate upstream inventory name: $name" ;; esac
-  validate_mapping "$name" "$pin" "$url" "$ref"
+  validate_mapping "$name" "$source_url" "$source_commit" "$url" "$ref" "$pin"
   seen="$seen $name"
-  printf '%s\t%s\t%s\t%s\n' "$name" "$url" "$ref" "$pin" >> "$VALIDATED_INVENTORY"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$name" "$source_url" "$source_commit" "$url" "$ref" "$pin" >> "$VALIDATED_INVENTORY"
 done < "$INVENTORY"
 [ "$seen" = " $expected" ] || die "upstream inventory is missing a maintained companion fork"
 
-check_lineage operator "$operator_pin" "$OPERATOR_URL" "$OPERATOR_REF"
-while IFS=$'\t' read -r name url ref pin; do
-  check_lineage "$name" "$pin" "$url" "$ref"
+check_lineage operator '' '' "$operator_pin" "$OPERATOR_URL" "$OPERATOR_REF"
+while IFS=$'\t' read -r name source_url source_commit url ref pin; do
+  check_lineage "$name" "$source_url" "$source_commit" "$pin" "$url" "$ref"
 done < "$VALIDATED_INVENTORY"
 printf 'upstream lineage checks passed\n'

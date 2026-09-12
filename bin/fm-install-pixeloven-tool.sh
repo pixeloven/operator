@@ -107,8 +107,8 @@ print_source() {
 
 print_upstream() {
   resolve_source "$1"
-  printf '%s\t%s\t%s\t%s\n' \
-    "$TOOL" "$UPSTREAM_URL" "$UPSTREAM_REF" "$UPSTREAM_PIN"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$TOOL" "$SOURCE_URL" "$SOURCE_COMMIT" "$UPSTREAM_URL" "$UPSTREAM_REF" "$UPSTREAM_PIN"
 }
 
 case "${1:-}" in
