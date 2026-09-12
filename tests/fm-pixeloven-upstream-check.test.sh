@@ -12,6 +12,7 @@ FAKEBIN="$TMP_ROOT/bin"
 CANONICAL="$TMP_ROOT/canonical.git"
 FORK="$TMP_ROOT/fork"
 FETCH_LOG="$TMP_ROOT/fetch.log"
+INJECTED="$TMP_ROOT/injected.git"
 mkdir -p "$FAKEBIN"
 
 make_commit() {
@@ -43,6 +44,12 @@ FOREIGN_PIN=$("$REAL_GIT" -C "$FORK" rev-parse HEAD)
 if "$REAL_GIT" -C "$CANONICAL" cat-file -e "${FOREIGN_PIN}^{commit}" 2>/dev/null; then
   fail 'foreign fixture commit leaked into canonical history'
 fi
+CANONICAL_TIP=$("$REAL_GIT" -C "$CANONICAL" rev-parse refs/heads/main)
+"$REAL_GIT" clone -q --bare "$CANONICAL" "$INJECTED"
+"$REAL_GIT" -C "$INJECTED" fetch -q "$FORK" refs/heads/main:refs/heads/foreign
+"$REAL_GIT" --git-dir="$INJECTED" replace --graft "$CANONICAL_TIP" "$FOREIGN_PIN"
+"$REAL_GIT" --git-dir="$INJECTED" merge-base --is-ancestor "$FOREIGN_PIN" "$CANONICAL_TIP" \
+  || fail 'injected replacement fixture does not forge canonical ancestry'
 
 cat > "$FAKEBIN/git" <<'SH'
 #!/usr/bin/env bash
@@ -131,6 +138,16 @@ test_local_foreign_commit_fails() {
   pass 'a locally present but non-upstream commit fails real lineage validation'
 }
 
+test_ambient_repository_injection_fails() {
+  write_inventory "$FOREIGN_PIN"
+  write_pin
+  local output status=0
+  output=$(GIT_DIR="$INJECTED" GIT_REPLACE_REF_BASE=refs/replace run_check 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'ambient repository objects and replacements forged canonical ancestry'
+  assert_contains "$output" 'is unavailable from canonical upstream' 'repository injection failure was unclear'
+  pass 'ambient repository objects and replacements cannot satisfy canonical ancestry'
+}
+
 test_missing_canonical_evidence_fails() {
   write_inventory
   write_pin
@@ -152,6 +169,24 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
   assert_no_fetch 'malformed pin triggered a canonical fetch'
 
   status=0
+  write_inventory
+  printf '%s %s\n' "${VALID_PIN:0:20}" "${VALID_PIN:20}" > "$TMP_ROOT/operator-pin"
+  : > "$FETCH_LOG"
+  output=$(run_check 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'whitespace-spliced operator pin was accepted'
+  assert_contains "$output" 'operator pin is not a lowercase hexadecimal commit' 'whitespace-spliced pin failure was unclear'
+  assert_no_fetch 'whitespace-spliced operator pin triggered a canonical fetch'
+
+  status=0
+  printf '%s\n%s\n' "$VALID_PIN" "$VALID_PIN" > "$TMP_ROOT/operator-pin"
+  : > "$FETCH_LOG"
+  output=$(run_check 2>&1) || status=$?
+  [ "$status" -ne 0 ] || fail 'multi-line operator pin was accepted'
+  assert_contains "$output" 'operator pin must contain exactly one commit line' 'multi-line pin failure was unclear'
+  assert_no_fetch 'multi-line operator pin triggered a canonical fetch'
+
+  status=0
+  write_pin
   write_inventory "$VALID_PIN" 'https://secret-token@github.com/kunchenguid/upstream.git'
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
@@ -172,5 +207,6 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
 
 test_valid_ancestor_passes
 test_local_foreign_commit_fails
+test_ambient_repository_injection_fails
 test_missing_canonical_evidence_fails
 test_malformed_registry_and_pin_data_fail_before_fetch
