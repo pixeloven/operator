@@ -1,0 +1,14 @@
+upstream lineage: operator 355f46fe5528ccc9790481171bf9da48dee2e90d is an ancestor of https://github.com/kunchenguid/firstmate.git refs/heads/main
+upstream lineage: gh-axi 84112b7897fc1d0833f2727a817ecc91a297c3ef is an ancestor of https://github.com/kunchenguid/gh-axi.git refs/heads/main
+fork lineage: gh-axi 84112b7897fc1d0833f2727a817ecc91a297c3ef descends from upstream pin 84112b7897fc1d0833f2727a817ecc91a297c3ef
+upstream lineage: chrome-devtools-axi 351be6bb8665fda10168242d965a966596d66772 is an ancestor of https://github.com/kunchenguid/chrome-devtools-axi.git refs/heads/main
+fork lineage: chrome-devtools-axi 351be6bb8665fda10168242d965a966596d66772 descends from upstream pin 351be6bb8665fda10168242d965a966596d66772
+upstream lineage: lavish-axi ffd7aacff563b8bca09eb7ebfb17c14faeb968ce is an ancestor of https://github.com/kunchenguid/lavish-axi.git refs/heads/main
+fork lineage: lavish-axi ffd7aacff563b8bca09eb7ebfb17c14faeb968ce descends from upstream pin ffd7aacff563b8bca09eb7ebfb17c14faeb968ce
+upstream lineage: tasks-axi d9175b6d083d693c5b6ca21652454d52e4b312d9 is an ancestor of https://github.com/kunchenguid/tasks-axi.git refs/heads/main
+fork lineage: tasks-axi d9175b6d083d693c5b6ca21652454d52e4b312d9 descends from upstream pin d9175b6d083d693c5b6ca21652454d52e4b312d9
+upstream lineage: quota-axi bbc3deb4fca6a172db0217fd26d990fad8b4202e is an ancestor of https://github.com/kunchenguid/quota-axi.git refs/heads/main
+fork lineage: quota-axi bbc3deb4fca6a172db0217fd26d990fad8b4202e descends from upstream pin bbc3deb4fca6a172db0217fd26d990fad8b4202e
+upstream lineage: no-mistakes 1a3f74d86d2646967d6f1e7dce8853023c41768c is an ancestor of https://github.com/kunchenguid/no-mistakes.git refs/heads/main
+fork lineage: no-mistakes 70185bf682521ed1822e51dc09fa327b85b87e79 descends from upstream pin 1a3f74d86d2646967d6f1e7dce8853023c41768c
+upstream lineage checks passed

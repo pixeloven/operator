@@ -1,0 +1,6 @@
+ok - a real canonical ancestor and existing legitimate fork history pass
+ok - an unrelated selected fork source fails real ancestry validation
+ok - a locally present but non-upstream commit fails real lineage validation
+ok - ambient repository objects and replacements cannot satisfy canonical ancestry
+ok - missing canonical upstream evidence fails clearly
+ok - malformed registry and pin data is rejected before network access
