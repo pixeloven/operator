@@ -49,7 +49,22 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -f "$OPERATOR_PIN_FILE" ] || die "operator pin file is missing: $OPERATOR_PIN_FILE"
-operator_pin=$(tr -d '[:space:]' < "$OPERATOR_PIN_FILE")
+operator_pin=
+operator_pin_terminated=0
+exec 3< "$OPERATOR_PIN_FILE" \
+  || die "operator pin file could not be read: $OPERATOR_PIN_FILE"
+if IFS= read -r operator_pin <&3; then
+  operator_pin_terminated=1
+fi
+operator_pin_extra=
+if IFS= read -r operator_pin_extra <&3 || [ -n "$operator_pin_extra" ]; then
+  die 'operator pin must contain exactly one commit line'
+fi
+exec 3<&-
+operator_pin_bytes=$(LC_ALL=C wc -c < "$OPERATOR_PIN_FILE") \
+  || die "operator pin file could not be read: $OPERATOR_PIN_FILE"
+[ "$operator_pin_bytes" -eq "$((${#operator_pin} + operator_pin_terminated))" ] \
+  || die 'operator pin must contain exactly one commit line'
 case "$operator_pin" in
   ''|*[!0-9a-f]*) die "operator pin is not a lowercase hexadecimal commit: $operator_pin" ;;
 esac
@@ -72,9 +87,13 @@ fi
 
 # Canonical evidence must not be redirected through user-controlled Git config.
 git_clean() (
-  unset GIT_CONFIG GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS
+  unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_CONFIG \
+    GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS GIT_DIR GIT_GRAFT_FILE \
+    GIT_INDEX_FILE GIT_NAMESPACE GIT_OBJECT_DIRECTORY GIT_QUARANTINE_PATH \
+    GIT_REPLACE_REF_BASE GIT_WORK_TREE
   GIT_CONFIG_NOSYSTEM=1 \
     GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_NO_REPLACE_OBJECTS=1 \
     GIT_TERMINAL_PROMPT=0 \
     GIT_ASKPASS=/bin/false \
     SSH_ASKPASS=/bin/false \
