@@ -2,8 +2,9 @@
 # fm-install-pixeloven-tool.sh - install Operator's pinned companion tool forks.
 #
 # This file is the single owner of the exact PixelOven repository, source
-# commit, canonical upstream repository/ref, and expected version selected for
-# gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi, and no-mistakes.
+# commit, upstream pin, canonical upstream repository/ref, and expected version
+# selected for gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi,
+# and no-mistakes.
 #
 # Usage:
 #   fm-install-pixeloven-tool.sh <tool> [prefix]
