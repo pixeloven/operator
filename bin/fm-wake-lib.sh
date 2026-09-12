@@ -412,7 +412,7 @@ fm_lock_claim() {
   return 0
 }
 
-fm_lock_try_create() {
+fm_lock_try_create_unserialized() {
   local lockdir=$1 allowed_steal_owner=${2:-} ownerdir
   FM_LOCK_OWNER_DIR=
   ownerdir=$(fm_lock_owner_dir "$lockdir") || return 1
@@ -420,10 +420,6 @@ fm_lock_try_create() {
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
-  # A stale-lock stealer removes the old primary only after publishing its
-  # mutex. Refuse before publishing a competing primary candidate so that a
-  # descheduled claimant cannot make the stealer fail, then remove its own
-  # candidate after the stealer has already given up.
   if fm_lock_claim_blocked_by_steal "$lockdir" "$allowed_steal_owner"; then
     fm_lock_discard_owner "$ownerdir"
     return 1
@@ -445,6 +441,42 @@ fm_lock_try_create() {
   fi
   fm_lock_discard_owner "$ownerdir"
   return 1
+}
+
+fm_lock_try_create() {
+  local lockdir=$1 allowed_steal_owner=${2:-} unserialized=${3:-0} steal steal_owner ownerdir rc
+  if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
+    FM_LOCK_OWNER_DIR=
+    return 1
+  fi
+  if [ "$unserialized" -eq 1 ]; then
+    fm_lock_try_create_unserialized "$lockdir" "$allowed_steal_owner"
+    return
+  fi
+  steal="$lockdir.steal"
+  if [ -n "$allowed_steal_owner" ]; then
+    fm_lock_points_to_owner "$steal" "$allowed_steal_owner" || return 1
+    fm_lock_try_create_unserialized "$lockdir" "$allowed_steal_owner"
+    return
+  fi
+  while ! fm_lock_try_acquire "$steal" 1; do
+    FM_LOCK_OWNER_DIR=
+    FM_LOCK_HELD_PID=
+    if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
+      return 1
+    fi
+    sleep 0.01
+  done
+  steal_owner=${FM_LOCK_OWNER_DIR:-}
+  rc=1
+  ownerdir=
+  if fm_lock_try_create_unserialized "$lockdir" "$steal_owner"; then
+    rc=0
+    ownerdir=${FM_LOCK_OWNER_DIR:-}
+  fi
+  fm_lock_release "$steal"
+  FM_LOCK_OWNER_DIR=$ownerdir
+  return "$rc"
 }
 
 fm_lock_remove_path() {
@@ -800,12 +832,12 @@ fm_recovery_marker_reopen_announced() {
 }
 
 fm_lock_try_acquire() {
-  local lockdir=$1 pid steal cur rc steal_owner primary_owner
+  local lockdir=$1 unserialized=${2:-0} pid steal cur rc steal_owner primary_owner
   FM_LOCK_HELD_PID=
   FM_LOCK_OWNER_DIR=
   FM_LOCK_RECOVERED_PID=
 
-  if fm_lock_try_create "$lockdir"; then
+  if fm_lock_try_create "$lockdir" "" "$unserialized"; then
     return 0
   fi
   # A contending owner may release between our failed create and this read.
@@ -828,7 +860,7 @@ fm_lock_try_acquire() {
     # - the hang reproduced by the self-held reclaim regression in
     # tests/fm-wake-queue.test.sh - so reclaim the abandoned hold instead.
     fm_lock_remove_path "$lockdir" || true
-    if fm_lock_try_create "$lockdir"; then
+    if fm_lock_try_create "$lockdir" "" "$unserialized"; then
       return 0
     fi
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
@@ -844,7 +876,7 @@ fm_lock_try_acquire() {
   fi
 
   steal="$lockdir.steal"
-  if ! fm_lock_try_acquire "$steal"; then
+  if ! fm_lock_try_acquire "$steal" 1; then
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
     return 1
