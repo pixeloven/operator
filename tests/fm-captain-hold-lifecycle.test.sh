@@ -407,7 +407,7 @@ test_archived_reheld_history_remains_verifiable() {
   run_captain "$home" hold "$task" --reason "captain final choice pending" >/dev/null
   printf 'Close after the final pass.\n' > "$home/final-answer.txt"
   run_captain "$home" answer "$task" --decision-file "$home/final-answer.txt" >/dev/null
-  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
   run_captain "$home" complete "$origin" "$task" >/dev/null \
     || fail "completion refused valid archived history from a re-held captain task"
   run_captain "$home" verify "$origin" >/dev/null \
@@ -444,7 +444,7 @@ test_archive_batches_and_dependency_metadata_remain_verifiable() {
     --reason "captain earlier choice pending" --repo sample >/dev/null
   printf 'Use the earlier archived answer.\n' > "$home/batch-answer.txt"
   run_captain "$home" answer "$task" --decision-file "$home/batch-answer.txt" >/dev/null
-  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
   tasks_in "$home" add sample-later-batch-task "Later archived work" --kind ship --repo sample >/dev/null
   tasks_in "$home" "done" sample-later-batch-task --keep 0 >/dev/null
   run_captain "$home" complete "$origin" "$task" >/dev/null \
@@ -468,7 +468,7 @@ test_archive_batches_and_dependency_metadata_remain_verifiable() {
     "$home/data/backlog.md" > "$home/data/backlog.next"
   mv "$home/data/backlog.next" "$home/data/backlog.md"
   tasks_in "$home" render >/dev/null
-  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
   run_captain "$home" complete "$origin" "$task" >/dev/null \
     || fail "completion rejected captain-hold metadata before a reasoned archived dependency"
   pass "archive batches and reasoned dependency metadata preserve verified answers"
@@ -503,7 +503,7 @@ test_archive_membership_and_identity_ambiguity_refuse() {
     --reason "captain first incarnation pending" --repo sample >/dev/null
   printf 'Answer the first incarnation.\n' > "$home/first-incarnation.txt"
   run_captain "$home" answer "$task" --decision-file "$home/first-incarnation.txt" >/dev/null
-  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
   run_captain "$home" hold "$task" --title "Reused archived incarnation" \
     --reason "captain reused incarnation pending" --repo sample >/dev/null
   tasks_in "$home" "done" "$task" --keep 0 >/dev/null
@@ -522,7 +522,7 @@ test_archive_membership_and_identity_ambiguity_refuse() {
     --reason "captain exact-id choice pending" --repo sample >/dev/null
   printf 'Answer the unrelated exact-id call.\n' > "$home/exact-answer.txt"
   run_captain "$home" answer "$task" --decision-file "$home/exact-answer.txt" >/dev/null
-  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
   run_shim "$home" hold "$origin" "$task" --title "Unresolved legacy call" \
     --reason "captain legacy collision pending" --repo sample >/dev/null
   if run_captain "$home" complete "$origin" "$task" \
