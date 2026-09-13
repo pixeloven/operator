@@ -459,14 +459,11 @@ fm_lock_try_create() {
     fm_lock_try_create_unserialized "$lockdir" "$allowed_steal_owner"
     return
   fi
-  while ! fm_lock_try_acquire "$steal" 1; do
+  if ! fm_lock_try_acquire "$steal" 1; then
     FM_LOCK_OWNER_DIR=
     FM_LOCK_HELD_PID=
-    if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
-      return 1
-    fi
-    sleep 0.01
-  done
+    return 1
+  fi
   steal_owner=${FM_LOCK_OWNER_DIR:-}
   rc=1
   ownerdir=
