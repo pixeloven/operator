@@ -100,7 +100,8 @@
 # `--none` is an explicit semantic attestation that the just-reviewed surface
 # has no unresolved captain call, and is refused while the origin still has an
 # open keyed status decision. With a non-empty inventory, every listed task is
-# verified durable (actively captain-held, or closed with a recorded answer),
+# verified durable (actively captain-held, or closed with a recorded answer in
+# the active backlog or the canonical tasks-axi retention archive),
 # the inventory is unioned idempotently into the metadata, and every still-open
 # keyed status decision is transferred to its durable owner with a
 # `captain-held [key=...]` status close naming the inventory. Later review
@@ -109,11 +110,15 @@
 # `verify` is read-only and is called by scout teardown, so teardown cannot
 # erase a source before this gate has succeeded: every recorded inventory
 # entry must still be durable and no keyed status decision may be open.
+# An archived entry counts only when its exact Done row retains captain-hold
+# provenance and a structurally valid recorded answer; archive lookup is never
+# used by the answer intake, so historical rows cannot become actionable.
 # Metadata compatibility: the attestation keeps the historical
 # `decisions_reviewed=1` and `decision_keys=` keys, and an inventory entry that
-# names no existing task resolves through the legacy `<origin>-decision-<entry>`
-# identity, so pre-collapse metadata written by fm-decision-hold.sh verifies
-# unchanged. An entry that exists as a task id is always that task.
+# names no existing active or archived task resolves through the legacy
+# `<origin>-decision-<entry>` identity, so pre-collapse metadata written by
+# fm-decision-hold.sh verifies unchanged. An entry that exists as a task id is
+# always that task.
 #
 # `diverged` is the read-only guard over the seam between the two records of
 # one captain call. See "record divergence" beside command_diverged below.
@@ -226,6 +231,33 @@ require_tasks_axi() {
 
 task_show() {  # <id>
   tasks_axi show "$1" --full 2>/dev/null
+}
+
+# Print the exact tasks-axi archive record for one task id. Archived task rows
+# begin at column zero while body lines are indented, so another row is the only
+# record boundary this parser accepts. Matching the parsed id rather than prose
+# makes a title, body, or neighboring task unable to stand in for the identity.
+archive_task_record() {  # <id>
+  local id=$1 archive="$DATA/done-archive.md"
+  [ -f "$archive" ] || return 1
+  awk -v wanted="$id" '
+    function archived_task_id(line, rest, separator) {
+      if (line !~ /^- \[[xX]\] [A-Za-z0-9._-]+ - /) return ""
+      rest = substr(line, 7)
+      separator = index(rest, " - ")
+      if (separator == 0) return ""
+      return substr(rest, 1, separator - 1)
+    }
+    {
+      row_id = archived_task_id($0)
+      if (row_id != "") {
+        if (found) exit
+        found = (row_id == wanted)
+      }
+      if (found) print
+    }
+    END { if (!found) exit 1 }
+  ' "$archive"
 }
 
 show_field() {  # <show-output> <field>
@@ -355,6 +387,79 @@ verify_hold_durable() {  # <task-id>
     return 0
   fi
   fail "captain-held task $id is neither held for the captain nor closed with a recorded captain answer"
+}
+
+# An archived row is durable proof only for an exact Done identity that retains
+# the captain hold and a structurally valid answer record. The digest is not
+# recomputed because legacy routed records digest only their decision payload,
+# not the routed-work suffix preserved in the archived body.
+verify_archived_answered() {  # <task-id> <archive-record>
+  local id=$1 record=$2 header body digest mode owner
+  header=${record%%$'\n'*}
+  if [ "$record" = "$header" ]; then
+    body=''
+  else
+    body=${record#*$'\n'}
+  fi
+  case "$header" in
+    *" (hold-kind: captain)") ;;
+    *" (hold-kind: captain) (hold-until: "????-??-??")") ;;
+    *) fail "captain-held task $id is archived without surviving captain-hold provenance" ;;
+  esac
+  case "$body" in
+    "  Resolution recorded by fm-captain-hold."*) owner=current ;;
+    "  Resolution recorded by fm-decision-hold."*) owner=legacy ;;
+    *) fail "captain-held task $id is archived without a recorded captain answer" ;;
+  esac
+  body_has_resolution_record "$body" \
+    || fail "captain-held task $id is archived without a recorded captain answer"
+  digest=$(recorded_decision_digest "$body" || true)
+  [ "${#digest}" -eq 64 ] \
+    || fail "captain-held task $id has a malformed archived captain-answer digest"
+  case "$digest" in
+    *[!0-9a-fA-F]*) fail "captain-held task $id has a malformed archived captain-answer digest" ;;
+  esac
+  mode=$(recorded_resolution_mode "$body" || true)
+  case "$owner" in
+    current)
+      case "$mode" in
+        answered|released|repaired) ;;
+        *) fail "captain-held task $id has a malformed archived resolution mode" ;;
+      esac
+      ;;
+    legacy)
+      case "$mode" in
+        ''|answered|routed|declined|repaired) ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution mode" ;;
+      esac
+      ;;
+  esac
+}
+
+# Completion and teardown verification alone may consult historical retention.
+# Active exact ids still win, then exact archived ids, before the same two
+# checks under the legacy derived identity. Channel answer intake deliberately
+# keeps using resolve_entry so an archive row can never receive or replay input.
+verify_inventory_entry_durable() {  # <origin-id> <entry>
+  local origin=$1 entry=$2 legacy record
+  if task_show "$entry" >/dev/null 2>&1; then
+    verify_hold_durable "$entry"
+    return 0
+  fi
+  if record=$(archive_task_record "$entry"); then
+    verify_archived_answered "$entry" "$record"
+    return 0
+  fi
+  legacy=$(legacy_hold_id "$origin" "$entry")
+  if task_show "$legacy" >/dev/null 2>&1; then
+    verify_hold_durable "$legacy"
+    return 0
+  fi
+  if record=$(archive_task_record "$legacy"); then
+    verify_archived_answered "$legacy" "$record"
+    return 0
+  fi
+  fail "no captain-held task $entry and no legacy identity $legacy in $FM_HOME/data/backlog.md or $DATA/done-archive.md"
 }
 
 # Resolve one inventory entry or channel key to the task that carries it: the
@@ -798,7 +903,7 @@ command_complete() {
   if [ -n "$keys" ]; then
     while IFS= read -r entry; do
       [ -n "$entry" ] || continue
-      verify_hold_durable "$(resolve_entry "$origin" "$entry")"
+      verify_inventory_entry_durable "$origin" "$entry"
     done <<EOF
 $(printf '%s\n' "$keys" | tr ',' '\n')
 EOF
@@ -852,7 +957,7 @@ command_verify() {
   if [ -n "$keys" ]; then
     while IFS= read -r entry; do
       [ -n "$entry" ] || continue
-      verify_hold_durable "$(resolve_entry "$origin" "$entry")"
+      verify_inventory_entry_durable "$origin" "$entry"
     done <<EOF
 $(printf '%s\n' "$keys" | tr ',' '\n')
 EOF

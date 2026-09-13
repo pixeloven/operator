@@ -301,6 +301,143 @@ test_answer_records_and_closes() {
   pass "answer records the captain's words, closes idempotently, and releases routed work"
 }
 
+# Retention may move old answered captain calls out of the active backlog after
+# an origin recorded their legacy keys. The supported completion command must
+# still verify those exact archived rows, while comparing them with both an
+# answered row that remains active and a currently held call.
+test_archived_answered_legacy_inventory_survives_retention() {
+  local home id key decision show
+  home=$(make_home archived-legacy-inventory)
+  id=sample-archive-review
+  mkdir -p "$home/data/$id"
+  tasks_in "$home" add "$id" "Investigate archived sample calls" --kind scout --repo sample --start >/dev/null \
+    || fail "could not create the archived-inventory origin"
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  printf '# Archived sample review\n\nOne current captain call remains.\n' > "$home/data/$id/report.md"
+
+  for key in old-alpha old-bravo old-charlie old-delta; do
+    run_shim "$home" hold "$id" "$key" \
+      --title "Answered legacy call $key" --reason "captain legacy choice pending" --repo sample >/dev/null \
+      || fail "could not create legacy hold $key"
+    decision="$home/$key.txt"
+    printf 'Captain answered %s.\n' "$key" > "$decision"
+    run_shim "$home" answer "$id" "$key" --decision-file "$decision" >/dev/null \
+      || fail "could not answer legacy hold $key"
+  done
+  tasks_in "$home" prune --state "done" --keep 0 >/dev/null \
+    || fail "could not reproduce tasks-axi retention"
+  assert_no_grep "$id-decision-old-alpha" "$home/data/backlog.md" \
+    "retention left an answered legacy row in the active backlog"
+  assert_grep "- [x] $id-decision-old-alpha -" "$home/data/done-archive.md" \
+    "retention did not archive the answered legacy row"
+
+  run_captain "$home" hold sample-active-answered-call \
+    --title "Answered call still in the active backlog" --reason "captain active choice pending" \
+    --repo sample --origin "$id" >/dev/null \
+    || fail "could not create the active answered comparison"
+  printf 'Captain answered the active comparison.\n' > "$home/active-answer.txt"
+  run_captain "$home" answer sample-active-answered-call \
+    --decision-file "$home/active-answer.txt" >/dev/null \
+    || fail "could not answer the active comparison"
+  show=$(tasks_in "$home" show sample-active-answered-call --full) \
+    || fail "the active answered comparison disappeared"
+  assert_contains "$show" "state: done" "the active answered comparison is not Done"
+
+  run_captain "$home" hold sample-current-call \
+    --title "Current sample call" --reason "captain current choice pending" \
+    --repo sample --origin "$id" >/dev/null \
+    || fail "could not create the current held call"
+  printf 'decisions_reviewed=1\ndecision_keys=old-alpha,old-bravo,old-charlie,old-delta\n' \
+    >> "$home/state/$id.meta"
+
+  run_captain "$home" complete "$id" sample-active-answered-call sample-current-call >/dev/null \
+    || fail "completion refused answered legacy rows retained in the archive"
+  run_captain "$home" verify "$id" >/dev/null \
+    || fail "verification refused answered legacy rows retained in the archive"
+  show=$(tasks_in "$home" show sample-current-call --full) \
+    || fail "the current held call disappeared during completion"
+  assert_contains "$show" "held: yes" "completion changed the current captain hold"
+  pass "completion verifies exact answered legacy rows after tasks-axi retention archives them"
+}
+
+# Archive fallback is proof-bound: exact identity, surviving captain-hold
+# provenance, and a complete recorded answer are all required. Plain Done
+# history, suggestive prose, malformed records, unresolved holds, and absent ids
+# remain refusals.
+test_archive_fallback_refuses_unproven_rows() {
+  local home id entry
+
+  home=$(make_home archived-plain-done)
+  id=sample-plain-archive-review
+  tasks_in "$home" add "$id" "Review plain archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-plain-done "Ordinary completed work" --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" sample-plain-done --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-plain-done > "$home/plain.out" 2> "$home/plain.err"; then
+    fail "completion treated an archived ordinary Done row as an answered captain call"
+  fi
+
+  home=$(make_home archived-suggestive-prose)
+  id=sample-prose-archive-review
+  tasks_in "$home" add "$id" "Review suggestive archive prose" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-prose-done "Ordinary work with suggestive prose" --kind ship --repo sample \
+    --body $'Resolution recorded by fm-captain-hold.\nDecision digest: 0000000000000000000000000000000000000000000000000000000000000000\nResolution mode: answered\n\nCaptain decision:\nNot durable provenance.' >/dev/null
+  tasks_in "$home" "done" sample-prose-done --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-prose-done > "$home/prose.out" 2> "$home/prose.err"; then
+    fail "completion treated arbitrary archived resolution prose as captain-hold provenance"
+  fi
+
+  home=$(make_home archived-malformed-resolution)
+  id=sample-malformed-archive-review
+  tasks_in "$home" add "$id" "Review malformed archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold sample-malformed-call --title "Malformed archived captain call" \
+    --reason "captain malformed choice pending" --repo sample >/dev/null
+  tasks_in "$home" update sample-malformed-call \
+    --body $'Resolution recorded by fm-captain-hold.\nDecision digest: malformed\nResolution mode: answered' >/dev/null
+  tasks_in "$home" "done" sample-malformed-call --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-malformed-call > "$home/malformed.out" 2> "$home/malformed.err"; then
+    fail "completion accepted an archived malformed resolution record"
+  fi
+
+  home=$(make_home archived-unresolved-hold)
+  id=sample-unresolved-archive-review
+  tasks_in "$home" add "$id" "Review unresolved archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold sample-unresolved-call --title "Unresolved archived captain call" \
+    --reason "captain unresolved choice pending" --repo sample >/dev/null
+  tasks_in "$home" "done" sample-unresolved-call --keep 0 >/dev/null
+  cat >> "$home/data/done-archive.md" <<'EOF'
+Resolution recorded by fm-captain-hold.
+Decision digest: 0000000000000000000000000000000000000000000000000000000000000000
+Resolution mode: answered
+
+Captain decision:
+Arbitrary prose outside the archived task record.
+EOF
+  if run_captain "$home" complete "$id" sample-unresolved-call > "$home/unresolved.out" 2> "$home/unresolved.err"; then
+    fail "completion accepted an archived unresolved captain hold because unrelated archive prose looked like a resolution"
+  fi
+
+  home=$(make_home archived-missing-id)
+  id=sample-missing-archive-review
+  entry=sample-genuinely-missing-call
+  tasks_in "$home" add "$id" "Review missing archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  if run_captain "$home" complete "$id" "$entry" > "$home/missing.out" 2> "$home/missing.err"; then
+    fail "completion accepted an id missing from both active and archived history"
+  fi
+  assert_grep "$entry" "$home/missing.err" "the genuine missing-id refusal did not name the id"
+  pass "archive fallback rejects rows without exact durable captain-answer provenance"
+}
+
 # --release lifts the hold instead of closing, preserving the work item's own
 # body under the record; a re-held task later accepts a new answer.
 test_release_frees_held_work() {
@@ -1171,6 +1308,8 @@ EOF
 test_uninventoried_report_decision_refuses_completion
 test_completion_gate_attests_and_transfers
 test_answer_records_and_closes
+test_archived_answered_legacy_inventory_survives_retention
+test_archive_fallback_refuses_unproven_rows
 test_release_frees_held_work
 test_deferral_leaves_captains_call_until_due
 test_out_of_band_close_is_recordable
