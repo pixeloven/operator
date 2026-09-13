@@ -122,7 +122,7 @@ Our default surface is new files in namespaces upstream can never collide with:
 | Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` |
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008 through 0012 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, and documentation-audience ownership.
+ADRs 0008 through 0013 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, documentation-audience ownership, and stale-lock publication serialization.
 Anything outside those lists needs a **new ADR**, not a silent change.
 See [fork-contract.md](fork-contract.md).
 
@@ -147,8 +147,8 @@ pull request** by [`.github/workflows/pixeloven-gates.yml`](../../.github/workfl
 (job `fork-contract`), so this section is a description of a live gate rather
 than a one-time claim.
 
-Every command below is expected to print **nothing**. Any output is a finding.
-The workflow runs exactly these, in this order, and fails the job on any output.
+Except for A7's affirmative lineage report, every command below is expected to print **nothing**; any other output is a finding.
+The workflow runs exactly these, in this order, and fails the job when a check reports a finding.
 
 ```sh
 # The upstream commit our tree currently contains - NOT the frozen fork point.
@@ -201,7 +201,7 @@ No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-install-pixeloven-tool\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows|fm-procevent-lib|fm-procevent|fm-task-inbox-lib|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-bootstrap|fm-lint-workflows|fm-no-mistakes-required|fm-pr-check-security|fm-secondmate-reconcile|fm-secondmate-sync|fm-startup-memory-budget|fm-task-delivery|fm-task-inbox|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|remote-secondmates\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-install-pixeloven-tool\.sh$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows|fm-procevent-lib|fm-procevent|fm-task-inbox-lib|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-bootstrap|fm-lint-workflows|fm-no-mistakes-required|fm-pr-check-security|fm-secondmate-reconcile|fm-secondmate-sync|fm-startup-memory-budget|fm-task-delivery|fm-task-inbox|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|CONTRIBUTING\.md$|docs/(configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
@@ -220,12 +220,15 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-**A7 — the recorded upstream pin is real and is contained in this tree.** Stops
-the pin being advanced without an actual merge, which would silently blind A4
-and A5:
+**A7 - every recorded upstream pin is a canonical upstream ancestor, every selected fork commit descends from its pin, and the operator pin is contained in this tree.**
+This prevents a locally injected or foreign commit from becoming the baseline for A4 and A5.
+The executable registry owns each companion's selected fork commit and canonical upstream mapping.
+The lineage check rejects malformed mappings before network access, ignores ambient Git configuration, fetches only each credential-free GitHub default-branch ref and exact selected fork commit's ancestry, and fails when canonical evidence is unavailable or ambiguous:
 
 ```sh
-git cat-file -e "${PIN}^{commit}" && git merge-base --is-ancestor "$PIN" HEAD
+git cat-file -e "${PIN}^{commit}" &&
+git merge-base --is-ancestor "$PIN" HEAD &&
+bin/fm-pixeloven-upstream-check.sh
 ```
 
 **A8 - the executable companion inventory selects exactly the six matching PixelOven forks.**
@@ -242,8 +245,8 @@ The gate requires six rows, the fixed tool-name order, and `https://github.com/p
 contains. It starts at the fork point and is advanced by **every upstream-merge
 PR** — which is the point: the pin is the machine-readable half of
 [`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
-stale while the gate keeps passing. A7 refuses a pin that is not a real commit
-contained in this history, so it cannot be advanced without an actual merge.
+stale while the gate keeps passing.
+A7 requires this pin to be a real commit contained in this history and every pin to be an ancestor of its canonical upstream default branch.
 
 ### Re-measuring §3
 

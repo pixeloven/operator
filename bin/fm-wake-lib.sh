@@ -412,11 +412,15 @@ fm_lock_claim() {
   return 0
 }
 
-fm_lock_try_create() {
+fm_lock_try_create_unserialized() {
   local lockdir=$1 allowed_steal_owner=${2:-} ownerdir
   FM_LOCK_OWNER_DIR=
   ownerdir=$(fm_lock_owner_dir "$lockdir") || return 1
   if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
+    fm_lock_discard_owner "$ownerdir"
+    return 1
+  fi
+  if fm_lock_claim_blocked_by_steal "$lockdir" "$allowed_steal_owner"; then
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
@@ -437,6 +441,75 @@ fm_lock_try_create() {
   fi
   fm_lock_discard_owner "$ownerdir"
   return 1
+}
+
+fm_lock_try_acquire_mutex() {
+  local lockdir=$1 pid owner guard guard_owner rc=1 acquired_owner=
+  FM_LOCK_OWNER_DIR=
+  if fm_lock_try_create_unserialized "$lockdir"; then
+    return 0
+  fi
+  owner=
+  if [ -L "$lockdir" ]; then
+    owner=$(fm_lock_link_owner "$lockdir" 2>/dev/null || true)
+  fi
+  pid=$(cat "$lockdir/pid" 2>/dev/null || true)
+  if [ -n "$pid" ] && [ "$pid" = "${BASHPID:-$$}" ]; then
+    fm_lock_remove_path "$lockdir" || true
+    fm_lock_try_create_unserialized "$lockdir"
+    return
+  fi
+  fm_lock_recheck_stale_owner "$lockdir" "$owner" "$pid" || {
+    FM_LOCK_HELD_PID=$pid
+    return 1
+  }
+  guard="$lockdir.steal"
+  if ! fm_lock_try_create_unserialized "$guard"; then
+    FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
+    return 1
+  fi
+  guard_owner=${FM_LOCK_OWNER_DIR:-}
+  if fm_lock_points_to_owner "$guard" "$guard_owner" \
+    && fm_lock_recheck_stale_owner "$lockdir" "$owner" "$pid"; then
+    fm_lock_remove_path "$lockdir" || true
+    if fm_lock_try_create_unserialized "$lockdir" "$guard_owner"; then
+      rc=0
+      acquired_owner=${FM_LOCK_OWNER_DIR:-}
+    fi
+  fi
+  [ "$rc" -eq 0 ] || FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
+  fm_lock_release "$guard"
+  FM_LOCK_OWNER_DIR=$acquired_owner
+  return "$rc"
+}
+
+fm_lock_try_create() {
+  local lockdir=$1 allowed_steal_owner=${2:-} steal steal_owner ownerdir rc
+  if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
+    FM_LOCK_OWNER_DIR=
+    return 1
+  fi
+  steal="$lockdir.steal"
+  if [ -n "$allowed_steal_owner" ]; then
+    fm_lock_points_to_owner "$steal" "$allowed_steal_owner" || return 1
+    fm_lock_try_create_unserialized "$lockdir" "$allowed_steal_owner"
+    return
+  fi
+  if ! fm_lock_try_acquire_mutex "$steal"; then
+    FM_LOCK_HELD_PID=$(cat "$steal/pid" 2>/dev/null || true)
+    FM_LOCK_OWNER_DIR=
+    return 1
+  fi
+  steal_owner=${FM_LOCK_OWNER_DIR:-}
+  rc=1
+  ownerdir=
+  if fm_lock_try_create_unserialized "$lockdir" "$steal_owner"; then
+    rc=0
+    ownerdir=${FM_LOCK_OWNER_DIR:-}
+  fi
+  fm_lock_release "$steal"
+  FM_LOCK_OWNER_DIR=$ownerdir
+  return "$rc"
 }
 
 fm_lock_remove_path() {
@@ -836,7 +909,7 @@ fm_lock_try_acquire() {
   fi
 
   steal="$lockdir.steal"
-  if ! fm_lock_try_acquire "$steal"; then
+  if ! fm_lock_try_acquire_mutex "$steal"; then
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
     return 1
@@ -884,7 +957,7 @@ fm_lock_try_acquire() {
   fi
   fm_lock_remove_path "$lockdir" || true
   rc=1
-  if fm_lock_try_create "$lockdir" "$steal_owner"; then
+  if fm_lock_try_create_unserialized "$lockdir" "$steal_owner"; then
     rc=0
     # shellcheck disable=SC2034 # Read by sourcing callers after lock acquisition.
     FM_LOCK_RECOVERED_PID=$cur
