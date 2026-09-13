@@ -114,11 +114,10 @@
 # provenance and a structurally valid recorded answer; archive lookup is never
 # used by the answer intake, so historical rows cannot become actionable.
 # Metadata compatibility: the attestation keeps the historical
-# `decisions_reviewed=1` and `decision_keys=` keys, and an inventory entry that
-# names no existing active or archived task resolves through the legacy
-# `<origin>-decision-<entry>` identity, so pre-collapse metadata written by
-# fm-decision-hold.sh verifies unchanged. An entry that exists as a task id is
-# always that task.
+# `decisions_reviewed=1` and `decision_keys=` keys. Completion checks both the
+# entry and the legacy `<origin>-decision-<entry>` identity across active and
+# archived tasks, accepts the sole durable candidate for pre-collapse metadata,
+# and refuses when both identities exist rather than guessing between them.
 #
 # `diverged` is the read-only guard over the seam between the two records of
 # one captain call. See "record divergence" beside command_diverged below.
@@ -687,8 +686,8 @@ verify_inventory_entry_durable() {  # <origin-id> <entry>
   esac
 }
 
-# Resolve one inventory entry or channel key to the task that carries it: the
-# exact task id when it exists, else the legacy derived identity.
+# Resolve one channel key to the active task that carries it: the exact task id
+# when it exists, else the legacy derived identity.
 resolve_entry() {  # <origin-or-empty> <entry>; prints the resolved id or fails
   local origin=$1 entry=$2 legacy
   if task_show "$entry" >/dev/null 2>&1; then

@@ -7,7 +7,7 @@ This document records the deterministic mechanism, structured surfaces, compatib
 
 A decision is not a separate thing in this system: it is an ordinary backlog task held for the captain, and the task id is the identity every surface and channel uses.
 `bin/fm-captain-hold.sh` is the only lifecycle command layered on that primitive.
-The command runs tasks-axi in the active `FM_HOME`, so the existing backlog remains the only durable work database and a secondmate-owned captain call stays in the secondmate home.
+The command runs tasks-axi in the active `FM_HOME`, so the tasks-axi-managed backlog and retention archive remain the only durable task records and a secondmate-owned captain call stays in the secondmate home.
 It never reads report bodies, review artifacts, terminal output, or chat.
 
 The `hold` subcommand places an existing task under an active captain hold, or creates the task when nothing exists to hold, then verifies the hold through `tasks-axi hold <id> --reason <reason> --kind captain`.
@@ -21,14 +21,14 @@ A hold whose `--until` date has passed keeps those annotations while tasks-axi r
 
 The `complete` subcommand unions the reviewed captain-held task ids into `decision_keys=` and appends `decisions_reviewed=1` while originating task metadata is live.
 A post-teardown visual review can complete against the surviving report and durable tasks without recreating volatile task metadata.
-It accepts `--none` as an explicit semantic inventory result, refused while the origin still has a lifecycle-open keyed status decision, and verifies every listed task against tasks-axi before recording completion.
+It accepts `--none` as an explicit semantic inventory result, refused while the origin still has a lifecycle-open keyed status decision, and verifies every listed task against active tasks-axi state or its canonical retention archive before recording completion.
 Completion and teardown verification consult the active backlog first, then accept an exact Done row from `data/done-archive.md` only when it retains captain-hold annotations and a canonical current or legacy resolution chain whose record digests match their non-empty captain-decision payloads and whose newest record proves a terminal answer rather than an earlier release.
 The supported legacy terminal boundary includes the pre-collapse answered record with `Routed identities: none` and no `Routed work:` suffix, but no broader missing routing boundary.
 That archive fallback is limited to inventory durability, so an archived row can never receive a new answer or become actionable again, duplicate archived incarnations refuse, and exact plus legacy-derived candidates must resolve to one unambiguous identity.
 With a non-empty inventory it appends a `captain-held [key=<key>]: tracked by <inventory>` transfer event for every still-open keyed status decision, which `bin/fm-classify-lib.sh` recognizes as closing the live status copy without claiming that the captain has answered it.
 
 Scout teardown calls the read-only `verify` subcommand after checking for the report and before removing any source state.
-`verify` requires the recorded attestation, requires every recorded inventory entry to still be durable (actively captain-held, or carrying a recorded answer), and fails on any keyed status decision that opened after the last `complete`, which makes re-running `complete` the repair.
+`verify` requires the recorded attestation, requires every recorded inventory entry to still be durable (actively captain-held, or carrying an accepted recorded answer), and fails on any keyed status decision that opened after the last `complete`, which makes re-running `complete` the repair.
 The `--force` path remains the explicit captain-approved discard escape hatch.
 
 ## Answer-time closure
