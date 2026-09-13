@@ -8,8 +8,9 @@
 [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md), and
 [ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md), which supersedes
 [ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
-[ADR-0012](../adr/0012-notification-reconciliation.md) and
-[ADR-0013](../adr/0013-archived-captain-hold-completion.md).
+[ADR-0012](../adr/0012-notification-reconciliation.md),
+[ADR-0013](../adr/0013-archived-captain-hold-completion.md), and
+[ADR-0014](../adr/0014-stale-lock-publication-serialization.md).
 
 ## The rule, in one line
 
@@ -47,7 +48,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008 through 0013 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008 through 0014 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed — not the `fm-*` scripts, not the
 `FM_*` variables, not the captain/crewmate vocabulary. The reasoning, and the
@@ -67,7 +68,7 @@ ADR-0010 separately permits the exact source-selection, CI acquisition, contribu
 Those are behavior-owned hunks, not permission for renames, cleanup, or unrelated downstream edits.
 The companion source and sync policy is owned by [`tool-distribution.md`](tool-distribution.md).
 
-ADR-0008 owns the isolated unsigned delivery lane, ADR-0010 owns companion distribution, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, and ADR-0013 owns the archived captain-hold completion exception.
+ADR-0008 owns the isolated unsigned delivery lane, ADR-0010 owns companion distribution, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, and ADR-0014 owns the stale-lock publication exception.
 
 ## Taking upstream changes
 

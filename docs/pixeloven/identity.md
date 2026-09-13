@@ -122,7 +122,7 @@ Our default surface is new files in namespaces upstream can never collide with:
 | Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` |
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008 through 0013 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, documentation-audience ownership, and archived captain-hold completion.
+ADRs 0008 through 0014 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, documentation-audience ownership, archived captain-hold completion, and stale-lock publication serialization.
 Anything outside those lists needs a **new ADR**, not a silent change.
 See [fork-contract.md](fork-contract.md).
 
