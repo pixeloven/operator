@@ -372,6 +372,65 @@ SH
   pass "primary publication serializes with stale-lock stealing and leaves one winner"
 }
 
+test_lock_publication_mutex_contention_is_nonblocking() {
+  local dir state lockdir holder_file release holder claimant i blocked primary_exposed mutex_changed result
+  dir=$(make_case lock-publication-mutex-nonblocking)
+  state="$dir/state"
+  lockdir="$state/.contend.lock"
+  holder_file="$dir/holder"
+  release="$dir/release"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_acquire "$2.steal" || exit 7
+    printf "%s\n" "${BASHPID:-$$}" > "$3"
+    while [ ! -e "$4" ]; do sleep 0.01; done
+    fm_lock_release "$2.steal"
+  ' _ "$LIB" "$lockdir" "$holder_file" "$release" &
+  holder=$!
+  i=0
+  while [ "$i" -lt 100 ] && [ ! -s "$holder_file" ]; do
+    sleep 0.02
+    i=$((i + 1))
+  done
+  [ -s "$holder_file" ] || fail "publication mutex holder did not start"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    if fm_lock_try_acquire "$2"; then
+      printf "acquired\n" > "$3"
+    else
+      printf "contended\n" > "$3"
+    fi
+  ' _ "$LIB" "$lockdir" "$dir/result" &
+  claimant=$!
+  i=0
+  while [ "$i" -lt 50 ] && [ ! -s "$dir/result" ]; do
+    sleep 0.02
+    i=$((i + 1))
+  done
+  blocked=0
+  [ -s "$dir/result" ] || blocked=1
+  primary_exposed=0
+  if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
+    primary_exposed=1
+  fi
+  mutex_changed=0
+  [ "$(cat "$lockdir.steal/pid" 2>/dev/null || true)" = "$(cat "$holder_file")" ] || mutex_changed=1
+  result=$(cat "$dir/result" 2>/dev/null || true)
+  if [ "$blocked" -eq 1 ]; then
+    kill "$claimant" 2>/dev/null || true
+  fi
+  : > "$release"
+  wait "$claimant" 2>/dev/null || true
+  wait "$holder" || fail "publication mutex holder failed"
+  [ "$blocked" -eq 0 ] || fail "primary claimant blocked behind a descheduled publication mutex holder"
+  [ "$result" = contended ] || fail "primary claimant did not return contention while the publication mutex was held"
+  [ "$primary_exposed" -eq 0 ] || fail "primary claimant published while the publication mutex was held"
+  [ "$mutex_changed" -eq 0 ] || fail "primary claimant replaced the live publication mutex owner"
+  pass "publication mutex contention returns without blocking or publishing"
+}
+
 test_lock_live_steal_mutex_is_not_reclaimed() {
   local dir state lockdir dead holder_file holder out i lockpid stealpid
   dir=$(make_case lock-live-stealer)
@@ -1214,6 +1273,7 @@ test_stale_watch_lock_reclaimed
 test_stale_watch_reclaim_publishes_before_clear
 test_live_stale_watch_lock_is_actionable
 test_lock_publication_serializes_with_stale_steal
+test_lock_publication_mutex_contention_is_nonblocking
 test_guard_warnings
 test_lock_single_winner_under_concurrency
 test_lock_steals_dead_pid_lock
