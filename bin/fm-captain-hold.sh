@@ -234,8 +234,8 @@ task_show() {  # <id>
 }
 
 # Print the exact tasks-axi archive record for one task id. Archived task rows
-# begin at column zero while body lines are indented, so another row is the only
-# record boundary this parser accepts. Matching the parsed id rather than prose
+# begin at column zero while body lines are indented, so any later nonblank
+# column-zero content ends the record. Matching the parsed id rather than prose
 # makes a title, body, or neighboring task unable to stand in for the identity.
 archive_task_record() {  # <id>
   local id=$1 archive="$DATA/done-archive.md"
@@ -249,15 +249,32 @@ archive_task_record() {  # <id>
       return substr(rest, 1, separator - 1)
     }
     {
+      if (found && $0 != "" && $0 !~ /^  /) exit
       row_id = archived_task_id($0)
       if (row_id != "") {
-        if (found) exit
         found = (row_id == wanted)
       }
       if (found) print
     }
     END { if (!found) exit 1 }
   ' "$archive"
+}
+
+archive_header_has_captain_hold() {  # <task-id> <archive-header>
+  printf '%s\n' "$2" | awk -v wanted="$1" '
+    BEGIN {
+      id = "[A-Za-z0-9][A-Za-z0-9._-]*"
+      date = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+      closed = "\\((merged|reported|done|closed) " date "\\)"
+      hold = "\\(hold: [^()]+\\) \\(hold-kind: captain\\)"
+      until = "( \\(hold-until: " date "\\))?"
+      dep = "( (blocked-by|parent|discovered-from): " id " - .+)?"
+      suffix = closed " " hold until dep "$"
+      prefix = "- [x] " wanted " - "
+    }
+    index($0, prefix) == 1 && substr($0, length(prefix) + 1) ~ suffix { found = 1 }
+    END { exit(found ? 0 : 1) }
+  '
 }
 
 show_field() {  # <show-output> <field>
@@ -468,11 +485,8 @@ verify_archived_answered() {  # <task-id> <archive-record>
   else
     archived_body=${record#*$'\n'}
   fi
-  case "$header" in
-    *" (hold-kind: captain)") ;;
-    *" (hold-kind: captain) (hold-until: "????-??-??")") ;;
-    *) fail "captain-held task $id is archived without surviving captain-hold provenance" ;;
-  esac
+  archive_header_has_captain_hold "$id" "$header" \
+    || fail "captain-held task $id is archived without surviving captain-hold provenance"
   body=$(unindent_archive_body "$archived_body") \
     || fail "captain-held task $id has a malformed archived resolution record"
   while :; do

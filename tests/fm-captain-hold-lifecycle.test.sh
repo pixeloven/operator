@@ -415,6 +415,48 @@ test_archived_reheld_history_remains_verifiable() {
   pass "archived re-held captain history retains its verified resolution chain"
 }
 
+test_archive_batches_and_dependency_metadata_remain_verifiable() {
+  local home origin task blocker
+  home=$(make_home archived-later-batch)
+  origin=sample-batch-review
+  task=sample-earlier-batch-call
+  tasks_in "$home" add "$origin" "Review archive batches" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Earlier archived call" \
+    --reason "captain earlier choice pending" --repo sample >/dev/null
+  printf 'Use the earlier archived answer.\n' > "$home/batch-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/batch-answer.txt" >/dev/null
+  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  tasks_in "$home" add sample-later-batch-task "Later archived work" --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" sample-later-batch-task --keep 0 >/dev/null
+  run_captain "$home" complete "$origin" "$task" >/dev/null \
+    || fail "completion included a later archive batch heading in the earlier task record"
+
+  home=$(make_home archived-reasoned-dependency)
+  origin=sample-dependency-review
+  task=sample-dependent-call
+  blocker=sample-finished-prerequisite
+  tasks_in "$home" add "$origin" "Review archived dependency metadata" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  tasks_in "$home" add "$blocker" "Finished prerequisite" --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" "$blocker" --no-prune >/dev/null
+  tasks_in "$home" add "$task" "Dependent captain call" --kind ship --repo sample \
+    --blocked-by "$blocker" >/dev/null
+  run_captain "$home" hold "$task" --reason "captain dependent choice pending" >/dev/null
+  printf 'Use the dependency-aware answer.\n' > "$home/dependency-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/dependency-answer.txt" >/dev/null
+  sed "/^- \\[x\\] $task - / { s/ blocked-by: $blocker//; s/$/ blocked-by: $blocker - prerequisite already finished/; }" \
+    "$home/data/backlog.md" > "$home/data/backlog.next"
+  mv "$home/data/backlog.next" "$home/data/backlog.md"
+  tasks_in "$home" render >/dev/null
+  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  run_captain "$home" complete "$origin" "$task" >/dev/null \
+    || fail "completion rejected captain-hold metadata before a reasoned archived dependency"
+  pass "archive batches and reasoned dependency metadata preserve verified answers"
+}
+
 # Archive fallback is proof-bound: exact identity, surviving captain-hold
 # provenance, and a complete recorded answer are all required. Plain Done
 # history, suggestive prose, malformed records, unresolved holds, and absent ids
@@ -453,6 +495,26 @@ test_archive_fallback_refuses_unproven_rows() {
   tasks_in "$home" "done" sample-prose-done --keep 0 >/dev/null
   if run_captain "$home" complete "$id" sample-prose-done > "$home/prose.out" 2> "$home/prose.err"; then
     fail "completion treated arbitrary archived resolution prose as captain-hold provenance"
+  fi
+
+  home=$(make_home archived-forged-hold-title)
+  id=sample-forged-title-review
+  decision='A structurally valid but unowned answer.'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  tasks_in "$home" add "$id" "Review forged archive title" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-forged-title-call "Ordinary work" \
+    --kind ship --repo sample --body "$body" >/dev/null
+  tasks_in "$home" "done" sample-forged-title-call --keep 0 >/dev/null
+  sed 's/Ordinary work/Ordinary work mentioning (hold: forged) (hold-kind: captain)/' \
+    "$home/data/done-archive.md" > "$home/data/done-archive.next"
+  mv "$home/data/done-archive.next" "$home/data/done-archive.md"
+  if run_captain "$home" complete "$id" sample-forged-title-call \
+    > "$home/forged-title.out" 2> "$home/forged-title.err"; then
+    fail "completion treated hold-like title text as canonical captain-hold provenance"
   fi
 
   home=$(make_home archived-malformed-resolution)
@@ -1396,6 +1458,7 @@ test_completion_gate_attests_and_transfers
 test_answer_records_and_closes
 test_archived_answered_legacy_inventory_survives_retention
 test_archived_reheld_history_remains_verifiable
+test_archive_batches_and_dependency_metadata_remain_verifiable
 test_archive_fallback_refuses_unproven_rows
 test_release_frees_held_work
 test_deferral_leaves_captains_call_until_due
