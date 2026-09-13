@@ -23,7 +23,7 @@ The `complete` subcommand unions the reviewed captain-held task ids into `decisi
 A post-teardown visual review can complete against the surviving report and durable tasks without recreating volatile task metadata.
 It accepts `--none` as an explicit semantic inventory result, refused while the origin still has a lifecycle-open keyed status decision, and verifies every listed task against tasks-axi before recording completion.
 Completion and teardown verification consult the active backlog first, then accept an exact Done row from `data/done-archive.md` only when it retains captain-hold annotations and a canonical current or legacy resolution chain whose record digests match their non-empty captain-decision payloads and whose newest record proves a terminal answer rather than an earlier release.
-That archive fallback is limited to inventory durability, so an archived row can never receive a new answer or become actionable again, and exact task ids still take precedence over legacy derived identities.
+That archive fallback is limited to inventory durability, so an archived row can never receive a new answer or become actionable again, duplicate archived incarnations refuse, and exact plus legacy-derived candidates must resolve to one unambiguous identity.
 With a non-empty inventory it appends a `captain-held [key=<key>]: tracked by <inventory>` transfer event for every still-open keyed status decision, which `bin/fm-classify-lib.sh` recognizes as closing the live status copy without claiming that the captain has answered it.
 
 Scout teardown calls the read-only `verify` subcommand after checking for the report and before removing any source state.

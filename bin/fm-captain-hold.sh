@@ -248,15 +248,40 @@ archive_task_record() {  # <id>
       if (separator == 0) return ""
       return substr(rest, 1, separator - 1)
     }
-    {
-      if (found && $0 != "" && $0 !~ /^  /) exit
-      row_id = archived_task_id($0)
-      if (row_id != "") {
-        found = (row_id == wanted)
-      }
-      if (found) print
+    function finish_record() {
+      if (!capturing) return
+      matches++
+      if (matches == 1) matched_record = record
+      capturing = 0
+      record = ""
     }
-    END { if (!found) exit 1 }
+    {
+      if ($0 ~ /^## Archived [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) {
+        finish_record()
+        in_batch = 1
+        next
+      }
+      if ($0 != "" && $0 !~ /^  /) {
+        finish_record()
+        row_id = archived_task_id($0)
+        if (in_batch && row_id != "") {
+          if (row_id == wanted) {
+            capturing = 1
+            record = $0
+          }
+          next
+        }
+        in_batch = 0
+        next
+      }
+      if (capturing) record = record "\n" $0
+    }
+    END {
+      finish_record()
+      if (matches == 1) print matched_record
+      else if (matches > 1) print "duplicate archived task identity"
+      else exit 1
+    }
   ' "$archive"
 }
 
@@ -598,30 +623,58 @@ verify_archived_answered() {  # <task-id> <archive-record>
   done
 }
 
+inventory_candidate_state() {  # <task-id>
+  local id=$1 record
+  if task_show "$id" >/dev/null 2>&1; then
+    if (verify_hold_durable "$id") >/dev/null 2>&1; then
+      printf 'resolved'
+    else
+      printf 'unresolved'
+    fi
+    return 0
+  fi
+  if record=$(archive_task_record "$id"); then
+    if (verify_archived_answered "$id" "$record") >/dev/null 2>&1; then
+      printf 'resolved'
+    else
+      printf 'unresolved'
+    fi
+    return 0
+  fi
+  printf 'absent'
+}
+
+verify_inventory_candidate() {  # <task-id>
+  local id=$1 record
+  if task_show "$id" >/dev/null 2>&1; then
+    verify_hold_durable "$id"
+    return 0
+  fi
+  record=$(archive_task_record "$id") \
+    || fail "captain-held task $id is absent from active and archived tasks"
+  verify_archived_answered "$id" "$record"
+}
+
 # Completion and teardown verification alone may consult historical retention.
-# Active exact ids still win, then exact archived ids, before the same two
-# checks under the legacy derived identity. Channel answer intake deliberately
-# keeps using resolve_entry so an archive row can never receive or replay input.
+# Channel answer intake deliberately keeps using resolve_entry so an archive row
+# can never receive or replay input.
 verify_inventory_entry_durable() {  # <origin-id> <entry>
-  local origin=$1 entry=$2 legacy record
-  if task_show "$entry" >/dev/null 2>&1; then
-    verify_hold_durable "$entry"
-    return 0
-  fi
-  if record=$(archive_task_record "$entry"); then
-    verify_archived_answered "$entry" "$record"
-    return 0
-  fi
+  local origin=$1 entry=$2 legacy exact_state legacy_state
   legacy=$(legacy_hold_id "$origin" "$entry")
-  if task_show "$legacy" >/dev/null 2>&1; then
-    verify_hold_durable "$legacy"
-    return 0
+  exact_state=$(inventory_candidate_state "$entry")
+  legacy_state=$(inventory_candidate_state "$legacy")
+  if [ "$exact_state" != absent ] && [ "$legacy_state" != absent ]; then
+    fail "captain-held inventory entry $entry is ambiguous between exact identity $entry and legacy identity $legacy"
   fi
-  if record=$(archive_task_record "$legacy"); then
-    verify_archived_answered "$legacy" "$record"
-    return 0
-  fi
-  fail "no captain-held task $entry and no legacy identity $legacy in $FM_HOME/data/backlog.md or $DATA/done-archive.md"
+  case "$exact_state:$legacy_state" in
+    resolved:absent) return 0 ;;
+    absent:resolved) return 0 ;;
+    unresolved:absent) verify_inventory_candidate "$entry" ;;
+    absent:unresolved) verify_inventory_candidate "$legacy" ;;
+    absent:absent)
+      fail "no captain-held task $entry and no legacy identity $legacy in $FM_HOME/data/backlog.md or $DATA/done-archive.md"
+      ;;
+  esac
 }
 
 # Resolve one inventory entry or channel key to the task that carries it: the

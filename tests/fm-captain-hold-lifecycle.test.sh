@@ -474,6 +474,64 @@ test_archive_batches_and_dependency_metadata_remain_verifiable() {
   pass "archive batches and reasoned dependency metadata preserve verified answers"
 }
 
+test_archive_membership_and_identity_ambiguity_refuse() {
+  local home origin task decision digest body
+  decision='A valid answer in an invalid location.'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+
+  home=$(make_home archived-outside-batch)
+  origin=sample-outside-batch-review
+  task=sample-outside-batch-call
+  archive_resolution_fixture "$home" "$origin" "$task" "$body"
+  sed '/^## Archived [0-9][0-9-]*$/d' "$home/data/done-archive.md" \
+    > "$home/data/done-archive.next"
+  mv "$home/data/done-archive.next" "$home/data/done-archive.md"
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/outside-batch.out" 2> "$home/outside-batch.err"; then
+    fail "completion accepted a task-shaped row outside a canonical archive batch"
+  fi
+
+  home=$(make_home archived-reused-id)
+  origin=sample-reused-id-review
+  task=sample-reused-id-call
+  tasks_in "$home" add "$origin" "Review reused archive identity" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "First archived incarnation" \
+    --reason "captain first incarnation pending" --repo sample >/dev/null
+  printf 'Answer the first incarnation.\n' > "$home/first-incarnation.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/first-incarnation.txt" >/dev/null
+  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  run_captain "$home" hold "$task" --title "Reused archived incarnation" \
+    --reason "captain reused incarnation pending" --repo sample >/dev/null
+  tasks_in "$home" "done" "$task" --keep 0 >/dev/null
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/reused-id.out" 2> "$home/reused-id.err"; then
+    fail "completion accepted a stale answer from an earlier archived task incarnation"
+  fi
+
+  home=$(make_home archived-exact-legacy-collision)
+  origin=sample-identity-collision-review
+  task=choice
+  tasks_in "$home" add "$origin" "Review identity collision" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Unrelated exact-id call" \
+    --reason "captain exact-id choice pending" --repo sample >/dev/null
+  printf 'Answer the unrelated exact-id call.\n' > "$home/exact-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/exact-answer.txt" >/dev/null
+  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  run_shim "$home" hold "$origin" "$task" --title "Unresolved legacy call" \
+    --reason "captain legacy collision pending" --repo sample >/dev/null
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/identity-collision.out" 2> "$home/identity-collision.err"; then
+    fail "completion let an archived exact id mask an active unresolved legacy call"
+  fi
+  pass "archive membership and identity ambiguity fail closed"
+}
+
 # Archive fallback is proof-bound: exact identity, surviving captain-hold
 # provenance, and a complete recorded answer are all required. Plain Done
 # history, suggestive prose, malformed records, unresolved holds, and absent ids
@@ -1498,6 +1556,7 @@ test_answer_records_and_closes
 test_archived_answered_legacy_inventory_survives_retention
 test_archived_reheld_history_remains_verifiable
 test_archive_batches_and_dependency_metadata_remain_verifiable
+test_archive_membership_and_identity_ambiguity_refuse
 test_archive_fallback_refuses_unproven_rows
 test_release_frees_held_work
 test_deferral_leaves_captains_call_until_due
