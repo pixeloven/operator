@@ -1,0 +1,5 @@
+live_watchers=1 lock_pid=359143
+watcher_one_stdout=watcher: already running
+watcher_two_stdout=
+watcher_one_stderr=
+watcher_two_stderr=

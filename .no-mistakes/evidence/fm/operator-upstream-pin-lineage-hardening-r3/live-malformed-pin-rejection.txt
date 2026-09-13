@@ -1,0 +1,2 @@
+exit=1
+fm-pixeloven-upstream-check.sh: operator pin is not a lowercase hexadecimal commit: 355f46fe5528ccc97904 81171bf9da48dee2e90d
