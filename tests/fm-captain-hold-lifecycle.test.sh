@@ -549,6 +549,31 @@ test_archive_fallback_refuses_unproven_rows() {
   run_captain "$home" complete "$id" sample-valid-legacy-call >/dev/null \
     || fail "completion refused a valid archived legacy resolution record"
 
+  home=$(make_home archived-valid-legacy-unrouted)
+  id=sample-valid-legacy-unrouted-review
+  decision=$'Captain answered through the legacy intake.\nDecision key: no-route\nAnswer: option c'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: none\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  archive_resolution_fixture "$home" "$id" "$id-decision-no-route" "$body"
+  run_captain "$home" complete "$id" no-route >/dev/null \
+    || fail "completion refused an archived pre-collapse answer without routed work"
+
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: (none)\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  assert_archived_resolution_refused legacy-parenthesized-no-suffix "$body" \
+    "completion broadened no-suffix legacy support to a parenthesized routing marker"
+
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: none\nResolution mode: routed\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  assert_archived_resolution_refused legacy-routed-no-suffix "$body" \
+    "completion broadened no-suffix legacy support to routed mode"
+
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: none\nResolution mode: answered\n\nCaptain decision:\nChanged legacy answer.' \
+    "$digest")
+  assert_archived_resolution_refused legacy-unrouted-digest-mismatch "$body" \
+    "completion accepted a mismatched no-suffix legacy answer digest"
+
   home=$(make_home archived-plain-done)
   id=sample-plain-archive-review
   tasks_in "$home" add "$id" "Review plain archive history" --kind scout --repo sample --start >/dev/null

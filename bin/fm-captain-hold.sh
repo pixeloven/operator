@@ -612,8 +612,18 @@ verify_archived_answered() {  # <task-id> <archive-record>
         ''|answered|routed|declined|repaired) ;;
         *) fail "captain-held task $id has a malformed archived legacy resolution mode" ;;
       esac
-      legacy_decision_digest_matches "$digest" "$routes" "$rest" \
-        || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
+      if [ "$routes" = none ] && [ "$mode" = answered ]; then
+        case "$rest" in
+          ''|*$'\n\nRouted work:\n'*)
+            fail "captain-held task $id has a malformed archived legacy routing boundary"
+            ;;
+        esac
+        [ "$(sha256_text "$rest")" = "$digest" ] \
+          || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
+      else
+        legacy_decision_digest_matches "$digest" "$routes" "$rest" \
+          || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
+      fi
       signature=$(sha256_text "legacy:$digest:$mode:$routes:$rest")
       list_has_key "$seen" "$signature" \
         && fail "captain-held task $id has duplicate archived resolution records"
