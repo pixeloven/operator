@@ -471,6 +471,34 @@ test_lock_live_steal_mutex_is_not_reclaimed() {
   pass "live steal mutex is not reclaimed"
 }
 
+test_lock_stale_steal_mutex_is_reclaimed() {
+  local dir state lockdir dead out lockpid
+  dir=$(make_case lock-stale-stealer)
+  state="$dir/state"
+  lockdir="$state/.contend.lock"
+  dead=$(dead_pid)
+  mkdir "$lockdir.steal"
+  printf '%s\n' "$dead" > "$lockdir.steal/pid"
+
+  out=$(FM_LOCK_STALE_AFTER=0 FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    if fm_lock_try_acquire "$2"; then rc=0; else rc=1; fi
+    printf "rc=%s lockpid=%s steal=%s guard=%s\n" \
+      "$rc" \
+      "$(cat "$2/pid" 2>/dev/null || true)" \
+      "$([ -e "$2.steal" ] || [ -L "$2.steal" ]; echo $?)" \
+      "$([ -e "$2.steal.steal" ] || [ -L "$2.steal.steal" ]; echo $?)"
+  ' _ "$LIB" "$lockdir")
+  case "$out" in
+    "rc=0 lockpid="*" steal=1 guard=1") ;;
+    *) fail "stale publication mutex was not reclaimed cleanly: $out" ;;
+  esac
+  lockpid=${out#*lockpid=}; lockpid=${lockpid%% *}
+  [ -n "$lockpid" ] || fail "stale publication mutex recovery left no primary owner pid: $out"
+  [ "$lockpid" != "$dead" ] || fail "stale publication mutex pid became the primary owner: $out"
+  pass "stale publication mutex is reclaimed through one bounded recovery guard"
+}
+
 test_lock_does_not_steal_live_lock() {
   local dir state lockdir live out lockpid
   dir=$(make_case lock-live-noop)
@@ -1279,6 +1307,7 @@ test_lock_single_winner_under_concurrency
 test_lock_steals_dead_pid_lock
 test_lock_stale_steal_single_winner_under_concurrency
 test_lock_live_steal_mutex_is_not_reclaimed
+test_lock_stale_steal_mutex_is_reclaimed
 test_lock_does_not_steal_live_lock
 test_lock_empty_pid_uses_minimum_grace
 test_lock_late_claim_loses_after_recreate
