@@ -461,7 +461,6 @@ fm_lock_try_create() {
   fi
   if ! fm_lock_try_acquire "$steal" 1; then
     FM_LOCK_OWNER_DIR=
-    FM_LOCK_HELD_PID=
     return 1
   fi
   steal_owner=${FM_LOCK_OWNER_DIR:-}
