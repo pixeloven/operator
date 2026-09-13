@@ -389,49 +389,162 @@ verify_hold_durable() {  # <task-id>
   fail "captain-held task $id is neither held for the captain nor closed with a recorded captain answer"
 }
 
-# An archived row is durable proof only for an exact Done identity that retains
-# the captain hold and a structurally valid answer record. The digest is not
-# recomputed because legacy routed records digest only their decision payload,
-# not the routed-work suffix preserved in the archived body.
+unindent_archive_body() {  # <archive-body>
+  printf '%s\n' "$1" | awk '
+    /^$/ { print; next }
+    /^  / { print substr($0, 3); next }
+    { exit 1 }
+  '
+}
+
+decision_digest_matches_prefix() {  # <digest> <decision-and-prior-body>
+  local expected=$1 rest=$2 candidate='' part
+  while :; do
+    case "$rest" in
+      *$'\n\n'*)
+        part=${rest%%$'\n\n'*}
+        candidate="${candidate}${candidate:+$'\n\n'}${part}"
+        [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ] && return 0
+        rest=${rest#*$'\n\n'}
+        ;;
+      *)
+        candidate="${candidate}${candidate:+$'\n\n'}${rest}"
+        [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ]
+        return
+        ;;
+    esac
+  done
+}
+
+legacy_routed_work_matches() {  # <routed-identities> <routed-work>
+  local identities=$1 work=$2 listed
+  if [ "$identities" = '(none)' ]; then
+    [ "$work" = '(none)' ]
+    return
+  fi
+  listed=$(printf '%s\n' "$work" | awk '
+    !/^- [A-Za-z0-9._-]+$/ { exit 1 }
+    { sub(/^- /, ""); values = values (values == "" ? "" : ",") $0 }
+    END { if (values == "") exit 1; print values }
+  ') || return 1
+  [ "$listed" = "$identities" ]
+}
+
+legacy_decision_digest_matches() {  # <digest> <routes> <decision-and-routed-work>
+  local expected=$1 routes=$2 rest=$3 candidate='' part work
+  while :; do
+    case "$rest" in
+      *$'\n\nRouted work:\n'*)
+        part=${rest%%$'\n\nRouted work:\n'*}
+        candidate="${candidate}${candidate:+$'\n\nRouted work:\n'}${part}"
+        work=${rest#*$'\n\nRouted work:\n'}
+        if [ -n "$candidate" ] \
+          && [ "$(sha256_text "$candidate")" = "$expected" ] \
+          && legacy_routed_work_matches "$routes" "$work"; then
+          return 0
+        fi
+        rest=$work
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
 verify_archived_answered() {  # <task-id> <archive-record>
-  local id=$1 record=$2 header body digest mode owner
+  local id=$1 record=$2 header archived_body body markers rest digest mode owner routes
   header=${record%%$'\n'*}
   if [ "$record" = "$header" ]; then
-    body=''
+    archived_body=''
   else
-    body=${record#*$'\n'}
+    archived_body=${record#*$'\n'}
   fi
   case "$header" in
     *" (hold-kind: captain)") ;;
     *" (hold-kind: captain) (hold-until: "????-??-??")") ;;
     *) fail "captain-held task $id is archived without surviving captain-hold provenance" ;;
   esac
+  body=$(unindent_archive_body "$archived_body") \
+    || fail "captain-held task $id has a malformed archived resolution record"
+  markers=$(printf '%s\n' "$body" | awk '
+    $0 == "Resolution recorded by fm-captain-hold." ||
+      $0 == "Resolution recorded by fm-decision-hold." { count++ }
+    END { print count + 0 }
+  ')
+  [ "$markers" -eq 1 ] \
+    || fail "captain-held task $id has duplicate or malformed archived resolution boundaries"
   case "$body" in
-    "  Resolution recorded by fm-captain-hold."*) owner=current ;;
-    "  Resolution recorded by fm-decision-hold."*) owner=legacy ;;
+    "Resolution recorded by fm-captain-hold."$'\n'*) owner=current ;;
+    "Resolution recorded by fm-decision-hold."$'\n'*) owner=legacy ;;
     *) fail "captain-held task $id is archived without a recorded captain answer" ;;
   esac
-  body_has_resolution_record "$body" \
-    || fail "captain-held task $id is archived without a recorded captain answer"
-  digest=$(recorded_decision_digest "$body" || true)
-  [ "${#digest}" -eq 64 ] \
-    || fail "captain-held task $id has a malformed archived captain-answer digest"
-  case "$digest" in
-    *[!0-9a-fA-F]*) fail "captain-held task $id has a malformed archived captain-answer digest" ;;
-  esac
-  mode=$(recorded_resolution_mode "$body" || true)
   case "$owner" in
     current)
+      rest=${body#*$'\n'}
+      case "$rest" in
+        "Decision digest: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived resolution record" ;;
+      esac
+      digest=${rest#"Decision digest: "}
+      digest=${digest%%$'\n'*}
+      rest=${rest#*$'\n'}
+      case "$rest" in
+        "Resolution mode: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived resolution record" ;;
+      esac
+      mode=${rest#"Resolution mode: "}
+      mode=${mode%%$'\n'*}
       case "$mode" in
         answered|released|repaired) ;;
         *) fail "captain-held task $id has a malformed archived resolution mode" ;;
       esac
+      case "$rest" in
+        "Resolution mode: $mode"$'\n\nCaptain decision:\n'*)
+          rest=${rest#"Resolution mode: $mode"$'\n\nCaptain decision:\n'}
+          ;;
+        *) fail "captain-held task $id has a malformed archived resolution record" ;;
+      esac
+      decision_digest_matches_prefix "$digest" "$rest" \
+        || fail "captain-held task $id has an unverified archived captain-answer digest"
       ;;
     legacy)
+      rest=${body#*$'\n'}
+      case "$rest" in
+        "Decision digest: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+      esac
+      digest=${rest#"Decision digest: "}
+      digest=${digest%%$'\n'*}
+      rest=${rest#*$'\n'}
+      case "$rest" in
+        "Routed identities: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+      esac
+      routes=${rest#"Routed identities: "}
+      routes=${routes%%$'\n'*}
+      rest=${rest#*$'\n'}
+      case "$rest" in
+        $'\nCaptain decision:\n'*)
+          mode=''
+          rest=${rest#$'\nCaptain decision:\n'}
+          ;;
+        "Resolution mode: "*$'\n'*)
+          mode=${rest#"Resolution mode: "}
+          mode=${mode%%$'\n'*}
+          case "$rest" in
+            "Resolution mode: $mode"$'\n\nCaptain decision:\n'*)
+              rest=${rest#"Resolution mode: $mode"$'\n\nCaptain decision:\n'}
+              ;;
+            *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+          esac
+          ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+      esac
       case "$mode" in
         ''|answered|routed|declined|repaired) ;;
         *) fail "captain-held task $id has a malformed archived legacy resolution mode" ;;
       esac
+      legacy_decision_digest_matches "$digest" "$routes" "$rest" \
+        || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
       ;;
   esac
 }

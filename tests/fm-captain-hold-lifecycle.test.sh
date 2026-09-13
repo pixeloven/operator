@@ -94,6 +94,36 @@ write_origin_meta() {  # <home> <id> [kind]
     "spawn_gen=fixture-$id"
 }
 
+fixture_digest() {  # <text>
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
+  else
+    printf '%s' "$1" | sha256sum | awk '{print $1}'
+  fi
+}
+
+archive_resolution_fixture() {  # <home> <origin-id> <task-id> <body>
+  local home=$1 origin=$2 task=$3 body=$4
+  tasks_in "$home" add "$origin" "Review archived resolution" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Archived captain call" \
+    --reason "captain archived choice pending" --repo sample >/dev/null
+  tasks_in "$home" update "$task" --body "$body" >/dev/null
+  tasks_in "$home" "done" "$task" --keep 0 >/dev/null
+}
+
+assert_archived_resolution_refused() {  # <name> <body> <message>
+  local name=$1 body=$2 message=$3 home origin task
+  home=$(make_home "archived-$name")
+  origin="sample-$name-review"
+  task="sample-$name-call"
+  archive_resolution_fixture "$home" "$origin" "$task" "$body"
+  if run_captain "$home" complete "$origin" "$task" > "$home/complete.out" 2> "$home/complete.err"; then
+    fail "$message"
+  fi
+}
+
 # Reproduces the loss exactly with privacy-safe synthetic names: the investigation
 # and visual review have ended, the only genuine unresolved captain call is report
 # prose, no held backlog item or open status exists, and the authoritative
@@ -366,7 +396,17 @@ test_archived_answered_legacy_inventory_survives_retention() {
 # history, suggestive prose, malformed records, unresolved holds, and absent ids
 # remain refusals.
 test_archive_fallback_refuses_unproven_rows() {
-  local home id entry
+  local home id entry decision digest body
+
+  home=$(make_home archived-valid-legacy)
+  id=sample-valid-legacy-review
+  decision='Use the archived legacy answer.'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: (none)\nResolution mode: answered\n\nCaptain decision:\n%s\n\nRouted work:\n(none)' \
+    "$digest" "$decision")
+  archive_resolution_fixture "$home" "$id" sample-valid-legacy-call "$body"
+  run_captain "$home" complete "$id" sample-valid-legacy-call >/dev/null \
+    || fail "completion refused a valid archived legacy resolution record"
 
   home=$(make_home archived-plain-done)
   id=sample-plain-archive-review
@@ -404,6 +444,28 @@ test_archive_fallback_refuses_unproven_rows() {
   if run_captain "$home" complete "$id" sample-malformed-call > "$home/malformed.out" 2> "$home/malformed.err"; then
     fail "completion accepted an archived malformed resolution record"
   fi
+
+  decision='The recorded answer.'
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %064d\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    0 "$decision")
+  assert_archived_resolution_refused fabricated-digest "$body" \
+    "completion accepted a fabricated archived captain-answer digest"
+
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\nChanged recorded answer.' \
+    "$digest")
+  assert_archived_resolution_refused changed-payload "$body" \
+    "completion accepted an archived decision changed after its digest was recorded"
+
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s\n\nResolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision" "$digest" "$decision")
+  assert_archived_resolution_refused duplicate-boundaries "$body" \
+    "completion accepted duplicate archived resolution boundaries"
+
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:' \
+    "$digest")
+  assert_archived_resolution_refused missing-decision-body "$body" \
+    "completion accepted an archived resolution with no decision body"
 
   home=$(make_home archived-unresolved-hold)
   id=sample-unresolved-archive-review
