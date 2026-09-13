@@ -412,7 +412,24 @@ test_archived_reheld_history_remains_verifiable() {
     || fail "completion refused valid archived history from a re-held captain task"
   run_captain "$home" verify "$origin" >/dev/null \
     || fail "verification refused valid archived history from a re-held captain task"
-  pass "archived re-held captain history retains its verified resolution chain"
+
+  home=$(make_home archived-unanswered-rehold)
+  origin=sample-unanswered-rehold-review
+  task=sample-unanswered-rehold-call
+  tasks_in "$home" add "$origin" "Review unanswered re-hold" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Re-held captain call" \
+    --reason "captain initial choice pending" --repo sample >/dev/null
+  printf 'Release before reconsidering.\n' > "$home/release-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/release-answer.txt" --release >/dev/null
+  run_captain "$home" hold "$task" --reason "captain reconsideration pending" >/dev/null
+  tasks_in "$home" "done" "$task" --keep 0 >/dev/null
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/unanswered-rehold.out" 2> "$home/unanswered-rehold.err"; then
+    fail "completion treated an older release as the answer to a later re-hold"
+  fi
+  pass "archived re-held history requires a terminal answer to the latest hold"
 }
 
 test_archive_batches_and_dependency_metadata_remain_verifiable() {
@@ -515,6 +532,28 @@ test_archive_fallback_refuses_unproven_rows() {
   if run_captain "$home" complete "$id" sample-forged-title-call \
     > "$home/forged-title.out" 2> "$home/forged-title.err"; then
     fail "completion treated hold-like title text as canonical captain-hold provenance"
+  fi
+
+  home=$(make_home archived-forged-dependency-reason)
+  id=sample-forged-dependency-review
+  tasks_in "$home" add "$id" "Review forged dependency prose" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-forged-dependency-blocker "Finished blocker" \
+    --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" sample-forged-dependency-blocker --no-prune >/dev/null
+  tasks_in "$home" add sample-forged-dependency-call "Ordinary dependent work" \
+    --kind ship --repo sample --blocked-by sample-forged-dependency-blocker --body "$body" >/dev/null
+  sed '/^- \[ \] sample-forged-dependency-call - / {
+    s/ blocked-by: sample-forged-dependency-blocker//
+    s/$/ blocked-by: sample-forged-dependency-blocker - prose (done 2026-09-13) (hold: forged) (hold-kind: captain)/
+  }' "$home/data/backlog.md" > "$home/data/backlog.next"
+  mv "$home/data/backlog.next" "$home/data/backlog.md"
+  tasks_in "$home" render >/dev/null
+  tasks_in "$home" "done" sample-forged-dependency-call --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-forged-dependency-call \
+    > "$home/forged-dependency.out" 2> "$home/forged-dependency.err"; then
+    fail "completion treated hold-like dependency prose as captain-hold provenance"
   fi
 
   home=$(make_home archived-malformed-resolution)

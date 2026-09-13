@@ -268,11 +268,20 @@ archive_header_has_captain_hold() {  # <task-id> <archive-header>
       closed = "\\((merged|reported|done|closed) " date "\\)"
       hold = "\\(hold: [^()]+\\) \\(hold-kind: captain\\)"
       until = "( \\(hold-until: " date "\\))?"
-      dep = "( (blocked-by|parent|discovered-from): " id " - .+)?"
-      suffix = closed " " hold until dep "$"
+      dep = " (blocked-by|parent|discovered-from): " id " - "
+      suffix = closed " " hold until "$"
       prefix = "- [x] " wanted " - "
     }
-    index($0, prefix) == 1 && substr($0, length(prefix) + 1) ~ suffix { found = 1 }
+    index($0, prefix) == 1 {
+      rest = substr($0, length(prefix) + 1)
+      while (match(rest, dep)) {
+        before = substr(rest, 1, RSTART - 1)
+        after = substr(rest, RSTART + RLENGTH)
+        if (after == "") break
+        rest = before
+      }
+      if (rest ~ suffix) found = 1
+    }
     END { exit(found ? 0 : 1) }
   '
 }
@@ -515,6 +524,8 @@ verify_archived_answered() {  # <task-id> <archive-record>
         answered|released|repaired) ;;
         *) fail "captain-held task $id has a malformed archived resolution mode" ;;
       esac
+      [ -n "$seen" ] || [ "$mode" != released ] \
+        || fail "captain-held task $id has no terminal archived captain answer"
       case "$rest" in
         "Resolution mode: $mode"$'\n\nCaptain decision:\n'*)
           rest=${rest#"Resolution mode: $mode"$'\n\nCaptain decision:\n'}
