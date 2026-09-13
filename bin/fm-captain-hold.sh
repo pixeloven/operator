@@ -397,20 +397,30 @@ unindent_archive_body() {  # <archive-body>
   '
 }
 
-decision_digest_matches_prefix() {  # <digest> <decision-and-prior-body>
+MATCHED_DECISION=''
+MATCHED_REMAINDER=''
+match_decision_digest_prefix() {  # <digest> <decision-and-prior-body>
   local expected=$1 rest=$2 candidate='' part
   while :; do
     case "$rest" in
       *$'\n\n'*)
         part=${rest%%$'\n\n'*}
         candidate="${candidate}${candidate:+$'\n\n'}${part}"
-        [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ] && return 0
+        if [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ]; then
+          MATCHED_DECISION=$candidate
+          MATCHED_REMAINDER=${rest#*$'\n\n'}
+          return 0
+        fi
         rest=${rest#*$'\n\n'}
         ;;
       *)
         candidate="${candidate}${candidate:+$'\n\n'}${rest}"
-        [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ]
-        return
+        if [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ]; then
+          MATCHED_DECISION=$candidate
+          MATCHED_REMAINDER=''
+          return 0
+        fi
+        return 1
         ;;
     esac
   done
@@ -451,7 +461,7 @@ legacy_decision_digest_matches() {  # <digest> <routes> <decision-and-routed-wor
 }
 
 verify_archived_answered() {  # <task-id> <archive-record>
-  local id=$1 record=$2 header archived_body body markers rest digest mode owner routes
+  local id=$1 record=$2 header archived_body body rest digest mode owner routes signature seen=''
   header=${record%%$'\n'*}
   if [ "$record" = "$header" ]; then
     archived_body=''
@@ -465,20 +475,14 @@ verify_archived_answered() {  # <task-id> <archive-record>
   esac
   body=$(unindent_archive_body "$archived_body") \
     || fail "captain-held task $id has a malformed archived resolution record"
-  markers=$(printf '%s\n' "$body" | awk '
-    $0 == "Resolution recorded by fm-captain-hold." ||
-      $0 == "Resolution recorded by fm-decision-hold." { count++ }
-    END { print count + 0 }
-  ')
-  [ "$markers" -eq 1 ] \
-    || fail "captain-held task $id has duplicate or malformed archived resolution boundaries"
-  case "$body" in
-    "Resolution recorded by fm-captain-hold."$'\n'*) owner=current ;;
-    "Resolution recorded by fm-decision-hold."$'\n'*) owner=legacy ;;
-    *) fail "captain-held task $id is archived without a recorded captain answer" ;;
-  esac
-  case "$owner" in
-    current)
+  while :; do
+    case "$body" in
+      "Resolution recorded by fm-captain-hold."$'\n'*) owner=current ;;
+      "Resolution recorded by fm-decision-hold."$'\n'*) owner=legacy ;;
+      *) fail "captain-held task $id is archived without a recorded captain answer" ;;
+    esac
+    case "$owner" in
+      current)
       rest=${body#*$'\n'}
       case "$rest" in
         "Decision digest: "*$'\n'*) ;;
@@ -503,10 +507,25 @@ verify_archived_answered() {  # <task-id> <archive-record>
           ;;
         *) fail "captain-held task $id has a malformed archived resolution record" ;;
       esac
-      decision_digest_matches_prefix "$digest" "$rest" \
+      match_decision_digest_prefix "$digest" "$rest" \
         || fail "captain-held task $id has an unverified archived captain-answer digest"
+      signature=$(sha256_text "current:$digest:$mode:$MATCHED_DECISION")
+      list_has_key "$seen" "$signature" \
+        && fail "captain-held task $id has duplicate archived resolution records"
+      seen="${seen}${seen:+,}${signature}"
+      body=$MATCHED_REMAINDER
+      if [ -z "$body" ]; then
+        return 0
+      fi
+      case "$body" in
+        "Resolution recorded by fm-captain-hold."$'\n'*|"Resolution recorded by fm-decision-hold."$'\n'*) continue ;;
+        "Resolution recorded by fm-captain-hold."*|"Resolution recorded by fm-decision-hold."*|*$'\nResolution recorded by fm-captain-hold.'*|*$'\nResolution recorded by fm-decision-hold.'*)
+          fail "captain-held task $id has malformed archived resolution boundaries"
+          ;;
+        *) return 0 ;;
+      esac
       ;;
-    legacy)
+      legacy)
       rest=${body#*$'\n'}
       case "$rest" in
         "Decision digest: "*$'\n'*) ;;
@@ -545,8 +564,13 @@ verify_archived_answered() {  # <task-id> <archive-record>
       esac
       legacy_decision_digest_matches "$digest" "$routes" "$rest" \
         || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
+      signature=$(sha256_text "legacy:$digest:$mode:$routes:$rest")
+      list_has_key "$seen" "$signature" \
+        && fail "captain-held task $id has duplicate archived resolution records"
+      return 0
       ;;
-  esac
+    esac
+  done
 }
 
 # Completion and teardown verification alone may consult historical retention.

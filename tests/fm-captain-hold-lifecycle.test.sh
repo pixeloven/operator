@@ -391,6 +391,30 @@ test_archived_answered_legacy_inventory_survives_retention() {
   pass "completion verifies exact answered legacy rows after tasks-axi retention archives them"
 }
 
+test_archived_reheld_history_remains_verifiable() {
+  local home origin task
+  home=$(make_home archived-reheld-history)
+  origin=sample-reheld-review
+  task=sample-reheld-call
+  tasks_in "$home" add "$origin" "Review re-held captain history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  tasks_in "$home" add "$task" "Apply the captain choice" --kind ship --repo sample \
+    --body "Original work context." >/dev/null
+  run_captain "$home" hold "$task" --reason "captain first choice pending" >/dev/null
+  printf 'Release for another pass.\n' > "$home/first-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/first-answer.txt" --release >/dev/null
+  run_captain "$home" hold "$task" --reason "captain final choice pending" >/dev/null
+  printf 'Close after the final pass.\n' > "$home/final-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/final-answer.txt" >/dev/null
+  tasks_in "$home" prune --state done --keep 0 >/dev/null
+  run_captain "$home" complete "$origin" "$task" >/dev/null \
+    || fail "completion refused valid archived history from a re-held captain task"
+  run_captain "$home" verify "$origin" >/dev/null \
+    || fail "verification refused valid archived history from a re-held captain task"
+  pass "archived re-held captain history retains its verified resolution chain"
+}
+
 # Archive fallback is proof-bound: exact identity, surviving captain-hold
 # provenance, and a complete recorded answer are all required. Plain Done
 # history, suggestive prose, malformed records, unresolved holds, and absent ids
@@ -1371,6 +1395,7 @@ test_uninventoried_report_decision_refuses_completion
 test_completion_gate_attests_and_transfers
 test_answer_records_and_closes
 test_archived_answered_legacy_inventory_survives_retention
+test_archived_reheld_history_remains_verifiable
 test_archive_fallback_refuses_unproven_rows
 test_release_frees_held_work
 test_deferral_leaves_captains_call_until_due
