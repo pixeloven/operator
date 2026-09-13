@@ -147,8 +147,8 @@ pull request** by [`.github/workflows/pixeloven-gates.yml`](../../.github/workfl
 (job `fork-contract`), so this section is a description of a live gate rather
 than a one-time claim.
 
-Every command below is expected to print **nothing**. Any output is a finding.
-The workflow runs exactly these, in this order, and fails the job on any output.
+Except for A7's affirmative lineage report, every command below is expected to print **nothing**; any other output is a finding.
+The workflow runs exactly these, in this order, and fails the job when a check reports a finding.
 
 ```sh
 # The upstream commit our tree currently contains - NOT the frozen fork point.
