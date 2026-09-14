@@ -94,6 +94,36 @@ write_origin_meta() {  # <home> <id> [kind]
     "spawn_gen=fixture-$id"
 }
 
+fixture_digest() {  # <text>
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
+  else
+    printf '%s' "$1" | sha256sum | awk '{print $1}'
+  fi
+}
+
+archive_resolution_fixture() {  # <home> <origin-id> <task-id> <body>
+  local home=$1 origin=$2 task=$3 body=$4
+  tasks_in "$home" add "$origin" "Review archived resolution" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Archived captain call" \
+    --reason "captain archived choice pending" --repo sample >/dev/null
+  tasks_in "$home" update "$task" --body "$body" >/dev/null
+  tasks_in "$home" "done" "$task" --keep 0 >/dev/null
+}
+
+assert_archived_resolution_refused() {  # <name> <body> <message>
+  local name=$1 body=$2 message=$3 home origin task
+  home=$(make_home "archived-$name")
+  origin="sample-$name-review"
+  task="sample-$name-call"
+  archive_resolution_fixture "$home" "$origin" "$task" "$body"
+  if run_captain "$home" complete "$origin" "$task" > "$home/complete.out" 2> "$home/complete.err"; then
+    fail "$message"
+  fi
+}
+
 # Reproduces the loss exactly with privacy-safe synthetic names: the investigation
 # and visual review have ended, the only genuine unresolved captain call is report
 # prose, no held backlog item or open status exists, and the authoritative
@@ -299,6 +329,383 @@ test_answer_records_and_closes() {
       and (.landed | any(.id == "sample-guard-call") | not)
   ' >/dev/null || fail "an answered captain call still renders somewhere it should not: $json"
   pass "answer records the captain's words, closes idempotently, and releases routed work"
+}
+
+# Retention may move old answered captain calls out of the active backlog after
+# an origin recorded their legacy keys. The supported completion command must
+# still verify those exact archived rows, while comparing them with both an
+# answered row that remains active and a currently held call.
+test_archived_answered_legacy_inventory_survives_retention() {
+  local home id key decision show
+  home=$(make_home archived-legacy-inventory)
+  id=sample-archive-review
+  mkdir -p "$home/data/$id"
+  tasks_in "$home" add "$id" "Investigate archived sample calls" --kind scout --repo sample --start >/dev/null \
+    || fail "could not create the archived-inventory origin"
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  printf '# Archived sample review\n\nOne current captain call remains.\n' > "$home/data/$id/report.md"
+
+  for key in old-alpha old-bravo old-charlie old-delta; do
+    run_shim "$home" hold "$id" "$key" \
+      --title "Answered legacy call $key" --reason "captain legacy choice pending" --repo sample >/dev/null \
+      || fail "could not create legacy hold $key"
+    decision="$home/$key.txt"
+    printf 'Captain answered %s.\n' "$key" > "$decision"
+    run_shim "$home" answer "$id" "$key" --decision-file "$decision" >/dev/null \
+      || fail "could not answer legacy hold $key"
+  done
+  tasks_in "$home" prune --state "done" --keep 0 >/dev/null \
+    || fail "could not reproduce tasks-axi retention"
+  assert_no_grep "$id-decision-old-alpha" "$home/data/backlog.md" \
+    "retention left an answered legacy row in the active backlog"
+  assert_grep "- [x] $id-decision-old-alpha -" "$home/data/done-archive.md" \
+    "retention did not archive the answered legacy row"
+
+  run_captain "$home" hold sample-active-answered-call \
+    --title "Answered call still in the active backlog" --reason "captain active choice pending" \
+    --repo sample --origin "$id" >/dev/null \
+    || fail "could not create the active answered comparison"
+  printf 'Captain answered the active comparison.\n' > "$home/active-answer.txt"
+  run_captain "$home" answer sample-active-answered-call \
+    --decision-file "$home/active-answer.txt" >/dev/null \
+    || fail "could not answer the active comparison"
+  show=$(tasks_in "$home" show sample-active-answered-call --full) \
+    || fail "the active answered comparison disappeared"
+  assert_contains "$show" "state: done" "the active answered comparison is not Done"
+
+  run_captain "$home" hold sample-current-call \
+    --title "Current sample call" --reason "captain current choice pending" \
+    --repo sample --origin "$id" >/dev/null \
+    || fail "could not create the current held call"
+  printf 'decisions_reviewed=1\ndecision_keys=old-alpha,old-bravo,old-charlie,old-delta\n' \
+    >> "$home/state/$id.meta"
+
+  run_captain "$home" complete "$id" sample-active-answered-call sample-current-call >/dev/null \
+    || fail "completion refused answered legacy rows retained in the archive"
+  run_captain "$home" verify "$id" >/dev/null \
+    || fail "verification refused answered legacy rows retained in the archive"
+  show=$(tasks_in "$home" show sample-current-call --full) \
+    || fail "the current held call disappeared during completion"
+  assert_contains "$show" "held: yes" "completion changed the current captain hold"
+  pass "completion verifies exact answered legacy rows after tasks-axi retention archives them"
+}
+
+test_archived_reheld_history_remains_verifiable() {
+  local home origin task
+  home=$(make_home archived-reheld-history)
+  origin=sample-reheld-review
+  task=sample-reheld-call
+  tasks_in "$home" add "$origin" "Review re-held captain history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  tasks_in "$home" add "$task" "Apply the captain choice" --kind ship --repo sample \
+    --body "Original work context." >/dev/null
+  run_captain "$home" hold "$task" --reason "captain first choice pending" >/dev/null
+  printf 'Release for another pass.\n' > "$home/first-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/first-answer.txt" --release >/dev/null
+  run_captain "$home" hold "$task" --reason "captain final choice pending" >/dev/null
+  printf 'Close after the final pass.\n' > "$home/final-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/final-answer.txt" >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
+  run_captain "$home" complete "$origin" "$task" >/dev/null \
+    || fail "completion refused valid archived history from a re-held captain task"
+  run_captain "$home" verify "$origin" >/dev/null \
+    || fail "verification refused valid archived history from a re-held captain task"
+
+  home=$(make_home archived-unanswered-rehold)
+  origin=sample-unanswered-rehold-review
+  task=sample-unanswered-rehold-call
+  tasks_in "$home" add "$origin" "Review unanswered re-hold" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Re-held captain call" \
+    --reason "captain initial choice pending" --repo sample >/dev/null
+  printf 'Release before reconsidering.\n' > "$home/release-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/release-answer.txt" --release >/dev/null
+  run_captain "$home" hold "$task" --reason "captain reconsideration pending" >/dev/null
+  tasks_in "$home" "done" "$task" --keep 0 >/dev/null
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/unanswered-rehold.out" 2> "$home/unanswered-rehold.err"; then
+    fail "completion treated an older release as the answer to a later re-hold"
+  fi
+  pass "archived re-held history requires a terminal answer to the latest hold"
+}
+
+test_archive_batches_and_dependency_metadata_remain_verifiable() {
+  local home origin task blocker
+  home=$(make_home archived-later-batch)
+  origin=sample-batch-review
+  task=sample-earlier-batch-call
+  tasks_in "$home" add "$origin" "Review archive batches" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Earlier archived call" \
+    --reason "captain earlier choice pending" --repo sample >/dev/null
+  printf 'Use the earlier archived answer.\n' > "$home/batch-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/batch-answer.txt" >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
+  tasks_in "$home" add sample-later-batch-task "Later archived work" --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" sample-later-batch-task --keep 0 >/dev/null
+  run_captain "$home" complete "$origin" "$task" >/dev/null \
+    || fail "completion included a later archive batch heading in the earlier task record"
+
+  home=$(make_home archived-reasoned-dependency)
+  origin=sample-dependency-review
+  task=sample-dependent-call
+  blocker=sample-finished-prerequisite
+  tasks_in "$home" add "$origin" "Review archived dependency metadata" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  tasks_in "$home" add "$blocker" "Finished prerequisite" --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" "$blocker" --no-prune >/dev/null
+  tasks_in "$home" add "$task" "Dependent captain call" --kind ship --repo sample \
+    --blocked-by "$blocker" >/dev/null
+  run_captain "$home" hold "$task" --reason "captain dependent choice pending" >/dev/null
+  printf 'Use the dependency-aware answer.\n' > "$home/dependency-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/dependency-answer.txt" >/dev/null
+  sed "/^- \\[x\\] $task - / { s/ blocked-by: $blocker//; s/$/ blocked-by: $blocker - prerequisite already finished/; }" \
+    "$home/data/backlog.md" > "$home/data/backlog.next"
+  mv "$home/data/backlog.next" "$home/data/backlog.md"
+  tasks_in "$home" render >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
+  run_captain "$home" complete "$origin" "$task" >/dev/null \
+    || fail "completion rejected captain-hold metadata before a reasoned archived dependency"
+  pass "archive batches and reasoned dependency metadata preserve verified answers"
+}
+
+test_archive_membership_and_identity_ambiguity_refuse() {
+  local home origin task decision digest body
+  decision='A valid answer in an invalid location.'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+
+  home=$(make_home archived-outside-batch)
+  origin=sample-outside-batch-review
+  task=sample-outside-batch-call
+  archive_resolution_fixture "$home" "$origin" "$task" "$body"
+  sed '/^## Archived [0-9][0-9-]*$/d' "$home/data/done-archive.md" \
+    > "$home/data/done-archive.next"
+  mv "$home/data/done-archive.next" "$home/data/done-archive.md"
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/outside-batch.out" 2> "$home/outside-batch.err"; then
+    fail "completion accepted a task-shaped row outside a canonical archive batch"
+  fi
+
+  home=$(make_home archived-reused-id)
+  origin=sample-reused-id-review
+  task=sample-reused-id-call
+  tasks_in "$home" add "$origin" "Review reused archive identity" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "First archived incarnation" \
+    --reason "captain first incarnation pending" --repo sample >/dev/null
+  printf 'Answer the first incarnation.\n' > "$home/first-incarnation.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/first-incarnation.txt" >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
+  run_captain "$home" hold "$task" --title "Reused archived incarnation" \
+    --reason "captain reused incarnation pending" --repo sample >/dev/null
+  tasks_in "$home" "done" "$task" --keep 0 >/dev/null
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/reused-id.out" 2> "$home/reused-id.err"; then
+    fail "completion accepted a stale answer from an earlier archived task incarnation"
+  fi
+
+  home=$(make_home archived-exact-legacy-collision)
+  origin=sample-identity-collision-review
+  task=choice
+  tasks_in "$home" add "$origin" "Review identity collision" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$origin"
+  printf 'done: report complete\n' > "$home/state/$origin.status"
+  run_captain "$home" hold "$task" --title "Unrelated exact-id call" \
+    --reason "captain exact-id choice pending" --repo sample >/dev/null
+  printf 'Answer the unrelated exact-id call.\n' > "$home/exact-answer.txt"
+  run_captain "$home" answer "$task" --decision-file "$home/exact-answer.txt" >/dev/null
+  tasks_in "$home" prune --state 'done' --keep 0 >/dev/null
+  run_shim "$home" hold "$origin" "$task" --title "Unresolved legacy call" \
+    --reason "captain legacy collision pending" --repo sample >/dev/null
+  if run_captain "$home" complete "$origin" "$task" \
+    > "$home/identity-collision.out" 2> "$home/identity-collision.err"; then
+    fail "completion let an archived exact id mask an active unresolved legacy call"
+  fi
+  pass "archive membership and identity ambiguity fail closed"
+}
+
+# Archive fallback is proof-bound: exact identity, surviving captain-hold
+# provenance, and a complete recorded answer are all required. Plain Done
+# history, suggestive prose, malformed records, unresolved holds, and absent ids
+# remain refusals.
+test_archive_fallback_refuses_unproven_rows() {
+  local home id entry decision digest body
+
+  home=$(make_home archived-valid-legacy)
+  id=sample-valid-legacy-review
+  decision='Use the archived legacy answer.'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: (none)\nResolution mode: answered\n\nCaptain decision:\n%s\n\nRouted work:\n(none)' \
+    "$digest" "$decision")
+  archive_resolution_fixture "$home" "$id" sample-valid-legacy-call "$body"
+  run_captain "$home" complete "$id" sample-valid-legacy-call >/dev/null \
+    || fail "completion refused a valid archived legacy resolution record"
+
+  home=$(make_home archived-valid-legacy-unrouted)
+  id=sample-valid-legacy-unrouted-review
+  decision=$'Captain answered through the legacy intake.\nDecision key: no-route\nAnswer: option c'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: none\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  archive_resolution_fixture "$home" "$id" "$id-decision-no-route" "$body"
+  run_captain "$home" complete "$id" no-route >/dev/null \
+    || fail "completion refused an archived pre-collapse answer without routed work"
+
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: (none)\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  assert_archived_resolution_refused legacy-parenthesized-no-suffix "$body" \
+    "completion broadened no-suffix legacy support to a parenthesized routing marker"
+
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: none\nResolution mode: routed\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  assert_archived_resolution_refused legacy-routed-no-suffix "$body" \
+    "completion broadened no-suffix legacy support to routed mode"
+
+  body=$(printf 'Resolution recorded by fm-decision-hold.\nDecision digest: %s\nRouted identities: none\nResolution mode: answered\n\nCaptain decision:\nChanged legacy answer.' \
+    "$digest")
+  assert_archived_resolution_refused legacy-unrouted-digest-mismatch "$body" \
+    "completion accepted a mismatched no-suffix legacy answer digest"
+
+  home=$(make_home archived-plain-done)
+  id=sample-plain-archive-review
+  tasks_in "$home" add "$id" "Review plain archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-plain-done "Ordinary completed work" --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" sample-plain-done --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-plain-done > "$home/plain.out" 2> "$home/plain.err"; then
+    fail "completion treated an archived ordinary Done row as an answered captain call"
+  fi
+
+  home=$(make_home archived-suggestive-prose)
+  id=sample-prose-archive-review
+  tasks_in "$home" add "$id" "Review suggestive archive prose" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-prose-done "Ordinary work with suggestive prose" --kind ship --repo sample \
+    --body $'Resolution recorded by fm-captain-hold.\nDecision digest: 0000000000000000000000000000000000000000000000000000000000000000\nResolution mode: answered\n\nCaptain decision:\nNot durable provenance.' >/dev/null
+  tasks_in "$home" "done" sample-prose-done --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-prose-done > "$home/prose.out" 2> "$home/prose.err"; then
+    fail "completion treated arbitrary archived resolution prose as captain-hold provenance"
+  fi
+
+  home=$(make_home archived-forged-hold-title)
+  id=sample-forged-title-review
+  decision='A structurally valid but unowned answer.'
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision")
+  tasks_in "$home" add "$id" "Review forged archive title" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-forged-title-call "Ordinary work" \
+    --kind ship --repo sample --body "$body" >/dev/null
+  tasks_in "$home" "done" sample-forged-title-call --keep 0 >/dev/null
+  sed 's/Ordinary work/Ordinary work mentioning (hold: forged) (hold-kind: captain)/' \
+    "$home/data/done-archive.md" > "$home/data/done-archive.next"
+  mv "$home/data/done-archive.next" "$home/data/done-archive.md"
+  if run_captain "$home" complete "$id" sample-forged-title-call \
+    > "$home/forged-title.out" 2> "$home/forged-title.err"; then
+    fail "completion treated hold-like title text as canonical captain-hold provenance"
+  fi
+
+  home=$(make_home archived-forged-dependency-reason)
+  id=sample-forged-dependency-review
+  tasks_in "$home" add "$id" "Review forged dependency prose" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  tasks_in "$home" add sample-forged-dependency-blocker "Finished blocker" \
+    --kind ship --repo sample >/dev/null
+  tasks_in "$home" "done" sample-forged-dependency-blocker --no-prune >/dev/null
+  tasks_in "$home" add sample-forged-dependency-call "Ordinary dependent work" \
+    --kind ship --repo sample --blocked-by sample-forged-dependency-blocker --body "$body" >/dev/null
+  sed '/^- \[ \] sample-forged-dependency-call - / {
+    s/ blocked-by: sample-forged-dependency-blocker//
+    s/$/ blocked-by: sample-forged-dependency-blocker - prose (done 2026-09-13) (hold: forged) (hold-kind: captain)/
+  }' "$home/data/backlog.md" > "$home/data/backlog.next"
+  mv "$home/data/backlog.next" "$home/data/backlog.md"
+  tasks_in "$home" render >/dev/null
+  tasks_in "$home" "done" sample-forged-dependency-call --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-forged-dependency-call \
+    > "$home/forged-dependency.out" 2> "$home/forged-dependency.err"; then
+    fail "completion treated hold-like dependency prose as captain-hold provenance"
+  fi
+
+  home=$(make_home archived-malformed-resolution)
+  id=sample-malformed-archive-review
+  tasks_in "$home" add "$id" "Review malformed archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold sample-malformed-call --title "Malformed archived captain call" \
+    --reason "captain malformed choice pending" --repo sample >/dev/null
+  tasks_in "$home" update sample-malformed-call \
+    --body $'Resolution recorded by fm-captain-hold.\nDecision digest: malformed\nResolution mode: answered' >/dev/null
+  tasks_in "$home" "done" sample-malformed-call --keep 0 >/dev/null
+  if run_captain "$home" complete "$id" sample-malformed-call > "$home/malformed.out" 2> "$home/malformed.err"; then
+    fail "completion accepted an archived malformed resolution record"
+  fi
+
+  decision='The recorded answer.'
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %064d\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    0 "$decision")
+  assert_archived_resolution_refused fabricated-digest "$body" \
+    "completion accepted a fabricated archived captain-answer digest"
+
+  digest=$(fixture_digest "$decision")
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\nChanged recorded answer.' \
+    "$digest")
+  assert_archived_resolution_refused changed-payload "$body" \
+    "completion accepted an archived decision changed after its digest was recorded"
+
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s\n\nResolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:\n%s' \
+    "$digest" "$decision" "$digest" "$decision")
+  assert_archived_resolution_refused duplicate-boundaries "$body" \
+    "completion accepted duplicate archived resolution boundaries"
+
+  body=$(printf 'Resolution recorded by fm-captain-hold.\nDecision digest: %s\nResolution mode: answered\n\nCaptain decision:' \
+    "$digest")
+  assert_archived_resolution_refused missing-decision-body "$body" \
+    "completion accepted an archived resolution with no decision body"
+
+  home=$(make_home archived-unresolved-hold)
+  id=sample-unresolved-archive-review
+  tasks_in "$home" add "$id" "Review unresolved archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold sample-unresolved-call --title "Unresolved archived captain call" \
+    --reason "captain unresolved choice pending" --repo sample >/dev/null
+  tasks_in "$home" "done" sample-unresolved-call --keep 0 >/dev/null
+  cat >> "$home/data/done-archive.md" <<'EOF'
+Resolution recorded by fm-captain-hold.
+Decision digest: 0000000000000000000000000000000000000000000000000000000000000000
+Resolution mode: answered
+
+Captain decision:
+Arbitrary prose outside the archived task record.
+EOF
+  if run_captain "$home" complete "$id" sample-unresolved-call > "$home/unresolved.out" 2> "$home/unresolved.err"; then
+    fail "completion accepted an archived unresolved captain hold because unrelated archive prose looked like a resolution"
+  fi
+
+  home=$(make_home archived-missing-id)
+  id=sample-missing-archive-review
+  entry=sample-genuinely-missing-call
+  tasks_in "$home" add "$id" "Review missing archive history" --kind scout --repo sample --start >/dev/null
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  if run_captain "$home" complete "$id" "$entry" > "$home/missing.out" 2> "$home/missing.err"; then
+    fail "completion accepted an id missing from both active and archived history"
+  fi
+  assert_grep "$entry" "$home/missing.err" "the genuine missing-id refusal did not name the id"
+  pass "archive fallback rejects rows without exact durable captain-answer provenance"
 }
 
 # --release lifts the hold instead of closing, preserving the work item's own
@@ -1171,6 +1578,11 @@ EOF
 test_uninventoried_report_decision_refuses_completion
 test_completion_gate_attests_and_transfers
 test_answer_records_and_closes
+test_archived_answered_legacy_inventory_survives_retention
+test_archived_reheld_history_remains_verifiable
+test_archive_batches_and_dependency_metadata_remain_verifiable
+test_archive_membership_and_identity_ambiguity_refuse
+test_archive_fallback_refuses_unproven_rows
 test_release_frees_held_work
 test_deferral_leaves_captains_call_until_due
 test_out_of_band_close_is_recordable

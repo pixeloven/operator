@@ -100,7 +100,8 @@
 # `--none` is an explicit semantic attestation that the just-reviewed surface
 # has no unresolved captain call, and is refused while the origin still has an
 # open keyed status decision. With a non-empty inventory, every listed task is
-# verified durable (actively captain-held, or closed with a recorded answer),
+# verified durable (actively captain-held, or closed with a recorded answer in
+# the active backlog or the canonical tasks-axi retention archive),
 # the inventory is unioned idempotently into the metadata, and every still-open
 # keyed status decision is transferred to its durable owner with a
 # `captain-held [key=...]` status close naming the inventory. Later review
@@ -109,11 +110,14 @@
 # `verify` is read-only and is called by scout teardown, so teardown cannot
 # erase a source before this gate has succeeded: every recorded inventory
 # entry must still be durable and no keyed status decision may be open.
+# An archived entry counts only when its exact Done row retains captain-hold
+# provenance and a structurally valid recorded answer; archive lookup is never
+# used by the answer intake, so historical rows cannot become actionable.
 # Metadata compatibility: the attestation keeps the historical
-# `decisions_reviewed=1` and `decision_keys=` keys, and an inventory entry that
-# names no existing task resolves through the legacy `<origin>-decision-<entry>`
-# identity, so pre-collapse metadata written by fm-decision-hold.sh verifies
-# unchanged. An entry that exists as a task id is always that task.
+# `decisions_reviewed=1` and `decision_keys=` keys. Completion checks both the
+# entry and the legacy `<origin>-decision-<entry>` identity across active and
+# archived tasks, accepts the sole durable candidate for pre-collapse metadata,
+# and refuses when both identities exist rather than guessing between them.
 #
 # `diverged` is the read-only guard over the seam between the two records of
 # one captain call. See "record divergence" beside command_diverged below.
@@ -226,6 +230,84 @@ require_tasks_axi() {
 
 task_show() {  # <id>
   tasks_axi show "$1" --full 2>/dev/null
+}
+
+# Print the exact tasks-axi archive record for one task id. Archived task rows
+# begin at column zero while body lines are indented, so any later nonblank
+# column-zero content ends the record. Matching the parsed id rather than prose
+# makes a title, body, or neighboring task unable to stand in for the identity.
+archive_task_record() {  # <id>
+  local id=$1 archive="$DATA/done-archive.md"
+  [ -f "$archive" ] || return 1
+  awk -v wanted="$id" '
+    function archived_task_id(line, rest, separator) {
+      if (line !~ /^- \[[xX]\] [A-Za-z0-9._-]+ - /) return ""
+      rest = substr(line, 7)
+      separator = index(rest, " - ")
+      if (separator == 0) return ""
+      return substr(rest, 1, separator - 1)
+    }
+    function finish_record() {
+      if (!capturing) return
+      matches++
+      if (matches == 1) matched_record = record
+      capturing = 0
+      record = ""
+    }
+    {
+      if ($0 ~ /^## Archived [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) {
+        finish_record()
+        in_batch = 1
+        next
+      }
+      if ($0 != "" && $0 !~ /^  /) {
+        finish_record()
+        row_id = archived_task_id($0)
+        if (in_batch && row_id != "") {
+          if (row_id == wanted) {
+            capturing = 1
+            record = $0
+          }
+          next
+        }
+        in_batch = 0
+        next
+      }
+      if (capturing) record = record "\n" $0
+    }
+    END {
+      finish_record()
+      if (matches == 1) print matched_record
+      else if (matches > 1) print "duplicate archived task identity"
+      else exit 1
+    }
+  ' "$archive"
+}
+
+archive_header_has_captain_hold() {  # <task-id> <archive-header>
+  printf '%s\n' "$2" | awk -v wanted="$1" '
+    BEGIN {
+      id = "[A-Za-z0-9][A-Za-z0-9._-]*"
+      date = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+      closed = "\\((merged|reported|done|closed) " date "\\)"
+      hold = "\\(hold: [^()]+\\) \\(hold-kind: captain\\)"
+      until = "( \\(hold-until: " date "\\))?"
+      dep = " (blocked-by|parent|discovered-from): " id " - "
+      suffix = closed " " hold until "$"
+      prefix = "- [x] " wanted " - "
+    }
+    index($0, prefix) == 1 {
+      rest = substr($0, length(prefix) + 1)
+      while (match(rest, dep)) {
+        before = substr(rest, 1, RSTART - 1)
+        after = substr(rest, RSTART + RLENGTH)
+        if (after == "") break
+        rest = before
+      }
+      if (rest ~ suffix) found = 1
+    }
+    END { exit(found ? 0 : 1) }
+  '
 }
 
 show_field() {  # <show-output> <field>
@@ -357,8 +439,255 @@ verify_hold_durable() {  # <task-id>
   fail "captain-held task $id is neither held for the captain nor closed with a recorded captain answer"
 }
 
-# Resolve one inventory entry or channel key to the task that carries it: the
-# exact task id when it exists, else the legacy derived identity.
+unindent_archive_body() {  # <archive-body>
+  printf '%s\n' "$1" | awk '
+    /^$/ { print; next }
+    /^  / { print substr($0, 3); next }
+    { exit 1 }
+  '
+}
+
+MATCHED_DECISION=''
+MATCHED_REMAINDER=''
+match_decision_digest_prefix() {  # <digest> <decision-and-prior-body>
+  local expected=$1 rest=$2 candidate='' part
+  while :; do
+    case "$rest" in
+      *$'\n\n'*)
+        part=${rest%%$'\n\n'*}
+        candidate="${candidate}${candidate:+$'\n\n'}${part}"
+        if [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ]; then
+          MATCHED_DECISION=$candidate
+          MATCHED_REMAINDER=${rest#*$'\n\n'}
+          return 0
+        fi
+        rest=${rest#*$'\n\n'}
+        ;;
+      *)
+        candidate="${candidate}${candidate:+$'\n\n'}${rest}"
+        if [ -n "$candidate" ] && [ "$(sha256_text "$candidate")" = "$expected" ]; then
+          MATCHED_DECISION=$candidate
+          MATCHED_REMAINDER=''
+          return 0
+        fi
+        return 1
+        ;;
+    esac
+  done
+}
+
+legacy_routed_work_matches() {  # <routed-identities> <routed-work>
+  local identities=$1 work=$2 listed
+  if [ "$identities" = '(none)' ]; then
+    [ "$work" = '(none)' ]
+    return
+  fi
+  listed=$(printf '%s\n' "$work" | awk '
+    !/^- [A-Za-z0-9._-]+$/ { exit 1 }
+    { sub(/^- /, ""); values = values (values == "" ? "" : ",") $0 }
+    END { if (values == "") exit 1; print values }
+  ') || return 1
+  [ "$listed" = "$identities" ]
+}
+
+legacy_decision_digest_matches() {  # <digest> <routes> <decision-and-routed-work>
+  local expected=$1 routes=$2 rest=$3 candidate='' part work
+  while :; do
+    case "$rest" in
+      *$'\n\nRouted work:\n'*)
+        part=${rest%%$'\n\nRouted work:\n'*}
+        candidate="${candidate}${candidate:+$'\n\nRouted work:\n'}${part}"
+        work=${rest#*$'\n\nRouted work:\n'}
+        if [ -n "$candidate" ] \
+          && [ "$(sha256_text "$candidate")" = "$expected" ] \
+          && legacy_routed_work_matches "$routes" "$work"; then
+          return 0
+        fi
+        rest=$work
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
+verify_archived_answered() {  # <task-id> <archive-record>
+  local id=$1 record=$2 header archived_body body rest digest mode owner routes signature seen=''
+  header=${record%%$'\n'*}
+  if [ "$record" = "$header" ]; then
+    archived_body=''
+  else
+    archived_body=${record#*$'\n'}
+  fi
+  archive_header_has_captain_hold "$id" "$header" \
+    || fail "captain-held task $id is archived without surviving captain-hold provenance"
+  body=$(unindent_archive_body "$archived_body") \
+    || fail "captain-held task $id has a malformed archived resolution record"
+  while :; do
+    case "$body" in
+      "Resolution recorded by fm-captain-hold."$'\n'*) owner=current ;;
+      "Resolution recorded by fm-decision-hold."$'\n'*) owner=legacy ;;
+      *) fail "captain-held task $id is archived without a recorded captain answer" ;;
+    esac
+    case "$owner" in
+      current)
+      rest=${body#*$'\n'}
+      case "$rest" in
+        "Decision digest: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived resolution record" ;;
+      esac
+      digest=${rest#"Decision digest: "}
+      digest=${digest%%$'\n'*}
+      rest=${rest#*$'\n'}
+      case "$rest" in
+        "Resolution mode: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived resolution record" ;;
+      esac
+      mode=${rest#"Resolution mode: "}
+      mode=${mode%%$'\n'*}
+      case "$mode" in
+        answered|released|repaired) ;;
+        *) fail "captain-held task $id has a malformed archived resolution mode" ;;
+      esac
+      [ -n "$seen" ] || [ "$mode" != released ] \
+        || fail "captain-held task $id has no terminal archived captain answer"
+      case "$rest" in
+        "Resolution mode: $mode"$'\n\nCaptain decision:\n'*)
+          rest=${rest#"Resolution mode: $mode"$'\n\nCaptain decision:\n'}
+          ;;
+        *) fail "captain-held task $id has a malformed archived resolution record" ;;
+      esac
+      match_decision_digest_prefix "$digest" "$rest" \
+        || fail "captain-held task $id has an unverified archived captain-answer digest"
+      signature=$(sha256_text "current:$digest:$mode:$MATCHED_DECISION")
+      list_has_key "$seen" "$signature" \
+        && fail "captain-held task $id has duplicate archived resolution records"
+      seen="${seen}${seen:+,}${signature}"
+      body=$MATCHED_REMAINDER
+      if [ -z "$body" ]; then
+        return 0
+      fi
+      case "$body" in
+        "Resolution recorded by fm-captain-hold."$'\n'*|"Resolution recorded by fm-decision-hold."$'\n'*) continue ;;
+        "Resolution recorded by fm-captain-hold."*|"Resolution recorded by fm-decision-hold."*|*$'\nResolution recorded by fm-captain-hold.'*|*$'\nResolution recorded by fm-decision-hold.'*)
+          fail "captain-held task $id has malformed archived resolution boundaries"
+          ;;
+        *) return 0 ;;
+      esac
+      ;;
+      legacy)
+      rest=${body#*$'\n'}
+      case "$rest" in
+        "Decision digest: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+      esac
+      digest=${rest#"Decision digest: "}
+      digest=${digest%%$'\n'*}
+      rest=${rest#*$'\n'}
+      case "$rest" in
+        "Routed identities: "*$'\n'*) ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+      esac
+      routes=${rest#"Routed identities: "}
+      routes=${routes%%$'\n'*}
+      rest=${rest#*$'\n'}
+      case "$rest" in
+        $'\nCaptain decision:\n'*)
+          mode=''
+          rest=${rest#$'\nCaptain decision:\n'}
+          ;;
+        "Resolution mode: "*$'\n'*)
+          mode=${rest#"Resolution mode: "}
+          mode=${mode%%$'\n'*}
+          case "$rest" in
+            "Resolution mode: $mode"$'\n\nCaptain decision:\n'*)
+              rest=${rest#"Resolution mode: $mode"$'\n\nCaptain decision:\n'}
+              ;;
+            *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+          esac
+          ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution record" ;;
+      esac
+      case "$mode" in
+        ''|answered|routed|declined|repaired) ;;
+        *) fail "captain-held task $id has a malformed archived legacy resolution mode" ;;
+      esac
+      if [ "$routes" = none ] && [ "$mode" = answered ]; then
+        case "$rest" in
+          ''|*$'\n\nRouted work:\n'*)
+            fail "captain-held task $id has a malformed archived legacy routing boundary"
+            ;;
+        esac
+        [ "$(sha256_text "$rest")" = "$digest" ] \
+          || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
+      else
+        legacy_decision_digest_matches "$digest" "$routes" "$rest" \
+          || fail "captain-held task $id has an unverified archived legacy captain-answer digest"
+      fi
+      signature=$(sha256_text "legacy:$digest:$mode:$routes:$rest")
+      list_has_key "$seen" "$signature" \
+        && fail "captain-held task $id has duplicate archived resolution records"
+      return 0
+      ;;
+    esac
+  done
+}
+
+inventory_candidate_state() {  # <task-id>
+  local id=$1 record
+  if task_show "$id" >/dev/null 2>&1; then
+    if (verify_hold_durable "$id") >/dev/null 2>&1; then
+      printf 'resolved'
+    else
+      printf 'unresolved'
+    fi
+    return 0
+  fi
+  if record=$(archive_task_record "$id"); then
+    if (verify_archived_answered "$id" "$record") >/dev/null 2>&1; then
+      printf 'resolved'
+    else
+      printf 'unresolved'
+    fi
+    return 0
+  fi
+  printf 'absent'
+}
+
+verify_inventory_candidate() {  # <task-id>
+  local id=$1 record
+  if task_show "$id" >/dev/null 2>&1; then
+    verify_hold_durable "$id"
+    return 0
+  fi
+  record=$(archive_task_record "$id") \
+    || fail "captain-held task $id is absent from active and archived tasks"
+  verify_archived_answered "$id" "$record"
+}
+
+# Completion and teardown verification alone may consult historical retention.
+# Channel answer intake deliberately keeps using resolve_entry so an archive row
+# can never receive or replay input.
+verify_inventory_entry_durable() {  # <origin-id> <entry>
+  local origin=$1 entry=$2 legacy exact_state legacy_state
+  legacy=$(legacy_hold_id "$origin" "$entry")
+  exact_state=$(inventory_candidate_state "$entry")
+  legacy_state=$(inventory_candidate_state "$legacy")
+  if [ "$exact_state" != absent ] && [ "$legacy_state" != absent ]; then
+    fail "captain-held inventory entry $entry is ambiguous between exact identity $entry and legacy identity $legacy"
+  fi
+  case "$exact_state:$legacy_state" in
+    resolved:absent) return 0 ;;
+    absent:resolved) return 0 ;;
+    unresolved:absent) verify_inventory_candidate "$entry" ;;
+    absent:unresolved) verify_inventory_candidate "$legacy" ;;
+    absent:absent)
+      fail "no captain-held task $entry and no legacy identity $legacy in $FM_HOME/data/backlog.md or $DATA/done-archive.md"
+      ;;
+  esac
+}
+
+# Resolve one channel key to the active task that carries it: the exact task id
+# when it exists, else the legacy derived identity.
 resolve_entry() {  # <origin-or-empty> <entry>; prints the resolved id or fails
   local origin=$1 entry=$2 legacy
   if task_show "$entry" >/dev/null 2>&1; then
@@ -798,7 +1127,7 @@ command_complete() {
   if [ -n "$keys" ]; then
     while IFS= read -r entry; do
       [ -n "$entry" ] || continue
-      verify_hold_durable "$(resolve_entry "$origin" "$entry")"
+      verify_inventory_entry_durable "$origin" "$entry"
     done <<EOF
 $(printf '%s\n' "$keys" | tr ',' '\n')
 EOF
@@ -852,7 +1181,7 @@ command_verify() {
   if [ -n "$keys" ]; then
     while IFS= read -r entry; do
       [ -n "$entry" ] || continue
-      verify_hold_durable "$(resolve_entry "$origin" "$entry")"
+      verify_inventory_entry_durable "$origin" "$entry"
     done <<EOF
 $(printf '%s\n' "$keys" | tr ',' '\n')
 EOF
