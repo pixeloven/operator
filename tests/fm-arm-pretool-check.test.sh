@@ -11,6 +11,8 @@ set -u
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
+export FM_HOME="$ROOT"
+
 CHECK="$ROOT/bin/fm-arm-pretool-check.sh"
 POLICY="$ROOT/bin/fm-arm-command-policy.mjs"
 
