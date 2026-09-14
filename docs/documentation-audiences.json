@@ -313,6 +313,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0013-archived-captain-hold-completion.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

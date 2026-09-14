@@ -24,6 +24,7 @@ Use [`_template.md`](_template.md).
 | [0010](0010-pixeloven-companion-forks-own-distribution.md) | PixelOven companion forks own distribution | Accepted | `operator` upstream synchronization and companion-fork migration |
 | [0011](0011-operator-github-hosted-runner-routing.md) | `operator` CI uses standard GitHub-hosted runners | Accepted | Hosted-runner remediation after PR #11 |
 | [0012](0012-notification-reconciliation.md) | Notification reconciliation may modify bounded upstream surfaces | Accepted | Process-result notification reliability reconciliation |
+| [0013](0013-archived-captain-hold-completion.md) | Archived captain-hold completion may modify bounded upstream surfaces | Accepted | Captain-approved archived answer compatibility |
 
 ## Conventions
 
