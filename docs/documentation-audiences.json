@@ -317,6 +317,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0014-stale-lock-publication-serialization.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

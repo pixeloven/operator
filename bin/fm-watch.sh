@@ -1422,7 +1422,7 @@ if ! fm_lock_try_acquire "$WATCH_LOCK"; then
     fi
     echo "watcher: already running pid $FM_LOCK_HELD_PID"
   else
-    echo "watcher: already running"
+    echo "watcher: watcher lock recovery in progress; another start is publishing it"
   fi
   exit 0
 fi

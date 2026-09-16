@@ -14,6 +14,7 @@ The upstream projects remain the original works, and their histories, licenses, 
 
 [`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh) is the executable source inventory.
 Run `bin/fm-install-pixeloven-tool.sh --list` for the exact commit and expected version currently selected for each fork.
+Run `bin/fm-install-pixeloven-tool.sh --upstream-list` for those selections together with each canonical upstream repository, default-branch ref, and ancestry pin.
 The script's header owns acquisition, build, destination, and no-mistakes daemon-safety mechanics.
 
 ## Installation and updates

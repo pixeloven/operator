@@ -25,6 +25,7 @@ Use [`_template.md`](_template.md).
 | [0011](0011-operator-github-hosted-runner-routing.md) | `operator` CI uses standard GitHub-hosted runners | Accepted | Hosted-runner remediation after PR #11 |
 | [0012](0012-notification-reconciliation.md) | Notification reconciliation may modify bounded upstream surfaces | Accepted | Process-result notification reliability reconciliation |
 | [0013](0013-archived-captain-hold-completion.md) | Archived captain-hold completion may modify bounded upstream surfaces | Accepted | Captain-approved archived answer compatibility |
+| [0014](0014-stale-lock-publication-serialization.md) | Stale-lock publication serialization may modify bounded upstream surfaces | Accepted | Hosted stale-lock scheduling race correction |
 
 ## Conventions
 

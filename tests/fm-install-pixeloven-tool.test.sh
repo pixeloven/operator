@@ -183,7 +183,7 @@ SH
 chmod 0755 "$FAKEBIN/git" "$FAKEBIN/corepack" "$FAKEBIN/node" "$FAKEBIN/cp" "$FAKEBIN/npm" "$FAKEBIN/go" "$FAKEBIN/install" "$FAKEBIN/make"
 
 test_source_inventory_is_exact_and_downstream() {
-  local out
+  local out upstream expected_upstream
   out=$(/bin/bash "$INSTALLER" --list) || fail '--list failed'
   [ "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" = 6 ] || fail '--list did not report six tools'
   assert_contains "$out" "gh-axi$(printf '\t')https://github.com/pixeloven/gh-axi$(printf '\t')84112b7897fc1d0833f2727a817ecc91a297c3ef$(printf '\t')0.1.34$(printf '\t')npm" 'gh-axi source is not exact'
@@ -193,7 +193,18 @@ test_source_inventory_is_exact_and_downstream() {
   assert_contains "$out" "quota-axi$(printf '\t')https://github.com/pixeloven/quota-axi$(printf '\t')bbc3deb4fca6a172db0217fd26d990fad8b4202e$(printf '\t')0.1.34$(printf '\t')npm" 'quota-axi source is not exact'
   assert_contains "$out" "no-mistakes$(printf '\t')https://github.com/pixeloven/no-mistakes$(printf '\t')70185bf682521ed1822e51dc09fa327b85b87e79$(printf '\t')1.60.1$(printf '\t')go" 'no-mistakes source is not exact'
   assert_not_contains "$out" 'kunchenguid/' 'the selected distribution inventory still points at upstream'
-  pass 'the public source inventory selects six exact PixelOven fork commits'
+  upstream=$(/bin/bash "$INSTALLER" --upstream-list) || fail '--upstream-list failed'
+  expected_upstream=$(cat <<'EOF'
+gh-axi	https://github.com/pixeloven/gh-axi	84112b7897fc1d0833f2727a817ecc91a297c3ef	https://github.com/kunchenguid/gh-axi.git	refs/heads/main	84112b7897fc1d0833f2727a817ecc91a297c3ef
+chrome-devtools-axi	https://github.com/pixeloven/chrome-devtools-axi	351be6bb8665fda10168242d965a966596d66772	https://github.com/kunchenguid/chrome-devtools-axi.git	refs/heads/main	351be6bb8665fda10168242d965a966596d66772
+lavish-axi	https://github.com/pixeloven/lavish-axi	ffd7aacff563b8bca09eb7ebfb17c14faeb968ce	https://github.com/kunchenguid/lavish-axi.git	refs/heads/main	ffd7aacff563b8bca09eb7ebfb17c14faeb968ce
+tasks-axi	https://github.com/pixeloven/tasks-axi	d9175b6d083d693c5b6ca21652454d52e4b312d9	https://github.com/kunchenguid/tasks-axi.git	refs/heads/main	d9175b6d083d693c5b6ca21652454d52e4b312d9
+quota-axi	https://github.com/pixeloven/quota-axi	bbc3deb4fca6a172db0217fd26d990fad8b4202e	https://github.com/kunchenguid/quota-axi.git	refs/heads/main	bbc3deb4fca6a172db0217fd26d990fad8b4202e
+no-mistakes	https://github.com/pixeloven/no-mistakes	70185bf682521ed1822e51dc09fa327b85b87e79	https://github.com/kunchenguid/no-mistakes.git	refs/heads/main	1a3f74d86d2646967d6f1e7dce8853023c41768c
+EOF
+  )
+  [ "$upstream" = "$expected_upstream" ] || fail 'canonical upstream inventory changed or became ambiguous'
+  pass 'the public source inventory selects six exact PixelOven fork commits and canonical upstream pins'
 }
 
 test_old_node_is_refused_before_source_fetch() {

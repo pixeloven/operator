@@ -61,9 +61,11 @@ Portable regression coverage uses:
 
 ```sh
 bin/fm-test-run.sh tests/fm-install-pixeloven-tool.test.sh
+bin/fm-test-run.sh tests/fm-pixeloven-upstream-check.test.sh
 bin/fm-test-run.sh tests/fm-bootstrap.test.sh
 bin/fm-test-run.sh tests/fm-no-mistakes-required.test.sh
 ```
 
-The first test executes the installer's public source inventory, the pre-fetch Node 22.19 floor refusal, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, failure-safe npm and no-mistakes replacement, unsafe executable-path refusal, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.
+The installer test executes both public inventories, the pre-fetch Node 22.19 floor refusal, all five npm build/deploy/install paths with their declared executable layouts and lockfile-selected production dependencies, failure-safe npm and no-mistakes replacement, unsafe executable-path refusal, the no-mistakes build/install path, the closed-tool refusal, and the daemon-lifecycle negative guarantee with isolated fakes.
+The lineage test exercises the production command interface with mocked Git and network dependencies, proving canonical ancestry and selected-fork descent while rejecting unrelated commits, ambient repository injection, unavailable evidence, malformed registry or pin data, credential-bearing URLs, non-branch refs, and the removed fixture-input options.
 The bootstrap regression reports Node below 22.19 through the existing install-consent diagnostic and accepts the floor and newer runtimes silently.
