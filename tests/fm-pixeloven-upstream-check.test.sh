@@ -9,11 +9,21 @@ CHECK="$ROOT/bin/fm-pixeloven-upstream-check.sh"
 TMP_ROOT=$(fm_test_tmproot fm-pixeloven-upstream-check)
 REAL_GIT=$(command -v git)
 FAKEBIN="$TMP_ROOT/bin"
+FIXTURE_ROOT="$TMP_ROOT/check-root"
+FIXTURE_CHECK="$FIXTURE_ROOT/bin/fm-pixeloven-upstream-check.sh"
 CANONICAL="$TMP_ROOT/canonical.git"
 FORK="$TMP_ROOT/fork"
 FETCH_LOG="$TMP_ROOT/fetch.log"
 INJECTED="$TMP_ROOT/injected.git"
-mkdir -p "$FAKEBIN"
+mkdir -p "$FAKEBIN" "$FIXTURE_ROOT/bin" "$FIXTURE_ROOT/docs/pixeloven"
+ln -s "$CHECK" "$FIXTURE_CHECK"
+cat > "$FIXTURE_ROOT/bin/fm-install-pixeloven-tool.sh" <<'SH'
+#!/usr/bin/env bash
+set -eu
+[ "$#" -eq 1 ] && [ "$1" = --upstream-list ] || exit 2
+cat "$FM_UPSTREAM_INVENTORY"
+SH
+chmod 0755 "$FIXTURE_ROOT/bin/fm-install-pixeloven-tool.sh"
 
 make_commit() {
   local repository=$1 name=$2 content=$3
@@ -106,15 +116,16 @@ write_inventory() {
 }
 
 write_pin() {
-  printf '%s\n' "${1:-$VALID_PIN}" > "$TMP_ROOT/operator-pin"
+  printf '%s\n' "${1:-$VALID_PIN}" > "$FIXTURE_ROOT/docs/pixeloven/upstream-pin"
 }
 
 run_check() {
   FM_REAL_GIT="$REAL_GIT" \
     FM_UPSTREAM_FETCH_LOG="$FETCH_LOG" \
+    FM_UPSTREAM_INVENTORY="$TMP_ROOT/inventory" \
     FM_UPSTREAM_MIRROR_ROOT="$TMP_ROOT" \
     PATH="$FAKEBIN:$PATH" \
-    "$CHECK" --inventory "$TMP_ROOT/inventory" --operator-pin "$TMP_ROOT/operator-pin"
+    "$FIXTURE_CHECK"
 }
 
 assert_no_fetch() {
@@ -209,7 +220,7 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
 
   status=0
   write_inventory
-  printf '%s %s\n' "${VALID_PIN:0:20}" "${VALID_PIN:20}" > "$TMP_ROOT/operator-pin"
+  printf '%s %s\n' "${VALID_PIN:0:20}" "${VALID_PIN:20}" > "$FIXTURE_ROOT/docs/pixeloven/upstream-pin"
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
   [ "$status" -ne 0 ] || fail 'whitespace-spliced operator pin was accepted'
@@ -217,7 +228,7 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
   assert_no_fetch 'whitespace-spliced operator pin triggered a canonical fetch'
 
   status=0
-  printf '%s\n%s\n' "$VALID_PIN" "$VALID_PIN" > "$TMP_ROOT/operator-pin"
+  printf '%s\n%s\n' "$VALID_PIN" "$VALID_PIN" > "$FIXTURE_ROOT/docs/pixeloven/upstream-pin"
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
   [ "$status" -ne 0 ] || fail 'multi-line operator pin was accepted'
@@ -244,9 +255,18 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
   pass 'malformed registry and pin data is rejected before network access'
 }
 
+test_fixture_overrides_are_not_public_options() {
+  local output status=0
+  output=$("$CHECK" --inventory "$TMP_ROOT/inventory" --operator-pin "$FIXTURE_ROOT/docs/pixeloven/upstream-pin" 2>&1) || status=$?
+  [ "$status" -eq 2 ] || fail 'removed fixture override options were still accepted'
+  assert_contains "$output" 'Usage:' 'removed fixture override options did not return usage'
+  pass 'fixture inputs are unavailable through the production command interface'
+}
+
 test_valid_ancestor_passes
 test_unrelated_selected_source_fails
 test_local_foreign_commit_fails
 test_ambient_repository_injection_fails
 test_missing_canonical_evidence_fails
 test_malformed_registry_and_pin_data_fail_before_fetch
+test_fixture_overrides_are_not_public_options

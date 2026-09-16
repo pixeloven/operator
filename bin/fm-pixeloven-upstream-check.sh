@@ -12,7 +12,6 @@
 #
 # Usage:
 #   fm-pixeloven-upstream-check.sh
-#   fm-pixeloven-upstream-check.sh --inventory <file> --operator-pin <file>
 set -eu
 
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -20,14 +19,12 @@ INSTALLER=$SCRIPT_DIR/fm-install-pixeloven-tool.sh
 OPERATOR_REPO=kunchenguid/firstmate
 OPERATOR_REF=refs/heads/main
 OPERATOR_URL=https://github.com/$OPERATOR_REPO.git
-INVENTORY=
 OPERATOR_PIN_FILE=$SCRIPT_DIR/../docs/pixeloven/upstream-pin
 
 usage() {
   cat <<'EOF'
 Usage:
   fm-pixeloven-upstream-check.sh
-  fm-pixeloven-upstream-check.sh --inventory <file> --operator-pin <file>
 
 Proves the operator pin and every companion-tool pin are ancestors of the
 canonical upstream default-branch history recorded by their registries, and
@@ -42,8 +39,6 @@ die() {
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --inventory) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; INVENTORY=$2; shift 2 ;;
-    --operator-pin) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; OPERATOR_PIN_FILE=$2; shift 2 ;;
     --help|-h) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
@@ -78,13 +73,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ -n "$INVENTORY" ]; then
-  [ -f "$INVENTORY" ] || die "upstream inventory is missing: $INVENTORY"
-else
-  INVENTORY=$TEMP_ROOT/inventory
-  "$INSTALLER" --upstream-list > "$INVENTORY" \
-    || die 'companion upstream inventory could not be read'
-fi
+INVENTORY=$TEMP_ROOT/inventory
+"$INSTALLER" --upstream-list > "$INVENTORY" \
+  || die 'companion upstream inventory could not be read'
 
 # Canonical evidence must not be redirected through user-controlled Git config.
 git_clean() (

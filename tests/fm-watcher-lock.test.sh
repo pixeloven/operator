@@ -499,6 +499,63 @@ test_lock_stale_steal_mutex_is_reclaimed() {
   pass "stale publication mutex is reclaimed through one bounded recovery guard"
 }
 
+test_lock_recovers_after_guard_owner_is_killed() {
+  local dir state lockdir fakebin dead owner i successor out
+  dir=$(make_case lock-killed-guard-owner)
+  state="$dir/state"
+  lockdir="$state/.contend.lock"
+  fakebin="$dir/fakebin-ln"
+  dead=$(dead_pid)
+  mkdir "$lockdir" "$lockdir.steal" "$fakebin"
+  printf '%s\n' "$dead" > "$lockdir/pid"
+  printf '%s\n' "$dead" > "$lockdir.steal/pid"
+  cat > "$fakebin/ln" <<'SH'
+#!/usr/bin/env bash
+set -eu
+PATH=/usr/bin:/bin command ln "$@"
+if [ "${3:-}" = "$FM_KILL_AFTER_GUARD" ]; then
+  : > "$FM_GUARD_PUBLISHED"
+  kill -KILL "$PPID"
+fi
+SH
+  chmod 0755 "$fakebin/ln"
+
+  FM_KILL_AFTER_GUARD="$lockdir.steal.steal" \
+    FM_GUARD_PUBLISHED="$dir/guard-published" PATH="$fakebin:$PATH" \
+    FM_LOCK_STALE_AFTER=0 FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_acquire "$2"
+  ' _ "$LIB" "$lockdir" &
+  owner=$!
+  i=0
+  while [ "$i" -lt 100 ] && [ ! -e "$dir/guard-published" ]; do
+    sleep 0.02
+    i=$((i + 1))
+  done
+  [ -e "$dir/guard-published" ] || fail "recovery owner did not publish the bounded guard"
+  wait "$owner" 2>/dev/null || true
+  [ -e "$lockdir.steal.steal" ] || [ -L "$lockdir.steal.steal" ] \
+    || fail "killed recovery owner did not leave its guard"
+
+  out=$(FM_LOCK_STALE_AFTER=0 FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    if fm_lock_try_acquire "$2"; then rc=0; else rc=1; fi
+    printf "rc=%s pid=%s mutex=%s guard=%s nested=%s\n" \
+      "$rc" "$(cat "$2/pid" 2>/dev/null || true)" \
+      "$([ -e "$2.steal" ] || [ -L "$2.steal" ]; echo $?)" \
+      "$([ -e "$2.steal.steal" ] || [ -L "$2.steal.steal" ]; echo $?)" \
+      "$([ -e "$2.steal.steal.steal" ] || [ -L "$2.steal.steal.steal" ]; echo $?)"
+  ' _ "$LIB" "$lockdir")
+  case "$out" in
+    "rc=0 pid="*" mutex=1 guard=1 nested=1") ;;
+    *) fail "successor did not reclaim both abandoned recovery layers: $out" ;;
+  esac
+  successor=${out#*pid=}; successor=${successor%% *}
+  [ -n "$successor" ] && [ "$successor" != "$dead" ] \
+    || fail "successor did not publish a new primary owner: $out"
+  pass "a successor recovers after the guard owner dies before release"
+}
+
 test_lock_does_not_steal_live_lock() {
   local dir state lockdir live out lockpid
   dir=$(make_case lock-live-noop)
@@ -1308,6 +1365,7 @@ test_lock_steals_dead_pid_lock
 test_lock_stale_steal_single_winner_under_concurrency
 test_lock_live_steal_mutex_is_not_reclaimed
 test_lock_stale_steal_mutex_is_reclaimed
+test_lock_recovers_after_guard_owner_is_killed
 test_lock_does_not_steal_live_lock
 test_lock_empty_pid_uses_minimum_grace
 test_lock_late_claim_loses_after_recreate
