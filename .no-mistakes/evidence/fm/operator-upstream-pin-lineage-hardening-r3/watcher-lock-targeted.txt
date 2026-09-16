@@ -1,0 +1,28 @@
+ok - killed watcher stale lock is reclaimed
+/tmp/lockdrv/only-base.sh: line 1368: 712567 Killed                     FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_remove_path() {
+      if [ "$1" = "$STATE/.watch.lock" ]; then
+        kill -KILL "${BASHPID:-$$}"
+      fi
+      return 1
+    }
+    fm_lock_try_acquire "$2"
+  ' _ "$LIB" "$lockdir" > /dev/null 2>&1
+ok - stale watcher reclaim publishes durable recovery evidence before clear
+ok - live watcher lock with stale heartbeat is actionable
+ok - primary publication serializes with stale-lock stealing and leaves one winner
+ok - publication mutex contention returns without blocking or publishing
+ok - concurrent fm_lock_try_acquire yields exactly one winner
+ok - dead-pid stale lock is reclaimed by a single acquirer
+ok - concurrent stale-lock steal yields exactly one winner
+ok - live steal mutex is not reclaimed
+ok - stale publication mutex is reclaimed through one bounded recovery guard
+ok - a successor recovers after the guard owner dies before release
+ok - live-held lock is not stolen
+ok - late original claimant cannot claim a recreated lock
+ok - paused mid-acquire claimant backs off to active stealer
+ok - a failed fm_lock_try_create clears its owner and names the live holder
+ok - watcher start reports recovery instead of a dead already-running pid
+ok - watch restart preserves recovery without signaling a reused pid
+ok - watcher self-evicts when the lock pid no longer names it

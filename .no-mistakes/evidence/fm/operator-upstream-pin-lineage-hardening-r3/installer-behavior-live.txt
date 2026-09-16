@@ -1,0 +1,8 @@
+ok - the public source inventory selects six exact PixelOven fork commits and canonical upstream pins
+ok - AXI source installs refuse Node below the supported floor before fetching
+ok - every npm companion tool installs its lockfile-selected runtime tree
+ok - unsafe manifest executable paths are refused before replacement
+ok - copy and version failures preserve the existing npm installation
+ok - install and version failures preserve the existing no-mistakes installation
+ok - no-mistakes is source-built without starting, stopping, or restarting its daemon
+ok - the installer is a closed companion-tool inventory, not a package control plane

@@ -1,0 +1,6 @@
+ok - primary publication serializes with stale-lock stealing and leaves one winner
+ok - publication mutex contention returns without blocking or publishing
+ok - stale publication mutex is reclaimed through one bounded recovery guard
+ok - a successor recovers after the guard owner dies before release
+ok - a failed fm_lock_try_create clears its owner and names the live holder
+ok - watcher start reports recovery instead of a dead already-running pid

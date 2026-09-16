@@ -1,0 +1,26 @@
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+ok - simultaneous watcher starts leave exactly one live process
+dual cold-start stress: 25/25 named the live singleton pid

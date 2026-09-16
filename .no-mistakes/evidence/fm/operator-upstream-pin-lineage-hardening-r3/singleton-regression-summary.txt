@@ -1,0 +1,29 @@
+Scenario: an operator starts bin/fm-watch.sh twice at the same time on a fresh
+state directory (no stale lock, no recovery in progress).
+
+Expected (repo-owned invariant, tests/fm-watcher-lock.test.sh::test_singleton_start):
+  the losing start prints "watcher: already running pid <live winner pid>".
+
+Measured, 10 runs of test_singleton_start each:
+  base 2e65377 (main)                         pass=10 fail=0
+  head 240a1d5 (this change)                  pass=7  fail=3
+  head with the fm-watch.sh:1412 lock-existence
+  clause removed                              pass=10 fail=0
+  (and tests/fm-watcher-lock.test.sh::test_watch_start_reports_recovery_not_a_dead_pid
+   still passes with that clause removed, because FM_LOCK_HELD_PID is now
+   liveness-filtered by fm_lock_set_live_holder)
+
+Measured, 25 real dual cold starts of bin/fm-watch.sh (see
+watcher-cold-start-race-HEAD.txt / watcher-cold-start-race-BASE.txt):
+  base: 25/25 losers printed "watcher: already running pid <n>"
+  head: 20/25 printed the pid; 5/25 printed
+        "watcher: watcher lock recovery in progress; another start is publishing it"
+  The singleton invariant itself held in every run (exactly one live watcher).
+
+Mechanism: fm_lock_try_create now takes the "$WATCH_LOCK.steal" publication
+mutex before publishing the primary lock. The loser correctly learns the live
+winner pid (held-pid-during-publication-window.txt shows FM_LOCK_HELD_PID is
+populated on head and empty on base for that window), but bin/fm-watch.sh:1412
+additionally requires "$WATCH_LOCK" to already exist. During the winner's
+publication window it does not, so the loser suppresses the live pid and
+reports a recovery that is not happening.

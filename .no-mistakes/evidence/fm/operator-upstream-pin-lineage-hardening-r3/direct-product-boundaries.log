@@ -1,0 +1,13 @@
+--- removed public override options ---
+Usage:
+  fm-pixeloven-upstream-check.sh
+
+Proves the operator pin and every companion-tool pin are ancestors of the
+canonical upstream default-branch history recorded by their registries, and
+that every selected companion fork commit descends from its pin.
+exit=2
+--- abandoned two-layer watcher recovery ---
+watcher_process=649632 published_lock_pid=649632 abandoned_pid=999999
+publication_mutex=cleared bounded_guard=cleared
+temporary_state=/tmp/fm-live-watch-recovery.BcdcTZ
+watcher recovery passed

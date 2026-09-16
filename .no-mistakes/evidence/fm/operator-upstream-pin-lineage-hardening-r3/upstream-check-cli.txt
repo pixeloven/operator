@@ -1,0 +1,26 @@
+$ bin/fm-pixeloven-upstream-check.sh --inventory /tmp/fake-inventory --operator-pin /tmp/fake-pin
+Usage:
+  fm-pixeloven-upstream-check.sh
+
+Proves the operator pin and every companion-tool pin are ancestors of the
+canonical upstream default-branch history recorded by their registries, and
+that every selected companion fork commit descends from its pin.
+exit=2
+
+$ bin/fm-pixeloven-upstream-check.sh --inventory /tmp/fake-inventory
+Usage:
+  fm-pixeloven-upstream-check.sh
+
+Proves the operator pin and every companion-tool pin are ancestors of the
+canonical upstream default-branch history recorded by their registries, and
+that every selected companion fork commit descends from its pin.
+exit=2
+
+$ bin/fm-pixeloven-upstream-check.sh --help
+Usage:
+  fm-pixeloven-upstream-check.sh
+
+Proves the operator pin and every companion-tool pin are ancestors of the
+canonical upstream default-branch history recorded by their registries, and
+that every selected companion fork commit descends from its pin.
+exit=0

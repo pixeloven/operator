@@ -1,0 +1,11 @@
+== HEAD ==
+live publisher holding $lockdir.steal: pid 710953
+primary lock published? no
+try_acquire=lost FM_LOCK_HELD_PID=[710953]
+try_create=lost FM_LOCK_HELD_PID=[710953]
+
+== BASE ==
+live publisher holding $lockdir.steal: pid 711104
+primary lock published? no
+try_acquire=lost FM_LOCK_HELD_PID=[]
+try_create=lost FM_LOCK_HELD_PID=[]
