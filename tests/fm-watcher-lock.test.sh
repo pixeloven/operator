@@ -649,7 +649,7 @@ test_lock_paused_mid_acquire_claim_fails_during_steal() {
     fm_lock_try_acquire "$2.steal" || exit 22
     steal_owner=${FM_LOCK_OWNER_DIR:-}
     if fm_lock_claim "$2" "$owner"; then late=won; else late=lost; fi
-    if fm_lock_try_create "$2" "$steal_owner"; then stealer=won; else stealer=lost; fi
+    if fm_lock_try_create_unserialized "$2" "$steal_owner"; then stealer=won; else stealer=lost; fi
     pid=$(cat "$2/pid" 2>/dev/null || true)
     printf "late=%s stealer=%s pid=%s\n" "$late" "$stealer" "$pid"
   ' _ "$LIB" "$lockdir")
@@ -664,6 +664,84 @@ test_lock_paused_mid_acquire_claim_fails_during_steal() {
   pid=${out#*pid=}; pid=${pid%% *}
   [ -n "$pid" ] || fail "stealer claim did not record a pid: $out"
   pass "paused mid-acquire claimant backs off to active stealer"
+}
+
+test_lock_try_create_failure_clears_owner_dir() {
+  local dir state lockdir holder_file out owner held holder i
+  dir=$(make_case lock-create-owner-reset)
+  state="$dir/state"
+  lockdir="$state/.contend.lock"
+  holder_file="$dir/steal-holder"
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_acquire "$2.steal" || exit 7
+    printf "%s\n" "${BASHPID:-$$}" > "$3"
+    sleep 3
+    fm_lock_release "$2.steal"
+  ' _ "$LIB" "$lockdir" "$holder_file" &
+  holder=$!
+  i=0
+  while [ "$i" -lt 50 ] && [ ! -s "$holder_file" ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -s "$holder_file" ] || fail "publication mutex holder did not start"
+  out=$(FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_create "$2.other" || exit 20
+    [ -n "${FM_LOCK_OWNER_DIR:-}" ] || exit 21
+    if fm_lock_try_create "$2"; then again=won; else again=lost; fi
+    printf "again=%s owner=[%s] held=[%s]\n" \
+      "$again" "${FM_LOCK_OWNER_DIR:-}" "${FM_LOCK_HELD_PID:-}"
+  ' _ "$LIB" "$lockdir")
+  wait "$holder" || fail "publication mutex holder failed"
+  case "$out" in
+    *"again=lost"*) ;;
+    *) fail "fm_lock_try_create won against a live publication mutex: $out" ;;
+  esac
+  owner=${out#*owner=}; owner=${owner%%]*}; owner=${owner#[}
+  [ -z "$owner" ] || fail "failed fm_lock_try_create left a stale owner directory: $out"
+  held=${out#*held=}; held=${held%%]*}; held=${held#[}
+  [ "$held" = "$(cat "$holder_file")" ] \
+    || fail "fm_lock_try_create did not report the live mutex holder: $out"
+  pass "a failed fm_lock_try_create clears its owner and names the live holder"
+}
+
+test_watch_start_reports_recovery_not_a_dead_pid() {
+  local dir state lockdir holder_file dead out err status holder i
+  dir=$(make_case watch-recovery-report)
+  state="$dir/state"
+  lockdir="$state/.watch.lock"
+  holder_file="$dir/steal-holder"
+  out="$dir/watch.out"
+  err="$dir/watch.err"
+  dead=$(dead_pid)
+  mkdir "$lockdir"
+  printf '%s\n' "$dead" > "$lockdir/pid"
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_try_acquire "$2.steal" || exit 7
+    printf "%s\n" "${BASHPID:-$$}" > "$3"
+    sleep 3
+    fm_lock_release "$2.steal"
+  ' _ "$LIB" "$lockdir" "$holder_file" &
+  holder=$!
+  i=0
+  while [ "$i" -lt 50 ] && [ ! -s "$holder_file" ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -s "$holder_file" ] || fail "publication mutex holder did not start"
+  status=0
+  FM_LOCK_STALE_AFTER=0 FM_STATE_OVERRIDE="$state" FM_POLL=5 FM_SIGNAL_GRACE=1 \
+    FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" 2> "$err" || status=$?
+  wait "$holder" || fail "publication mutex holder failed"
+  [ "$status" -eq 0 ] || fail "watcher start did not defer cleanly: status=$status $(cat "$err")"
+  ! grep -F "$dead" "$out" "$err" >/dev/null \
+    || fail "watcher start named the dead recorded pid: $(cat "$out" "$err")"
+  grep -F 'recovery in progress' "$out" >/dev/null \
+    || fail "watcher start did not report recovery in progress: $(cat "$out" "$err")"
+  pass "watcher start reports recovery instead of a dead already-running pid"
 }
 
 test_watch_restart_rejects_reused_pid() {
@@ -1370,6 +1448,8 @@ test_lock_does_not_steal_live_lock
 test_lock_empty_pid_uses_minimum_grace
 test_lock_late_claim_loses_after_recreate
 test_lock_paused_mid_acquire_claim_fails_during_steal
+test_lock_try_create_failure_clears_owner_dir
+test_watch_start_reports_recovery_not_a_dead_pid
 test_watch_restart_rejects_reused_pid
 test_watch_restart_attaches_to_healthy_peer
 test_watcher_self_evicts_on_lock_takeover
