@@ -9,7 +9,8 @@
 
 An ordinary claimant could publish a primary lock after its precheck while a stale-lock stealer held the matching mutex.
 That interleaving could make the stealer fail and then make the ordinary claimant remove its own candidate, leaving no winner.
-Correcting the shared lock boundary and proving the scheduling interleaving requires changes to inherited lock code and its focused regression.
+The serialization guard also had to remain recoverable if its own process died after publication, without growing an unbounded chain of guard locks.
+Correcting the shared lock boundary and proving both interruption windows requires changes to inherited lock code and its focused regression.
 
 ## Decision
 
@@ -25,7 +26,7 @@ Every other upstream file remains outside this exception.
 
 ## Consequences
 
-Primary-lock publication and stale-lock stealing share one nonblocking mutex boundary.
+Primary-lock publication and stale-lock stealing share a nonblocking mutex boundary whose abandoned guard is reclaimed through one terminal recovery level.
 The focused regression may live beside the inherited watcher-lock tests without weakening the additive-only fork rule.
 The fork-contract gate accepts exactly these paths while continuing to reject unrelated upstream-file changes.
 

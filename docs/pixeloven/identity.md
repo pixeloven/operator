@@ -109,22 +109,11 @@ once they exist.)*
 
 ### What *is* ours to name
 
-Our default surface is new files in namespaces upstream can never collide with:
-
-| Surface | Path |
-|---|---|
-| Runtime backends | `bin/backends/` |
-| Skills | `.agents/skills/po-*` |
-| Documentation | `docs/pixeloven/` |
-| Decisions | `docs/adr/` |
-| CI we own | `.github/workflows/pixeloven-*.yml` |
-| Companion installer | `bin/fm-install-pixeloven-tool.sh` |
-| Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` |
+Our default surface is new files in namespaces upstream can never collide with, while [`fork-contract.md`](fork-contract.md#where-our-code-goes) owns the exact current surface inventory and ADR exceptions.
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
 ADRs 0008 through 0014 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, documentation-audience ownership, archived captain-hold completion, and stale-lock publication serialization.
 Anything outside those lists needs a **new ADR**, not a silent change.
-See [fork-contract.md](fork-contract.md).
 
 ## 4. Erratum on ADR-0004
 
