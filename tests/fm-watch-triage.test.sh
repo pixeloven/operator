@@ -6275,6 +6275,22 @@ test_procevent_unacknowledged_result_redrains_until_handled() {
   pass "an unacknowledged process-event result re-drains until handling is acknowledged"
 }
 
+test_procevent_marker_keys_are_injective() {
+  local dir state out pid marker_count
+  dir=$(make_case procevent-marker-keys); state="$dir/state"; out="$dir/watch.out"
+  append_wake "$state" check "procevent:a.b:1" "check: procevent fixture a.b 1"
+  append_wake "$state" check "procevent:a_b:1" "check: procevent fixture a_b 1"
+  procevent_watch_bg "$dir" "$out"
+  pid=$!
+  wait_for_exit "$pid" 100 || fail "colliding-looking process-event keys were not surfaced"
+  grep -F "procevent:a.b:1" "$out" >/dev/null || fail "the dotted queue key was suppressed"
+  grep -F "procevent:a_b:1" "$out" >/dev/null || fail "the underscored queue key was suppressed"
+  marker_count=$(find "$state" -maxdepth 1 -name '.seen-procevent-*' -type f | awk 'END { print NR + 0 }')
+  [ "$marker_count" = 2 ] || fail "distinct queue keys produced $marker_count seen markers"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" >/dev/null 2>&1 || fail "marker identity fixture drain failed"
+  pass "complete process-event queue keys map to distinct seen markers"
+}
+
 test_procevent_markers_follow_canonical_events() {
   local dir state out pid marker_count marker1
   dir=$(make_case procevent-marker-identity); state="$dir/state"; out="$dir/watch.out"
