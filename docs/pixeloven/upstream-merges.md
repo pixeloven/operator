@@ -55,9 +55,9 @@ Upstream's self-repository publication gate takes the remote marked `remote.<nam
 The neutral `refs/remotes/firstmate-upstream/main` ref carries no remote configuration and leaves the clone's publication target on `pixeloven/operator`.
 Setting `git config remote.origin.gh-resolved base` in the project clone, which is what `gh repo set-default` writes, additionally pins that target to `origin`.
 
-**Operator homes need two local settings to ship to this repository.**
+**Every `operator` home that ships to this repository needs two local settings.**
 Since stage 2 of the fourth synchronization, that gate refuses every non-`local-only` ship on a project sharing firstmate's root commit unless the home grants publication to its target, and `pixeloven/operator` shares it by [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md).
-Each operator home that ships to this repository needs:
+Set them once per home:
 
 ```sh
 # In the operator home (local and gitignored; never committed, never scoped to kunchenguid):
@@ -394,7 +394,8 @@ Every ADR-0010 hunk the map re-applies is void under [ADR-0015](../adr/0015-comp
 
 ADR-0012 now names eleven files and ADR-0014 describes the tombstone reaper; the A4 allowlist drops the three paths that returned to upstream bytes.
 
-{TEST_EVIDENCE}
+Measured on stock macOS Bash 3.2.57, ADR-0014's serialized publication costs about 170 ms per uncontended lock acquire and release against upstream's 75 ms, so a lock-heavy suite runs roughly twice as long locally; GitHub's Linux runners remain the timing authority.
+Local verification before the PR covered the delivery suite, including the new launch regression and its counterfactual, the archived captain-hold cases under upstream's `tasks-axi` 0.2.6 floor, lint, the documentation-audience check, and the fork-contract assertions; the remaining affected suites were left to the pull request's CI.
 
 The stage is consumer-visible through upstream's behavior changes, including raised tool floors, the self-repository publication gate, and the default-on supervision host, so it counts toward the `v0.3.0` minor bump.
 
