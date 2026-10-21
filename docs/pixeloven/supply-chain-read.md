@@ -7,9 +7,9 @@
 - **Status:** this document **gates Phase 1** (tasks P1.1–P1.5). Nothing installs
   on the workstation before it is read and accepted.
 
-> **Current distribution note, 2026-08-29:** This document records the upstream source and package audit performed in 2026-08-16.
-> `operator` now selects exact commits from PixelOven's public companion forks as described in [`tool-distribution.md`](tool-distribution.md).
-> The `kunchenguid/*` links below remain intentionally as upstream attribution, ancestry, and historical verification evidence rather than install endpoints.
+> **Current distribution note, 2026-10-21:** This document records the upstream source and package audit performed in 2026-08-16 and 2026-08-17.
+> Since [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md), `operator` acquires its companion tools from the same upstream published sources that audit read, so the `kunchenguid/*` links below are current install sources again.
+> [Part 3](#part-3-companion-acquisition-after-adr-0015) records the current acquisition surface and the deviations the operator has accepted.
 
 ---
 
@@ -1006,3 +1006,34 @@ In addition to A0.3's triggers:
 *Part 2 published for task P1.6 (H-1, G-2). Pins feed
 `ansible/roles/bastion/defaults/main.yml` in P1.2. Linked from
 ductiletoaster/harmony#512 and pixeloven/operator#1.*
+
+---
+
+# Part 3: companion acquisition after ADR-0015
+
+- **Decision:** [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md), superseding [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md)
+- **Date:** 2026-10-21
+- **Deciders:** the operator
+
+## 15. Where the tools come from now
+
+`operator` acquires gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi, and no-mistakes exactly as upstream `kunchenguid/firstmate` does at the current pin.
+The five AXI tools come from the npm registry packages Parts 1 and 2 audited, and no-mistakes comes from upstream's GitHub release install path and reusable `require-no-mistakes` action at the commit upstream's workflow pins.
+Version floors are upstream's: `bin/fm-bootstrap.sh`, `bin/fm-tasks-axi-lib.sh`, and `bin/fm-quota-axi-lib.sh` own them, and the coming synchronization raises them as upstream wrote them.
+The PixelOven source-build installer and its pinned fork commits are retired.
+
+The trade-off is accepted: the operator again trusts upstream's npm publishers and release path directly, and can no longer ship a downstream tool fix ahead of upstream.
+Conditions C2 and C4-C8 apply to these sources again without translation, because Parts 1 and 2 audited exactly these upstream packages and release paths.
+Upstream's CI at the pin installs `tasks-axi` without an exact version on its Linux runners; that unpinned acquisition returns with upstream's bytes and is CI-runner only.
+
+## 16. Accepted deviations for the coming synchronization
+
+The operator accepted two upstream behaviors that the five-stage synchronization brings in, rather than carrying downstream hunks against them.
+
+| # | Upstream behavior | Why it is a deviation | Disposition |
+|---|---|---|---|
+| **D1** | Upstream's CI installs `@earendil-works/pi-coding-agent` with no version | Breaks G-2's exact-pin rule | **Accepted**, CI-runner only: it never reaches a fleet host, and pinning it would add a downstream `ci.yml` hunk |
+| **D2** | The supervision host is default-on for Claude primaries: a second headless Bash-capable session, with hooks that mirror captain prompts and replies into `state/` | New autonomous session, spend, and captain-text persistence enabled without opt-in | **Accepted**; revisit after about a week of use once the synchronization lands, with `config/supervision-host-off` as the opt-out |
+
+Both rows are inputs to the next re-read under §6 and §14, not standing exemptions from them.
+

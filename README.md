@@ -15,7 +15,6 @@
 > - **Releases** → [`docs/pixeloven/releases.md`](docs/pixeloven/releases.md)
 > - **Decisions** → [`docs/adr/`](docs/adr/)
 > - **Supply-chain verdict** → [`docs/pixeloven/supply-chain-read.md`](docs/pixeloven/supply-chain-read.md)
-> - **Companion tool distribution** → [`docs/pixeloven/tool-distribution.md`](docs/pixeloven/tool-distribution.md)
 > - **Attribution** → [`NOTICE`](NOTICE)
 >
 > Everything below this banner is upstream's README, unmodified.

@@ -12,18 +12,11 @@ FAKEBIN="$TMP_ROOT/bin"
 FIXTURE_ROOT="$TMP_ROOT/check-root"
 FIXTURE_CHECK="$FIXTURE_ROOT/bin/fm-pixeloven-upstream-check.sh"
 CANONICAL="$TMP_ROOT/canonical.git"
-FORK="$TMP_ROOT/fork"
+DOWNSTREAM="$TMP_ROOT/downstream"
 FETCH_LOG="$TMP_ROOT/fetch.log"
 INJECTED="$TMP_ROOT/injected.git"
 mkdir -p "$FAKEBIN" "$FIXTURE_ROOT/bin" "$FIXTURE_ROOT/docs/pixeloven"
 ln -s "$CHECK" "$FIXTURE_CHECK"
-cat > "$FIXTURE_ROOT/bin/fm-install-pixeloven-tool.sh" <<'SH'
-#!/usr/bin/env bash
-set -eu
-[ "$#" -eq 1 ] && [ "$1" = --upstream-list ] || exit 2
-cat "$FM_UPSTREAM_INVENTORY"
-SH
-chmod 0755 "$FIXTURE_ROOT/bin/fm-install-pixeloven-tool.sh"
 
 make_commit() {
   local repository=$1 name=$2 content=$3
@@ -44,23 +37,19 @@ VALID_PIN=$("$REAL_GIT" -C "$SOURCE" rev-parse HEAD)
 make_commit "$SOURCE" tip.txt tip
 "$REAL_GIT" clone -q --bare "$SOURCE" "$CANONICAL"
 
-"$REAL_GIT" clone -q "$CANONICAL" "$FORK"
-"$REAL_GIT" -C "$FORK" config user.name 'Lineage Test'
-"$REAL_GIT" -C "$FORK" config user.email lineage@example.invalid
-make_commit "$FORK" downstream.txt downstream
-FORK_SOURCE=$("$REAL_GIT" -C "$FORK" rev-parse HEAD)
-FORK_TREE=$("$REAL_GIT" -C "$FORK" rev-parse 'HEAD^{tree}')
-UNRELATED_SOURCE=$(printf '%s\n' unrelated | "$REAL_GIT" -C "$FORK" commit-tree "$FORK_TREE")
-"$REAL_GIT" -C "$FORK" update-ref refs/heads/unrelated "$UNRELATED_SOURCE"
-FOREIGN_PIN=$FORK_SOURCE
-"$REAL_GIT" -C "$FORK" cat-file -e "${FOREIGN_PIN}^{commit}" \
+"$REAL_GIT" clone -q "$CANONICAL" "$DOWNSTREAM"
+"$REAL_GIT" -C "$DOWNSTREAM" config user.name 'Lineage Test'
+"$REAL_GIT" -C "$DOWNSTREAM" config user.email lineage@example.invalid
+make_commit "$DOWNSTREAM" downstream.txt downstream
+FOREIGN_PIN=$("$REAL_GIT" -C "$DOWNSTREAM" rev-parse HEAD)
+"$REAL_GIT" -C "$DOWNSTREAM" cat-file -e "${FOREIGN_PIN}^{commit}" \
   || fail 'foreign fixture commit is not locally present'
 if "$REAL_GIT" -C "$CANONICAL" cat-file -e "${FOREIGN_PIN}^{commit}" 2>/dev/null; then
   fail 'foreign fixture commit leaked into canonical history'
 fi
 CANONICAL_TIP=$("$REAL_GIT" -C "$CANONICAL" rev-parse refs/heads/main)
 "$REAL_GIT" clone -q --bare "$CANONICAL" "$INJECTED"
-"$REAL_GIT" -C "$INJECTED" fetch -q "$FORK" refs/heads/main:refs/heads/foreign
+"$REAL_GIT" -C "$INJECTED" fetch -q "$DOWNSTREAM" refs/heads/main:refs/heads/foreign
 "$REAL_GIT" --git-dir="$INJECTED" replace --graft "$CANONICAL_TIP" "$FOREIGN_PIN"
 "$REAL_GIT" --git-dir="$INJECTED" merge-base --is-ancestor "$FOREIGN_PIN" "$CANONICAL_TIP" \
   || fail 'injected replacement fixture does not forge canonical ancestry'
@@ -85,8 +74,6 @@ if [ "$is_fetch" -eq 1 ]; then
       https://github.com/*)
         if [ "${FM_UPSTREAM_FETCH_FAIL:-0}" = 1 ]; then
           rewritten+=("$FM_UPSTREAM_MIRROR_ROOT/missing.git")
-        elif [[ "$arg" = https://github.com/pixeloven/* ]]; then
-          rewritten+=("$FM_UPSTREAM_MIRROR_ROOT/fork")
         else
           rewritten+=("$FM_UPSTREAM_MIRROR_ROOT/canonical.git")
         fi
@@ -104,17 +91,6 @@ exec "$FM_REAL_GIT" "${args[@]}"
 SH
 chmod 0755 "$FAKEBIN/git"
 
-write_inventory() {
-  local pin=${1:-$VALID_PIN} url=${2:-https://github.com/kunchenguid/upstream-fixture.git} ref=${3:-refs/heads/main}
-  local source_commit=${4:-$FORK_SOURCE} source_url
-  : > "$TMP_ROOT/inventory"
-  for tool in gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes; do
-    source_url=https://github.com/pixeloven/$tool
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
-      "$tool" "$source_url" "$source_commit" "$url" "$ref" "$pin" >> "$TMP_ROOT/inventory"
-  done
-}
-
 write_pin() {
   printf '%s\n' "${1:-$VALID_PIN}" > "$FIXTURE_ROOT/docs/pixeloven/upstream-pin"
 }
@@ -122,7 +98,6 @@ write_pin() {
 run_check() {
   FM_REAL_GIT="$REAL_GIT" \
     FM_UPSTREAM_FETCH_LOG="$FETCH_LOG" \
-    FM_UPSTREAM_INVENTORY="$TMP_ROOT/inventory" \
     FM_UPSTREAM_MIRROR_ROOT="$TMP_ROOT" \
     PATH="$FAKEBIN:$PATH" \
     "$FIXTURE_CHECK"
@@ -133,7 +108,6 @@ assert_no_fetch() {
 }
 
 test_valid_ancestor_passes() {
-  write_inventory
   write_pin
   : > "$FETCH_LOG"
   run_check >/dev/null || fail 'valid canonical ancestors were rejected'
@@ -144,25 +118,12 @@ test_valid_ancestor_passes() {
   assert_contains "$calls" '--no-recurse-submodules' 'canonical fetch did not exclude submodules'
   assert_contains "$calls" '--filter=tree:0' 'canonical fetch transferred more than commit history'
   assert_contains "$calls" '+refs/heads/main:refs/remotes/canonical/upstream' 'canonical fetch did not bind one exact branch ref'
-  assert_contains "$calls" "https://github.com/pixeloven/gh-axi $FORK_SOURCE" 'selected fork commit was not fetched exactly'
   assert_contains "$calls" 'config_global=/dev/null config_nosystem=1 config_count=' 'ambient Git configuration was not isolated'
-  pass 'a real canonical ancestor and existing legitimate fork history pass'
-}
-
-test_unrelated_selected_source_fails() {
-  write_inventory "$VALID_PIN" 'https://github.com/kunchenguid/upstream-fixture.git' \
-    refs/heads/main "$UNRELATED_SOURCE"
-  write_pin
-  local output status=0
-  output=$(run_check 2>&1) || status=$?
-  [ "$status" -ne 0 ] || fail 'selected fork commit unrelated to its upstream pin was accepted'
-  assert_contains "$output" 'does not descend from upstream pin' 'unrelated fork source failure was unclear'
-  pass 'an unrelated selected fork source fails real ancestry validation'
+  pass 'a real canonical ancestor passes'
 }
 
 test_local_foreign_commit_fails() {
-  write_inventory "$FOREIGN_PIN"
-  write_pin
+  write_pin "$FOREIGN_PIN"
   local output status=0
   output=$(run_check 2>&1) || status=$?
   [ "$status" -ne 0 ] || fail 'locally present foreign commit was accepted'
@@ -171,8 +132,7 @@ test_local_foreign_commit_fails() {
 }
 
 test_ambient_repository_injection_fails() {
-  write_inventory "$FOREIGN_PIN"
-  write_pin
+  write_pin "$FOREIGN_PIN"
   local output status=0
   output=$(GIT_DIR="$INJECTED" GIT_REPLACE_REF_BASE=refs/replace run_check 2>&1) || status=$?
   [ "$status" -ne 0 ] || fail 'ambient repository objects and replacements forged canonical ancestry'
@@ -181,7 +141,6 @@ test_ambient_repository_injection_fails() {
 }
 
 test_missing_canonical_evidence_fails() {
-  write_inventory
   write_pin
   local output status=0
   output=$(FM_UPSTREAM_FETCH_FAIL=1 run_check 2>&1) || status=$?
@@ -190,36 +149,24 @@ test_missing_canonical_evidence_fails() {
   pass 'missing canonical upstream evidence fails clearly'
 }
 
-test_malformed_registry_and_pin_data_fail_before_fetch() {
+test_malformed_pin_data_fails_before_fetch() {
   local output status=0
-  write_inventory not-a-commit
-  write_pin
+  write_pin not-a-commit
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
-  [ "$status" -ne 0 ] || fail 'malformed registry pin was accepted'
-  assert_contains "$output" 'malformed upstream pin' 'malformed registry pin failure was unclear'
-  assert_no_fetch 'malformed pin triggered a canonical fetch'
+  [ "$status" -ne 0 ] || fail 'non-hexadecimal operator pin was accepted'
+  assert_contains "$output" 'operator pin is not a lowercase hexadecimal commit' 'non-hexadecimal pin failure was unclear'
+  assert_no_fetch 'non-hexadecimal operator pin triggered a canonical fetch'
 
   status=0
-  write_inventory
-  {
-    printf 'gh-axi\thttps://github.com/pixeloven/gh-axi\t%s\thttps://github.com/kunchenguid/upstream-fixture.git\trefs/heads/main\t%s' \
-      "$FORK_SOURCE" "${VALID_PIN:0:20}"
-    printf '\0'
-    printf '%s\n' "${VALID_PIN:20}"
-    for tool in chrome-devtools-axi lavish-axi tasks-axi quota-axi no-mistakes; do
-      printf '%s\thttps://github.com/pixeloven/%s\t%s\thttps://github.com/kunchenguid/upstream-fixture.git\trefs/heads/main\t%s\n' \
-        "$tool" "$tool" "$FORK_SOURCE" "$VALID_PIN"
-    done
-  } > "$TMP_ROOT/inventory"
+  write_pin "${VALID_PIN:0:20}"
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
-  [ "$status" -ne 0 ] || fail 'NUL-spliced inventory pin was accepted'
-  assert_contains "$output" 'non-text bytes are not allowed' 'NUL-spliced inventory failure was unclear'
-  assert_no_fetch 'NUL-spliced inventory triggered a canonical fetch'
+  [ "$status" -ne 0 ] || fail 'abbreviated operator pin was accepted'
+  assert_contains "$output" 'operator pin must be a full 40-character commit' 'abbreviated pin failure was unclear'
+  assert_no_fetch 'abbreviated operator pin triggered a canonical fetch'
 
   status=0
-  write_inventory
   printf '%s %s\n' "${VALID_PIN:0:20}" "${VALID_PIN:20}" > "$FIXTURE_ROOT/docs/pixeloven/upstream-pin"
   : > "$FETCH_LOG"
   output=$(run_check 2>&1) || status=$?
@@ -234,39 +181,20 @@ test_malformed_registry_and_pin_data_fail_before_fetch() {
   [ "$status" -ne 0 ] || fail 'multi-line operator pin was accepted'
   assert_contains "$output" 'operator pin must contain exactly one commit line' 'multi-line pin failure was unclear'
   assert_no_fetch 'multi-line operator pin triggered a canonical fetch'
-
-  status=0
-  write_pin
-  write_inventory "$VALID_PIN" 'https://secret-token@github.com/kunchenguid/upstream.git'
-  : > "$FETCH_LOG"
-  output=$(run_check 2>&1) || status=$?
-  [ "$status" -ne 0 ] || fail 'credential-bearing canonical URL was accepted'
-  assert_contains "$output" 'credential-free GitHub HTTPS repository URL' 'credential-bearing URL failure was unclear'
-  assert_not_contains "$output" 'secret-token' 'credential-bearing URL leaked into failure output'
-  assert_no_fetch 'credential-bearing URL triggered a canonical fetch'
-
-  status=0
-  write_inventory "$VALID_PIN" 'https://github.com/kunchenguid/upstream.git' 'refs/tags/main'
-  : > "$FETCH_LOG"
-  output=$(run_check 2>&1) || status=$?
-  [ "$status" -ne 0 ] || fail 'non-branch canonical ref was accepted'
-  assert_contains "$output" 'is not a default-branch ref' 'malformed ref failure was unclear'
-  assert_no_fetch 'malformed ref triggered a canonical fetch'
-  pass 'malformed registry and pin data is rejected before network access'
+  pass 'malformed pin data is rejected before network access'
 }
 
 test_fixture_overrides_are_not_public_options() {
   local output status=0
-  output=$("$CHECK" --inventory "$TMP_ROOT/inventory" --operator-pin "$FIXTURE_ROOT/docs/pixeloven/upstream-pin" 2>&1) || status=$?
+  output=$("$CHECK" --operator-pin "$FIXTURE_ROOT/docs/pixeloven/upstream-pin" 2>&1) || status=$?
   [ "$status" -eq 2 ] || fail 'removed fixture override options were still accepted'
   assert_contains "$output" 'Usage:' 'removed fixture override options did not return usage'
   pass 'fixture inputs are unavailable through the production command interface'
 }
 
 test_valid_ancestor_passes
-test_unrelated_selected_source_fails
 test_local_foreign_commit_fails
 test_ambient_repository_injection_fails
 test_missing_canonical_evidence_fails
-test_malformed_registry_and_pin_data_fail_before_fetch
+test_malformed_pin_data_fails_before_fetch
 test_fixture_overrides_are_not_public_options

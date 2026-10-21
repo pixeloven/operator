@@ -1,6 +1,6 @@
 # ADR-0010: PixelOven companion forks own distribution
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0015
 - **Date:** 2026-08-29
 - **Deciders:** Brian Gebel (the operator)
 - **Supersedes:** ADR-0001's absolute ban on editing upstream files, only for the bounded distribution surfaces below
@@ -21,7 +21,7 @@ A URL swap to a nonexistent fork release would therefore look correct while rema
 ## Decision
 
 PixelOven's public companion forks are the distribution sources selected by `operator`.
-[`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh) is the single owner of the exact repository, commit, expected version, and source-build mechanics for all six tools.
+`bin/fm-install-pixeloven-tool.sh` is the single owner of the exact repository, commit, expected version, and source-build mechanics for all six tools.
 The installer fetches an exact fork commit, builds and deploys npm tools from their committed pnpm lockfiles, and builds no-mistakes from source without driving daemon lifecycle behavior.
 
 ADR-0001 remains the default, but the following existing upstream files may carry narrowly reviewed PixelOven distribution or documentation-audience hunks:

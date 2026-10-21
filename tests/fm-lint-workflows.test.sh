@@ -204,8 +204,8 @@ test_current_workflows_pass() {
   pass "current .github/workflows YAML files parse"
 }
 
-test_current_workflow_model_is_hosted_and_node_ready() {
-  local workflow model invalid bad='' ci_model installer_contract serial_listing
+test_current_workflow_model_is_hosted() {
+  local workflow model invalid bad=''
   command -v jq >/dev/null 2>&1 || fail 'jq is required to inspect the normalized workflow model'
 
   for workflow in "$ROOT"/.github/workflows/*.yml "$ROOT"/.github/workflows/*.yaml; do
@@ -228,47 +228,7 @@ test_current_workflow_model_is_hosted_and_node_ready() {
   done
   [ -z "$bad" ] || fail "workflow jobs escaped the standard GitHub-hosted runner allowlist"$'\n'"$bad"
 
-  ci_model=$(workflow_to_json "$ROOT/.github/workflows/ci.yml") \
-    || fail 'could not parse the CI workflow model'
-  installer_contract='[
-    {"job":"tests-portable-parallel-1","step":"Install tasks-axi"},
-    {"job":"tests-portable-parallel-2","step":"Install tasks-axi"},
-    {"job":"tests-portable-serial","step":"Install tasks-axi for backlog-handoff delegation"},
-    {"job":"macos-stock-bash","step":"Install tasks-axi"}
-  ]'
-  printf '%s\n' "$ci_model" | jq -e --argjson expected "$installer_contract" '
-    [
-      .jobs | to_entries[]
-      | .key as $job
-      | .value.steps[]?
-      | select(.name? as $name | any($expected[]; .step == $name))
-      | {job: $job, step: .name}
-    ] == $expected
-    and all($expected[]; . as $owner
-      | any($ci.jobs[$owner.job].steps[]?;
-          .name? == $owner.step
-        )
-      and any($ci.jobs[$owner.job].steps[]?;
-          ((.uses? // "") | startswith("actions/setup-node@"))
-          and ((.with["node-version"]? // "") == "22.19.0")
-        )
-    )
-  ' --argjson ci "$ci_model" >/dev/null \
-    || fail 'the declared source-installer jobs or named steps lack Node 22.19.0'
-
-  serial_listing=$("$ROOT/bin/fm-test-run.sh" --list --lane portable-serial) \
-    || fail 'could not inspect the portable serial lane'
-  assert_contains "$serial_listing" 'tests/fm-install-pixeloven-tool.test.sh' \
-    'the source-installer integration test is not scheduled in the portable serial lane'
-  printf '%s\n' "$ci_model" | jq -e '
-    .jobs["tests-portable-serial"].steps
-    | any(.[];
-        ((.uses? // "") | startswith("actions/setup-node@"))
-        and ((.with["node-version"]? // "") == "22.19.0")
-      )
-  ' >/dev/null || fail 'the source-installer integration-test lane lacks Node 22.19.0'
-
-  pass 'workflow jobs use standard GitHub-hosted runners and Node-dependent lanes provision 22.19.0'
+  pass 'workflow jobs use standard GitHub-hosted runners'
 }
 
 test_private_runner_label_is_rejected_by_repository_lint() {
@@ -627,7 +587,7 @@ SH
 
 test_pins_an_explicit_version
 test_current_workflows_pass
-test_current_workflow_model_is_hosted_and_node_ready
+test_current_workflow_model_is_hosted
 test_private_runner_label_is_rejected_by_repository_lint
 test_col0_heredoc_fails_with_clear_error
 test_valid_fixture_passes

@@ -4,13 +4,14 @@
 (MIT, © 2026 Kun Chen). This page is the operating rule; the reasoning lives in
 [ADR-0001](../adr/0001-soft-fork-of-firstmate.md),
 [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md), and the bounded exceptions in
-[ADR-0008](../adr/0008-autonomous-delivery-lane.md),
-[ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md), and
+[ADR-0008](../adr/0008-autonomous-delivery-lane.md) and
 [ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md), which supersedes
 [ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
 [ADR-0012](../adr/0012-notification-reconciliation.md),
 [ADR-0013](../adr/0013-archived-captain-hold-completion.md), and
 [ADR-0014](../adr/0014-stale-lock-publication-serialization.md).
+[ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) superseded the companion-distribution exception of
+[ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
 
 ## The rule, in one line
 
@@ -26,8 +27,8 @@
 | Commit date | 2026-08-13 |
 | Seed method | full upstream history pushed unchanged; `main` = the fork commit |
 
-`upstream` is configured as a git remote. To see everything PixelOven has
-changed, at any time:
+Upstream is fetched into the neutral ref `refs/remotes/firstmate-upstream/main`, never into a remote named `upstream`, `github`, or `origin` (see [`upstream-merges.md`](upstream-merges.md#2-the-standing-procedure)).
+To see everything PixelOven has changed, at any time:
 
 ```sh
 git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
@@ -42,13 +43,11 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
 | CI we own | `.github/workflows/pixeloven-*.yml` | |
-| Companion installer | `bin/fm-install-pixeloven-tool.sh` | closed inventory of six public PixelOven forks |
-| Companion installer tests | `tests/fm-install-pixeloven-tool.test.sh` | executable source and lifecycle contract |
-| Upstream lineage check | `bin/fm-pixeloven-upstream-check.sh` | canonical ancestry verification for the operator and companion forks |
+| Upstream lineage check | `bin/fm-pixeloven-upstream-check.sh` | canonical ancestry verification for the operator upstream pin |
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008 through 0014 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008 and 0011 through 0015 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed — not the `fm-*` scripts, not the
 `FM_*` variables, not the captain/crewmate vocabulary. The reasoning, and the
@@ -64,11 +63,10 @@ Its complete assertions and failure conditions are documented in [`identity.md`]
 Nothing else in it is changed.
 This remains the identity exception recorded in ADR-0001.
 
-ADR-0010 separately permits the exact source-selection, CI acquisition, contributor guidance, audience inventory, and regression files needed to make PixelOven's companion forks independently usable.
-Those are behavior-owned hunks, not permission for renames, cleanup, or unrelated downstream edits.
-The companion source and sync policy is owned by [`tool-distribution.md`](tool-distribution.md).
+Companion tools are acquired exactly as upstream acquires them, so no upstream file carries a PixelOven tool-source hunk ([ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)).
+Assertion A8 fails if a tracked file outside decision and documentation history selects a PixelOven companion fork again.
 
-ADR-0008 owns the isolated unsigned delivery lane, ADR-0010 owns companion distribution, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, and ADR-0014 owns the stale-lock publication exception.
+ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, ADR-0014 owns the stale-lock publication exception, and ADR-0015 owns the documentation-audience entries that classify PixelOven prose.
 
 ## Taking upstream changes
 
@@ -81,10 +79,16 @@ ADR-0008 owns the isolated unsigned delivery lane, ADR-0010 owns companion distr
    gates disabled (see [supply-chain-read.md](supply-chain-read.md)).
 
 ```sh
-git fetch upstream
-git log --oneline main..upstream/main     # what's new
-git merge --no-ff upstream/main           # on a branch, into a PR
+git fetch --no-tags https://github.com/kunchenguid/firstmate.git main:refs/remotes/firstmate-upstream/main
+git log --oneline main..firstmate-upstream/main     # what's new
+git merge --no-ff firstmate-upstream/main           # on a branch, into a PR
 ```
+
+## Contributing
+
+[`CONTRIBUTING.md`](../../CONTRIBUTING.md) is upstream's file, kept byte-identical so it never conflicts ([ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)).
+Its workflow applies here with `pixeloven/operator` as the parent repository and your fork of `operator` as the `no-mistakes init --fork-url` target.
+The `Require no-mistakes` check enforces the same delivery evidence on every pull request to this repository.
 
 ## Releasing
 

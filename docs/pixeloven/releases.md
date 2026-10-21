@@ -102,15 +102,17 @@ Five workflows run here, and they have very different characters:
 
 | Workflow | Owner | Fires on | Character |
 |---|---|---|---|
-| `ci.yml` | upstream suite, with ADR-0011's GitHub-hosted routing and ADR-0010's bounded tasks-axi acquisition hunk | push to `main`, every PR; native macOS is manual/non-blocking | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
-| `no-mistakes-required.yml` | **upstream**, with ADR-0010's bounded PixelOven action source hunk | every PR | enforces the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
+| `ci.yml` | upstream suite, with ADR-0011's GitHub-hosted routing hunks | push to `main`, every PR; native macOS is manual/non-blocking until the `v0.3.0` synchronization | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
+| `no-mistakes-required.yml` | **upstream**, with ADR-0011's hosted-runner comment | every PR | enforces the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
 | `windows-herdr-spike.yml` | **upstream** — never edited (O-1) | `workflow_dispatch` only | costs nothing unless invoked |
 | `pixeloven-gates.yml` | **ours** | push to `main`, every PR | 2 jobs, both seconds of real work |
 | `pixeloven-release.yml` | **ours** | `push: tags: ['v*']` | 1 job |
 
 ### The cost finding — measured, not estimated
 
-The native macOS compatibility job is intentionally non-blocking for routine PR delivery and is run manually or on pushes to `main`.
+The native macOS compatibility job is currently non-blocking for routine PR delivery and is run manually or on pushes to `main`.
+Once the coming synchronization takes upstream's workflow, the stock macOS job runs on every pull request, as upstream's own workflow requires; this is a captain decision of 2026-10-21.
+The repository is public, so GitHub-hosted Actions minutes, including macOS, are not billed against an allowance.
 Releases affecting shell portability must have recent native macOS evidence, or equivalent current upstream evidence, recorded before release.
 The following billing figures are historical evidence from the repository's private, free-plan period, when the organization had 2,000 included Actions minutes per month and private-repository jobs consumed that allowance.
 At that time GitHub billed each job rounded up to the minute and applied a 10x multiplier to macOS jobs.
@@ -157,7 +159,7 @@ Demonstrated locally at three points in our history:
 | `a5e90e3` (Phase 0, task A0.1 — **before** any A1 work) | **fails**: 11 unclassified |
 | `d6d7f85` (`v0.1.0`) | **fails**: 14 unclassified |
 
-ADR-0010 accepted the documentation inventory as one bounded existing-file exception because maintained downstream prose needs the same audience and owner checks as upstream prose.
+ADR-0010 accepted the documentation inventory as one bounded existing-file exception because maintained downstream prose needs the same audience and owner checks as upstream prose, and [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) keeps that exception in force after superseding the rest of ADR-0010.
 The inventory now classifies every PixelOven ADR and project document, so `bin/fm-doc-audience-check.sh` can be read as a real pass/fail gate again.
 That file is part of the future upstream contact surface and must be reconciled by ownership during every synchronization.
 
@@ -178,7 +180,7 @@ If hosted-runner billing or capacity blocks execution, treat that as an operatio
 
 [`CONTRIBUTING.md`](../../CONTRIBUTING.md) owns the signature and current-head attestation contract enforced by `Require no-mistakes`.
 The check is expected to be green before merge.
-ADR-0010 changes only the reusable action source to `pixeloven/no-mistakes` at the selected downstream commit `0e546529579f7a862f6f2fecef4905ddd10e2494`.
+The check uses upstream's reusable action at the exact commit upstream pins; [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) retired the PixelOven action source.
 Upstream ancestry and corrective ancestry pull requests additionally follow the merge-commit contract in [`upstream-merges.md`](upstream-merges.md).
 
 ## 5. Release log
@@ -186,6 +188,7 @@ Upstream ancestry and corrective ancestry pull requests additionally follow the 
 | Tag | Date | Upstream merged through | Notes |
 |---|---|---|---|
 | `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
+| `v0.2.0` | 2026-10-21 | `355f46fe5528` | Commit `09acb8af` on `main`, all gates green. Carries the three upstream synchronizations through `bdae21ed09d2`, `1fbc7bb1fba2`, and `355f46fe5528`, plus ADR-0008 and ADR-0010 through ADR-0014. A **minor** bump per §2: consumer-visible runtime, supervision, backend, documentation, and test behavior recorded in [`upstream-merges.md`](upstream-merges.md). |
 
-The **next** tag will carry three completed upstream synchronizations: the 8-commit A1.4 merge through `bdae21ed09d2`, the subsequent 86-commit synchronization through `1fbc7bb1fba2`, and the 10-commit synchronization through `355f46fe5528`.
-Per §2 it is a **minor** bump - `v0.2.0` - because [`upstream-merges.md`](upstream-merges.md) records consumer-visible behavior across runtime, supervision, backends, documentation, and tests, including `/stow` open-record persistence, the `CLAUDE.md` pointer-file change, atomic backlog transitions, quota helpers, and bounded pane-churn absorb.
+The **next** tag is planned as `v0.3.0`: the five-stage synchronization from `355f46fe5528` to current upstream, preceded by [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)'s return to upstream companion-tool sources.
+Its release notes must call out upstream's raised tool floors, the self-repository publication gate and the neutral upstream fetch ref, and the default-on supervision host.

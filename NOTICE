@@ -18,7 +18,7 @@ This repository was seeded by pushing upstream's own git history unchanged, so
 the authorship of every upstream file remains attributable through `git log`
 and `git blame`. See docs/adr/0002-seeded-with-full-upstream-history.md.
 
-PixelOven's own contributions, including the bounded downstream distribution overrides recorded in ADR-0010, are described in docs/pixeloven/fork-contract.md and are likewise offered under the MIT License.
+PixelOven's own contributions, including the bounded downstream exceptions recorded in the ADRs under docs/adr/, are described in docs/pixeloven/fork-contract.md and are likewise offered under the MIT License.
 
 Third-party components referenced (but not vendored) by this project keep their
 own licenses, notably:
@@ -33,8 +33,7 @@ own licenses, notably:
   quota-axi - https://github.com/kunchenguid/quota-axi - MIT
   no-mistakes - https://github.com/kunchenguid/no-mistakes - MIT
 
-The `operator` project selects public PixelOven forks of those six upstream projects as its distribution sources.
-Those forks preserve upstream ancestry and attribution.
+The `operator` project acquires those six tools from their upstream published sources.
 PixelOven does not claim original authorship of the upstream work.
 
 Note: the herdr repository's LICENSE file is Apache-2.0, while a runtime

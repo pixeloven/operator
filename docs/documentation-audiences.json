@@ -321,6 +321,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0015-companion-tools-from-upstream-sources.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
@@ -439,14 +443,6 @@
     {
       "path": "docs/pixeloven/supply-chain-read.md",
       "audience": "maintainer-verification"
-    },
-    {
-      "path": "docs/pixeloven/tool-distribution-verification.md",
-      "audience": "maintainer-verification"
-    },
-    {
-      "path": "docs/pixeloven/tool-distribution.md",
-      "audience": "operator-current"
     },
     {
       "path": "docs/pixeloven/upstream-merges.md",
