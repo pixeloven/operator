@@ -1,9 +1,9 @@
 # Identity — what this project is called, and what stays named `fm`
 
 - **Task:** A1.1
-- **Satisfies:** **O-1** (soft fork: additions by default, with ADR-0010's bounded distribution exceptions) · **G-7**
+- **Satisfies:** **O-1** (soft fork: additions by default, with the bounded existing-file exceptions listed in [`fork-contract.md`](fork-contract.md)) · **G-7**
   (in prose, "the operator" means the human; the project is written `operator`)
-- **Decisions:** [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) (additive default), [ADR-0004](../adr/0004-the-name-operator.md) (the name), and [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md) (bounded distribution overrides)
+- **Decisions:** [ADR-0001](../adr/0001-soft-fork-of-firstmate.md) (additive default), [ADR-0004](../adr/0004-the-name-operator.md) (the name), and [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) (companion tools acquired as upstream does)
 
 This page answers three questions a reader arrives with: *what is this called*,
 *why does everything inside it still say `fm`*, and *how do I check that
@@ -86,7 +86,7 @@ once they exist.)*
 
 ### Why
 
-**Renaming any of it would be a broad upstream rewrite, which remains outside the bounded distribution exception.**
+**Renaming any of it would be a broad upstream rewrite, which remains outside every bounded ADR exception.**
 
 1. **It breaks the merge contract (O-1 / O-2).** The soft fork is cheap *only*
    because our changes and upstream's changes never touch the same lines. A
@@ -112,7 +112,7 @@ once they exist.)*
 Our default surface is new files in namespaces upstream can never collide with, while [`fork-contract.md`](fork-contract.md#where-our-code-goes) owns the exact current surface inventory and ADR exceptions.
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008 through 0014 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, companion distribution, notification reconciliation, documentation-audience ownership, archived captain-hold completion, and stale-lock publication serialization.
+ADRs 0008 and 0011 through 0015 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, notification reconciliation, archived captain-hold completion, stale-lock publication serialization, and documentation-audience ownership.
 Anything outside those lists needs a **new ADR**, not a silent change.
 
 ## 4. Erratum on ADR-0004
@@ -170,7 +170,7 @@ Anchored on the host so that `docs/pixeloven/…` paths are not false positives:
 
 ```sh
 corpus | grep -oE 'github\.com/pixeloven/[A-Za-z0-9._-]+' | sed 's/\.git$//' | sort -u \
-       | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci|gh-axi|chrome-devtools-axi|lavish-axi|tasks-axi|quota-axi|no-mistakes)$'
+       | grep -vE '^github\.com/pixeloven/(operator|crew|pulse|lattice|ci)$'
 ```
 
 **A3 — the project is never capitalized as a proper noun** (G-7). Two files are
@@ -190,7 +190,7 @@ No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-install-pixeloven-tool\.sh$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-captain-hold|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows|fm-procevent-lib|fm-procevent|fm-task-inbox-lib|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-bootstrap|fm-captain-hold-lifecycle|fm-lint-workflows|fm-no-mistakes-required|fm-pr-check-security|fm-secondmate-reconcile|fm-secondmate-sync|fm-startup-memory-budget|fm-task-delivery|fm-task-inbox|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|CONTRIBUTING\.md$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-bootstrap|fm-captain-hold|fm-spawn|fm-delivery-lane|fm-lint-workflows|fm-procevent-lib|fm-procevent|fm-task-inbox-lib|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-pr-check-security|fm-secondmate-reconcile|fm-task-delivery|fm-task-inbox|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
@@ -209,10 +209,9 @@ sed '/<!-- PIXELOVEN-FORK-BANNER:START -->/,/<!-- PIXELOVEN-FORK-BANNER:END -->/
 git ls-files -- data state config projects .no-mistakes
 ```
 
-**A7 - every recorded upstream pin is a canonical upstream ancestor, every selected fork commit descends from its pin, and the operator pin is contained in this tree.**
+**A7 - the operator upstream pin is a canonical upstream ancestor and is contained in this tree.**
 This prevents a locally injected or foreign commit from becoming the baseline for A4 and A5.
-The executable registry owns each companion's selected fork commit and canonical upstream mapping.
-The lineage check rejects malformed mappings before network access, ignores ambient Git configuration, fetches only each credential-free GitHub default-branch ref and exact selected fork commit's ancestry, and fails when canonical evidence is unavailable or ambiguous:
+The lineage check rejects a malformed pin before network access, ignores ambient Git configuration, fetches only the ancestry of `kunchenguid/firstmate`'s default branch, and fails when canonical evidence is unavailable or ambiguous:
 
 ```sh
 git cat-file -e "${PIN}^{commit}" &&
@@ -220,13 +219,15 @@ git merge-base --is-ancestor "$PIN" HEAD &&
 bin/fm-pixeloven-upstream-check.sh
 ```
 
-**A8 - the executable companion inventory selects exactly the six matching PixelOven forks.**
+**A8 - companion tools come from upstream's published sources, never a PixelOven fork** ([ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)).
+Outside the decision and documentation history in `docs/adr/` and `docs/pixeloven/`, no tracked file may name the retired fork installer or select a PixelOven companion-fork repository:
 
 ```sh
-bin/fm-install-pixeloven-tool.sh --list
+git grep -nE 'fm-install-pixel''oven-tool|pixeloven/(gh-axi|chrome-devtools-axi|lavish-axi|tasks-axi|quota-axi|no-mistakes)([^A-Za-z0-9._-]|$)' \
+  -- . ':!docs/adr/' ':!docs/pixeloven/'
 ```
 
-The gate requires six rows, the fixed tool-name order, and `https://github.com/pixeloven/<tool>` as each row's source URL.
+The installer name is split in the pattern so the gate's own source cannot match itself.
 
 ### Why A4/A5 track a moving pin
 
@@ -235,7 +236,7 @@ contains. It starts at the fork point and is advanced by **every upstream-merge
 PR** — which is the point: the pin is the machine-readable half of
 [`upstream-tracking.md`](upstream-tracking.md), so the ledger cannot silently go
 stale while the gate keeps passing.
-A7 requires this pin to be a real commit contained in this history and every pin to be an ancestor of its canonical upstream default branch.
+A7 requires this pin to be a real commit contained in this history and an ancestor of the canonical upstream default branch.
 
 ### Re-measuring §3
 

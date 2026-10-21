@@ -69,9 +69,9 @@ enabled only on the human's explicit instruction.
 
 ## 3. Provisioning it
 
-Preconditions: the fleet home is a clone of this repository at a release tag, and the `no-mistakes` binary is installed from the exact PixelOven fork source selected by [`bin/fm-install-pixeloven-tool.sh`](../../bin/fm-install-pixeloven-tool.sh).
+Preconditions: the fleet home is a clone of this repository at a release tag, and the `no-mistakes` binary is installed from upstream's published source, as `bin/fm-bootstrap.sh`'s install hint names it ([ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)).
 It is a Go binary, **not** the npm package of the same name.
-See [`tool-distribution.md`](tool-distribution.md) for the current source contract and [`supply-chain-read.md`](supply-chain-read.md) for the upstream package audit.
+See [`supply-chain-read.md`](supply-chain-read.md) for the upstream package audit and the current acquisition conditions.
 
 ```sh
 mkdir -p "$FM_HOME/data" "$FM_HOME/projects"
@@ -96,10 +96,10 @@ because only one of them is visible in this repository:
 |---|---|---|
 | Registry posture | `$FM_HOME/data/projects.md` (machine-local) | What the fleet *intends* — consumed by `fm-fleet-sync.sh`, `fm-home-seed.sh`, and `fm-spawn.sh`'s registry-deviation notice |
 | The gate itself | `no-mistakes init` state under `~/.no-mistakes/` | The pipeline a change must pass to become a PR |
-| `Require no-mistakes` | `.github/workflows/no-mistakes-required.yml` (inherited, with ADR-0010's bounded PixelOven action source) | **Server-side enforcement** of the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
+| `Require no-mistakes` | `.github/workflows/no-mistakes-required.yml` (inherited, with ADR-0011's hosted-runner comment) | **Server-side enforcement** of the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
 
 The third is the one that cannot be bypassed by a mistake on the workstation, and it is the reason O-4 is a property of the repository rather than of one machine's configuration.
-It remains upstream-owned except for ADR-0010's exact reusable-action source hunk.
+It runs upstream's reusable action at the exact commit upstream pins, and remains upstream-owned except for ADR-0011's hosted-runner comment.
 
 A pull request raised without the delivery evidence defined in [`CONTRIBUTING.md`](../../CONTRIBUTING.md) is rejected by `Require no-mistakes`.
 A pipeline-delivered pull request is expected to make that check green before merge.

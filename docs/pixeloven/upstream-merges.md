@@ -15,28 +15,29 @@ it costs to catch up, and how to do it*.
 ## 1. The rule that keeps this reviewable
 
 **We add by default and keep every existing-file exception exact and reviewed.**
-[ADR-0001](../adr/0001-soft-fork-of-firstmate.md) owns the additive default, while [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md) owns the bounded companion-distribution exception.
+[ADR-0001](../adr/0001-soft-fork-of-firstmate.md) owns the additive default, while the ADRs listed in [`fork-contract.md`](fork-contract.md) own each bounded existing-file exception.
 Every merge is a live test of both rules.
 
 **G-5, absolutely: this is a PULL ONLY.** Nothing is pushed, opened, commented,
-or otherwise posted to `kunchenguid/*`. The `upstream` remote exists to fetch.
-Any upstream contribution is a separate, per-instance operator decision.
+or otherwise posted to `kunchenguid/*`. Upstream is only ever fetched, into a
+neutral ref. Any upstream contribution is a separate, per-instance operator decision.
 
 ## 2. The standing procedure
 
 ```sh
 # 1. Measure first - the ledger row is written before the merge, not after.
-git remote add upstream https://github.com/kunchenguid/firstmate.git   # once
-git fetch --no-tags upstream main
-git rev-list --count main..upstream/main
-git log   --oneline            main..upstream/main
+#    Fetch into a neutral ref; never add a remote (see below).
+git fetch --no-tags https://github.com/kunchenguid/firstmate.git \
+  main:refs/remotes/firstmate-upstream/main
+git rev-list --count main..firstmate-upstream/main
+git log   --oneline            main..firstmate-upstream/main
 
 # 2. Merge on a branch. Never on main, never with a bot, never automatically.
 git checkout -b "upstream-merge/$(date +%Y-%m-%d)"
-git merge --no-ff --no-edit upstream/main
+git merge --no-ff --no-edit firstmate-upstream/main
 
 # 3. Advance the machine-readable pin - the gates read this file (A4/A5/A7).
-git rev-parse upstream/main > docs/pixeloven/upstream-pin
+git rev-parse firstmate-upstream/main > docs/pixeloven/upstream-pin
 
 # 4. Record the ledger row in upstream-tracking.md and the merge row below.
 
@@ -47,6 +48,12 @@ git rev-parse upstream/main > docs/pixeloven/upstream-pin
 # 6. Merge it with a REAL MERGE COMMIT. Not --squash, not a rebase.
 gh-axi pr merge <n> --merge
 ```
+
+**Never add a remote named `upstream`, `github`, or `origin` for kunchenguid.**
+A merge worker runs in a worktree of the shared project clone, so `git remote add` writes into that clone's shared `.git/config` and outlives the task.
+The self-repository publication gate that upstream added after our current pin takes the remote marked `remote.<name>.gh-resolved=base` as a project's publication target, and otherwise the first of `upstream`, `github`, and `origin`, so an `upstream` remote pointing at `kunchenguid/firstmate` would make every later ship from that clone target upstream and be refused.
+The neutral `refs/remotes/firstmate-upstream/main` ref carries no remote configuration and leaves the clone's publication target on `pixeloven/operator`.
+Setting `git config remote.origin.gh-resolved base` in the project clone, which is what `gh repo set-default` writes, additionally pins that target to `origin`.
 
 **Step 3 is not optional.** `docs/pixeloven/upstream-pin` is what the
 fork-contract assertions diff against. Skipping it makes A4 report upstream's own
@@ -69,7 +76,7 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 > replays upstream's commits as fresh cherry-picks with new SHAs. The result looks
 > fine — same tree, same files — but:
 >
-> - `upstream/main` is **no longer an ancestor**, so the merge base with upstream
+> - the upstream commit is **no longer an ancestor**, so the merge base with upstream
 >   is gone and the *next* merge re-presents every one of these commits;
 > - upstream's authorship SHAs are rewritten, which is exactly what
 >   [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md) seeded whole

@@ -11,11 +11,14 @@ measured in commits, not versions.
 ## How to measure
 
 ```sh
-git fetch upstream
-git rev-list --count main..upstream/main            # commits we are behind
-git log --oneline main..upstream/main               # what they are
-git diff --stat main..upstream/main                 # the conflict surface
+git fetch --no-tags https://github.com/kunchenguid/firstmate.git \
+  main:refs/remotes/firstmate-upstream/main         # neutral ref, never a remote
+git rev-list --count main..firstmate-upstream/main  # commits we are behind
+git log --oneline main..firstmate-upstream/main     # what they are
+git diff --stat main..firstmate-upstream/main       # the conflict surface
 ```
+
+[`upstream-merges.md`](upstream-merges.md#2-the-standing-procedure) explains why upstream is never added as a remote.
 
 ## Ledger
 
@@ -25,6 +28,7 @@ git diff --stat main..upstream/main                 # the conflict surface
 | 2026-08-17 | `d6d7f85` (= `v0.1.0`) | `bdae21ed09d2` | **8 commits** | **first merge** (task A1.4) | Clean: **zero conflicts**, merge wall **0.031 s**. Full record in [`upstream-merges.md`](upstream-merges.md). Pin advanced to `bdae21ed09d2`. |
 | 2026-08-30 | `61539eb` | `1fbc7bb1fba2` | **86 commits** | **second merge** | Three clean merge checkpoints, **zero conflicts**, combined merge wall **0.54 s**. Upstream advanced twice during validation, and the pin was refreshed after each merge. |
 | 2026-09-01 | `0c1b6e3` | `355f46fe5528` | **10 commits** | **third merge** | Ordinary two-parent merge with two resolved content conflicts. Pin advanced to `355f46fe5528`; the full conflict and distribution review is in [`upstream-merges.md`](upstream-merges.md). |
+| 2026-10-21 | `09acb8af` (= `v0.2.0`) | `3847411b` | **481 commits** | observation | Upstream overlap investigation before the planned five-stage `v0.3.0` synchronization. [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) removes the companion-distribution hunks first. **No merge performed.** |
 
 The machine-readable half of this ledger is [`upstream-pin`](upstream-pin) — a
 single line holding the upstream commit our tree currently contains. The

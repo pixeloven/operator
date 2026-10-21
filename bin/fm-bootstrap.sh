@@ -849,18 +849,13 @@ secondmate_handoff_detect() {
 }
 
 install_cmd() {
-  local pixeloven_installer hook_bin
-  printf -v pixeloven_installer '%q' "$SCRIPT_DIR/fm-install-pixeloven-tool.sh"
   case "$1" in
     tmux|node|git|gh|curl|jq|orca|zellij) echo "brew install $1  # or the platform's package manager" ;;
     cmux) echo "brew install --cask cmux  # or see https://cmux.com" ;;
     treehouse) echo "curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh" ;;
-    no-mistakes) echo "$pixeloven_installer no-mistakes" ;;
-    gh-axi|chrome-devtools-axi|lavish-axi)
-      printf -v hook_bin '%q' "${FM_PIXELOVEN_TOOL_PREFIX:-$HOME/.local}/bin/$1"
-      echo "$pixeloven_installer $1 && $hook_bin setup hooks"
-      ;;
-    tasks-axi|quota-axi) echo "$pixeloven_installer $1" ;;
+    no-mistakes) echo "curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh" ;;
+    gh-axi|chrome-devtools-axi|lavish-axi) echo "npm install -g $1 && $1 setup hooks" ;;
+    tasks-axi|quota-axi) echo "npm install -g $1" ;;
     *) return 1 ;;
   esac
 }
@@ -895,7 +890,6 @@ if ! BACKEND_TOOLS=$(fm_backend_required_tools "$BACKEND"); then
   BACKEND_TOOLS=""
 fi
 TOOLS="$BACKEND_TOOLS $COMMON_TOOLS"
-NODE_MIN=22.19.0
 NO_MISTAKES_MIN=1.46.0
 # AXI-FAMILY FLOOR POLICY. Every axi-family floor is the CURRENT LATEST published
 # version of that tool, captain-bumped periodically to keep the whole fleet on the
@@ -920,10 +914,7 @@ tool_version_at_least() {  # <tool> <min-version>
   local min_major min_minor min_patch min_extra
   command -v "$tool" >/dev/null 2>&1 || return 1
   output=$("$tool" --version 2>/dev/null) || return 1
-  parts=$(printf '%s\n' "$output" \
-    | grep -oE '[vV]?[0-9]+\.[0-9]+\.[0-9]+' \
-    | head -n 1 \
-    | sed -E 's/^[vV]?([0-9]+)\.([0-9]+)\.([0-9]+)$/\1 \2 \3/')
+  parts=$(printf '%s\n' "$output" | sed -nE 's/.*[vV]?([0-9]+)\.([0-9]+)\.([0-9]+).*/\1 \2 \3/p' | head -n 1)
   IFS=' ' read -r major minor patch extra <<< "$parts"
   [ -n "$major" ] && [ -n "$minor" ] && [ -n "$patch" ] && [ -z "$extra" ] || return 1
   IFS='.' read -r min_major min_minor min_patch min_extra <<< "$min"
@@ -1404,9 +1395,6 @@ detect_local_tools() {
   for t in $COMMON_TOOLS; do
     command -v "$t" >/dev/null || missing_tool_diagnostic "$t"
   done
-  if command -v node >/dev/null 2>&1 && ! tool_version_at_least node "$NODE_MIN"; then
-    missing_tool_diagnostic node
-  fi
   # The treehouse lease-support upgrade check is only relevant when the resolved
   # backend actually requires treehouse (every backend except orca, which owns its
   # own worktrees); an orca home must not be told to upgrade a provider it never uses.
