@@ -345,7 +345,7 @@ Superseded hunks whose upstream replacement is not yet merged stay until stage 2
 The ADR-0012 and ADR-0014 cores are re-ported in stage 2, where upstream's rewrites of their owners arrive.
 ADR-0012's file list now names its two incidental hunks, and the A4 allowlist drops the four paths that returned to upstream bytes.
 
-Under stock macOS Bash 3.2, ADR-0014's serialized publication multiplies upstream's new per-lock process spawn, so the watcher-lock and wake-queue suites exceed their local timing budgets while passing with longer waits.
+Under stock macOS Bash 3.2, ADR-0014's serialized publication multiplies upstream's new per-lock process spawn, so the watcher-lock, wake-queue, and watch-triage suites exceed their local timing budgets while passing with longer waits.
 Stage 2's re-port must measure that cost on Bash 3.2.
 
 The stage is consumer-visible through upstream's behavior changes, including the stock macOS CI lane, so it counts toward the `v0.3.0` minor bump.
