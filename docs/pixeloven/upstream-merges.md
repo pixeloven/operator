@@ -316,10 +316,44 @@ In `tests/fm-pr-check-security.test.sh`, the resolution retained the downstream 
 The synchronization is consumer-visible: it adds atomic backlog transitions, bounded pane-churn absorb, promoted-worker definition-of-done rendering, quota selection and monitoring helpers, structured Lavish capture reading, custom-check unregistration, a Bash 3.2 public-followup fix, and isolated Herdr server environments.
 Upstream's stock macOS lane also introduced a registry acquisition of `tasks-axi`; the same branch replaced that acquisition with `bin/fm-install-pixeloven-tool.sh tasks-axi` under Node 22.19, preserving ADR-0010's companion-distribution boundary without rewriting the merge commit.
 
-## 6. Merge log
+## 6. Fourth synchronization, stage 1 of 2 - 2026-10-21
+
+The fourth synchronization merges upstream in two reviewed stages, each a real two-parent merge.
+Stage 1 merged upstream `8fd5575b1179c2479bb7668725e03b2d905556a5` into PixelOven `27404554274d`, 50 upstream commits past the previous pin `355f46fe5528`.
+Upstream's own changes in that range touch 179 files with 23,518 insertions and 2,570 deletions.
+Stage 2 continues from this pin to `0e82f3ee`.
+
+| | |
+|---|---|
+| **Conflicts** | **6 files, 9 hunks** |
+| **Merge wall-clock** | **0.14 s** |
+
+Resolutions:
+
+- `.github/workflows/ci.yml` took upstream's 20-minute serial timeout with its five-shard rebalance, superseding ADR-0011's 30-minute bump, and took upstream's stock macOS job unconditionally so it runs on every pull request; `workflow_dispatch` remains the only downstream trigger hunk.
+- `bin/fm-task-inbox-lib.sh` and `tests/fm-task-inbox.test.sh` took upstream, whose own vanished-lock retry supersedes the downstream fix.
+- `tests/fm-secondmate-reconcile.test.sh` took upstream, whose bounded wait supersedes the downstream flake fix.
+- `tests/fm-task-delivery.test.sh` keeps both ADR-0008's delivery-lane test and upstream's task-subsection test.
+- `docs/captain-hold-lifecycle.md` takes upstream's wording and re-adds ADR-0013's retention-archive clauses.
+
+Two auto-merged downstream hunks were corrected on the same branch.
+`bin/fm-lint-workflows.sh` returned to upstream bytes, because its optional actionlint-config hunk referenced a file neither tree carries and aborted under stock macOS Bash 3.2.
+ADR-0014's mutex inspector now compares owner pids through upstream's `fm_current_pid`, matching upstream's new Bash 3.2 subshell ownership rule.
+
+Superseded hunks whose upstream replacement is not yet merged stay until stage 2: the `tests/fm-pr-check-security.test.sh` wait bound, ADR-0014's terminal guard, and ADR-0012's lock-refusal re-check in `bin/fm-bootstrap.sh`.
+The ADR-0012 and ADR-0014 cores are re-ported in stage 2, where upstream's rewrites of their owners arrive.
+ADR-0012's file list now names its two incidental hunks, and the A4 allowlist drops the four paths that returned to upstream bytes.
+
+Under stock macOS Bash 3.2, ADR-0014's serialized publication multiplies upstream's new per-lock process spawn, so the watcher-lock and wake-queue suites exceed their local timing budgets while passing with longer waits.
+Stage 2's re-port must measure that cost on Bash 3.2.
+
+The stage is consumer-visible through upstream's behavior changes, including the stock macOS CI lane, so it counts toward the `v0.3.0` minor bump.
+
+## 7. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
 | 2026-08-17 | `6789876442d0` (fork point) | `bdae21ed09d2` | 8 | **0** | 0.031 s | Task A1.4 rehearsal. Cut after `v0.1.0`. Only contact surface was `README.md` (banner vs. line 178) and it merged cleanly. Produced the upstream-pin fix (A4/A5 re-anchored, A7 added). |
 | 2026-08-30 | `bdae21ed09d2` | `1fbc7bb1fba2` | 86 | **0** | 0.54 s | Second synchronization used three clean merge checkpoints because upstream advanced twice during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |
 | 2026-09-01 | `1fbc7bb1fba2` | `355f46fe5528` | 10 | **2 files** | not recorded | Third synchronization preserved the two-parent merge, resolved configuration and test overlap, and corrected the new stock-macOS `tasks-axi` acquisition to the pinned PixelOven installer on the same branch. |
+| 2026-10-21 | `355f46fe5528` | `8fd5575b1179` | 50 | **6 files** | 0.14 s | Fourth synchronization, stage 1 of 2. Took upstream for the superseded inbox, reconcile, and serial-timeout hunks; stock macOS now runs on every PR. |

@@ -102,7 +102,7 @@ Five workflows run here, and they have very different characters:
 
 | Workflow | Owner | Fires on | Character |
 |---|---|---|---|
-| `ci.yml` | upstream suite, with ADR-0011's GitHub-hosted routing hunks | push to `main`, every PR; native macOS is manual/non-blocking until the `v0.3.0` synchronization | heavy: 2 parallel test shards + a 4-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
+| `ci.yml` | upstream suite, with ADR-0011's GitHub-hosted routing hunks | push to `main`, every PR, and manual dispatch | heavy: 2 parallel test shards + a 5-way serial matrix + a real-Herdr lane capped at 75 min + a `macos-latest` job |
 | `no-mistakes-required.yml` | **upstream**, with ADR-0011's hosted-runner comment | every PR | enforces the contribution contract owned by [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
 | `windows-herdr-spike.yml` | **upstream** — never edited (O-1) | `workflow_dispatch` only | costs nothing unless invoked |
 | `pixeloven-gates.yml` | **ours** | push to `main`, every PR | 2 jobs, both seconds of real work |
@@ -110,8 +110,7 @@ Five workflows run here, and they have very different characters:
 
 ### The cost finding — measured, not estimated
 
-The native macOS compatibility job is currently non-blocking for routine PR delivery and is run manually or on pushes to `main`.
-Once the coming synchronization takes upstream's workflow, the stock macOS job runs on every pull request, as upstream's own workflow requires; this is a captain decision of 2026-10-21.
+The stock macOS compatibility job runs on every pull request, as upstream's own workflow requires; this is a captain decision of 2026-10-21, applied by the first stage of the `v0.3.0` synchronization.
 The repository is public, so GitHub-hosted Actions minutes, including macOS, are not billed against an allowance.
 Releases affecting shell portability must have recent native macOS evidence, or equivalent current upstream evidence, recorded before release.
 The following billing figures are historical evidence from the repository's private, free-plan period, when the organization had 2,000 included Actions minutes per month and private-repository jobs consumed that allowance.
@@ -190,5 +189,5 @@ Upstream ancestry and corrective ancestry pull requests additionally follow the 
 | `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
 | `v0.2.0` | 2026-10-21 | `355f46fe5528` | Commit `09acb8af` on `main`, all gates green. Carries the three upstream synchronizations through `bdae21ed09d2`, `1fbc7bb1fba2`, and `355f46fe5528`, plus ADR-0008 and ADR-0010 through ADR-0014. A **minor** bump per §2: consumer-visible runtime, supervision, backend, documentation, and test behavior recorded in [`upstream-merges.md`](upstream-merges.md). |
 
-The **next** tag is planned as `v0.3.0`: the five-stage synchronization from `355f46fe5528` to current upstream, preceded by [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)'s return to upstream companion-tool sources.
+The **next** tag is planned as `v0.3.0`: the two-stage synchronization from `355f46fe5528` through `8fd5575b` to `0e82f3ee`, preceded by [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)'s return to upstream companion-tool sources.
 Its release notes must call out upstream's raised tool floors, the self-repository publication gate and the neutral upstream fetch ref, and the default-on supervision host.

@@ -1028,7 +1028,7 @@ Upstream's CI at the pin installs `tasks-axi` without an exact version on its Li
 
 ## 16. Accepted deviations for the coming synchronization
 
-The operator accepted two upstream behaviors that the five-stage synchronization brings in, rather than carrying downstream hunks against them.
+The operator accepted two upstream behaviors that the two-stage synchronization brings in, rather than carrying downstream hunks against them.
 
 | # | Upstream behavior | Why it is a deviation | Disposition |
 |---|---|---|---|
