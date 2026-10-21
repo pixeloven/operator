@@ -507,7 +507,7 @@ FM_LOCK_STALE_PID=
 #   1 - held by a live or too-fresh owner
 #   2 - abandoned by the dead owner in FM_LOCK_STALE_OWNER/FM_LOCK_STALE_PID
 fm_lock_inspect_mutex() {
-  local lockdir=$1
+  local lockdir=$1 current
   FM_LOCK_OWNER_DIR=
   FM_LOCK_STALE_OWNER=
   FM_LOCK_STALE_PID=
@@ -518,7 +518,8 @@ fm_lock_inspect_mutex() {
     FM_LOCK_STALE_OWNER=$(fm_lock_link_owner "$lockdir" 2>/dev/null || true)
   fi
   FM_LOCK_STALE_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
-  if [ -n "$FM_LOCK_STALE_PID" ] && [ "$FM_LOCK_STALE_PID" = "${BASHPID:-$$}" ]; then
+  fm_current_pid current || return 1
+  if [ -n "$FM_LOCK_STALE_PID" ] && [ "$FM_LOCK_STALE_PID" = "$current" ]; then
     fm_lock_remove_path "$lockdir" || true
     fm_lock_try_create_unserialized "$lockdir" && return 0
     return 1

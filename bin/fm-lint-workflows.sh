@@ -124,15 +124,8 @@ fi
 # fm-lint.sh owns ShellCheck of the canonical shell set. Disable actionlint's
 # extra shell and Python subprocess linters so this gate is the named workflow
 # linter, not a second shell lint of `run:` blocks.
-# A repository actionlint config is optional.
-# Without one, actionlint's standard runner-label set rejects undeclared
-# private labels before a workflow can strand required checks in a queue.
-ACTIONLINT_CONFIG_ARGS=()
-if [ -f "$ROOT/.github/actionlint.yaml" ]; then
-  ACTIONLINT_CONFIG_ARGS=(-config-file "$ROOT/.github/actionlint.yaml")
-fi
 set +e
-"$ACTIONLINT_BIN" -no-color "${ACTIONLINT_CONFIG_ARGS[@]}" -shellcheck= -pyflakes= -- "${FILES[@]}"
+"$ACTIONLINT_BIN" -no-color -shellcheck= -pyflakes= -- "${FILES[@]}"
 rc=$?
 set -e
 
