@@ -1,0 +1,44 @@
+### A8 pattern at base 09acb8af (outside docs/adr, docs/pixeloven) - hits expected
+09acb8af:.github/workflows/ci.yml:75:          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+09acb8af:.github/workflows/ci.yml:116:          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+09acb8af:.github/workflows/ci.yml:178:          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+09acb8af:.github/workflows/ci.yml:377:          bin/fm-install-pixeloven-tool.sh tasks-axi "$RUNNER_TEMP/fm-tools"
+09acb8af:.github/workflows/no-mistakes-required.yml:31:        uses: pixeloven/no-mistakes/.github/actions/require-no-mistakes@0e546529579f7a862f6f2fecef4905ddd10e2494
+09acb8af:.github/workflows/pixeloven-gates.yml:232:                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-install-pixeloven-tool\.sh$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-install-pixeloven-tool\.test\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required|pixeloven-release)\.yml$|bin/(fm-bootstrap|fm-captain-hold|fm-test-run|fm-spawn|fm-delivery-lane|fm-lint-workflows|fm-procevent-lib|fm-procevent|fm-task-inbox-lib|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-bootstrap|fm-captain-hold-lifecycle|fm-lint-workflows|fm-no-mistakes-required|fm-pr-check-security|fm-secondmate-reconcile|fm-secondmate-sync|fm-startup-memory-budget|fm-task-delivery|fm-task-inbox|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|CONTRIBUTING\.md$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|examples/watched-tools\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
+09acb8af:.github/workflows/pixeloven-gates.yml:256:          source_rows=$(bin/fm-install-pixeloven-tool.sh --list 2>/dev/null) \
+09acb8af:CONTRIBUTING.md:6:**Human-authored pull requests targeting `main` must be raised through [`no-mistakes`](https://github.com/pixeloven/no-mistakes).**
+09acb8af:CONTRIBUTING.md:33:See the [no-mistakes quick start](https://github.com/pixeloven/no-mistakes/blob/main/docs/src/content/docs/start-here/quick-start.md) for the full first-run walkthrough.
+09acb8af:bin/fm-bootstrap.sh:853:  printf -v pixeloven_installer '%q' "$SCRIPT_DIR/fm-install-pixeloven-tool.sh"
+09acb8af:bin/fm-install-pixeloven-tool.sh:2:# fm-install-pixeloven-tool.sh - install Operator's pinned companion tool forks.
+09acb8af:bin/fm-install-pixeloven-tool.sh:10:#   fm-install-pixeloven-tool.sh <tool> [prefix]
+09acb8af:bin/fm-install-pixeloven-tool.sh:11:#   fm-install-pixeloven-tool.sh --source <tool>
+09acb8af:bin/fm-install-pixeloven-tool.sh:12:#   fm-install-pixeloven-tool.sh --list
+09acb8af:bin/fm-install-pixeloven-tool.sh:13:#   fm-install-pixeloven-tool.sh --upstream-list
+09acb8af:bin/fm-install-pixeloven-tool.sh:14:#   fm-install-pixeloven-tool.sh --help
+09acb8af:bin/fm-install-pixeloven-tool.sh:32:  fm-install-pixeloven-tool.sh <tool> [prefix]
+09acb8af:bin/fm-install-pixeloven-tool.sh:33:  fm-install-pixeloven-tool.sh --source <tool>
+09acb8af:bin/fm-install-pixeloven-tool.sh:34:  fm-install-pixeloven-tool.sh --list
+09acb8af:bin/fm-install-pixeloven-tool.sh:35:  fm-install-pixeloven-tool.sh --upstream-list
+(total       55 lines)
+
+### A8 pattern at HEAD - must be empty
+(total        0 lines)
+
+### every remaining fm-install-pixeloven-tool mention at HEAD
+HEAD:docs/adr/0010-pixeloven-companion-forks-own-distribution.md:24:`bin/fm-install-pixeloven-tool.sh` is the single owner of the exact repository, commit, expected version, and source-build mechanics for all six tools.
+HEAD:docs/adr/0011-operator-github-hosted-runner-routing.md:29:CI jobs that execute `bin/fm-install-pixeloven-tool.sh` or its integration tests provision Node.js 22.19.0 explicitly.
+HEAD:docs/adr/0015-companion-tools-from-upstream-sources.md:12:It carried a source-build installer, `bin/fm-install-pixeloven-tool.sh`, and downstream hunks in ten upstream-owned files to route every acquisition through it.
+HEAD:docs/adr/0015-companion-tools-from-upstream-sources.md:25:`bin/fm-install-pixeloven-tool.sh` and its test are removed, and `bin/fm-pixeloven-upstream-check.sh` keeps only the operator pin lineage check.
+HEAD:docs/pixeloven/upstream-merges.md:317:Upstream's stock macOS lane also introduced a registry acquisition of `tasks-axi`; the same branch replaced that acquisition with `bin/fm-install-pixeloven-tool.sh tasks-axi` under Node 22.19, preserving ADR-0010's companion-distribution boundary without rewriting the merge commit.
+
+### remote-add/fetch upstream instructions in merge docs at HEAD
+HEAD:docs/pixeloven/upstream-merges.md:31:  main:refs/remotes/firstmate-upstream/main
+HEAD:docs/pixeloven/upstream-merges.md:32:git rev-list --count main..firstmate-upstream/main
+HEAD:docs/pixeloven/upstream-merges.md:33:git log   --oneline            main..firstmate-upstream/main
+HEAD:docs/pixeloven/upstream-merges.md:37:git merge --no-ff --no-edit firstmate-upstream/main
+HEAD:docs/pixeloven/upstream-merges.md:40:git rev-parse firstmate-upstream/main > docs/pixeloven/upstream-pin
+HEAD:docs/pixeloven/upstream-merges.md:55:The neutral `refs/remotes/firstmate-upstream/main` ref carries no remote configuration and leaves the clone's publication target on `pixeloven/operator`.
+HEAD:docs/pixeloven/upstream-tracking.md:15:  main:refs/remotes/firstmate-upstream/main         # neutral ref, never a remote
+HEAD:docs/pixeloven/upstream-tracking.md:16:git rev-list --count main..firstmate-upstream/main  # commits we are behind
+HEAD:docs/pixeloven/upstream-tracking.md:17:git log --oneline main..firstmate-upstream/main     # what they are
+HEAD:docs/pixeloven/upstream-tracking.md:18:git diff --stat main..firstmate-upstream/main       # the conflict surface

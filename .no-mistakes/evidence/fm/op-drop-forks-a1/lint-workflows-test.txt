@@ -1,0 +1,9 @@
+FM_TEST_BEGIN 2026-10-21T20:19:02Z tests/fm-lint-workflows.test.sh family=pure-contract-unit expected_gate_skip=none
+ok - fm-lint-workflows.sh pins an explicit actionlint version (1.7.12)
+not ok - current workflows must parse, got 1
+fm-lint-workflows.sh: actionlint 1.7.12 (pinned 1.7.12)
+/Users/brian/.no-mistakes/worktrees/c2aee2a088bd/01M5G1FEAT1NCMBDGCETT856H6/bin/fm-lint-workflows.sh: line 135: ACTIONLINT_CONFIG_ARGS[@]: unbound variable
+FM_TEST_END 2026-10-21T20:19:02Z tests/fm-lint-workflows.test.sh exit=1 duration_ms=177 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=294
+FM_TEST_SUMMARY_FAMILY family=pure-contract-unit count=1 duration_ms=177 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-lint-workflows.test.sh duration_ms=177
