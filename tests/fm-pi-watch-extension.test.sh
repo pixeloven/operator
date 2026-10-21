@@ -549,7 +549,7 @@ if (markers.length !== 0) {
   throw new Error(`handled-row retirement retained presentation markers: ${markers.join(" | ")}`);
 }
 
-lifecycle.get("session_shutdown")?.();
+await lifecycle.get("session_shutdown")?.({ type: "session_shutdown", reason: "quit" }, {});
 for (let i = 0; i < 100 && existsSync(`${process.env.FM_HOME}/state/.watch.lock`); i += 1) {
   await new Promise((resolve) => setTimeout(resolve, 20));
 }
