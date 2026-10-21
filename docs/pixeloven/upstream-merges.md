@@ -336,9 +336,10 @@ Resolutions:
 - `tests/fm-task-delivery.test.sh` keeps both ADR-0008's delivery-lane test and upstream's task-subsection test.
 - `docs/captain-hold-lifecycle.md` takes upstream's wording and re-adds ADR-0013's retention-archive clauses.
 
-Two auto-merged downstream hunks were corrected on the same branch.
+Three auto-merged downstream hunks were corrected on the same branch.
 `bin/fm-lint-workflows.sh` returned to upstream bytes, because its optional actionlint-config hunk referenced a file neither tree carries and aborted under stock macOS Bash 3.2.
 ADR-0014's mutex inspector now compares owner pids through upstream's `fm_current_pid`, matching upstream's new Bash 3.2 subshell ownership rule.
+ADR-0012's Pi reconcile case now passes the typed quit shutdown event that upstream's session-replacement handler reads.
 
 Superseded hunks whose upstream replacement is not yet merged stay until stage 2: the `tests/fm-pr-check-security.test.sh` wait bound, ADR-0014's terminal guard, and ADR-0012's lock-refusal re-check in `bin/fm-bootstrap.sh`.
 The ADR-0012 and ADR-0014 cores are re-ported in stage 2, where upstream's rewrites of their owners arrive.
