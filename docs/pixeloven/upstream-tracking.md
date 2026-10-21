@@ -30,6 +30,7 @@ git diff --stat main..firstmate-upstream/main       # the conflict surface
 | 2026-09-01 | `0c1b6e3` | `355f46fe5528` | **10 commits** | **third merge** | Ordinary two-parent merge with two resolved content conflicts. Pin advanced to `355f46fe5528`; the full conflict and distribution review is in [`upstream-merges.md`](upstream-merges.md). |
 | 2026-10-21 | `09acb8af` (= `v0.2.0`) | `3847411b` | **481 commits** | observation | Upstream overlap investigation before the planned five-stage `v0.3.0` synchronization. [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) removes the companion-distribution hunks first. **No merge performed.** |
 | 2026-10-21 | `27404554` | `8fd5575b1179` | **50 commits** | **fourth merge, stage 1 of 2** | Ordinary two-parent merge with six resolved conflicted files, while upstream `main` stood 482 commits ahead at `83b70ef49e33`. Pin advanced to `8fd5575b1179`; stage 2 continues to `0e82f3ee`. Full record in [`upstream-merges.md`](upstream-merges.md). |
+| 2026-10-21 | `8473c8542ddb` (stage 1 branch) | `0e82f3eebd21` | **427 commits** | **fourth merge, stage 2 of 2** | Ordinary two-parent merge with eighteen resolved conflicted files, while upstream `main` stood six commits further ahead at `bd866530a07b`. Pin advanced to `0e82f3eebd21`. Full record in [`upstream-merges.md`](upstream-merges.md). |
 
 The machine-readable half of this ledger is [`upstream-pin`](upstream-pin) — a
 single line holding the upstream commit our tree currently contains. The
