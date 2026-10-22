@@ -265,26 +265,29 @@ test_concurrent_writers_never_clobber() {
   pass "inbox: concurrent writers serialize on the sequence lock and lose nothing"
 }
 
-test_released_contention_retries_the_same_lock() {
-  local state lock
-  state="$TMP_ROOT/released-contention/state"; mkdir -p "$state/t1.inbox"
-  lock="$state/t1.inbox/.seq.lock"
-  FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    eval "$(declare -f fm_lock_try_create | sed "1s/fm_lock_try_create/_original_fm_lock_try_create/")"
-    attempts=0
-    fm_lock_try_create() {
-      attempts=$((attempts + 1))
-      if [ "$attempts" -eq 1 ]; then
-        return 1
-      fi
-      _original_fm_lock_try_create "$@"
-    }
-    fm_task_inbox_lock_acquire "$2" || exit 1
-    fm_lock_release "$2"
-  ' _ "$ROOT/bin/fm-task-inbox-lib.sh" "$lock" \
-    || fail "a released contention window was treated as a permanent lock failure"
-  pass "inbox: a lock released during contention is retried at the same lock path"
+test_writer_retries_after_a_vanished_lock_collision() {
+  local state fakebin marker rec real_ln
+  state="$TMP_ROOT/vanished-lock-race/state"
+  fakebin="$TMP_ROOT/vanished-lock-race/fakebin"
+  marker="$TMP_ROOT/vanished-lock-race/first-ln-failed"
+  mkdir -p "$state" "$fakebin"
+  real_ln=$(command -v ln)
+  cat > "$fakebin/ln" <<'SH'
+#!/usr/bin/env bash
+set -u
+if [ ! -e "$FM_FAKE_LN_MARKER" ]; then
+  : > "$FM_FAKE_LN_MARKER"
+  exit 1
+fi
+exec "$FM_REAL_LN" "$@"
+SH
+  chmod +x "$fakebin/ln"
+
+  rec=$(PATH="$fakebin:$PATH" FM_REAL_LN="$real_ln" FM_FAKE_LN_MARKER="$marker" \
+    inbox_lib "$state" fm_task_inbox_write "$state" t1 "steer after collision") \
+    || fail "a writer abandoned an acquisition whose competing lock had already vanished"
+  [ -f "$rec" ] || fail "the retry after a vanished lock collision did not write its record"
+  pass "inbox: a writer retries when a competing lock vanishes after its failed claim"
 }
 
 test_ladder_writes_ignore_vanished_inbox() {
@@ -524,7 +527,7 @@ test_idempotent_write_dedups_exact_body
 test_idempotent_write_follows_concurrent_ack
 test_handled_mv_dedups_by_sequence
 test_concurrent_writers_never_clobber
-test_released_contention_retries_the_same_lock
+test_writer_retries_after_a_vanished_lock_collision
 test_ladder_writes_ignore_vanished_inbox
 test_fire_and_forget_records_never_enter_the_ladder
 test_ring_ladder_policy
