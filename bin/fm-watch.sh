@@ -2238,6 +2238,15 @@ EOF
   return 1
 }
 
+procevent_surfaced_markers_exist() {
+  local marker
+  for marker in "$STATE"/.seen-procevent-*; do
+    [ -e "$marker" ] || [ -L "$marker" ] || continue
+    return 0
+  done
+  return 1
+}
+
 procevent_prune_surfaced_markers_locked() {
   local marker marker_name sequence key extra status=0
   for marker in "$STATE"/.seen-procevent-*; do
@@ -2291,6 +2300,9 @@ procevent_surface_queued() {
   PROCEVENT_QUEUED_ROWS=
   PROCEVENT_PRESENTABLE_ROWS=
   PROCEVENT_SURFACED_ROWS=
+  if [ ! -s "$FM_WAKE_QUEUE" ] && ! procevent_surfaced_markers_exist; then
+    return 0
+  fi
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   if [ ! -s "$FM_WAKE_QUEUE" ]; then
     procevent_prune_surfaced_markers_locked || true
@@ -2749,7 +2761,7 @@ while ! fm_lock_try_acquire "$WATCH_LOCK"; do
     fi
     echo "watcher: already running pid $FM_LOCK_HELD_PID"
   else
-    echo "watcher: watcher lock recovery in progress; another start is publishing it"
+    echo "watcher: already running"
   fi
   exit 0
 done

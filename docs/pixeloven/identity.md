@@ -120,7 +120,8 @@ moves.)*
 Our default surface is new files in namespaces upstream can never collide with, while [`fork-contract.md`](fork-contract.md#where-our-code-goes) owns the exact current surface inventory and ADR exceptions.
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008 and 0011 through 0016 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, notification reconciliation, archived captain-hold completion, stale-lock publication serialization, documentation-audience ownership, and persona themes.
+ADRs 0008, 0011 through 0013, 0015, and 0016 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, notification reconciliation, archived captain-hold completion, documentation-audience ownership, and persona themes.
+ADR-0014 is withdrawn and carries no hunks.
 Anything outside those lists needs a **new ADR**, not a silent change.
 
 ## 4. Erratum on ADR-0004
@@ -198,7 +199,7 @@ No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/po-[a-z0-9-]+\.sh$|tests/po-[a-z0-9-]+\.test\.sh$|AGENTS\.md$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-dod-lib|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/po-[a-z0-9-]+\.sh$|tests/po-[a-z0-9-]+\.test\.sh$|AGENTS\.md$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-dod-lib|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what

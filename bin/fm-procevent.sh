@@ -807,6 +807,8 @@ cmd_register_extension() {
 # queued publication. Reconciliation observes an existing pending row without
 # appending another; acknowledgement of that row permits one replacement replay.
 # FM_PROCEVENT_PUBLISH_RESULT reports appended or already-queued on success.
+# Reconcile's published= keeps upstream's meaning, every unhandled result whose
+# publication this pass ensured, and queued= counts those already pending.
 FM_PROCEVENT_PUBLISH_RESULT=
 publish_result() {  # <result-file>
   local result=$1 id seq adapter line status=1 owner_task='' message='' record='' announcement
@@ -914,10 +916,8 @@ publish_pending() {  # [result-file-to-skip]
     [ -n "$result" ] || continue
     [ "$result" = "$skip" ] && continue
     if publish_result "$result"; then
-      case "$FM_PROCEVENT_PUBLISH_RESULT" in
-        appended) published=$((published + 1)) ;;
-        already-queued) queued=$((queued + 1)) ;;
-      esac
+      published=$((published + 1))
+      [ "$FM_PROCEVENT_PUBLISH_RESULT" != already-queued ] || queued=$((queued + 1))
     fi
   done < <(fm_procevent_pending "$STATE")
   printf '%s\t%s\n' "$published" "$queued"

@@ -9,8 +9,8 @@
 [ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
 [ADR-0012](../adr/0012-notification-reconciliation.md),
 [ADR-0013](../adr/0013-archived-captain-hold-completion.md), and
-[ADR-0014](../adr/0014-stale-lock-publication-serialization.md), and
 [ADR-0016](../adr/0016-persona-themed-at-the-edge.md).
+[ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock exception was withdrawn and carries no hunks.
 [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) superseded the companion-distribution exception of
 [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
 
@@ -50,7 +50,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008 and 0011 through 0016 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, and 0016 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -68,7 +68,7 @@ This remains the identity exception recorded in ADR-0001.
 Companion tools are acquired exactly as upstream acquires them, so no upstream file carries a PixelOven tool-source hunk ([ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)).
 Assertion A8 fails if a tracked file outside decision and documentation history selects a PixelOven companion fork again.
 
-ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, ADR-0014 owns the stale-lock publication exception, ADR-0015 owns the documentation-audience entries that classify PixelOven prose, and ADR-0016 owns the persona hunks: one line in `AGENTS.md` and the worker-vocabulary and themed-vocative hunks in `bin/fm-dod-lib.sh`, which assertion A9 holds to exactly the lines that ADR lists.
+ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, ADR-0015 owns the documentation-audience entries that classify PixelOven prose, and ADR-0016 owns the persona hunks: one line in `AGENTS.md` and the worker-vocabulary and themed-vocative hunks in `bin/fm-dod-lib.sh`, which assertion A9 holds to exactly the lines that ADR lists.
 
 ## Taking upstream changes
 

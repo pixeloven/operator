@@ -1,6 +1,6 @@
 # ADR-0014: Stale-lock publication serialization may modify bounded upstream surfaces
 
-- **Status:** Accepted
+- **Status:** Withdrawn 2026-10-22; every hunk returned to upstream bytes
 - **Date:** 2026-09-13
 - **Deciders:** The operator
 - **Source:** Captain-approved hosted stale-lock scheduling race correction
@@ -41,3 +41,9 @@ The fork-contract gate accepts exactly these paths while continuing to reject un
 - **Keep the race and retry at callers.** Rejected because zero winners is a shared lock-boundary defect.
 - **Permit every inherited watcher test.** Rejected because this correction needs only the existing focused watcher-lock suite.
 - **Add a parallel PixelOven lock implementation.** Rejected because callers would remain on the unsafe inherited boundary and two lock implementations would drift.
+
+## Withdrawal (2026-10-22)
+
+The captain withdrew this exception during the second stage of the `v0.3.0` synchronization, and every file it named returned to upstream `0e82f3ee` bytes.
+Re-ported onto upstream's rewritten lock code, the serialization made each ordinary acquisition publish and release a second lock, roughly doubling acquisition cost, and the added contention failed upstream's own process-event and watcher suites on hosted Linux runners.
+The zero-winner interleaving it addressed remains in upstream, and its deterministic reproduction is to be offered upstream as a separate, per-instance decision under G-5.
