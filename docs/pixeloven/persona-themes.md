@@ -10,8 +10,8 @@ This page owns the theme format, the validation rules, and the list of surfaces 
 |---|---|
 | Chat: self-name, the user's address word, role nouns, seasoning, the exact no-op reply | a Persona block in the primary home's `data/captain-shared.md`, which every session-start digest prints and every second mate inherits read-only |
 | Worker prose a person reads, such as scout reports | one vocabulary line in the worker launch role contract |
-| The intent-address guard for no-mistakes | also refuses the theme's vocative, so a theme never weakens it |
-| Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude` |
+| The intent-address guard for no-mistakes | also refuses the theme's vocative, so a theme never weakens it; the vocative comes from the applied Persona block, so a selection broken after `apply` does not switch the guard off |
+| Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude`; primary home only |
 
 Rules, identifiers, and record formats never change: an instruction that names the captain still binds the same person with exactly the same limits.
 
@@ -69,13 +69,16 @@ At the current pin, the bundled theme's "operator" appears about 460 times and "
 
 ## What stays nautical, deliberately
 
+This scope is the captain's decision of 2026-10-21: the theme covers the edge a person reads, while identifiers, script names, and upstream text stay canonical.
+
 - Every identifier: `fm-*` scripts, `FM_*` variables, home paths such as `data/captain.md`, skill directory names, status verbs, and the `fm/` branch prefix, which is already configurable per project.
 - Parsed tokens workers see: the `## Captain's intent` and `## Firstmate spec` brief headings and the `FIRSTMATE_OP:` operational prefix.
 - The tmux session name `firstmate`, which other homes and tooling look up by name.
-- The Calm sailing-boat animation and its log lines.
-- The wedge-alarm notification title.
-- The Bearings board labels.
-- Upstream documentation as browsed on GitHub.
+- The Calm sailing-boat animation and its log lines; theming them was declined.
+- The wedge-alarm notification title; theming it was declined.
+- The Bearings board labels, until the scheduled Phase-3 follow-up task themes them.
+- Upstream documentation as browsed on GitHub, until the scheduled Phase-3 follow-up task adds a themed docs view.
+- The original command names in a second-mate home: alias skills are generated only in the primary home's code root, and the Persona block says so.
 - Script help and diagnostics, which the agent reads and translates before speaking.
 
 The agent still reads nautical text and speaks themed words, so occasional leakage is possible and is not mechanically enforced.

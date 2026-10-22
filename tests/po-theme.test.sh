@@ -9,8 +9,10 @@
 #   - nautical apply writes nothing; operator apply writes exactly one block,
 #     is idempotent, preserves the captain's prose, and rolls back byte-exact
 #   - the real fm-session-start.sh prints the Persona block in CONTEXT
-#   - the intent-address check refuses the themed vocative, and under nautical
+#   - the intent-address check refuses the themed vocative, keeps refusing the
+#     applied vocative when the selection breaks after apply, and under nautical
 #     matches the unpatched upstream detector on a sample corpus
+#   - the Persona block scopes the command aliases to the primary home
 #   - the worker role contract is byte-identical to upstream under nautical and
 #     gains exactly one vocabulary line under a theme
 #   - a secondmate home resolves a custom theme from the inherited values line,
@@ -361,6 +363,45 @@ test_secondmate_home() {
   pass "a secondmate home resolves an inherited custom theme, refuses apply, and rejects tampering"
 }
 
+test_address_guard_survives_broken_selection() {
+  local code home out
+  code=$(new_code broken)
+  home=$(new_home broken)
+  printf 'operator\n' > "$home/config/po-theme"
+  out=$(run_in "$code" "$home" apply 2>&1) || fail "operator apply failed: $out"
+  printf 'nosuch\n' > "$home/config/po-theme"
+  run_in "$ROOT" "$home" resolve >/dev/null 2>&1 && fail "an unknown selection resolved"
+  assert_equals "Operator" "$(run_in "$ROOT" "$home" address-alt 2>/dev/null)" "an unknown selection dropped the vocative the Persona block still sets"
+  intent_refused "$ROOT/bin" "$home" 'Operator, please add a flag.' || fail "an unknown selection let 'Operator,' through the intent check"
+  derive "$home" drill 's/^user_address = .*/user_address = "Boss"/; s/^noop_reply = .*/noop_reply = "Boss, all quiet."/; s/^bad_news_example = .*/bad_news_example = "Boss, the build broke - ..."/'
+  printf 'drill\n' > "$home/config/po-theme"
+  out=$(run_in "$code" "$home" apply 2>&1) || fail "drill apply failed: $out"
+  printf 'user_address = "not one word"\n' >> "$home/config/po-themes/drill.theme"
+  run_in "$ROOT" "$home" resolve >/dev/null 2>&1 && fail "an invalid local theme resolved"
+  intent_refused "$ROOT/bin" "$home" 'Boss, add a flag.' || fail "an invalid local theme let the applied vocative through the intent check"
+  pass "the intent check keeps the applied vocative when the selection breaks after apply"
+}
+
+test_persona_aliases_primary_only() {
+  local code primary mate block out
+  code=$(new_code aliasscope)
+  primary=$(new_home aliasscope-primary)
+  printf 'operator\n' > "$primary/config/po-theme"
+  out=$(run_in "$code" "$primary" apply 2>&1) || fail "operator apply failed: $out"
+  assert_present "$code/.agents/skills/sitrep/SKILL.md" "the primary home did not generate /sitrep"
+  block=$(cat "$primary/data/captain-shared.md")
+  assert_contains "$block" '- Command aliases, generated in the primary home only (a second-mate home keeps the original command names): /' "the block does not scope the aliases to the primary home"
+  assert_contains "$block" ' /sitrep = /bearings;' "the block does not list the aliases"
+  assert_contains "$block" 'in the primary home, treat each alias exactly as its target.' "the block does not limit alias use to the primary home"
+  mate="$TMP_ROOT/aliasscope/mate"
+  mkdir -p "$mate/data"
+  printf 'fmtest-sm\n' > "$mate/.fm-secondmate-home"
+  cp "$primary/data/captain-shared.md" "$mate/data/captain-shared.md"
+  out=$(run_in "$code" "$mate" verify 2>&1) || fail "the inherited block with scoped aliases failed verify: $out"
+  out=$(run_in "$code" "$mate" apply 2>&1) && fail "apply generated aliases in a secondmate home"
+  pass "the Persona block advertises the aliases as primary-home commands only"
+}
+
 # shellcheck disable=SC2016  # backticks are literal Markdown the assertions match.
 test_aliases_keep_tree_clean() {
   local code home exclude_before out a
@@ -455,6 +496,8 @@ test_session_start_prints_persona
 test_intent_address_check
 test_worker_role_contract
 test_secondmate_home
+test_address_guard_survives_broken_selection
+test_persona_aliases_primary_only
 test_aliases_keep_tree_clean
 test_verify_reports_drift
 test_terms_and_resolve

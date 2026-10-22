@@ -44,7 +44,8 @@
 #                                     user-invocable skill has an alias key, and the
 #                                     ADR-0016 hook hunks are present
 #   po-theme.sh address-alt           themed vocative for bin/fm-dod-lib.sh's
-#                                     intent-address check (empty for nautical)
+#                                     intent-address check: the applied Persona
+#                                     block's, else the selection's (empty for nautical)
 #   po-theme.sh worker-line           one-line worker vocabulary for the launch role
 #                                     contract (empty for nautical)
 #
@@ -176,6 +177,22 @@ active_is_nautical() {
   [ -f "$CONFIG/po-theme" ] || return 0
   case "$(head -n 1 "$CONFIG/po-theme" | tr -d '[:space:]')" in ''|nautical) return 0 ;; esac
   return 1
+}
+
+# shared_address: print the vocative the Persona block in $SHARED tells the agent
+# to use, so the intent-address guard follows the words actually in force even
+# when the selection no longer resolves; fail when there is no usable block.
+shared_address() {
+  local v
+  [ -f "$SHARED" ] && grep -qxF "$START_MARK" "$SHARED" || return 1
+  block_of "$SHARED" > "$TMPD/shared.block"
+  values_to_theme "$TMPD/shared.block" > "$TMPD/shared.theme" 2>/dev/null || return 1
+  parse "$TMPD/shared.theme" > "$TMPD/shared.kv" 2>/dev/null || return 1
+  v=$(get "$TMPD/shared.kv" user_address 2>/dev/null) || return 1
+  case "$v" in [A-Z]*) ;; *) return 1 ;; esac
+  case "$v" in *[!A-Za-z-]*) return 1 ;; esac
+  [ ${#v} -le 24 ] || return 1
+  printf '%s\n' "$v"
 }
 
 # resolve_active: sets ACTIVE_NAME, ACTIVE_SRC, ACTIVE_KV.
@@ -352,11 +369,11 @@ persona() {  # <name> <kv>
     esac
   done < "$kv"
   printf -- "- Identifiers never change: script names, paths, environment variables, skill names, status verbs, and brief headings such as \`## Captain's intent\` stay exactly as written.\n"
-  printf -- '- Command aliases:'
+  printf -- '- Command aliases, generated in the primary home only (a second-mate home keeps the original command names):'
   while IFS="$TAB" read -r k v; do
     case "$k" in alias.*) [ "$v" = "${k#alias.}" ] || printf ' /%s = /%s;' "$v" "${k#alias.}" ;; esac
   done < "$kv"
-  printf ' treat each alias exactly as its target.\n'
+  printf ' in the primary home, treat each alias exactly as its target.\n'
   printf -- '- Workers receive this vocabulary through their launch role contract; scout reports and other prose a person reads use the words on the right.\n'
   values_line "$kv"
   printf '%s\n' "$END_MARK"
@@ -580,6 +597,7 @@ case "$cmd" in
   verify) verify ;;
   anchors) anchors ;;
   address-alt)
+    shared_address && exit 0
     active_is_nautical && exit 0
     resolve_active
     [ "$ACTIVE_NAME" = nautical ] || get "$ACTIVE_KV" user_address ;;
