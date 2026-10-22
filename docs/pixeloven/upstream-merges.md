@@ -394,15 +394,13 @@ ADR-0014's serialization made every ordinary lock acquisition publish and releas
 The captain withdrew ADR-0014 on 2026-10-22: `bin/fm-wake-lib.sh` and `bin/fm-watch.sh` keep only ADR-0012 hunks, `docs/watcher-continuity.md` and `tests/fm-watcher-lock.test.sh` returned to upstream bytes, and the zero-winner reproduction is left to offer upstream separately.
 ADR-0012's sequence-floor recovery refused an append when an empty wake queue was unreadable, which upstream's mail suite exercises, and its `published=` count had narrowed to new appends, which upstream's remote-reply suite reads; both now match upstream's behavior.
 A test-list entry and a test local survived the conflict resolution unused.
-With ADR-0014 gone, the next CI round still failed one upstream-unmodified supervision-host case on its fixed 25-second wait for a full engine turn: that shard ran about 1.75 times slower than upstream's CI, while local timings of the same case matched upstream's tree.
-Under ADR-0011's hosted-runner exception, that file's `wait_until` helper now doubles the poll budget, and the A4 allowlist names it.
 Upstream's synthetic `TYPESAFE_API_KEY` fixture from upstream #4692 also trips the PixelOven secret scan, so `docs/pixeloven/gitleaksignore` accepts exactly that one fingerprint.
 
 Two departures from the investigation's map are deliberate.
 The bounded-recovery retry in `tests/fm-backend-herdr-presentation-e2e.test.sh` stays, because upstream's presentation recovery still refuses a contended concurrent resume after its bounded attempt unless `--herdr-resume-lock-wait` is passed.
 Every ADR-0010 hunk the map re-applies is void under [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md), so upstream's tool floors, CI installs, and the unpinned Pi coding-agent package are taken as upstream wrote them.
 
-ADR-0012 now names eleven files and ADR-0014 is withdrawn; the A4 allowlist drops the five paths that returned to upstream bytes and adds `tests/fm-supervision-host.test.sh` under ADR-0011.
+ADR-0012 now names eleven files and ADR-0014 is withdrawn; the A4 allowlist drops the five paths that returned to upstream bytes.
 
 Local verification before the PR covered the delivery suite, including the new launch regression and its counterfactual, the archived captain-hold cases under upstream's `tasks-axi` 0.2.6 floor, lint, the documentation-audience check, and the fork-contract assertions; the remaining affected suites were left to the pull request's CI.
 

@@ -31,10 +31,6 @@ CI jobs that execute `bin/fm-install-pixeloven-tool.sh` or its integration tests
 The inherited-file exception is limited to `.github/workflows/ci.yml`, `.github/workflows/no-mistakes-required.yml`, `bin/fm-lint-workflows.sh`, `tests/fm-lint-workflows.test.sh`, and the documentation-audience entry needed for this ADR.
 PixelOven-owned workflows and documentation remain within their existing downstream namespaces.
 
-`tests/fm-supervision-host.test.sh` is added to that exception for one hunk: its `wait_until` helper doubles upstream's poll budget.
-On standard hosted runners a full engine turn ran past upstream's fixed 25-second wait while the same turn took about 12 seconds locally on both trees.
-A met condition still returns on its first passing poll, so the change only delays the report of a genuine hang.
-
 ## Consequences
 
 Required pull-request and default-branch checks can execute without private runner-group, ARC scale-set, Harmony tenant, App, or PAT dependencies.
