@@ -741,6 +741,32 @@ test_lock_absent_after_contended_create_is_not_stolen() {
   pass "a create lost to publication contention on an absent lock is retried, not stolen as stale"
 }
 
+# An owner that releases between the failed create and the absent-lock check
+# must not leave a non-blocking claimant with no lock and no live holder: the
+# claimant retries the create once and wins the just-released lock.
+test_lock_absent_after_contended_create_retries_create() {
+  local dir state out
+  dir=$(make_case lock-absent-after-contention-retry)
+  state="$dir/state"
+  out=$(FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    creates=0
+    fm_lock_try_create() {
+      creates=$((creates + 1))
+      [ "$creates" -gt 1 ] || { FM_LOCK_HELD_PID=99999999; FM_LOCK_OWNER_DIR=; return 1; }
+      mkdir -p "$1" && printf "%s\n" "${BASHPID:-$$}" > "$1/pid"
+    }
+    if fm_lock_try_acquire "$2/.watch.lock"; then rc=0; else rc=1; fi
+    printf "rc=%s creates=%s recovered=[%s] primary=%s downtime=%s\n" "$rc" "$creates" \
+      "$FM_LOCK_RECOVERED_PID" \
+      "$([ -e "$2/.watch.lock" ] || [ -L "$2/.watch.lock" ]; echo $?)" \
+      "$([ -e "$2/.watcher-down" ]; echo $?)"
+  ' _ "$LIB" "$state")
+  [ "$out" = "rc=0 creates=2 recovered=[] primary=0 downtime=1" ] \
+    || fail "a lock released before the absent-lock check was not claimed by a retried create: $out"
+  pass "a create lost to a just-released owner is retried once and wins the absent lock"
+}
+
 test_lock_publication_mutex_contention_is_nonblocking() {
   local dir state lockdir holder_file release holder claimant i blocked primary_exposed mutex_changed result
   dir=$(make_case lock-publication-mutex-nonblocking)
@@ -1846,6 +1872,7 @@ test_live_stale_watch_lock_is_actionable
 test_lock_publication_serializes_with_stale_steal
 test_lock_publication_mutex_contention_is_nonblocking
 test_lock_absent_after_contended_create_is_not_stolen
+test_lock_absent_after_contended_create_retries_create
 test_live_stalled_watch_lock_is_replaced_past_hard_bound
 test_guard_warnings
 test_lock_single_winner_under_concurrency

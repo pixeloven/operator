@@ -1224,11 +1224,18 @@ fm_lock_try_acquire() {
   fi
   # An absent lock after a failed create is contention on the serialized
   # publication mutex or an owner that just released, never an ownerless stale
-  # lock: stealing it would publish recovery for a lock nobody lost. A waiting
-  # caller retries; a non-blocking one sees no live holder.
+  # lock: stealing it would publish recovery for a lock nobody lost. Retry the
+  # create once so a just-released lock is claimed; if it is still absent, a
+  # waiting caller retries and a non-blocking one sees no live holder. A lock
+  # that appeared meanwhile goes through the ordinary holder checks.
   if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
+    if fm_lock_try_create "$lockdir"; then
+      return 0
+    fi
     FM_LOCK_HELD_PID=
-    return 1
+    if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
+      return 1
+    fi
   fi
 
   fm_current_pid current || return 1
