@@ -26,14 +26,12 @@ ADR-0001 remains the default, but the following existing upstream files may carr
 - `tests/fm-backend-herdr-presentation-e2e.test.sh`
 - `tests/fm-pi-watch-extension.test.sh`
 - `tests/fm-procevent.test.sh`
-- `tests/fm-remote-reply.test.sh`
 - `tests/fm-wake-queue.test.sh`
 - `tests/fm-watch-triage.test.sh`
 
 [`docs/configuration.md`](../configuration.md#process-to-event-sources-stateprocevent) remains the single owner of the durability and presentation contract.
 The remote-secondmate page carries only the client-path consequence.
 The core is one pending row per captured result at enqueue and sequence-aware presentation markers that retire once their rows are acknowledged, built on upstream's single locked append core and its worker-owned board routing.
-The remote-reply retry assertion accepts the single pending check wake either from reconcile or from the failed handling that already queued it, because one pending row per captured result means the retry is never appended twice.
 The bounded-recovery retry in `tests/fm-backend-herdr-presentation-e2e.test.sh` absorbs upstream's refuse-by-default bounded session-lock acquire when two homes recover concurrently.
 The task-inbox lock and secondmate-reconcile hunks that accompanied this change were superseded upstream and returned to upstream bytes in the first stage of the `v0.3.0` synchronization.
 In the second stage, the handling skill and the `bin/fm-bootstrap.sh` post-lock record re-check returned to upstream bytes: the skill's bounded re-announcement wording stays true under this reconciliation, and upstream's non-recursive steal mutex removed the lock refusal the re-check absorbed.
@@ -43,7 +41,7 @@ Renames, broad rewrites, unrelated cleanup, and changes to preserved fleet state
 ## Consequences
 
 The inherited clients can implement and test one coherent notification path without pretending those changes are additive-only.
-Future upstream merges have an explicit twelve-file contact surface to review.
+Future upstream merges have an explicit eleven-file contact surface to review.
 The fork-contract gate accepts exactly these paths while continuing to reject unrelated upstream-file changes.
 
 ## Verification
