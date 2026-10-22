@@ -358,6 +358,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0016-persona-themed-at-the-edge.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
@@ -492,6 +496,10 @@
     {
       "path": "docs/pixeloven/identity.md",
       "audience": "public-product"
+    },
+    {
+      "path": "docs/pixeloven/persona-themes.md",
+      "audience": "operator-current"
     },
     {
       "path": "docs/pixeloven/releases.md",
@@ -687,6 +695,10 @@
     },
     {
       "path": ".agents/skills/operational-home-layout/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/po-theme/SKILL.md",
       "audience": "agent-runtime"
     },
     {

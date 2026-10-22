@@ -229,7 +229,7 @@ jobs:
 
           echo "== A4 - O-1: the diff against upstream $PIN stays inside PixelOven namespaces and accepted ADR overrides"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/po-[a-z0-9-]+\.sh$|tests/po-[a-z0-9-]+\.test\.sh$|AGENTS\.md$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-dod-lib|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: path is outside PixelOven namespaces and accepted ADR override sets"; }
 
           echo '== A5 - the README exception stays one bounded banner block'
@@ -257,6 +257,33 @@ jobs:
           out=$(git grep -nE 'fm-install-pixel''oven-tool|pixeloven/(gh-axi|chrome-devtools-axi|lavish-axi|tasks-axi|quota-axi|no-mistakes)([^A-Za-z0-9._-]|$)' \
                   -- . ':!docs/adr/' ':!docs/pixeloven/' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad 'A8: a tracked file still selects a PixelOven companion fork or its installer'; }
+
+          echo '== A9 - the ADR-0016 persona hunks stay exactly as listed'
+          changed() { git diff -U0 "$PIN" -- "$1" | grep -E '^[-+]' | grep -vE '^(\+\+\+ b/|--- a/)' || true; }
+          out=$(changed AGENTS.md | grep -vE '^\+Persona: ' || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: AGENTS.md differs from upstream beyond the one Persona line"; }
+          [ "$(changed AGENTS.md | grep -cE '^\+Persona: ' || true)" -le 1 ] || bad "A9: AGENTS.md carries more than one Persona line"
+          cat > "$RUNNER_TEMP/a9-allowed" <<'A9'
+          +EOF
+          +  "${BASH_SOURCE[0]%/*}/po-theme.sh" worker-line 2>/dev/null || true
+          +  cat <<'EOF'
+          -  fm_brief_task_heading_body "$1" "## Captain's intent" | awk '
+          +  local po_alt; po_alt=$("${BASH_SOURCE[0]%/*}/po-theme.sh" address-alt 2>/dev/null || true)
+          +  fm_brief_task_heading_body "$1" "## Captain's intent" | awk -v alt="$po_alt" '
+          +    alt != "" && $0 ~ ("^[[:space:]]*" alt "[:,]") { print; found = 1; exit }
+          A9
+          out=$(changed bin/fm-dod-lib.sh | grep -vxF -f "$RUNNER_TEMP/a9-allowed" || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: bin/fm-dod-lib.sh differs from upstream beyond ADR-0016's lines"; }
+          out=$(changed bin/fm-dod-lib.sh | sort | uniq -d)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: an ADR-0016 line in bin/fm-dod-lib.sh repeats"; }
+          out=$(git diff --summary "$PIN" -- AGENTS.md bin/fm-dod-lib.sh | grep 'mode change' || true)
+          [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: a persona hunk changed a file mode"; }
+
+          echo '== A10 - the theme canary: mirrored literals, commands, and hooks still match, and every bundled theme validates'
+          bin/po-theme.sh anchors || bad "A10: a nautical anchor drifted from upstream; update the themes in this PR"
+          for t in .agents/skills/po-theme/themes/*.theme; do
+            bin/po-theme.sh validate "$(basename "$t" .theme)" || bad "A10: bundled theme $(basename "$t" .theme) failed validation"
+          done
 
           [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
           echo 'fork-contract assertions PASSED'
