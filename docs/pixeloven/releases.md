@@ -188,8 +188,22 @@ Upstream ancestry and corrective ancestry pull requests additionally follow the 
 |---|---|---|---|
 | `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
 | `v0.2.0` | 2026-10-21 | `355f46fe5528` | Commit `09acb8af` on `main`, all gates green. Carries the three upstream synchronizations through `bdae21ed09d2`, `1fbc7bb1fba2`, and `355f46fe5528`, plus ADR-0008 and ADR-0010 through ADR-0014. A **minor** bump per §2: consumer-visible runtime, supervision, backend, documentation, and test behavior recorded in [`upstream-merges.md`](upstream-merges.md). |
+| `v0.3.0` | 2026-10-22 | `0e82f3eebd21` | Cut from `main` with this release record on top of `d0307f42`. Carries the fourth synchronization in two stages, `355f46fe5528` through `8fd5575b1179` to `0e82f3eebd21` (PRs #25 and #26), plus ADR-0015 (PR #24) and ADR-0016 (PR #27). A **minor** bump per §2: upstream behavior changes a consumer can notice and two PixelOven-authored changes, detailed below. |
 
-The **next** tag is planned as `v0.3.0`: the two-stage synchronization from `355f46fe5528` through `8fd5575b` to `0e82f3ee`, preceded by [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)'s return to upstream companion-tool sources.
-Its release notes must call out upstream's raised tool floors, the self-repository publication gate and the neutral upstream fetch ref, and the default-on supervision host.
-They must note that [ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock serialization was withdrawn, so lock behavior is upstream's.
-They must also state that every operator home shipping to this repository needs `config/firstmate-role` set to `maintainer github.com/pixeloven/operator` and `remote.origin.gh-resolved=base` in its operator project clone, as [`upstream-merges.md`](upstream-merges.md#2-the-standing-procedure) shows.
+### `v0.3.0` release notes
+
+The fourth synchronization merged 477 upstream commits in two reviewed two-parent merges, recorded in [`upstream-merges.md`](upstream-merges.md) sections 6 and 7.
+[ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) returns all six companion tools to upstream sources: the PixelOven forks of gh-axi, chrome-devtools-axi, lavish-axi, tasks-axi, quota-axi, and no-mistakes are no longer used, and `bin/fm-install-pixeloven-tool.sh` is removed.
+Upstream's raised tool floors therefore apply as upstream wrote them, including tasks-axi 0.2.6, quota-axi 0.1.51, and lavish-axi 0.1.80, and a home with tasks-axi below its floor refuses spawns, captain holds, and backlog handoff until it is upgraded.
+Upstream's self-repository publication gate now refuses every non-`local-only` ship on a project sharing firstmate's root commit unless the home grants publication to its target, and this repository shares that root by [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md).
+The merge procedure therefore fetches upstream only into the neutral `refs/remotes/firstmate-upstream/main` ref, never as a remote, so a clone's publication target stays on `pixeloven/operator`.
+Upstream's supervision host is on by default; `config/supervision-host-off` opts a home out, as [`docs/configuration.md`](../configuration.md#supervision-host-configsupervision-host) owns.
+[ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock serialization was withdrawn, so lock behavior is upstream's.
+[ADR-0012](../adr/0012-notification-reconciliation.md) and [ADR-0013](../adr/0013-archived-captain-hold-completion.md) were re-ported onto upstream's rewrites of their owners, and `bin/fm-spawn.sh` adds ADR-0008's `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_NOSYSTEM` to upstream's launch-environment allowlist floor.
+[ADR-0016](../adr/0016-persona-themed-at-the-edge.md) adds the opt-in persona theme layer: a home selects a theme in `config/po-theme`, `bin/po-theme.sh apply` renders it for chat words only, and `nautical` stays the code default, so a home without a selection is byte-for-byte upstream.
+
+Every operator home shipping to this repository needs `config/firstmate-role` set to `maintainer github.com/pixeloven/operator` and `remote.origin.gh-resolved=base` in its operator project clone, as [`upstream-merges.md`](upstream-merges.md#2-the-standing-procedure) shows.
+Without the role grant the publication gate refuses the ship, and without the base marker an `upstream`, `github`, or `origin` remote pointing at `kunchenguid/firstmate` could become the publication target.
+
+The stock macOS Bash snapshot compatibility job passed on `d0307f42`, which is this release's native macOS evidence.
+Upstream's `Behavior portable serial 2` shard currently exceeds its 30-minute limit on this repository's hosted runners without a test failure; the fix is queued for a later release.
