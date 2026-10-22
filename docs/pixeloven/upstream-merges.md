@@ -398,7 +398,7 @@ Two departures from the investigation's map are deliberate.
 The bounded-recovery retry in `tests/fm-backend-herdr-presentation-e2e.test.sh` stays, because upstream's presentation recovery still refuses a contended concurrent resume after its bounded attempt unless `--herdr-resume-lock-wait` is passed.
 Every ADR-0010 hunk the map re-applies is void under [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md), so upstream's tool floors, CI installs, and the unpinned Pi coding-agent package are taken as upstream wrote them.
 
-ADR-0012 now names eleven files and ADR-0014 describes the tombstone reaper; the A4 allowlist drops the three paths that returned to upstream bytes.
+ADR-0012 now names twelve files and ADR-0014 describes the tombstone reaper; the A4 allowlist drops the three paths that returned to upstream bytes.
 
 Measured on stock macOS Bash 3.2.57, ADR-0014's serialized publication costs about 170 ms per uncontended lock acquire and release against upstream's 75 ms, so a lock-heavy suite runs roughly twice as long locally; GitHub's Linux runners remain the timing authority.
 Local verification before the PR covered the delivery suite, including the new launch regression and its counterfactual, the archived captain-hold cases under upstream's `tasks-axi` 0.2.6 floor, lint, the documentation-audience check, and the fork-contract assertions; the remaining affected suites were left to the pull request's CI.

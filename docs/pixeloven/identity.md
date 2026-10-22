@@ -190,7 +190,7 @@ No second ref means this covers the working tree as well as committed history:
 
 ```sh
 git diff --name-only "$PIN" \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
+  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-remote-reply|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)'
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
