@@ -217,7 +217,16 @@ assert_grep 'ingested: ios appended=0' "$TMP_ROOT/handle-arm-fail.out" "failed r
 rm -f "$PARENT/state/procevent"
 mkdir "$PARENT/state/procevent"
 reconcile_out=$(remote_env "$ROOT/bin/fm-procevent.sh" reconcile)
-assert_contains "$reconcile_out" 'published=1' "failed re-arm did not leave the result eligible for retry"
+# ADR-0012: the retry stays eligible through exactly one pending check wake.
+# Reconcile either appends it or finds the row the failed handling already
+# queued, depending on whether that handling reached publication first.
+case "$reconcile_out" in
+  *'published=1 '*'queued=0'*|*'published=0 '*'queued=1'*) ;;
+  *) fail "failed re-arm did not leave the result eligible for retry exactly once: $reconcile_out" ;;
+esac
+retry_rows=$(awk -F '\t' -v key="procevent:$SID:1" '$3 == "check" && $4 == key { count++ } END { print count + 0 }' \
+  "$PARENT/state/.wake-queue" 2>/dev/null || echo 0)
+[ "$retry_rows" -eq 1 ] || fail "expected one pending retry wake, found $retry_rows"
 out=$(remote_env "$ADAPTER" handle ios 1 "$RESULT")
 assert_contains "$out" 'ingested: ios appended=0' "retried reply ingest was not idempotent"
 assert_contains "$out" 'handled: remote-reply-ios 1' "captured generation was not acknowledged"
