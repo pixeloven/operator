@@ -378,19 +378,21 @@ Resolutions:
 
 - `.agents/skills/process-event-sources/SKILL.md` and `tests/fm-pr-check-security.test.sh` took upstream, and `bin/fm-bootstrap.sh` returned to upstream bytes after it auto-merged: upstream's non-recursive steal mutex removed the lock refusal the bootstrap re-check absorbed, and upstream's watcher TERM fix replaced the downstream wait bound.
 - `.github/workflows/ci.yml` took upstream's partitioned lint job name and kept ADR-0011's hosted-runner comment and `workflow_dispatch` trigger.
-- `bin/fm-wake-lib.sh`, `bin/fm-watch.sh`, and `bin/fm-procevent.sh` were rebuilt from upstream and the ADR-0012 and ADR-0014 cores re-ported onto them, as the overlap investigation's map prescribed.
-  ADR-0012 keeps one pending row per captured result through `fm_wake_ensure_queued` over upstream's single locked append core, reports `queued=` beside upstream's `failed=`, and keeps sequence-aware presentation markers under upstream's three process-event headlines; the multi-source batch publication and the second append core were dropped.
-  ADR-0014 keeps publication serialization and live-holder reporting on upstream's steal mutex; its terminal guard was dropped in favour of upstream's tombstone reaper.
+- `bin/fm-wake-lib.sh`, `bin/fm-watch.sh`, and `bin/fm-procevent.sh` were rebuilt from upstream and the ADR-0012 core re-ported onto them, as the overlap investigation's map prescribed.
+  ADR-0012 keeps one pending row per captured result through `fm_wake_ensure_queued` over upstream's single locked append core and keeps sequence-aware presentation markers under upstream's three process-event headlines; the multi-source batch publication and the second append core were dropped.
+  Reconcile keeps upstream's `published=` meaning, every unhandled result whose publication the pass ensured, and adds `queued=` for those already pending, so upstream's own suites read it unchanged.
+- ADR-0014's lock serialization was first re-ported onto upstream's steal mutex and then withdrawn by the captain, so its files carry no hunks (see below).
 - `bin/fm-captain-hold.sh` took upstream and re-grafted ADR-0013's archive verifier at the top of upstream's `verify_entry_durable`, accepting archived `reconciled` records and applying upstream's recorded-origin and self-inventory checks to archived rows.
   When exact and legacy identities are both active, upstream's exact identity wins; ambiguity still refuses whenever an archived candidate is involved.
 - `bin/fm-spawn.sh` keeps both ADR-0008's Git isolation exports and upstream's new pre-launch exports, and adds `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_NOSYSTEM` to upstream's `config/launch-env-allowlist` floor, proven by a launch regression in `tests/fm-task-delivery.test.sh`.
-- `docs/configuration.md`, `docs/captain-hold-lifecycle.md`, `docs/remote-secondmates.md`, and `docs/watcher-continuity.md` took upstream's rewritten layouts and re-worded the downstream contracts into them; `docs/documentation-audiences.json` unions both verification entries.
+- `docs/configuration.md`, `docs/captain-hold-lifecycle.md`, and `docs/remote-secondmates.md` took upstream's rewritten layouts and re-worded the downstream contracts into them; `docs/documentation-audiences.json` unions both verification entries.
 - The test conflicts union upstream's new cases with the downstream ones; the downstream triage and Pi cases now assert upstream's key-only headlines, and upstream's launch-failure case expects a replay after acknowledgement because ADR-0012 retires the presentation marker.
-  The terminal-guard and legacy directory-mutex watcher-lock cases and the batch wake-queue case were removed with the code they covered.
+  The batch wake-queue case was removed with the code it covered.
 
-The pull request's first CI run exposed three re-port regressions, fixed on the branch.
-The investigation's ADR-0014 prototype had dropped stage 1's early return for an absent lock after a failed create, so contention on the serialized publication mutex fell into the stale-steal path and published watcher downtime for a lock nobody lost; the return is restored and the mutex holder is no longer reported as the lock's holder.
-ADR-0012's sequence-floor recovery refused an append when an empty wake queue was unreadable, which upstream's mail suite exercises.
+The pull request's hosted CI exposed regressions in the re-ports, resolved on the branch.
+ADR-0014's serialization made every ordinary lock acquisition publish and release a second lock, roughly doubling acquisition cost on upstream's new lock code (about 13 ms against 6 ms on Linux, 170 ms against 75 ms on stock macOS Bash 3.2), and the contention failed upstream's process-event, captain-hold, board, watcher, and supervision-host suites on hosted runners while passing in isolation.
+The captain withdrew ADR-0014 on 2026-10-22: `bin/fm-wake-lib.sh` and `bin/fm-watch.sh` keep only ADR-0012 hunks, `docs/watcher-continuity.md` and `tests/fm-watcher-lock.test.sh` returned to upstream bytes, and the zero-winner reproduction is left to offer upstream separately.
+ADR-0012's sequence-floor recovery refused an append when an empty wake queue was unreadable, which upstream's mail suite exercises, and its `published=` count had narrowed to new appends, which upstream's remote-reply suite reads; both now match upstream's behavior.
 A test-list entry and a test local survived the conflict resolution unused.
 Upstream's synthetic `TYPESAFE_API_KEY` fixture from upstream #4692 also trips the PixelOven secret scan, so `docs/pixeloven/gitleaksignore` accepts exactly that one fingerprint.
 
@@ -398,9 +400,8 @@ Two departures from the investigation's map are deliberate.
 The bounded-recovery retry in `tests/fm-backend-herdr-presentation-e2e.test.sh` stays, because upstream's presentation recovery still refuses a contended concurrent resume after its bounded attempt unless `--herdr-resume-lock-wait` is passed.
 Every ADR-0010 hunk the map re-applies is void under [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md), so upstream's tool floors, CI installs, and the unpinned Pi coding-agent package are taken as upstream wrote them.
 
-ADR-0012 now names eleven files and ADR-0014 describes the tombstone reaper; the A4 allowlist drops the three paths that returned to upstream bytes.
+ADR-0012 now names eleven files and ADR-0014 is withdrawn; the A4 allowlist drops the five paths that returned to upstream bytes.
 
-Measured on stock macOS Bash 3.2.57, ADR-0014's serialized publication costs about 170 ms per uncontended lock acquire and release against upstream's 75 ms, so a lock-heavy suite runs roughly twice as long locally; GitHub's Linux runners remain the timing authority.
 Local verification before the PR covered the delivery suite, including the new launch regression and its counterfactual, the archived captain-hold cases under upstream's `tasks-axi` 0.2.6 floor, lint, the documentation-audience check, and the fork-contract assertions; the remaining affected suites were left to the pull request's CI.
 
 The stage is consumer-visible through upstream's behavior changes, including raised tool floors, the self-repository publication gate, and the default-on supervision host, so it counts toward the `v0.3.0` minor bump.
@@ -413,4 +414,4 @@ The stage is consumer-visible through upstream's behavior changes, including rai
 | 2026-08-30 | `bdae21ed09d2` | `1fbc7bb1fba2` | 86 | **0** | 0.54 s | Second synchronization used three clean merge checkpoints because upstream advanced twice during validation. Companion-fork distribution changes followed the first pure merge under ADR-0010. |
 | 2026-09-01 | `1fbc7bb1fba2` | `355f46fe5528` | 10 | **2 files** | not recorded | Third synchronization preserved the two-parent merge, resolved configuration and test overlap, and corrected the new stock-macOS `tasks-axi` acquisition to the pinned PixelOven installer on the same branch. |
 | 2026-10-21 | `355f46fe5528` | `8fd5575b1179` | 50 | **6 files** | 0.14 s | Fourth synchronization, stage 1 of 2. Took upstream for the superseded inbox, reconcile, and serial-timeout hunks; stock macOS now runs on every PR. |
-| 2026-10-21 | `8fd5575b1179` | `0e82f3eebd21` | 427 | **18 files** | 0.29 s | Fourth synchronization, stage 2 of 2. Re-ported the ADR-0012, ADR-0013, and ADR-0014 cores onto upstream's rewrites, dropped the superseded bootstrap, pr-check, and terminal-guard hunks, and added the delivery lane to the launch-env floor. |
+| 2026-10-21 | `8fd5575b1179` | `0e82f3eebd21` | 427 | **18 files** | 0.29 s | Fourth synchronization, stage 2 of 2. Re-ported the ADR-0012 and ADR-0013 cores onto upstream's rewrites, withdrew ADR-0014, dropped the superseded bootstrap and pr-check hunks, and added the delivery lane to the launch-env floor. |

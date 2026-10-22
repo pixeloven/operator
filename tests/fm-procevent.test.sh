@@ -393,7 +393,7 @@ assert_contains "$(wake_payloads "$H2")" "procevent lavish src-cut 7" "durable a
 assert_absent "$H2/state/procevent-inbox/src-cut.7.handled" "recovery alone never marks the recovered result handled"
 cp "$H2/state/.wake-queue" "$H2/state/.wake-queue.before-repeat"
 out=$(pe "$H2" reconcile)
-assert_contains "$out" "published=0" "a still-queued result was published a second time"
+assert_contains "$out" "published=1" "a still-queued result stopped counting as ensured"
 assert_contains "$out" "queued=1" "reconcile did not report the equivalent pending publication"
 cmp -s "$H2/state/.wake-queue.before-repeat" "$H2/state/.wake-queue" \
   || fail "repeat reconciliation changed the pending durable row"
@@ -449,7 +449,7 @@ ensure_rows=$(awk -F '\t' '$3 == "check" && $4 == "procevent:same-src:1" { count
 [ "$(cat "$HENSURE/state/.wake-queue.seq")" = 1 ] \
   || fail "concurrent process-result reconciliation advanced the sequence more than once"
 ensure_published=$(grep -l 'published=1 .*queued=0' "$TMP_ROOT"/hensure-*.out | wc -l | tr -d '[:space:]')
-ensure_queued=$(grep -l 'published=0 .*queued=1' "$TMP_ROOT"/hensure-*.out | wc -l | tr -d '[:space:]')
+ensure_queued=$(grep -l 'published=1 .*queued=1' "$TMP_ROOT"/hensure-*.out | wc -l | tr -d '[:space:]')
 [ "$ensure_published" -eq 1 ] && [ "$ensure_queued" -eq 19 ] \
   || fail "concurrent reconcile reporting did not separate one append from 19 pending observations"
 
@@ -677,8 +677,9 @@ TERMINAL_RESULT=$(first_result "$HTERM" ends-src || true)
 assert_grep 'terminal payload' "$TERMINAL_RESULT" "automatic retirement retains the captured output verbatim"
 out=$(pe_adapter "$HTERM" reconcile)
 assert_contains "$out" "started=0" "a retired terminal source is never restarted"
-assert_contains "$out" "published=0" "an unhandled terminal result appended a duplicate while its row was queued"
 assert_contains "$out" "queued=1" "an unhandled terminal result was not retained as a pending publication"
+[ "$(awk -F '\t' '$3 == "check" && $4 == "procevent:ends-src:1" { count++ } END { print count + 0 }' "$HTERM/state/.wake-queue")" = 1 ] \
+  || fail "an unhandled terminal result appended a duplicate while its row was queued"
 [ "$(count_results "$HTERM" ends-src)" = 1 ] || fail "a retired terminal source ran its poll again"
 out=$(pe_adapter "$HTERM" retire ends-src)
 assert_contains "$out" "retired: ends-src" "explicit retirement stays supported and idempotent after automatic retirement"

@@ -2749,7 +2749,7 @@ while ! fm_lock_try_acquire "$WATCH_LOCK"; do
     fi
     echo "watcher: already running pid $FM_LOCK_HELD_PID"
   else
-    echo "watcher: watcher lock recovery in progress; another start is publishing it"
+    echo "watcher: already running"
   fi
   exit 0
 done

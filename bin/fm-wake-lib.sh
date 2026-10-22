@@ -590,25 +590,11 @@ fm_lock_claim() {
   return 0
 }
 
-fm_lock_set_live_holder() {
-  local lockdir=$1 pid
-  FM_LOCK_HELD_PID=
-  pid=$(cat "$lockdir/pid" 2>/dev/null || true)
-  if fm_pid_alive "$pid"; then
-    FM_LOCK_HELD_PID=$pid
-  fi
-  return 0
-}
-
-fm_lock_try_create_unserialized() {
+fm_lock_try_create() {
   local lockdir=$1 allowed_steal_owner=${2:-} ownerdir
   FM_LOCK_OWNER_DIR=
   ownerdir=$(fm_lock_owner_dir "$lockdir") || return 1
   if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
-    fm_lock_discard_owner "$ownerdir"
-    return 1
-  fi
-  if fm_lock_claim_blocked_by_steal "$lockdir" "$allowed_steal_owner"; then
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
@@ -629,34 +615,6 @@ fm_lock_try_create_unserialized() {
   fi
   fm_lock_discard_owner "$ownerdir"
   return 1
-}
-
-# Ordinary publication takes the same nonblocking .steal mutex a stale-lock
-# stealer holds, so a claimant returns contention instead of publishing beside
-# an active replacement and then retracting (the zero-winner interleaving).
-fm_lock_try_create() {
-  local lockdir=$1 steal steal_owner ownerdir rc
-  if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
-    FM_LOCK_OWNER_DIR=
-    return 1
-  fi
-  steal="$lockdir.steal"
-  if ! fm_lock_try_acquire_steal_mutex "$steal"; then
-    # The mutex holder is another publisher, not this lock's holder.
-    FM_LOCK_HELD_PID=
-    FM_LOCK_OWNER_DIR=
-    return 1
-  fi
-  steal_owner=${FM_LOCK_OWNER_DIR:-}
-  rc=1
-  ownerdir=
-  if fm_lock_try_create_unserialized "$lockdir" "$steal_owner"; then
-    rc=0
-    ownerdir=${FM_LOCK_OWNER_DIR:-}
-  fi
-  fm_lock_release "$steal"
-  FM_LOCK_OWNER_DIR=$ownerdir
-  return "$rc"
 }
 
 fm_lock_remove_path() {
@@ -1202,7 +1160,7 @@ fm_lock_reap_dead_link() {
 fm_lock_try_acquire_steal_mutex() {  # <steal-lock>
   local lockdir=$1 current
   FM_LOCK_OWNER_DIR=
-  fm_lock_try_create_unserialized "$lockdir" && return 0
+  fm_lock_try_create "$lockdir" && return 0
   fm_current_pid current || return 1
   fm_lock_reap_dead_link "$lockdir.steal" || true
   if [ "$(cat "$lockdir/pid" 2>/dev/null || true)" = "$current" ]; then
@@ -1210,7 +1168,7 @@ fm_lock_try_acquire_steal_mutex() {  # <steal-lock>
   elif [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
     fm_lock_reap_dead_link "$lockdir" || return 1
   fi
-  fm_lock_try_create_unserialized "$lockdir"
+  fm_lock_try_create "$lockdir"
 }
 
 fm_lock_try_acquire() {
@@ -1221,21 +1179,6 @@ fm_lock_try_acquire() {
 
   if fm_lock_try_create "$lockdir"; then
     return 0
-  fi
-  # An absent lock after a failed create is contention on the serialized
-  # publication mutex or an owner that just released, never an ownerless stale
-  # lock: stealing it would publish recovery for a lock nobody lost. Retry the
-  # create once so a just-released lock is claimed; if it is still absent, a
-  # waiting caller retries and a non-blocking one sees no live holder. A lock
-  # that appeared meanwhile goes through the ordinary holder checks.
-  if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
-    if fm_lock_try_create "$lockdir"; then
-      return 0
-    fi
-    FM_LOCK_HELD_PID=
-    if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
-      return 1
-    fi
   fi
 
   fm_current_pid current || return 1
@@ -1253,7 +1196,7 @@ fm_lock_try_acquire() {
     if fm_lock_try_create "$lockdir"; then
       return 0
     fi
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     return 1
   fi
   if fm_pid_alive "$pid"; then
@@ -1261,13 +1204,13 @@ fm_lock_try_acquire() {
     return 1
   fi
   if fm_lock_mid_acquire_is_fresh "$lockdir" "$pid"; then
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$pid
     return 1
   fi
 
   steal="$lockdir.steal"
   if ! fm_lock_try_acquire_steal_mutex "$steal"; then
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
     return 1
   fi
@@ -1276,19 +1219,19 @@ fm_lock_try_acquire() {
   cur=$(cat "$lockdir/pid" 2>/dev/null || true)
   if fm_pid_alive "$cur"; then
     fm_lock_release "$steal"
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$cur
     FM_LOCK_OWNER_DIR=
     return 1
   fi
   if fm_lock_mid_acquire_is_fresh "$lockdir" "$cur"; then
     fm_lock_release "$steal"
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$cur
     FM_LOCK_OWNER_DIR=
     return 1
   fi
   if ! fm_lock_points_to_owner "$steal" "$steal_owner"; then
     fm_lock_release "$steal"
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
     return 1
   fi
@@ -1300,7 +1243,7 @@ fm_lock_try_acquire() {
   cur=$(cat "$lockdir/pid" 2>/dev/null || true)
   if ! fm_lock_recheck_stale_owner "$lockdir" "$primary_owner" "$cur"; then
     fm_lock_release "$steal"
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
     return 1
   fi
@@ -1308,20 +1251,20 @@ fm_lock_try_acquire() {
   if [ "$lockdir" = "$STATE/.watch.lock" ] \
     && ! _fm_recovery_marker_publish "$STATE/.watcher-down" downtime; then
     fm_lock_release "$steal"
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$cur
     FM_LOCK_OWNER_DIR=
     return 1
   fi
   fm_lock_remove_path "$lockdir" || true
   rc=1
-  if fm_lock_try_create_unserialized "$lockdir" "$steal_owner"; then
+  if fm_lock_try_create "$lockdir" "$steal_owner"; then
     rc=0
     # shellcheck disable=SC2034 # Read by sourcing callers after lock acquisition.
     FM_LOCK_RECOVERED_PID=$cur
   fi
   if [ "$rc" -ne 0 ]; then
     # shellcheck disable=SC2034 # Read by callers after fm_lock_try_acquire returns.
-    fm_lock_set_live_holder "$lockdir"
+    FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
   fi
   fm_lock_release "$steal"

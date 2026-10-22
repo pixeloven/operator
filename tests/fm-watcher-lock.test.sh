@@ -614,218 +614,6 @@ test_lock_stale_steal_single_winner_under_concurrency() {
   pass "concurrent stale-lock steal yields exactly one winner"
 }
 
-test_lock_publication_serializes_with_stale_steal() {
-  local dir state lockdir fakebin stale stealer replacement contender i exposed wins lock_pid
-  dir=$(make_case lock-steal-publication-serialization)
-  state="$dir/state"
-  lockdir="$state/.contend.lock"
-  fakebin="$dir/fakebin-ln"
-  stale=$(dead_pid)
-  mkdir "$lockdir"
-  printf '%s\n' "$stale" > "$lockdir/pid"
-  : > "$dir/wins"
-  mkdir -p "$fakebin"
-  cat > "$fakebin/ln" <<'SH'
-#!/usr/bin/env bash
-set -eu
-if [ ! -e "$FM_LN_ONCE" ]; then
-  : > "$FM_LN_ONCE"
-  : > "$FM_LN_READY"
-  while [ ! -e "$FM_LN_GO" ]; do sleep 0.01; done
-fi
-rc=0
-PATH=/usr/bin:/bin command ln "$@" || rc=$?
-if [ "$rc" -eq 0 ] && [ "$(readlink "$3" 2>/dev/null || true)" = "$2" ]; then
-  : > "$FM_LN_PUBLISHED"
-  while [ ! -e "$FM_LN_CONTINUE" ]; do sleep 0.01; done
-fi
-exit "$rc"
-SH
-  chmod 0755 "$fakebin/ln"
-
-  FM_LN_ONCE="$dir/stealer-once" FM_LN_READY="$dir/stealer-ready" \
-    FM_LN_GO="$dir/stealer-go" FM_LN_PUBLISHED="$dir/stealer-published" \
-    FM_LN_CONTINUE="$dir/stealer-continue" \
-    PATH="$fakebin:$PATH" FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    if fm_lock_try_acquire "$2"; then
-      printf "stealer\n" >> "$3"
-      while [ ! -e "$4" ]; do sleep 0.01; done
-    fi
-  ' _ "$LIB" "$lockdir" "$dir/wins" "$dir/winner-release" &
-  stealer=$!
-  i=0
-  while [ "$i" -lt 100 ] && [ ! -e "$dir/stealer-ready" ]; do
-    sleep 0.02
-    i=$((i + 1))
-  done
-  [ -e "$dir/stealer-ready" ] || fail "stale-lock stealer did not reach mutex publication"
-
-  FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    fm_lock_acquire_wait "$2"
-    fm_lock_release "$2"
-  ' _ "$LIB" "$lockdir" &
-  replacement=$!
-  wait "$replacement" || fail "intermediate claimant did not replace and release the stale lock"
-
-  FM_LN_ONCE="$dir/contender-once" FM_LN_READY="$dir/contender-ready" \
-    FM_LN_GO="$dir/contender-go" FM_LN_PUBLISHED="$dir/contender-published" \
-    FM_LN_CONTINUE="$dir/contender-continue" PATH="$fakebin:$PATH" \
-    FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    if fm_lock_try_acquire "$2"; then
-      printf "contender\n" >> "$3"
-    fi
-  ' _ "$LIB" "$lockdir" "$dir/wins" &
-  contender=$!
-  i=0
-  while [ "$i" -lt 100 ] && [ ! -e "$dir/contender-ready" ]; do
-    sleep 0.02
-    i=$((i + 1))
-  done
-  [ -e "$dir/contender-ready" ] || fail "ordinary claimant did not pause after its primary-lock precheck"
-
-  : > "$dir/stealer-go"
-  i=0
-  while [ "$i" -lt 100 ] && [ ! -e "$dir/stealer-published" ]; do
-    sleep 0.02
-    i=$((i + 1))
-  done
-  [ -e "$dir/stealer-published" ] || fail "stale-lock stealer did not publish its mutex"
-
-  : > "$dir/contender-go"
-  sleep 0.1
-  exposed=0
-  if [ -e "$dir/contender-published" ]; then
-    exposed=1
-  fi
-  : > "$dir/contender-continue"
-  : > "$dir/stealer-continue"
-  wait "$contender" || fail "ordinary claimant process failed"
-  i=0
-  while [ "$i" -lt 100 ] && [ ! -s "$dir/wins" ]; do
-    sleep 0.02
-    i=$((i + 1))
-  done
-  wins=$(awk 'NF { count++ } END { print count + 0 }' "$dir/wins")
-  lock_pid=$(cat "$lockdir/pid" 2>/dev/null || true)
-  : > "$dir/winner-release"
-  wait "$stealer" || fail "stale-lock stealer process failed"
-  [ "$exposed" -eq 0 ] || fail "ordinary claimant published a competing primary while the steal mutex was held"
-  [ "$wins" -eq 1 ] || fail "expected exactly one final lock winner, got $wins"
-  [ -n "$lock_pid" ] || fail "the final winner did not leave a primary lock"
-  pass "primary publication serializes with stale-lock stealing and leaves one winner"
-}
-
-# A create that loses only to publication-mutex contention leaves the lock
-# absent. That is not an ownerless stale lock: taking the stale-steal path would
-# publish watcher downtime for a lock nobody lost and report the mutex holder as
-# the lock's owner. The contended publication is modeled by a create that fails
-# without publishing, and the mutex is free again by the time acquisition reacts.
-test_lock_absent_after_contended_create_is_not_stolen() {
-  local dir state out
-  dir=$(make_case lock-absent-after-contention)
-  state="$dir/state"
-  out=$(FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    fm_lock_try_create() { FM_LOCK_HELD_PID=99999999; FM_LOCK_OWNER_DIR=; return 1; }
-    if fm_lock_try_acquire "$2/.watch.lock"; then rc=0; else rc=1; fi
-    printf "rc=%s held=[%s] recovered=[%s] primary=%s downtime=%s\n" "$rc" "$FM_LOCK_HELD_PID" \
-      "$FM_LOCK_RECOVERED_PID" \
-      "$([ -e "$2/.watch.lock" ] || [ -L "$2/.watch.lock" ]; echo $?)" \
-      "$([ -e "$2/.watcher-down" ]; echo $?)"
-  ' _ "$LIB" "$state")
-  [ "$out" = "rc=1 held=[] recovered=[] primary=1 downtime=1" ] \
-    || fail "a contended create on an absent lock was treated as a stale steal: $out"
-  pass "a create lost to publication contention on an absent lock is retried, not stolen as stale"
-}
-
-# An owner that releases between the failed create and the absent-lock check
-# must not leave a non-blocking claimant with no lock and no live holder: the
-# claimant retries the create once and wins the just-released lock.
-test_lock_absent_after_contended_create_retries_create() {
-  local dir state out
-  dir=$(make_case lock-absent-after-contention-retry)
-  state="$dir/state"
-  out=$(FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    creates=0
-    fm_lock_try_create() {
-      creates=$((creates + 1))
-      [ "$creates" -gt 1 ] || { FM_LOCK_HELD_PID=99999999; FM_LOCK_OWNER_DIR=; return 1; }
-      mkdir -p "$1" && printf "%s\n" "${BASHPID:-$$}" > "$1/pid"
-    }
-    if fm_lock_try_acquire "$2/.watch.lock"; then rc=0; else rc=1; fi
-    printf "rc=%s creates=%s recovered=[%s] primary=%s downtime=%s\n" "$rc" "$creates" \
-      "$FM_LOCK_RECOVERED_PID" \
-      "$([ -e "$2/.watch.lock" ] || [ -L "$2/.watch.lock" ]; echo $?)" \
-      "$([ -e "$2/.watcher-down" ]; echo $?)"
-  ' _ "$LIB" "$state")
-  [ "$out" = "rc=0 creates=2 recovered=[] primary=0 downtime=1" ] \
-    || fail "a lock released before the absent-lock check was not claimed by a retried create: $out"
-  pass "a create lost to a just-released owner is retried once and wins the absent lock"
-}
-
-test_lock_publication_mutex_contention_is_nonblocking() {
-  local dir state lockdir holder_file release holder claimant i blocked primary_exposed mutex_changed result
-  dir=$(make_case lock-publication-mutex-nonblocking)
-  state="$dir/state"
-  lockdir="$state/.contend.lock"
-  holder_file="$dir/holder"
-  release="$dir/release"
-
-  FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    fm_lock_try_acquire "$2.steal" || exit 7
-    printf "%s\n" "${BASHPID:-$$}" > "$3"
-    while [ ! -e "$4" ]; do sleep 0.01; done
-    fm_lock_release "$2.steal"
-  ' _ "$LIB" "$lockdir" "$holder_file" "$release" &
-  holder=$!
-  i=0
-  while [ "$i" -lt 100 ] && [ ! -s "$holder_file" ]; do
-    sleep 0.02
-    i=$((i + 1))
-  done
-  [ -s "$holder_file" ] || fail "publication mutex holder did not start"
-
-  FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    if fm_lock_try_acquire "$2"; then
-      printf "acquired\n" > "$3"
-    else
-      printf "contended\n" > "$3"
-    fi
-  ' _ "$LIB" "$lockdir" "$dir/result" &
-  claimant=$!
-  i=0
-  while [ "$i" -lt 50 ] && [ ! -s "$dir/result" ]; do
-    sleep 0.02
-    i=$((i + 1))
-  done
-  blocked=0
-  [ -s "$dir/result" ] || blocked=1
-  primary_exposed=0
-  if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
-    primary_exposed=1
-  fi
-  mutex_changed=0
-  [ "$(cat "$lockdir.steal/pid" 2>/dev/null || true)" = "$(cat "$holder_file")" ] || mutex_changed=1
-  result=$(cat "$dir/result" 2>/dev/null || true)
-  if [ "$blocked" -eq 1 ]; then
-    kill "$claimant" 2>/dev/null || true
-  fi
-  : > "$release"
-  wait "$claimant" 2>/dev/null || true
-  wait "$holder" || fail "publication mutex holder failed"
-  [ "$blocked" -eq 0 ] || fail "primary claimant blocked behind a descheduled publication mutex holder"
-  [ "$result" = contended ] || fail "primary claimant did not return contention while the publication mutex was held"
-  [ "$primary_exposed" -eq 0 ] || fail "primary claimant published while the publication mutex was held"
-  [ "$mutex_changed" -eq 0 ] || fail "primary claimant replaced the live publication mutex owner"
-  pass "publication mutex contention returns without blocking or publishing"
-}
-
 test_lock_live_steal_mutex_is_not_reclaimed() {
   local dir state lockdir dead holder_file holder out i lockpid stealpid
   dir=$(make_case lock-live-stealer)
@@ -959,7 +747,7 @@ test_lock_paused_mid_acquire_claim_fails_during_steal() {
     fm_lock_try_acquire "$2.steal" || exit 22
     steal_owner=${FM_LOCK_OWNER_DIR:-}
     if fm_lock_claim "$2" "$owner"; then late=won; else late=lost; fi
-    if fm_lock_try_create_unserialized "$2" "$steal_owner"; then stealer=won; else stealer=lost; fi
+    if fm_lock_try_create "$2" "$steal_owner"; then stealer=won; else stealer=lost; fi
     pid=$(cat "$2/pid" 2>/dev/null || true)
     printf "late=%s stealer=%s pid=%s\n" "$late" "$stealer" "$pid"
   ' _ "$LIB" "$lockdir")
@@ -974,86 +762,6 @@ test_lock_paused_mid_acquire_claim_fails_during_steal() {
   pid=${out#*pid=}; pid=${pid%% *}
   [ -n "$pid" ] || fail "stealer claim did not record a pid: $out"
   pass "paused mid-acquire claimant backs off to active stealer"
-}
-
-test_lock_try_create_failure_clears_owner_dir() {
-  local dir state lockdir holder_file out owner held holder i
-  dir=$(make_case lock-create-owner-reset)
-  state="$dir/state"
-  lockdir="$state/.contend.lock"
-  holder_file="$dir/steal-holder"
-  FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    fm_lock_try_acquire "$2.steal" || exit 7
-    printf "%s\n" "${BASHPID:-$$}" > "$3"
-    sleep 3
-    fm_lock_release "$2.steal"
-  ' _ "$LIB" "$lockdir" "$holder_file" &
-  holder=$!
-  i=0
-  while [ "$i" -lt 50 ] && [ ! -s "$holder_file" ]; do
-    sleep 0.1
-    i=$((i + 1))
-  done
-  [ -s "$holder_file" ] || fail "publication mutex holder did not start"
-  out=$(FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    fm_lock_try_create "$2.other" || exit 20
-    [ -n "${FM_LOCK_OWNER_DIR:-}" ] || exit 21
-    if fm_lock_try_create "$2"; then again=won; else again=lost; fi
-    printf "again=%s owner=[%s] held=[%s]\n" \
-      "$again" "${FM_LOCK_OWNER_DIR:-}" "${FM_LOCK_HELD_PID:-}"
-  ' _ "$LIB" "$lockdir")
-  wait "$holder" || fail "publication mutex holder failed"
-  case "$out" in
-    *"again=lost"*) ;;
-    *) fail "fm_lock_try_create won against a live publication mutex: $out" ;;
-  esac
-  owner=${out#*owner=}; owner=${owner%%]*}; owner=${owner#[}
-  [ -z "$owner" ] || fail "failed fm_lock_try_create left a stale owner directory: $out"
-  held=${out#*held=}; held=${held%%]*}; held=${held#[}
-  # The mutex holder is another publisher, not the lock's holder, and callers
-  # such as the watcher act on FM_LOCK_HELD_PID as the lock owner.
-  [ -z "$held" ] \
-    || fail "fm_lock_try_create reported the publication mutex holder as the lock holder: $out"
-  pass "a failed fm_lock_try_create clears its owner and names no lock holder"
-}
-
-test_watch_start_reports_recovery_not_a_dead_pid() {
-  local dir state lockdir holder_file dead out err status holder i
-  dir=$(make_case watch-recovery-report)
-  state="$dir/state"
-  lockdir="$state/.watch.lock"
-  holder_file="$dir/steal-holder"
-  out="$dir/watch.out"
-  err="$dir/watch.err"
-  dead=$(dead_pid)
-  mkdir "$lockdir"
-  printf '%s\n' "$dead" > "$lockdir/pid"
-  FM_STATE_OVERRIDE="$state" bash -c '
-    . "$1"
-    fm_lock_try_acquire "$2.steal" || exit 7
-    printf "%s\n" "${BASHPID:-$$}" > "$3"
-    sleep 3
-    fm_lock_release "$2.steal"
-  ' _ "$LIB" "$lockdir" "$holder_file" &
-  holder=$!
-  i=0
-  while [ "$i" -lt 50 ] && [ ! -s "$holder_file" ]; do
-    sleep 0.1
-    i=$((i + 1))
-  done
-  [ -s "$holder_file" ] || fail "publication mutex holder did not start"
-  status=0
-  FM_LOCK_STALE_AFTER=0 FM_STATE_OVERRIDE="$state" FM_POLL=5 FM_SIGNAL_GRACE=1 \
-    FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" 2> "$err" || status=$?
-  wait "$holder" || fail "publication mutex holder failed"
-  [ "$status" -eq 0 ] || fail "watcher start did not defer cleanly: status=$status $(cat "$err")"
-  ! grep -F "$dead" "$out" "$err" >/dev/null \
-    || fail "watcher start named the dead recorded pid: $(cat "$out" "$err")"
-  grep -F 'recovery in progress' "$out" >/dev/null \
-    || fail "watcher start did not report recovery in progress: $(cat "$out" "$err")"
-  pass "watcher start reports recovery instead of a dead already-running pid"
 }
 
 test_watch_restart_rejects_reused_pid() {
@@ -1869,10 +1577,6 @@ test_msys_pid_identity_uses_proc
 test_stale_watch_lock_reclaimed
 test_stale_watch_reclaim_publishes_before_clear
 test_live_stale_watch_lock_is_actionable
-test_lock_publication_serializes_with_stale_steal
-test_lock_publication_mutex_contention_is_nonblocking
-test_lock_absent_after_contended_create_is_not_stolen
-test_lock_absent_after_contended_create_retries_create
 test_live_stalled_watch_lock_is_replaced_past_hard_bound
 test_guard_warnings
 test_lock_single_winner_under_concurrency
@@ -1888,8 +1592,6 @@ test_lock_does_not_steal_live_lock
 test_lock_empty_pid_uses_minimum_grace
 test_lock_late_claim_loses_after_recreate
 test_lock_paused_mid_acquire_claim_fails_during_steal
-test_lock_try_create_failure_clears_owner_dir
-test_watch_start_reports_recovery_not_a_dead_pid
 test_watch_restart_rejects_reused_pid
 test_watch_restart_attaches_to_healthy_peer
 test_watcher_self_evicts_on_lock_takeover
