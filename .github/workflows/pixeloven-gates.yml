@@ -97,9 +97,11 @@ jobs:
 
       - name: Scan full history for secrets
         # --redact so a candidate secret is never echoed into a public log (G-3).
+        # Accepted fingerprints live in our namespace, not a root .gitleaksignore (A4).
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/bin/gitleaks" git . --redact --no-banner
+          "$RUNNER_TEMP/bin/gitleaks" git . --redact --no-banner \
+            --gitleaks-ignore-path docs/pixeloven/gitleaksignore
 
   lint:
     name: workflows · docs · fork contract
@@ -229,7 +231,7 @@ jobs:
 
           echo "== A4 - O-1: the diff against upstream $PIN stays inside PixelOven namespaces and accepted ADR overrides"
           out=$(git diff --name-only "$PIN" \
-                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/(po-|process-event-sources/SKILL\.md$)|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-bootstrap|fm-captain-hold|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-pr-check-security|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage|fm-watcher-lock)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|watcher-continuity\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
+                | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|bin/backends/|\.agents/skills/po-|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|verification/delivery-lane\.md)$|README\.md$|NOTICE$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: path is outside PixelOven namespaces and accepted ADR override sets"; }
 
           echo '== A5 - the README exception stays one bounded banner block'

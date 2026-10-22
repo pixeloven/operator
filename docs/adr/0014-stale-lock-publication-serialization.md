@@ -1,6 +1,6 @@
 # ADR-0014: Stale-lock publication serialization may modify bounded upstream surfaces
 
-- **Status:** Accepted
+- **Status:** Withdrawn 2026-10-22; every hunk returned to upstream bytes
 - **Date:** 2026-09-13
 - **Deciders:** The operator
 - **Source:** Captain-approved hosted stale-lock scheduling race correction
@@ -10,6 +10,7 @@
 An ordinary claimant could publish a primary lock after its precheck while a stale-lock stealer held the matching mutex.
 That interleaving could make the stealer fail and then make the ordinary claimant remove its own candidate, leaving no winner.
 The serialization guard also had to remain recoverable if its own process died after publication, without growing an unbounded chain of guard locks.
+Upstream later replaced the recursive steal-mutex chain with a per-reaper tombstone reaper but kept the zero-winner interleaving, so only the serialization remains downstream.
 Correcting the shared lock boundary and proving both interruption windows requires changes to inherited lock code and its focused regression.
 
 ## Decision
@@ -26,7 +27,12 @@ Every other upstream file remains outside this exception.
 
 ## Consequences
 
-Primary-lock publication and stale-lock stealing share a nonblocking mutex boundary whose abandoned guard is reclaimed through one terminal recovery level.
+Primary-lock publication and stale-lock stealing share upstream's nonblocking steal mutex, and a dead mutex holder is reaped through upstream's tombstone reaper rather than a downstream guard level.
+The downstream terminal guard was dropped in the second stage of the `v0.3.0` synchronization in favour of that reaper.
+A losing claimant reports a holder PID only while that process is live, so a watcher start reports recovery in progress instead of naming a dead recorded PID.
+A claimant that loses only the publication mutex while the lock is absent retries rather than stealing, and never reports the mutex holder as the lock's holder.
+A directory-form publication mutex left by a pre-symlink build is not reaped, and while it remains it blocks ordinary publication of that lock; no current build creates one.
+Each ordinary acquisition pays one extra mutex publication and release.
 The focused regression may live beside the inherited watcher-lock tests without weakening the additive-only fork rule.
 The fork-contract gate accepts exactly these paths while continuing to reject unrelated upstream-file changes.
 
@@ -35,3 +41,9 @@ The fork-contract gate accepts exactly these paths while continuing to reject un
 - **Keep the race and retry at callers.** Rejected because zero winners is a shared lock-boundary defect.
 - **Permit every inherited watcher test.** Rejected because this correction needs only the existing focused watcher-lock suite.
 - **Add a parallel PixelOven lock implementation.** Rejected because callers would remain on the unsafe inherited boundary and two lock implementations would drift.
+
+## Withdrawal (2026-10-22)
+
+The captain withdrew this exception during the second stage of the `v0.3.0` synchronization, and every file it named returned to upstream `0e82f3ee` bytes.
+Re-ported onto upstream's rewritten lock code, the serialization made each ordinary acquisition publish and release a second lock, roughly doubling acquisition cost, and the added contention failed upstream's own process-event and watcher suites on hosted Linux runners.
+The zero-winner interleaving it addressed remains in upstream, and its deterministic reproduction is to be offered upstream as a separate, per-instance decision under G-5.

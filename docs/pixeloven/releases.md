@@ -191,3 +191,5 @@ Upstream ancestry and corrective ancestry pull requests additionally follow the 
 
 The **next** tag is planned as `v0.3.0`: the two-stage synchronization from `355f46fe5528` through `8fd5575b` to `0e82f3ee`, preceded by [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)'s return to upstream companion-tool sources.
 Its release notes must call out upstream's raised tool floors, the self-repository publication gate and the neutral upstream fetch ref, and the default-on supervision host.
+They must note that [ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock serialization was withdrawn, so lock behavior is upstream's.
+They must also state that every operator home shipping to this repository needs `config/firstmate-role` set to `maintainer github.com/pixeloven/operator` and `remote.origin.gh-resolved=base` in its operator project clone, as [`upstream-merges.md`](upstream-merges.md#2-the-standing-procedure) shows.
