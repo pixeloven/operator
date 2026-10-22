@@ -388,6 +388,12 @@ Resolutions:
 - The test conflicts union upstream's new cases with the downstream ones; the downstream triage and Pi cases now assert upstream's key-only headlines, and upstream's launch-failure case expects a replay after acknowledgement because ADR-0012 retires the presentation marker.
   The terminal-guard and legacy directory-mutex watcher-lock cases and the batch wake-queue case were removed with the code they covered.
 
+The pull request's first CI run exposed three re-port regressions, fixed on the branch.
+The investigation's ADR-0014 prototype had dropped stage 1's early return for an absent lock after a failed create, so contention on the serialized publication mutex fell into the stale-steal path and published watcher downtime for a lock nobody lost; the return is restored and the mutex holder is no longer reported as the lock's holder.
+ADR-0012's sequence-floor recovery refused an append when an empty wake queue was unreadable, which upstream's mail suite exercises.
+A test-list entry and a test local survived the conflict resolution unused.
+Upstream's synthetic `TYPESAFE_API_KEY` fixture from upstream #4692 also trips the PixelOven secret scan, so `docs/pixeloven/gitleaksignore` accepts exactly that one fingerprint.
+
 Two departures from the investigation's map are deliberate.
 The bounded-recovery retry in `tests/fm-backend-herdr-presentation-e2e.test.sh` stays, because upstream's presentation recovery still refuses a contended concurrent resume after its bounded attempt unless `--herdr-resume-lock-wait` is passed.
 Every ADR-0010 hunk the map re-applies is void under [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md), so upstream's tool floors, CI installs, and the unpinned Pi coding-agent package are taken as upstream wrote them.

@@ -642,7 +642,8 @@ fm_lock_try_create() {
   fi
   steal="$lockdir.steal"
   if ! fm_lock_try_acquire_steal_mutex "$steal"; then
-    fm_lock_set_live_holder "$steal"
+    # The mutex holder is another publisher, not this lock's holder.
+    FM_LOCK_HELD_PID=
     FM_LOCK_OWNER_DIR=
     return 1
   fi
@@ -1220,6 +1221,14 @@ fm_lock_try_acquire() {
 
   if fm_lock_try_create "$lockdir"; then
     return 0
+  fi
+  # An absent lock after a failed create is contention on the serialized
+  # publication mutex or an owner that just released, never an ownerless stale
+  # lock: stealing it would publish recovery for a lock nobody lost. A waiting
+  # caller retries; a non-blocking one sees no live holder.
+  if [ ! -e "$lockdir" ] && [ ! -L "$lockdir" ]; then
+    FM_LOCK_HELD_PID=
+    return 1
   fi
 
   fm_current_pid current || return 1
@@ -2332,7 +2341,10 @@ fm_wake_append_locked() {
 # row or a sequence-bearing process-event presentation marker still names.
 _fm_wake_sequence_floor_locked() {
   local seq=0 candidate marker marker_name
-  if [ -e "$FM_WAKE_QUEUE" ] || [ -L "$FM_WAKE_QUEUE" ]; then
+  # An empty regular queue holds no rows, so it cannot raise the floor even
+  # when it is not readable (a write-only queue still accepts the append).
+  if [ -L "$FM_WAKE_QUEUE" ] || [ -s "$FM_WAKE_QUEUE" ] \
+    || { [ -e "$FM_WAKE_QUEUE" ] && [ ! -f "$FM_WAKE_QUEUE" ]; }; then
     [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 1
     candidate=$(awk -F '\t' '
       NF >= 5 && $2 ~ /^[0-9]+$/ && $2 > max { max=$2 }

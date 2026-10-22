@@ -30,6 +30,7 @@ Every other upstream file remains outside this exception.
 Primary-lock publication and stale-lock stealing share upstream's nonblocking steal mutex, and a dead mutex holder is reaped through upstream's tombstone reaper rather than a downstream guard level.
 The downstream terminal guard was dropped in the second stage of the `v0.3.0` synchronization in favour of that reaper.
 A losing claimant reports a holder PID only while that process is live, so a watcher start reports recovery in progress instead of naming a dead recorded PID.
+A claimant that loses only the publication mutex while the lock is absent retries rather than stealing, and never reports the mutex holder as the lock's holder.
 A directory-form publication mutex left by a pre-symlink build is not reaped, and while it remains it blocks ordinary publication of that lock; no current build creates one.
 Each ordinary acquisition pays one extra mutex publication and release.
 The focused regression may live beside the inherited watcher-lock tests without weakening the additive-only fork rule.

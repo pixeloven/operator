@@ -97,9 +97,11 @@ jobs:
 
       - name: Scan full history for secrets
         # --redact so a candidate secret is never echoed into a public log (G-3).
+        # Accepted fingerprints live in our namespace, not a root .gitleaksignore (A4).
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/bin/gitleaks" git . --redact --no-banner
+          "$RUNNER_TEMP/bin/gitleaks" git . --redact --no-banner \
+            --gitleaks-ignore-path docs/pixeloven/gitleaksignore
 
   lint:
     name: workflows · docs · fork contract
