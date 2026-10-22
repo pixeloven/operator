@@ -263,8 +263,11 @@ assert_no_re() {  # <regex> <file> <msg>
   ! grep -E -- "$1" "$2" >/dev/null || fail "$3"$'\n'"--- $2 ---"$'\n'"$(cat "$2" 2>/dev/null)"
 }
 
+# PixelOven ADR-0011: the poll budget is doubled for standard hosted runners,
+# where a full engine turn can outlast upstream's bound; a met condition still
+# returns on its first passing poll.
 wait_until() {  # <polls of 0.1s> <command...>
-  local limit=$1 i=0
+  local limit=$(($1 * 2)) i=0
   shift
   while [ "$i" -lt "$limit" ]; do
     "$@" && return 0

@@ -66,7 +66,7 @@ This remains the identity exception recorded in ADR-0001.
 Companion tools are acquired exactly as upstream acquires them, so no upstream file carries a PixelOven tool-source hunk ([ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md)).
 Assertion A8 fails if a tracked file outside decision and documentation history selects a PixelOven companion fork again.
 
-ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, and ADR-0015 owns the documentation-audience entries that classify PixelOven prose.
+ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions and the supervision-host test's hosted-runner poll budget, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, and ADR-0015 owns the documentation-audience entries that classify PixelOven prose.
 
 ## Taking upstream changes
 
