@@ -6419,7 +6419,7 @@ test_procevent_headlines_classify_queue_keys() {
 # registration identity: this test would fail if a second episode reused the
 # first one's key, because the watcher would keep polling and never wake.
 test_procevent_launch_failed_episodes_are_each_delivered() {
-  local dir state out status
+  local dir state out
   dir=$(make_case procevent-launch-failed-episodes); state="$dir/state"; out="$dir/watch.out"
   append_wake "$state" check "procevent:lf-src:launch-failed:1-2-100-7" \
     "check: process-event source lf-src is registered but its launch did not prove it took the claim"

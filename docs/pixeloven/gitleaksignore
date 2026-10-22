@@ -1,0 +1,4 @@
+# Accepted gitleaks findings for the pixeloven gates secret scan.
+# Each line is a gitleaks fingerprint; keep a reason comment above each one.
+# Upstream test fixture from kunchenguid/firstmate #4692: a fake TYPESAFE_API_KEY value, not a credential.
+69d660ad6167271daf09e8c5521581c03cb9a4f8:tests/fm-dispatch-resolve.test.sh:generic-api-key:183

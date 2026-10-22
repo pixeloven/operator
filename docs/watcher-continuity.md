@@ -416,6 +416,7 @@ A live foreign holder therefore cannot strand a TERM'd watcher in this marker-lo
 
 Ordinary lock publication and stale-owner replacement share one nonblocking publication mutex, so a claimant returns contention instead of publishing alongside an active replacement.
 A dead publication-mutex holder is reaped once through a per-reaper tombstone, so no deeper guard chain is created and an interrupted reaper is taken over from its tombstone.
+A claimant that loses only that mutex while the lock is absent retries rather than taking the stale-steal path, so it never publishes watcher downtime for a lock nobody lost.
 Every losing startup rechecks the current lock holder before reporting it.
 It names a PID only when that process is still live, and otherwise reports that lock recovery is in progress without claiming the dead recorded PID is running.
 
@@ -486,6 +487,7 @@ It checks that a newly appended keyed decision is classified without rereading e
 - Verified-successor attach.
 - Recovery publication before stale-lock removal.
 - Serialized nonblocking primary publication during stale stealing.
+- A create lost only to publication contention on an absent lock, which is retried rather than stolen as stale.
 - The typed self-eviction failure.
 - Bounded and successor-linked lifecycle rows.
 - A SIGSTOP counterfactual that distinguishes a live PID from a stale beacon before classifying termination.
