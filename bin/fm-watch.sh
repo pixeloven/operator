@@ -2238,6 +2238,22 @@ EOF
   return 1
 }
 
+# Fork-free pre-lock probe: fails only when the queue provably holds no row the
+# locked scan below would select. Every such row carries the tab-delimited
+# `check` kind and `procevent:` key prefix, so an unlocked read can only
+# over-report, and anything it cannot read falls through to the locked path.
+# An append racing this read is found by the next cycle, exactly as if the
+# locked scan had run just before it.
+procevent_queue_may_hold_rows() {
+  local line tab=$'\t'
+  [ -s "$FM_WAKE_QUEUE" ] || return 1
+  [ -f "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in *"$tab"check"$tab"procevent:*) return 0 ;; esac
+  done 2>/dev/null < "$FM_WAKE_QUEUE" || return 0
+  return 1
+}
+
 procevent_surfaced_markers_exist() {
   local marker
   for marker in "$STATE"/.seen-procevent-*; do
@@ -2300,7 +2316,7 @@ procevent_surface_queued() {
   PROCEVENT_QUEUED_ROWS=
   PROCEVENT_PRESENTABLE_ROWS=
   PROCEVENT_SURFACED_ROWS=
-  if [ ! -s "$FM_WAKE_QUEUE" ] && ! procevent_surfaced_markers_exist; then
+  if ! procevent_queue_may_hold_rows && ! procevent_surfaced_markers_exist; then
     return 0
   fi
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
