@@ -30,7 +30,7 @@ Nearly everything a person reads in a session is written by the agent, so changi
    The block changes display words for chat only, grants no authority, and changes no rule.
    It carries a machine-readable values line, so a second mate's scripts resolve the same theme, including a custom theme that exists only in the primary home, and validate it before use.
 4. Exactly these upstream hunks are permitted, and nothing else:
-   - one inserted line in `AGENTS.md`, beginning `Persona: `, after "This file is your entire job description.", making the block authoritative for chat words;
+   - one inserted line in `AGENTS.md`, beginning `Persona: `, after "This file is your entire job description.", making the block authoritative for chat words (H1);
    - in `bin/fm-dod-lib.sh`, one worker-vocabulary call in `fm_brief_worker_role` (H4), which prints nothing under `nautical`;
    - in `bin/fm-dod-lib.sh`, the themed vocative in `fm_brief_intent_address_line` (H5), so the guard that keeps direct address out of no-mistakes intent does not weaken under a theme.
 5. Slash-command aliases are generated per primary home as alias skills, never tracked, and excluded through a delimited block of `.git/info/exclude`, so the guarded self-update still sees a clean tree.
