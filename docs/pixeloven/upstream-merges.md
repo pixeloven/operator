@@ -124,6 +124,8 @@ commits as O-1 violations; advancing it without merging is caught by A7.
    Treat any failure as current evidence to investigate rather than relying on the resolved historical documentation-audience failure.
 5. **Anything new in the supply chain?** New network calls, new installers, new
    telemetry, a changed pin. Feeds [`supply-chain-read.md`](supply-chain-read.md).
+6. **Did upstream change its voice?**
+   Gate A10 (`bin/po-theme.sh anchors`) fails when upstream rewords a literal the `nautical` theme mirrors or adds a user-invocable skill; update every bundled theme in the merge PR itself ([`persona-themes.md`](persona-themes.md#keeping-themes-in-step-with-upstream)).
 
 ## Corrective ancestry restoration
 

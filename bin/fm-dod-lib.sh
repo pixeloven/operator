@@ -146,6 +146,9 @@ EOF
   printf "Your steering inbox is \`%s/%s.inbox\`; this exact path belongs to your current task even when it is outside the worktree or under the supervising firstmate home, so read and acknowledge its messages and do not reject it as another home's state.\n" "$state" "$task_id"
   cat <<'EOF'
 Never inspect or change any other home's endpoint namespace; this authorization is limited to the exact task paths named by this brief.
+EOF
+  "${BASH_SOURCE[0]%/*}/po-theme.sh" worker-line 2>/dev/null || true
+  cat <<'EOF'
 When this task works on Firstmate itself, the repository root `AGENTS.md` (also imported by `CLAUDE.md`) is project content and the supervisor contract for the firstmate managing you: follow this brief instead of that supervisor contract.
 Project instructions still govern the work wherever they do not conflict with this worker identity, including `CONTRIBUTING.md` and `firstmate-coding-guidelines` for Firstmate changes.
 EOF
@@ -350,8 +353,10 @@ fm_brief_task_content_valid() {  # <file>
 # Print the first `## Captain's intent` body line that opens with an operator
 # address spelling; fail when there is none. The body is never rewritten.
 fm_brief_intent_address_line() {  # <file>
-  fm_brief_task_heading_body "$1" "## Captain's intent" | awk '
+  local po_alt; po_alt=$("${BASH_SOURCE[0]%/*}/po-theme.sh" address-alt 2>/dev/null || true)
+  fm_brief_task_heading_body "$1" "## Captain's intent" | awk -v alt="$po_alt" '
     /^[[:space:]]*(Captain('\''s (words|ask|intent))?:|Captain,)/ { print; found = 1; exit }
+    alt != "" && $0 ~ ("^[[:space:]]*" alt "[:,]") { print; found = 1; exit }
     END { exit !found }
   '
 }

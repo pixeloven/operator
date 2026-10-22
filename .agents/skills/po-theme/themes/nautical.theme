@@ -1,0 +1,36 @@
+# po-theme/1 - nautical (the default)
+# Every value here is the literal upstream firstmate wording. Selecting this
+# theme writes no Persona block and no command aliases, so a home behaves
+# byte-for-byte as upstream. `bin/po-theme.sh anchors` asserts that each value
+# still appears in the upstream text it mirrors, so a sync that changes the
+# wording fails the merge PR instead of drifting. This file is also the schema:
+# every theme defines exactly these keys, plus optional avoid.<word> entries.
+schema = "po-theme/1"
+name = "nautical"
+description = "Upstream firstmate's nautical voice"
+
+user = "captain"
+user_plural = "captains"
+user_address = "Captain"
+self = "first mate"
+self_plural = "first mates"
+product = "firstmate"
+worker = "crewmate"
+worker_plural = "crewmates"
+crew = "crew"
+submate = "second mate"
+submate_plural = "second mates"
+fleet = "fleet"
+ship_task = "ship"
+scout_task = "scout"
+
+seasoning = "aye, on deck, shipshape, under way, ahoy"
+noop_reply = "Captain, shipshape."
+bad_news_example = "Captain, the build broke - ..."
+
+alias.afk = "afk"
+alias.ahoy = "ahoy"
+alias.bearings = "bearings"
+alias.quiet = "quiet"
+alias.stow = "stow"
+alias.updatefirstmate = "updatefirstmate"

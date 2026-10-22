@@ -27,6 +27,7 @@ Use [`_template.md`](_template.md).
 | [0013](0013-archived-captain-hold-completion.md) | Archived captain-hold completion may modify bounded upstream surfaces | Accepted | Captain-approved archived answer compatibility |
 | [0014](0014-stale-lock-publication-serialization.md) | Stale-lock publication serialization may modify bounded upstream surfaces | Withdrawn 2026-10-22 | Hosted stale-lock scheduling race correction |
 | [0015](0015-companion-tools-from-upstream-sources.md) | Companion tools are acquired from upstream sources | Accepted | Captain decisions for the five-stage upstream synchronization |
+| [0016](0016-persona-themed-at-the-edge.md) | Persona and vocabulary are themed at the edge, never rewritten in place | Accepted | Captain decisions on persona customization |
 
 ## Conventions
 
