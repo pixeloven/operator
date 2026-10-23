@@ -6501,6 +6501,55 @@ test_procevent_surface_serializes_with_drain() {
   pass "queue revalidation, proactive output, and marker commit serialize with drain"
 }
 
+# A process-event row queued behind unrelated rows by a live holder of the wake
+# queue lock is not presented around that lock, and is presented once the lock
+# is released. The holder starts only after the first full cycle, because
+# watcher startup takes the same lock for its own recovery bookkeeping.
+test_procevent_row_queued_under_held_lock_surfaces_after_release() {
+  local dir state out ready append appended release holder pid
+  dir=$(make_case procevent-held-lock); state="$dir/state"; out="$dir/watch.out"
+  ready="$dir/lock-ready"; append="$dir/lock-append"; appended="$dir/lock-appended"
+  release="$dir/lock-release"
+  append_wake "$state" signal "held-lock-unrelated" "signal: an unrelated queued row"
+  FM_WATCH_HANDLING_SUCCESSOR=1 procevent_watch_bg "$dir" "$out"
+  pid=$!
+  wait_poll_cycle "$state" "$pid" || fail "the held-lock watcher never completed a cycle: $(cat "$out")"
+
+  # Each wait is bounded, so a failed assertion cannot strand the holder.
+  FM_STATE_OVERRIDE="$state" bash -c '
+    wait_file() { local i=0; while [ ! -e "$1" ] && [ "$i" -lt 600 ]; do sleep 0.05; i=$((i + 1)); done; [ -e "$1" ]; }
+    . "$1/bin/fm-wake-lib.sh"
+    fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
+    printf "1\n" > "$2"
+    status=0
+    if wait_file "$3"; then
+      fm_wake_append_locked check "procevent:held-lock:1" "check: procevent fixture held-lock 1" || status=1
+      printf "1\n" > "$4"
+      wait_file "$5" || status=1
+    else
+      status=1
+    fi
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    exit "$status"
+  ' _ "$ROOT" "$ready" "$append" "$appended" "$release" &
+  holder=$!
+  wait_numeric_file "$ready" 100 || fail "the queue lock holder did not start"
+
+  : > "$append"
+  wait_numeric_file "$appended" 100 || fail "the lock holder could not queue the process-event row"
+  wait_live "$pid" 10 || fail "the watcher surfaced a row without waiting for the held queue lock: $(cat "$out")"
+  ! grep -F "procevent:held-lock:1" "$out" >/dev/null \
+    || fail "the watcher read the queue around the held lock: $(cat "$out")"
+
+  : > "$release"
+  wait "$holder" || fail "the queue lock holder failed"
+  wait_for_exit "$pid" 100 || fail "a queued process-event row was not surfaced after the lock released: $(cat "$out")"
+  grep -F "check: process-event result captured: procevent:held-lock:1" "$out" >/dev/null \
+    || fail "the queued process-event row was not surfaced: $(cat "$out")"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" >/dev/null 2>&1 || fail "held-lock fixture drain failed"
+  pass "a process-event row queued under a held queue lock is surfaced once the lock is released"
+}
+
 test_procevent_surface_crash_boundaries() {
   local dir state out fifo pid reader marker exit_status replay_err sequence generation
   dir=$(make_case procevent-output-fail); state="$dir/state"; out="$dir/watch.out"; fifo="$dir/output.fifo"
@@ -7274,6 +7323,7 @@ test_procevent_marker_keys_are_injective
 test_procevent_headlines_classify_queue_keys
 test_procevent_launch_failed_episodes_are_each_delivered
 test_procevent_surface_serializes_with_drain
+test_procevent_row_queued_under_held_lock_surfaces_after_release
 test_procevent_surface_crash_boundaries
 test_procevent_marker_failure_exits_and_replays
 test_heartbeat_no_change_absorbed
