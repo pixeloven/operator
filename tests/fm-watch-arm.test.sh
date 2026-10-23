@@ -543,7 +543,7 @@ test_slow_rearm_recovery_is_still_surfaced() {
     real=$(command -v "$tool") || fail "no $tool to delay"
     cat > "$fakebin/$tool" <<SH
 #!/bin/sh
-[ -e "$state/.last-watcher-beat" ] && sleep 0.9
+[ -e "$state/.last-watcher-beat" ] && sleep 0.6
 exec "$real" "\$@"
 SH
     chmod +x "$fakebin/$tool"

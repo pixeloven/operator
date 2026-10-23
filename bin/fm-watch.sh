@@ -2219,7 +2219,7 @@ procevent_surface_marker_matches() {  # <queue-sequence> <canonical-event-key>
   local sequence=$1 key=$2 marker stored_sequence stored_key extra
   marker=$(procevent_surfaced_marker "$key") || return 1
   [ -f "$marker" ] && [ ! -L "$marker" ] || return 1
-  IFS=$(printf '\t') read -r stored_sequence stored_key extra < "$marker" || return 1
+  IFS=$'\t' read -r stored_sequence stored_key extra < "$marker" || return 1
   case "$stored_sequence" in ''|*[!0-9]*) return 1 ;; esac
   [ -z "$extra" ] && [ "$stored_key" = "$key" ] || return 1
   [ "$sequence" -le "$stored_sequence" ] \
@@ -2228,29 +2228,13 @@ procevent_surface_marker_matches() {  # <queue-sequence> <canonical-event-key>
 
 procevent_identity_queued_through() {  # <queue-sequence> <canonical-event-key>
   local sequence=$1 key=$2 queued_sequence queued_key
-  while IFS=$(printf '\t') read -r queued_sequence queued_key; do
+  while IFS=$'\t' read -r queued_sequence queued_key; do
     [ "$queued_key" = "$key" ] || continue
     [ "$queued_sequence" -le "$sequence" ]
     return
   done <<EOF
 $PROCEVENT_QUEUED_ROWS
 EOF
-  return 1
-}
-
-# Fork-free pre-lock probe: fails only when the queue provably holds no row the
-# locked scan below would select. Every such row carries the tab-delimited
-# `check` kind and `procevent:` key prefix, so an unlocked read can only
-# over-report, and anything it cannot read falls through to the locked path.
-# An append racing this read is found by the next cycle, exactly as if the
-# locked scan had run just before it.
-procevent_queue_may_hold_rows() {
-  local line tab=$'\t'
-  [ -s "$FM_WAKE_QUEUE" ] || return 1
-  [ -f "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 0
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in *"$tab"check"$tab"procevent:*) return 0 ;; esac
-  done 2>/dev/null < "$FM_WAKE_QUEUE" || return 0
   return 1
 }
 
@@ -2271,7 +2255,7 @@ procevent_prune_surfaced_markers_locked() {
     case "$marker_name" in
       id-*)
         if [ -f "$marker" ] && [ ! -L "$marker" ]; then
-          IFS=$(printf '\t') read -r sequence key extra < "$marker" || sequence=
+          IFS=$'\t' read -r sequence key extra < "$marker" || sequence=
           case "$sequence" in ''|*[!0-9]*) ;; *)
             if [ -z "$extra" ] && procevent_identity_queued_through "$sequence" "$key"; then
               continue
@@ -2316,7 +2300,7 @@ procevent_surface_queued() {
   PROCEVENT_QUEUED_ROWS=
   PROCEVENT_PRESENTABLE_ROWS=
   PROCEVENT_SURFACED_ROWS=
-  if ! procevent_queue_may_hold_rows && ! procevent_surfaced_markers_exist; then
+  if [ ! -s "$FM_WAKE_QUEUE" ] && ! procevent_surfaced_markers_exist; then
     return 0
   fi
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
@@ -2333,6 +2317,13 @@ procevent_surface_queued() {
     fm_lock_release "$FM_WAKE_QUEUE_LOCK"
     return 1
   }
+  # With no process-event row queued there is nothing to present; only retire
+  # markers whose rows are gone, without the presentation pass below.
+  if [ -z "$PROCEVENT_QUEUED_ROWS" ]; then
+    procevent_prune_surfaced_markers_locked || true
+    fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+    return 0
+  fi
   PROCEVENT_PRESENTABLE_ROWS=$(printf '%s\n' "$PROCEVENT_QUEUED_ROWS" | awk -F '\t' '
     NF >= 2 {
       if (!seen[$2]++) order[++count]=$2
@@ -2344,7 +2335,7 @@ procevent_surface_queued() {
     return 1
   }
   procevent_prune_surfaced_markers_locked || true
-  while IFS=$(printf '\t') read -r sequence key; do
+  while IFS=$'\t' read -r sequence key; do
     [ -n "$sequence" ] || continue
     procevent_surface_marker_matches "$sequence" "$key" && continue
     PROCEVENT_SURFACED_ROWS="${PROCEVENT_SURFACED_ROWS}${sequence}"$'\t'"${key}"$'\n'
