@@ -1,0 +1,7 @@
+doctor --fix (tasks-axi installed only in a non-default fnm version):
+fix required-tasks-axi=applied: linked the discoverable version-manager tool at <home>/.local/bin/tasks-axi
+required tasks-axi=<home>/.local/bin/tasks-axi
+generated wrapper ~/.local/bin/tasks-axi:
+#!/usr/bin/env bash
+# Firstmate remote tool wrapper v1
+exec <home>/.local/share/fnm/node-versions/v24.0.0/installation/bin/tasks-axi "$@"

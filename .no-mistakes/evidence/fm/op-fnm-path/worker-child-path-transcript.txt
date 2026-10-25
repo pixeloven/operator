@@ -1,0 +1,36 @@
+host: Linux 7.2.9-ogc3.1.fc44.x86_64; /home/linuxbrew/.linuxbrew/bin/node present? no
+
+=== S1 fnm-only account (no ~/.nvm, XDG fnm dir) ===
+lane exit=0 job exit=0
+child PATH=<lab>/remote-root/bin:<lab>/account/.local/share/fnm/aliases/default/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+node -> <lab>/account/.local/share/fnm/aliases/default/bin/node
+node prints: fnm-22.11.0
+brew -> /home/linuxbrew/.linuxbrew/bin/brew
+
+=== S2 fnm + nvm default both installed ===
+lane exit=0 job exit=0
+child PATH=<lab>/remote-root/bin:<lab>/account/.local/share/fnm/aliases/default/bin:/home/linuxbrew/.linuxbrew/bin:<lab>/account/.nvm/versions/node/v20.0.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+node -> <lab>/account/.local/share/fnm/aliases/default/bin/node
+node prints: fnm-22.11.0
+brew -> /home/linuxbrew/.linuxbrew/bin/brew
+
+=== S3 fnm dir present but no default alias (nvm fallback) ===
+lane exit=0 job exit=0
+child PATH=<lab>/remote-root/bin:/home/linuxbrew/.linuxbrew/bin:<lab>/account/.nvm/versions/node/v20.0.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+node -> <lab>/account/.nvm/versions/node/v20.0.0/bin/node
+node prints: nvm-20
+brew -> /home/linuxbrew/.linuxbrew/bin/brew
+
+=== S4 legacy ~/.fnm only, plus nvm ===
+lane exit=0 job exit=0
+child PATH=<lab>/remote-root/bin:<lab>/account/.fnm/aliases/default/bin:/home/linuxbrew/.linuxbrew/bin:<lab>/account/.nvm/versions/node/v20.0.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+node -> <lab>/account/.fnm/aliases/default/bin/node
+node prints: fnm-21.1.0
+brew -> /home/linuxbrew/.linuxbrew/bin/brew
+
+=== S5 ambient FNM_DIR/XDG_DATA_HOME ignored (fnm under custom dir only) ===
+lane exit=0 (FNM_DIR=<lab>/account/custom-fnm exported in worker env)
+child PATH=<lab>/remote-root/bin:/home/linuxbrew/.linuxbrew/bin:<lab>/account/.nvm/versions/node/v20.0.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+node -> <lab>/account/.nvm/versions/node/v20.0.0/bin/node
+node prints: nvm-20
+brew -> /home/linuxbrew/.linuxbrew/bin/brew

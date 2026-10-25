@@ -1,0 +1,8 @@
+host: Linux 7.2.9-ogc3.1.fc44.x86_64; /home/linuxbrew/.linuxbrew/bin/node present? no
+
+=== S1 fnm-only account (no ~/.nvm, XDG fnm dir) ===
+lane exit=0 job exit=0
+child PATH=<lab>/remote-root/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+node -> <none>
+node prints: <no node>
+brew -> <none>
