@@ -144,12 +144,13 @@ The authorized child sees these directories, in this order:
 
 1. `<remote-root>/bin`.
 2. A genuine account `~/.local/bin`.
-3. The nvm default version bin.
-4. asdf shims and install bins.
-5. mise shims and install bins.
-6. Nix directories.
-7. Homebrew directories.
-8. The system tail `/usr/bin:/bin:/usr/sbin:/sbin`.
+3. The fnm default alias bin.
+4. The nvm default version bin.
+5. asdf shims and install bins.
+6. mise shims and install bins.
+7. Nix directories.
+8. Homebrew directories.
+9. The system tail `/usr/bin:/bin:/usr/sbin:/sbin`.
 
 The Nix and package-manager order after version-manager discovery is:
 
@@ -157,9 +158,16 @@ The Nix and package-manager order after version-manager discovery is:
 2. `/etc/profiles/per-user/<account>/bin`
 3. `/run/current-system/sw/bin`
 4. `/opt/homebrew/bin`
-5. `/usr/local/bin`
+5. `/home/linuxbrew/.linuxbrew/bin`
+6. `/usr/local/bin`
 
 Exact repeated entries are omitted.
+
+### fnm version selection
+
+The fnm entry is `<fnm-dir>/aliases/default/bin`, the version `fnm default` selected.
+The fnm directory follows fnm's own lookup: `FNM_DIR`, else an existing `fnm` under `XDG_DATA_HOME` or `~/.local/share`, else an existing `~/.fnm`, else an existing macOS `~/Library/Application Support/fnm`.
+Without a default alias, fnm adds no entry and the later directories provide Node.
 
 ### nvm version selection
 
@@ -192,7 +200,7 @@ This has two consequences:
 
 ### Wrappers for version-managed tools
 
-The filesystem discovery normally finds tools installed by nvm, asdf, or mise without starting their shell hooks.
+The filesystem discovery normally finds tools installed by fnm, nvm, asdf, or mise without starting their shell hooks.
 When a required tool remains discoverable only through one of those managers, `fm-remote-doctor.sh --fix` may create a Firstmate-owned wrapper in `~/.local/bin` that executes its selected absolute target.
 It never overwrites a wrapper or other file it does not own, and it never installs a package.
 An operator can use the same wrapper shape when a tool needs a manual selection:
@@ -209,6 +217,7 @@ chmod +x ~/.local/bin/tasks-axi
 ```
 
 - Replace the placeholder with the remote account's selected nvm version.
+- For fnm, use `<fnm-dir>/node-versions/<selected-version>/installation/bin`.
 - For asdf or mise, use the same shape with the selected version's absolute `bin` directory, one wrapper per tool the remote home actually needs.
 - The wrapper must execute that absolute target rather than resolving its own name again through `~/.local/bin`.
 

@@ -6,6 +6,9 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+# fnm's directory honors these, so the runner's own values must not reach the
+# fixture account's composed PATH.
+unset FNM_DIR XDG_DATA_HOME
 TMP_ROOT=$(fm_test_tmproot fm-remote-job)
 mkdir -p "$TMP_ROOT"
 TMP_ROOT=$(cd "$TMP_ROOT" && pwd -P)
@@ -286,6 +289,63 @@ case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
 esac
 printf '20\n' > "$NVM_ROOT/alias/default"
 pass "operator PATH honors nvm defaults with a deterministic fallback"
+
+# fnm's default alias is a symlink to an installed version, exactly as
+# `fnm default` writes it, and it is searched ahead of nvm.
+make_fnm_default() { # <fnm-dir> <version>
+  local fnm_dir=$1 version=$2
+  mkdir -p "$fnm_dir/node-versions/v$version/installation/bin" "$fnm_dir/aliases"
+  printf '#!/bin/bash\nprintf "fnm-%s\\n"\n' "$version" > "$fnm_dir/node-versions/v$version/installation/bin/node"
+  chmod +x "$fnm_dir/node-versions/v$version/installation/bin/node"
+  ln -s "$fnm_dir/node-versions/v$version/installation" "$fnm_dir/aliases/default"
+}
+fnm_node() { # [env assignment...]; prints the node the composed PATH selects
+  # shellcheck disable=SC2016 # the child expands its own arguments
+  env "$@" bash -c '. "$1/bin/fm-remote-job-lib.sh"; fm_remote_job_compose_operator_path "$2" >/dev/null; PATH="$FM_REMOTE_JOB_OPERATOR_PATH" node' _ "$ROOT" "$ACCOUNT_HOME"
+}
+[ "$(fnm_node)" = 20 ] || fail "the composed PATH lost nvm's default when fnm is absent"
+MODERN_FNM="$ACCOUNT_HOME/.local/share/fnm"
+make_fnm_default "$ACCOUNT_HOME/Library/Application Support/fnm" 21.0.0
+[ "$(fnm_node)" = fnm-21.0.0 ] || fail "the composed PATH ignored the legacy macOS fnm directory"
+make_fnm_default "$ACCOUNT_HOME/.fnm" 22.0.0
+[ "$(fnm_node)" = fnm-22.0.0 ] || fail "the composed PATH ignored the legacy ~/.fnm directory"
+make_fnm_default "$MODERN_FNM" 23.0.0
+fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
+case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
+  *":$ACCOUNT_HOME/.local/bin:$MODERN_FNM/aliases/default/bin:$NVM_V20:"*) ;;
+  *) fail "fnm's default bin was not composed between ~/.local/bin and nvm"$'\n'"  PATH: $FM_REMOTE_JOB_OPERATOR_PATH" ;;
+esac
+[ "$(fnm_node)" = fnm-23.0.0 ] || fail "the composed PATH did not prefer the XDG fnm directory"
+[ "$(fm_remote_job_manager_tool "$ACCOUNT_HOME" node)" = "$MODERN_FNM/node-versions/v23.0.0/installation/bin/node" ] \
+  || fail "version-manager tool discovery did not search fnm's installed versions first"
+make_fnm_default "$TMP_ROOT/xdg-data/fnm" 24.0.0
+[ "$(fnm_node XDG_DATA_HOME="$TMP_ROOT/xdg-data")" = fnm-24.0.0 ] || fail "the composed PATH ignored XDG_DATA_HOME"
+[ "$(fnm_node XDG_DATA_HOME=relative)" = fnm-23.0.0 ] || fail "a relative XDG_DATA_HOME displaced the default data directory"
+make_fnm_default "$TMP_ROOT/fnm-dir" 25.0.0
+[ "$(fnm_node FNM_DIR="$TMP_ROOT/fnm-dir" XDG_DATA_HOME="$TMP_ROOT/xdg-data")" = fnm-25.0.0 ] || fail "the composed PATH ignored FNM_DIR"
+rm -f "$MODERN_FNM/aliases/default"
+[ "$(fnm_node)" = 20 ] || fail "an fnm directory without a default alias displaced nvm's default"
+rm -rf -- "$MODERN_FNM" "$ACCOUNT_HOME/.fnm" "$ACCOUNT_HOME/Library/Application Support/fnm" "$TMP_ROOT/xdg-data" "$TMP_ROOT/fnm-dir"
+pass "operator PATH searches fnm's default Node ahead of nvm in fnm's directory order"
+
+# Linux Homebrew lives at a fixed system prefix this test must not create, so
+# the case asserts only where a host already has it, as CI's Linux runners do.
+LINUXBREW_BIN=/home/linuxbrew/.linuxbrew/bin
+fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
+if [ -d "$LINUXBREW_BIN" ] && [ ! -L "$LINUXBREW_BIN" ]; then
+  LINUXBREW_EXPECTED=$LINUXBREW_BIN
+  [ ! -d /usr/local/bin ] || [ -L /usr/local/bin ] || LINUXBREW_EXPECTED="$LINUXBREW_BIN:/usr/local/bin"
+  case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
+    *":$LINUXBREW_EXPECTED:/usr/bin:"*) ;;
+    *) fail "Linux Homebrew was not composed ahead of /usr/local/bin and the system tail"$'\n'"  PATH: $FM_REMOTE_JOB_OPERATOR_PATH" ;;
+  esac
+  pass "operator PATH includes Linux Homebrew beside the other Homebrew prefix"
+else
+  case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
+    *":$LINUXBREW_BIN:"*) fail "the composed PATH named an absent Linux Homebrew" ;;
+  esac
+  printf 'note: no %s on this host; the Linux Homebrew include direction is inert here\n' "$LINUXBREW_BIN"
+fi
 
 NIX_PROFILE="$ACCOUNT_HOME/.nix-profile"
 NIX_BIN="$TMP_ROOT/nix-profile-bin"
