@@ -272,12 +272,20 @@ printf '20\n' > "$NVM_ROOT/alias/default"
 printf '#!/bin/bash\nprintf "20\\n"\n' > "$NVM_V20/node"
 printf '#!/bin/bash\nprintf "24\\n"\n' > "$NVM_V24/node"
 chmod +x "$NVM_V20/node" "$NVM_V24/node"
-fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
-NVM_SELECTED=$(PATH="$FM_REMOTE_JOB_OPERATOR_PATH" node)
+# The host's real Linux Homebrew precedes the fixture managers and may carry its
+# own node, so fixture lookups resolve through the composed PATH without it.
+fixture_node() { # prints the node the composed PATH selects among fixture installs
+  local path
+  fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
+  path=":$FM_REMOTE_JOB_OPERATOR_PATH:"
+  path=${path//:\/home\/linuxbrew\/.linuxbrew\/bin:/:}
+  path=${path#:}
+  PATH=${path%:} node
+}
+NVM_SELECTED=$(fixture_node)
 [ "$NVM_SELECTED" = 20 ] || fail "the composed PATH ignored nvm's default alias"
 rm -f "$NVM_ROOT/alias/default"
-fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
-NVM_SELECTED=$(PATH="$FM_REMOTE_JOB_OPERATOR_PATH" node)
+NVM_SELECTED=$(fixture_node)
 [ "$NVM_SELECTED" = 24 ] || fail "the nvm fallback did not select the highest installed version"
 printf 'system\n' > "$NVM_ROOT/alias/default"
 fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
@@ -296,16 +304,12 @@ make_fnm_default() { # <fnm-dir> <version>
   chmod +x "$fnm_dir/node-versions/v$version/installation/bin/node"
   ln -s "$fnm_dir/node-versions/v$version/installation" "$fnm_dir/aliases/default"
 }
-fnm_node() { # prints the node the composed PATH selects
-  # shellcheck disable=SC2016 # the child expands its own arguments
-  bash -c '. "$1/bin/fm-remote-job-lib.sh"; fm_remote_job_compose_operator_path "$2" >/dev/null; PATH="$FM_REMOTE_JOB_OPERATOR_PATH" node' _ "$ROOT" "$ACCOUNT_HOME"
-}
-[ "$(fnm_node)" = 20 ] || fail "the composed PATH lost nvm's default when fnm is absent"
+[ "$(fixture_node)" = 20 ] || fail "the composed PATH lost nvm's default when fnm is absent"
 MODERN_FNM="$ACCOUNT_HOME/.local/share/fnm"
 make_fnm_default "$ACCOUNT_HOME/Library/Application Support/fnm" 21.0.0
-[ "$(fnm_node)" = fnm-21.0.0 ] || fail "the composed PATH ignored the legacy macOS fnm directory"
+[ "$(fixture_node)" = fnm-21.0.0 ] || fail "the composed PATH ignored the legacy macOS fnm directory"
 make_fnm_default "$ACCOUNT_HOME/.fnm" 22.0.0
-[ "$(fnm_node)" = fnm-22.0.0 ] || fail "the composed PATH ignored the legacy ~/.fnm directory"
+[ "$(fixture_node)" = fnm-22.0.0 ] || fail "the composed PATH ignored the legacy ~/.fnm directory"
 make_fnm_default "$MODERN_FNM" 23.0.0
 LINUXBREW_BIN=/home/linuxbrew/.linuxbrew/bin
 LINUXBREW_ENTRY=
@@ -315,11 +319,11 @@ case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
   *":$ACCOUNT_HOME/.local/bin:$MODERN_FNM/aliases/default/bin:$LINUXBREW_ENTRY$NVM_V20:"*) ;;
   *) fail "fnm's default bin was not composed between ~/.local/bin and nvm"$'\n'"  PATH: $FM_REMOTE_JOB_OPERATOR_PATH" ;;
 esac
-[ "$(fnm_node)" = fnm-23.0.0 ] || fail "the composed PATH did not prefer ~/.local/share/fnm"
+[ "$(fixture_node)" = fnm-23.0.0 ] || fail "the composed PATH did not prefer ~/.local/share/fnm"
 [ "$(fm_remote_job_manager_tool "$ACCOUNT_HOME" node)" = "$MODERN_FNM/node-versions/v23.0.0/installation/bin/node" ] \
   || fail "version-manager tool discovery did not search fnm's installed versions first"
 rm -f "$MODERN_FNM/aliases/default"
-[ "$(fnm_node)" = 20 ] || fail "an fnm directory without a default alias displaced nvm's default"
+[ "$(fixture_node)" = 20 ] || fail "an fnm directory without a default alias displaced nvm's default"
 rm -rf -- "$MODERN_FNM" "$ACCOUNT_HOME/.fnm" "$ACCOUNT_HOME/Library/Application Support/fnm"
 pass "operator PATH searches fnm's default Node ahead of nvm in fnm's directory order"
 
