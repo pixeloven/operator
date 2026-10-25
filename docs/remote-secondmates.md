@@ -166,7 +166,7 @@ Exact repeated entries are omitted.
 ### fnm version selection
 
 The fnm entry is `<fnm-dir>/aliases/default/bin`, the version `fnm default` selected.
-The fnm directory follows fnm's own lookup: `FNM_DIR`, else an existing `fnm` under `XDG_DATA_HOME` or `~/.local/share`, else an existing `~/.fnm`, else an existing macOS `~/Library/Application Support/fnm`.
+The fnm directory is the first existing one of fnm's account-home defaults: `~/.local/share/fnm`, else `~/.fnm`, else macOS `~/Library/Application Support/fnm`.
 Without a default alias, fnm adds no entry and the later directories provide Node.
 
 ### nvm version selection

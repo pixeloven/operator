@@ -198,19 +198,13 @@ fm_remote_job_append_dirs() { # <expanded glob matches>
   done
 }
 
-# fnm's data directory in fnm's own lookup order (its src/directories.rs):
-# FNM_DIR, else the XDG data directory's fnm, else the legacy ~/.fnm, else the
-# legacy macOS ~/Library/Application Support/fnm. Each default must already
-# exist, and every home-relative default uses the account home.
+# fnm's default data directory in fnm's own lookup order: the XDG default
+# ~/.local/share/fnm, else the legacy ~/.fnm, else the legacy macOS
+# ~/Library/Application Support/fnm, each under the account home and only when
+# it already exists.
 fm_remote_job_fnm_dir() { # <account-home>
-  local account_home=$1 data_home candidate
-  if [ -n "${FNM_DIR:-}" ]; then
-    printf '%s\n' "$FNM_DIR"
-    return 0
-  fi
-  data_home=${XDG_DATA_HOME:-}
-  case "$data_home" in /*) ;; *) data_home="$account_home/.local/share" ;; esac
-  for candidate in "$data_home/fnm" "$account_home/.fnm" "$account_home/Library/Application Support/fnm"; do
+  local account_home=$1 candidate
+  for candidate in "$account_home/.local/share/fnm" "$account_home/.fnm" "$account_home/Library/Application Support/fnm"; do
     [ -d "$candidate" ] || continue
     printf '%s\n' "$candidate"
     return 0
