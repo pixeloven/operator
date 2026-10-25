@@ -145,12 +145,13 @@ The authorized child sees these directories, in this order:
 1. `<remote-root>/bin`.
 2. A genuine account `~/.local/bin`.
 3. The fnm default alias bin.
-4. The nvm default version bin.
-5. asdf shims and install bins.
-6. mise shims and install bins.
-7. Nix directories.
-8. Homebrew directories.
-9. The system tail `/usr/bin:/bin:/usr/sbin:/sbin`.
+4. Linux Homebrew `/home/linuxbrew/.linuxbrew/bin`.
+5. The nvm default version bin.
+6. asdf shims and install bins.
+7. mise shims and install bins.
+8. Nix directories.
+9. Homebrew directories.
+10. The system tail `/usr/bin:/bin:/usr/sbin:/sbin`.
 
 The Nix and package-manager order after version-manager discovery is:
 
@@ -158,8 +159,7 @@ The Nix and package-manager order after version-manager discovery is:
 2. `/etc/profiles/per-user/<account>/bin`
 3. `/run/current-system/sw/bin`
 4. `/opt/homebrew/bin`
-5. `/home/linuxbrew/.linuxbrew/bin`
-6. `/usr/local/bin`
+5. `/usr/local/bin`
 
 Exact repeated entries are omitted.
 

@@ -310,9 +310,12 @@ make_fnm_default "$ACCOUNT_HOME/Library/Application Support/fnm" 21.0.0
 make_fnm_default "$ACCOUNT_HOME/.fnm" 22.0.0
 [ "$(fnm_node)" = fnm-22.0.0 ] || fail "the composed PATH ignored the legacy ~/.fnm directory"
 make_fnm_default "$MODERN_FNM" 23.0.0
+LINUXBREW_BIN=/home/linuxbrew/.linuxbrew/bin
+LINUXBREW_ENTRY=
+[ ! -d "$LINUXBREW_BIN" ] || [ -L "$LINUXBREW_BIN" ] || LINUXBREW_ENTRY="$LINUXBREW_BIN:"
 fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
 case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
-  *":$ACCOUNT_HOME/.local/bin:$MODERN_FNM/aliases/default/bin:$NVM_V20:"*) ;;
+  *":$ACCOUNT_HOME/.local/bin:$MODERN_FNM/aliases/default/bin:$LINUXBREW_ENTRY$NVM_V20:"*) ;;
   *) fail "fnm's default bin was not composed between ~/.local/bin and nvm"$'\n'"  PATH: $FM_REMOTE_JOB_OPERATOR_PATH" ;;
 esac
 [ "$(fnm_node)" = fnm-23.0.0 ] || fail "the composed PATH did not prefer the XDG fnm directory"
@@ -330,16 +333,13 @@ pass "operator PATH searches fnm's default Node ahead of nvm in fnm's directory 
 
 # Linux Homebrew lives at a fixed system prefix this test must not create, so
 # the case asserts only where a host already has it, as CI's Linux runners do.
-LINUXBREW_BIN=/home/linuxbrew/.linuxbrew/bin
 fm_remote_job_compose_operator_path "$ACCOUNT_HOME" >/dev/null
-if [ -d "$LINUXBREW_BIN" ] && [ ! -L "$LINUXBREW_BIN" ]; then
-  LINUXBREW_EXPECTED=$LINUXBREW_BIN
-  [ ! -d /usr/local/bin ] || [ -L /usr/local/bin ] || LINUXBREW_EXPECTED="$LINUXBREW_BIN:/usr/local/bin"
+if [ -n "$LINUXBREW_ENTRY" ]; then
   case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
-    *":$LINUXBREW_EXPECTED:/usr/bin:"*) ;;
-    *) fail "Linux Homebrew was not composed ahead of /usr/local/bin and the system tail"$'\n'"  PATH: $FM_REMOTE_JOB_OPERATOR_PATH" ;;
+    *":$ACCOUNT_HOME/.local/bin:$LINUXBREW_BIN:$NVM_V20:"*) ;;
+    *) fail "Linux Homebrew was not composed after the fnm slot and ahead of nvm"$'\n'"  PATH: $FM_REMOTE_JOB_OPERATOR_PATH" ;;
   esac
-  pass "operator PATH includes Linux Homebrew beside the other Homebrew prefix"
+  pass "operator PATH searches Linux Homebrew ahead of nvm, asdf, mise, and Nix"
 else
   case ":$FM_REMOTE_JOB_OPERATOR_PATH:" in
     *":$LINUXBREW_BIN:"*) fail "the composed PATH named an absent Linux Homebrew" ;;

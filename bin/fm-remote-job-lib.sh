@@ -73,9 +73,9 @@
 # its configured FM_ROOT/bin. Every child receives env -i with the composed
 # PATH, HOME, FM_HOME, FM_ROOT_OVERRIDE, and FM_REMOTE_JOB_ACTIVE=1. The PATH
 # is intentionally filesystem-discovered rather than login-shell-derived:
-# ~/.local/bin; the fnm default alias bin; nvm, asdf, and mise shims/install
-# bins; Nix; Homebrew, including Linux Homebrew; and the system tail. No shell
-# startup files are evaluated. Each discovered set is appended in the shell's
+# ~/.local/bin; the fnm default alias bin; Linux Homebrew; nvm, asdf, and mise
+# shims/install bins; Nix; Homebrew; and the system tail. No shell startup files
+# are evaluated. Each discovered set is appended in the shell's
 # own sorted pathname-expansion order, so which install of a multi-version tool
 # wins is fixed by this composition rather than by the order the filesystem
 # happens to return.
@@ -297,6 +297,7 @@ fm_remote_job_compose_operator_path() { # <account-home>
   fm_remote_job_path_append_if_dir "$account_home/.local/bin"
   fnm_dir=$(fm_remote_job_fnm_dir "$account_home" 2>/dev/null || true)
   [ -z "$fnm_dir" ] || fm_remote_job_path_append_if_dir "$fnm_dir/aliases/default/bin"
+  fm_remote_job_path_append_if_dir /home/linuxbrew/.linuxbrew/bin
   nvm_bin=$(fm_remote_job_nvm_selected_bin "$account_home" 2>/dev/null || true)
   [ -z "$nvm_bin" ] || fm_remote_job_path_append "$nvm_bin"
   fm_remote_job_path_append_if_dir "$account_home/.asdf/shims"
@@ -312,7 +313,6 @@ fm_remote_job_compose_operator_path() { # <account-home>
   fi
   fm_remote_job_path_append_resolved_dir /run/current-system/sw/bin
   fm_remote_job_path_append_if_dir /opt/homebrew/bin
-  fm_remote_job_path_append_if_dir /home/linuxbrew/.linuxbrew/bin
   fm_remote_job_path_append_if_dir /usr/local/bin
   fm_remote_job_path_append /usr/bin
   fm_remote_job_path_append /bin
