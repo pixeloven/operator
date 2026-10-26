@@ -24,16 +24,17 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 PC="$ROOT/bin/po-crew.sh"
-BASE_PATH=${FM_TEST_BASE_PATH:-/usr/bin:/bin:/usr/sbin:/sbin}
 TMP_ROOT=$(fm_test_tmproot po-crew-tests)
 FM_TEST_CLEANUP_DIRS+=("$TMP_ROOT")
 trap fm_test_cleanup EXIT
+BASE_PATH=$(fm_test_base_path_sans "${FM_TEST_BASE_PATH:-/usr/bin:/bin:/usr/sbin:/sbin}" gh claude codex pi)
 fm_git_identity fmtest fmtest@example.invalid
 
 PLUGINS='crew infra-skills planning-skills identity-skills language-skills'
 
-# The only real tools on PATH are jq and git, so an absent stub reads as an
-# absent tool even on a machine that has the real one.
+# The only real tools on PATH are jq and git, and BASE_PATH hides any host gh,
+# claude, codex, or pi, so an absent stub reads as an absent tool even on a
+# machine that has the real one.
 TOOLBIN="$TMP_ROOT/toolbin"
 mkdir -p "$TOOLBIN"
 ln -s "$(command -v jq)" "$TOOLBIN/jq"
