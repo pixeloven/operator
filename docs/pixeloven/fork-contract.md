@@ -9,7 +9,8 @@
 [ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
 [ADR-0012](../adr/0012-notification-reconciliation.md),
 [ADR-0013](../adr/0013-archived-captain-hold-completion.md),
-[ADR-0016](../adr/0016-persona-themed-at-the-edge.md), and
+[ADR-0016](../adr/0016-persona-themed-at-the-edge.md),
+[ADR-0018](../adr/0018-security-policy-file.md), which claims `.github/SECURITY.md` and no upstream hunk, and
 [ADR-0019](../adr/0019-crew-machine-level-delivery.md), which claims a `po-*` helper and no upstream hunk.
 [ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock exception was withdrawn and carries no hunks.
 [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) superseded the companion-distribution exception of
