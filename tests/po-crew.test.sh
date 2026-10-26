@@ -2,14 +2,15 @@
 # tests/po-crew.test.sh - behavior tests for bin/po-crew.sh (ADR-0019).
 #
 # Coverage:
-#   - fence writes the five disabled entries into a fresh home and keeps the
-#     file out of git status
-#   - fence preserves every other key, backs up once, overrides an enabled
-#     entry, is idempotent, and leaves malformed JSON untouched
+#   - fence writes the five disabled entries into a fresh home
+#   - fence preserves every other key, backs up once under state/po-crew,
+#     overrides an enabled entry, is idempotent, and leaves malformed JSON
+#     untouched
 #   - fence skips a secondmate home and writes nothing there
 #   - check passes on a complete install with stub claude, codex, and pi, and
 #     reports a missing, disabled, or behind plugin, a missing catalogue, an
-#     absent tool, and a missing fence as the right rows
+#     absent tool, and a missing fence as the right rows, and warns without
+#     failing when a Codex cache directory is not a git checkout
 #
 # Every tool is a stub on PATH and every tool state path is a fixture, so no
 # case reads or writes this machine's real install or operator home.
@@ -41,6 +42,7 @@ new_home() {  # <name>: a primary home that is a git work tree
 }
 
 settings() { printf '%s\n' "$1/.claude/settings.local.json"; }
+backup() { printf '%s\n' "$1/state/po-crew/settings.local.json.bak"; }
 
 fenced() {  # <file>: exit 0 when all five entries are false
   jq -e '(.enabledPlugins // {}) as $e | all("crew","infra-skills","planning-skills","identity-skills","language-skills"; $e[. + "@pixeloven"] == false)' "$1" >/dev/null
@@ -52,9 +54,8 @@ test_fence_fresh_home() {
   out=$(PATH="$TOOLBIN:$BASE_PATH" "$PC" fence "$home" 2>&1) || fail "fence failed on a fresh home: $out"
   assert_contains "$out" "fence: applied" "fence did not report applying"
   fenced "$(settings "$home")" || fail "fresh fence is missing an entry: $(cat "$(settings "$home")")"
-  [ -z "$(git -C "$home" status --porcelain)" ] || fail "fence left the home dirty: $(git -C "$home" status --porcelain)"
-  assert_absent "$(settings "$home").po-crew-backup" "fence backed up a file that did not exist"
-  pass "fence writes the five entries into a fresh home and keeps git status clean"
+  assert_absent "$(backup "$home")" "fence backed up a file that did not exist"
+  pass "fence writes the five entries into a fresh home"
 }
 
 test_fence_preserves_and_is_idempotent() {
@@ -75,15 +76,14 @@ JSON
   assert_equals "$(jq -c '.permissions' "$file")" '{"allow":["Bash(ls:*)"],"deny":["Bash(rm:*)"]}' "fence lost the permission rules"
   assert_equals "$(jq -r '.env.KEEP' "$file")" 1 "fence lost an unrelated key"
   assert_equals "$(jq -r '.enabledPlugins["other@elsewhere"]' "$file")" true "fence lost another plugin's entry"
-  assert_equals "$(cat "$file.po-crew-backup")" "$before" "the backup is not the original file"
-  [ -z "$(git -C "$home" status --porcelain)" ] || fail "fence or its backup left the home dirty: $(git -C "$home" status --porcelain)"
+  assert_equals "$(cat "$(backup "$home")")" "$before" "the backup is not the original file"
   after=$(cksum < "$file")
   out=$(PATH="$TOOLBIN:$BASE_PATH" "$PC" fence "$home" 2>&1) || fail "second fence failed: $out"
   assert_contains "$out" "already present" "second fence did not report a no-op"
   assert_equals "$(cksum < "$file")" "$after" "second fence changed the file"
   jq '.enabledPlugins["crew@pixeloven"] = true' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
   PATH="$TOOLBIN:$BASE_PATH" "$PC" fence "$home" >/dev/null 2>&1 || fail "re-fence failed"
-  assert_equals "$(cat "$file.po-crew-backup")" "$before" "a later change overwrote the first backup"
+  assert_equals "$(cat "$(backup "$home")")" "$before" "a later change overwrote the first backup"
   pass "fence keeps every other key, backs up once, overrides an enabled entry, and is idempotent"
 }
 
@@ -218,6 +218,19 @@ test_check_absent_tools_and_fence() {
   pass "check skips absent tools and a secondmate fence, and reports a missing fence or catalogue"
 }
 
+test_check_codex_cache_without_git() {
+  local m home out p
+  m=$(new_install nogit)
+  home=$(fenced_home nogit "$m")
+  for p in $PLUGINS; do rm -rf "$m/codex/plugins/cache/pixeloven/$p/0.1.0/.git"; done
+  fm_git_init_commit "$m/codex" >/dev/null
+  out=$(run_check "$m" "$home")
+  assert_contains "$out" "rc=0" "a Codex cache without .git failed check: $out"
+  assert_equals "$(printf '%s\n' "$out" | grep -cE '^warn +codex .*installed commit not readable from cache')" 5 "expected one warn row per Codex plugin: $out"
+  assert_not_contains "$out" "fail " "a Codex cache without .git reported a failure"
+  pass "check warns without failing when the Codex cache is not a git checkout, ignoring a parent repository"
+}
+
 test_check_is_read_only() {
   local m home before after
   m=$(new_install readonly)
@@ -236,6 +249,7 @@ test_fence_skips_secondmate
 test_check_complete_install
 test_check_reports_failures
 test_check_absent_tools_and_fence
+test_check_codex_cache_without_git
 test_check_is_read_only
 
 echo "all po-crew tests passed"

@@ -11,14 +11,15 @@
 # The fence is five `"<plugin>@pixeloven": false` entries under enabledPlugins
 # in the home's untracked .claude/settings.local.json. `fence` merges exactly
 # those entries and keeps every other key in the file, such as permission rules;
-# it backs the file up once before its first change, is a no-op when the entries
-# are already present, and keeps the file and its backup out of `git status`
-# through the repository's .git/info/exclude when nothing ignores them yet.
+# it backs the file up once, to the home's gitignored
+# state/po-crew/settings.local.json.bak, before its first change, and is a
+# no-op when the entries are already present.
 # A secondmate home (.fm-secondmate-home marker) is skipped: its Claude settings
 # come from the parent home's spawn, not from this file.
 #
 # `check` is read-only. It prints one row per item and exits 1 when any row is
-# `fail`; a tool that is not installed prints `skip` rows instead.
+# `fail`; a tool that is not installed prints `skip` rows instead, and a Codex
+# plugin whose cache directory is not a git checkout prints a `warn` row.
 #   - the catalogue lists a pin for every plugin
 #   - Claude Code, Codex, and pi each have every plugin installed at user scope,
 #     enabled (Claude Code and Codex), and at the catalogue pin
@@ -47,6 +48,7 @@ CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 PI_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 CATALOGUE="$CLAUDE_DIR/plugins/marketplaces/$MARKET/.claude-plugin/marketplace.json"
 REL_SETTINGS='.claude/settings.local.json'
+REL_BACKUP='state/po-crew/settings.local.json.bak'
 
 die() { printf 'po-crew: %s\n' "$*" >&2; exit 1; }
 
@@ -66,21 +68,6 @@ fence_json() {
   printf '%s\n' "$out"
 }
 
-# exclude_settings <home>: keep the file and its backup out of git status when
-# the home is a work tree and nothing ignores them yet.
-exclude_settings() {
-  local excl rel
-  git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
-  excl=$(git -C "$1" rev-parse --git-path info/exclude 2>/dev/null || true)
-  [ -n "$excl" ] || return 0
-  case "$excl" in /*) ;; *) excl="$1/$excl" ;; esac
-  for rel in "$REL_SETTINGS" "$REL_SETTINGS.po-crew-backup"; do
-    git -C "$1" check-ignore -q "$rel" 2>/dev/null && continue
-    mkdir -p "$(dirname "$excl")"
-    grep -qxF "$rel" "$excl" 2>/dev/null || printf '%s\n' "$rel" >> "$excl"
-  done
-}
-
 fence() {
   local home file want cur tmp
   home=$(home_dir "${1:-}")
@@ -95,11 +82,13 @@ fence() {
     printf '%s' "$cur" | jq -e 'type == "object" and ((.enabledPlugins // {}) | type == "object")' >/dev/null \
       || die "unexpected settings shape, left unchanged: $file"
     if printf '%s' "$cur" | jq -e --argjson w "$want" '(.enabledPlugins // {}) as $e | all($w | to_entries[]; $e[.key] == false)' >/dev/null; then
-      exclude_settings "$home"
       echo "fence: already present in $file"
       return 0
     fi
-    [ -e "$file.po-crew-backup" ] || cp -p "$file" "$file.po-crew-backup"
+    if [ ! -e "$home/$REL_BACKUP" ]; then
+      mkdir -p "$(dirname "$home/$REL_BACKUP")"
+      cp -p "$file" "$home/$REL_BACKUP"
+    fi
   else
     mkdir -p "$home/.claude"
     cur='{}'
@@ -109,12 +98,11 @@ fence() {
     || { rm -f "$tmp"; die "could not write $file"; }
   # Rewrite in place so an existing file keeps its mode and inode.
   if [ -f "$file" ]; then cat "$tmp" > "$file" && rm -f "$tmp"; else mv "$tmp" "$file"; fi
-  exclude_settings "$home"
   echo "fence: applied to $file"
 }
 
 FAILED=0
-row() {  # <ok|fail|skip> <item> <detail>
+row() {  # <ok|warn|fail|skip> <item> <detail>
   printf '%-4s  %-34s %s\n' "$1" "$2" "$3"
   [ "$1" != fail ] || FAILED=1
 }
@@ -178,7 +166,7 @@ check_claude() {
 }
 
 check_codex() {
-  local list p entry ver sha
+  local list p entry dir
   if ! command -v codex >/dev/null 2>&1; then
     row skip codex "not installed"
     return 0
@@ -192,9 +180,12 @@ check_codex() {
     elif [ "$(printf '%s' "$entry" | jq -r '.enabled')" != true ]; then
       row fail "codex $p@$MARKET" "installed but disabled"
     else
-      ver=$(printf '%s' "$entry" | jq -r '.version // empty')
-      sha=$(git -C "$CODEX_DIR/plugins/cache/$MARKET/$p/$ver" rev-parse HEAD 2>/dev/null || true)
-      at_pin codex "$p" "$sha" enabled
+      dir="$CODEX_DIR/plugins/cache/$MARKET/$p/$(printf '%s' "$entry" | jq -r '.version // empty')"
+      if [ -e "$dir/.git" ]; then
+        at_pin codex "$p" "$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)" enabled
+      else
+        row warn "codex $p@$MARKET" "enabled, installed commit not readable from cache"
+      fi
     fi
   done
 }

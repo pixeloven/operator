@@ -25,7 +25,7 @@ bin/po-crew.sh fence    # primary home; a no-op when already present
 ```
 
 The fence is a `false` entry for each of the five plugins under `enabledPlugins` in the home's untracked `.claude/settings.local.json`.
-`fence` merges only those entries and keeps every other key, such as permission rules, backs the file up once to `settings.local.json.po-crew-backup` before its first change, and keeps both files out of `git status` through `.git/info/exclude` when nothing else ignores them.
+`fence` merges only those entries and keeps every other key, such as permission rules, and backs the file up once to the home's gitignored `state/po-crew/settings.local.json.bak` before its first change.
 It refuses a malformed file and leaves it unchanged.
 It skips a second mate home, whose Claude settings come from the parent's spawn rather than from this file.
 Never put the fence in the tracked `.claude/settings.json`: that would turn `crew` off for every worker copy of this repository.
@@ -38,6 +38,7 @@ bin/po-crew.sh check    # read-only; exit 1 when any row is `fail`
 
 It prints one row for the catalogue, one per tool and plugin, and one for the fence.
 A tool that is not installed prints a `skip` row.
+A Codex plugin whose cache directory is not a git checkout prints a `warn` row, `installed commit not readable from cache`, which does not fail the check.
 
 | Row says | Meaning | Fix |
 |---|---|---|
