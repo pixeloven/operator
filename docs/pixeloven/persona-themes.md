@@ -28,6 +28,7 @@ The selection is the first line of the gitignored `config/po-theme`; absent, emp
 The chat words change from the next session start; workers launched after `apply` get the new vocabulary line at once.
 Second mates pick up the block when `data/captain-shared.md` next propagates to them, and they resolve the theme from its values line, so a custom theme defined only in the primary home still applies there.
 `apply` refuses in a second mate home, and a selection file there is ignored, because the persona is primary-authoritative.
+After an update that changes a theme's words, such as the lowercase role words of ADR-0020, the primary home reruns `apply` so second mates inherit the new block; until then a second mate reads an inherited values line's role words in lowercase.
 After `/updatefirstmate` or an upstream merge, run `verify` and rerun `apply` if it reports drift.
 
 A themed home spends about 1,150 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.

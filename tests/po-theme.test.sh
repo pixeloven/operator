@@ -16,7 +16,8 @@
 #   - the worker role contract is byte-identical to upstream under nautical and
 #     gains exactly one vocabulary line under a theme
 #   - a secondmate home resolves a custom theme from the inherited values line,
-#     refuses apply, ignores a local selection, and refuses a tampered line
+#     refuses apply, ignores a local selection, refuses a tampered line, and
+#     reads a capitalized inherited role word in lowercase
 #   - generated alias skills keep `git status --porcelain` and the guarded
 #     self-update's dirty_status empty, and nautical apply removes them
 #   - verify reports a stale, hand-edited, missing, or unexpected block and
@@ -362,6 +363,15 @@ test_secondmate_home() {
   out=$(run_in "$ROOT" "$mate" worker-line 2>&1) && fail "a tampered values line was accepted: $out"
   assert_equals "" "$(role_of "$ROOT/bin" "$mate" | grep 'Vocabulary for prose' || true)" "a tampered values line reached the worker role contract"
   rm "$mate/data/captain-shared.md" "$mate/data/captain-shared.md.bak"
+
+  run_in "$code" "$primary" persona operator \
+    | sed '/^<!-- po-theme:values /s/ self="spotter" / self="Spotter" /; /^<!-- po-theme:values /s/ fleet="task force" / fleet="Task Force" /' \
+    > "$mate/data/captain-shared.md"
+  grep -q ' self="Spotter" .* fleet="Task Force"' "$mate/data/captain-shared.md" || fail "the fixture values line was not capitalized"
+  out=$(run_in "$ROOT" "$mate" worker-line 2>&1) || fail "an inherited capitalized values line failed: $out"
+  assert_contains "$out" 'firstmate "spotter"' "the inherited role words were not read in lowercase"
+  assert_contains "$(role_of "$ROOT/bin" "$mate")" 'firstmate "spotter"' "an inherited capitalized values line dropped the worker vocabulary line"
+  rm "$mate/data/captain-shared.md"
   assert_equals "" "$(run_in "$ROOT" "$mate" address-alt)" "a secondmate home without an inherited block is not nautical"
   pass "a secondmate home resolves an inherited custom theme, refuses apply, and rejects tampering"
 }

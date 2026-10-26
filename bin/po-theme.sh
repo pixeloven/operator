@@ -201,8 +201,12 @@ resolve_active() {
   if is_secondmate_home; then
     block_of "$SHARED" > "$TMPD/inherited.block"
     if [ -s "$TMPD/inherited.block" ]; then
-      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.theme" \
+      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.raw" \
         || die "the inherited Persona block in $SHARED has no values line; rerun apply in the primary home"
+      awk -v roles="$ROLE_KEYS" '
+        BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
+        { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
+      ' "$TMPD/inherited.raw" > "$TMPD/inherited.theme"
       parse "$TMPD/inherited.theme" > "$TMPD/inherited.kv" 2>/dev/null || die "the inherited Persona values line is malformed"
       n=$(get "$TMPD/inherited.kv" name 2>/dev/null || true)
       valid_name "$n" || die "the inherited Persona values line has no valid name"
