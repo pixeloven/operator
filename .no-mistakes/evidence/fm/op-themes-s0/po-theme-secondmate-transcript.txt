@@ -1,0 +1,43 @@
+### S4 second-mate home inheriting a block applied by the PRE-change code (capitalized role words)
+$ (base 98f88c60) po-theme.sh apply  # primary home, operator theme
+persona: operator block written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-s0.J6TUiX/oldprimary/data/captain-shared.md
+alias: /debrief -> /ahoy
+alias: /sitrep -> /bearings
+alias: /flush -> /stow
+alias: /updateoperator -> /updatefirstmate
+[exit 0]
+--- inherited values line:
+self="Spotter"
+worker="Specialist"
+submate="Navigator"
+fleet="Task Force"
+$ (new c418530a) po-theme.sh resolve  # second-mate home
+operator inherited:/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-s0.J6TUiX/mate/data/captain-shared.md
+[exit 0]
+$ (new c418530a) po-theme.sh worker-line  # second-mate home
+Vocabulary for prose a person reads (reports, summaries): this home calls the captain "operator", firstmate "spotter", crewmates "specialists", the crew "squad", second mates "navigators", the fleet "task force", ship tasks "deploy", and scout tasks "recon"; identifiers and brief headings stay as written.
+[exit 0]
+$ (new c418530a) po-theme.sh address-alt  # second-mate home
+Operator
+[exit 0]
+$ (new c418530a) po-theme.sh verify  # second-mate home
+drift: the inherited Persona block does not match its own values line (hand-edited)
+[exit 1]
+$ (new) po-theme.sh persona | grep table rows  # second-mate home
+| first mate, firstmate (you) | spotter |
+| crewmate, crewmates (a worker) | specialist, specialists |
+| fleet | task force |
+--- new-code worker role contract in the second-mate home:
+Vocabulary for prose a person reads (reports, summaries): this home calls the captain "operator", firstmate "spotter", crewmates "specialists", the crew "squad", second mates "navigators", the fleet "task force", ship tasks "deploy", and scout tasks "recon"; identifiers and brief headings stay as written.
+--- control: base code on same inherited block (expected to work, capitalized):
+Vocabulary for prose a person reads (reports, summaries): this home calls the captain "operator", firstmate "Spotter", crewmates "Specialists", the crew "squad", second mates "Navigators", the fleet "Task Force", ship tasks "deploy", and scout tasks "recon"; identifiers and brief headings stay as written.
+--- address guard still refuses the inherited vocative (new code):
+Operator, add a flag.
+[exit 0 - nonzero means refused]
+--- adversarial: tampered inherited values line with a directive still refused
+error: self: value contains the authority word 'ignore'
+error: self: value contains the authority word 'rules'
+po-theme: theme operator failed validation
+[exit 1]
+--- control: a non-address intent line in the same second-mate home (new code):
+[exit 1 - nonzero/empty means allowed]
