@@ -1,0 +1,18 @@
+## Parsed artifact 'uses:' refs per workflow (python yaml)
+.github/workflows/ci.yml ['actions/upload-artifact@v4', 'actions/upload-artifact@v4', 'actions/upload-artifact@v4', 'actions/upload-artifact@v4', 'actions/upload-artifact@v4', 'actions/download-artifact@v4', 'actions/upload-artifact@v4']
+.github/workflows/no-mistakes-required.yml []
+.github/workflows/pixeloven-gates.yml []
+.github/workflows/pixeloven-release.yml []
+.github/workflows/windows-herdr-spike.yml ['actions/upload-artifact@v7']
+spike step with: [{'name': 'windows-herdr-spike-${{ github.run_id }}', 'path': '${{ runner.temp }}/windows-herdr-measurement.md\n${{ runner.temp }}/windows-herdr-details.log\n${{ runner.temp }}/herdr-fm-windows-spike-*.log\n${{ runner.temp }}/herdr-windows-install.log\n', 'if-no-files-found': 'warn'}]
+
+## actions/upload-artifact@v7 action.yml
+runs: {'using': 'node24', 'main': 'dist/upload/index.js'}
+inputs: ['archive', 'compression-level', 'if-no-files-found', 'include-hidden-files', 'name', 'overwrite', 'path', 'retention-days']
+
+## actions/upload-artifact@v4 action.yml
+runs: {'using': 'node20', 'main': 'dist/upload/index.js'}
+inputs: ['compression-level', 'if-no-files-found', 'include-hidden-files', 'name', 'overwrite', 'path', 'retention-days']
+
+## v7 'archive' input
+{'description': 'If true, the artifact will be archived (zipped) before uploading. If false, the artifact will be uploaded as-is without archiving. When `archive` is `false`, only a single file can be uploaded. The name of the file will be used as the artifact name (ignoring the `name` parameter).\n', 'default': 'true'}
