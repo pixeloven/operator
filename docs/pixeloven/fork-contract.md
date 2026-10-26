@@ -8,8 +8,9 @@
 [ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md), which supersedes
 [ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
 [ADR-0012](../adr/0012-notification-reconciliation.md),
-[ADR-0013](../adr/0013-archived-captain-hold-completion.md), and
-[ADR-0016](../adr/0016-persona-themed-at-the-edge.md).
+[ADR-0013](../adr/0013-archived-captain-hold-completion.md),
+[ADR-0016](../adr/0016-persona-themed-at-the-edge.md), and
+[ADR-0019](../adr/0019-crew-machine-level-delivery.md), which claims a `po-*` helper and no upstream hunk.
 [ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock exception was withdrawn and carries no hunks.
 [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) superseded the companion-distribution exception of
 [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
@@ -41,8 +42,8 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 |---|---|---|
 | Runtime backends | `bin/backends/` | new adapter files only |
 | Skills | `.agents/skills/po-*` | the `po-` prefix exists so upstream can never collide with us |
-| Fork scripts | `bin/po-*` | claimed by ADR-0016; today the persona theme helper |
-| Fork tests | `tests/po-*` | claimed by ADR-0016; upstream's runner picks them up by name |
+| Fork scripts | `bin/po-*` | claimed by ADR-0016 for the persona theme helper; ADR-0019 adds the `crew` delivery helper |
+| Fork tests | `tests/po-*` | claimed by ADR-0016 and ADR-0019; upstream's runner picks them up by name |
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
 | CI we own | `.github/workflows/pixeloven-*.yml` | |
@@ -51,7 +52,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, and 0016 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, and 0021 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -70,6 +71,7 @@ Companion tools are acquired exactly as upstream acquires them, so no upstream f
 Assertion A8 fails if a tracked file outside decision and documentation history selects a PixelOven companion fork again.
 
 ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, ADR-0015 owns the documentation-audience entries that classify PixelOven prose, and ADR-0016 owns the persona hunks: one line in `AGENTS.md` and the worker-vocabulary and themed-vocative hunks in `bin/fm-dod-lib.sh`, which assertion A9 holds to exactly the lines that ADR lists.
+ADR-0021 carries upstream's unmerged Herdr slash-popup composer fix in `bin/fm-composer-lib.sh`, its three tests, and their captured screens, byte-identical to that pull request, until an upstream synchronization brings it.
 
 ## Taking upstream changes
 
