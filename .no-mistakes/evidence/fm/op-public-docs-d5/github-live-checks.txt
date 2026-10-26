@@ -1,0 +1,7 @@
+$ gh api repos/pixeloven/operator/private-vulnerability-reporting
+{"enabled":true}$ gh api repos/pixeloven/operator/community/profile --jq .files.security_policy  (default branch, pre-merge)
+
+$ gh api repos/kunchenguid/firstmate/contents/SECURITY.md / .github/SECURITY.md / docs/SECURITY.md (upstream collision check)
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)

@@ -1,0 +1,25 @@
+## Private-material references remaining in mutable docs (docs/pixeloven, docs/adr/README.md, .github/SECURITY.md, README banner)
+harmony:                 1 hits
+ductiletoaster/harmony:  1 hits
+pixeloven/lattice:       0 hits
+ansible/roles:           0 hits
+1Password:               0 hits
+op-ssh-sign:             0 hits
+#1237:                   0 hits
+#512:                    0 hits
+
+## remaining 'bastion' mentions (generic noun):
+docs/pixeloven/supply-chain-read.md:290:**Recommendation (mandatory).** The bastion role must export
+docs/pixeloven/supply-chain-read.md:440:- **Status:** this part **gates P1.2**. The pins in §9 are the ones the bastion
+docs/pixeloven/supply-chain-read.md:551:have put a foreign publisher's binary on the bastion's `PATH` under the name
+docs/pixeloven/supply-chain-read.md:577:  bastion's `PATH`) so no `sudo` branch is ever reachable;
+docs/pixeloven/supply-chain-read.md:713:- **A headless bastion needs `loginctl enable-linger`** for the user, or a
+docs/pixeloven/supply-chain-read.md:718:  mitigation. Decide which mode the bastion runs in and assert it, rather than
+docs/pixeloven/supply-chain-read.md:769:session on the bastion — including our own private work — gains a hook that
+docs/pixeloven/supply-chain-read.md:805:in the toolbelt, and it includes `~/.pi/`, which on our bastion is the harness
+docs/pixeloven/supply-chain-read.md:808:new credentials on the bastion during the pilot" should be read as also meaning
+docs/pixeloven/supply-chain-read.md:861:  — which on our bastion includes repository write. Nothing new is granted; it is
+
+## Accepted ADR files changed vs base (must be none besides the new 0018 + README index):
+A	docs/adr/0018-security-policy-file.md
+M	docs/adr/README.md

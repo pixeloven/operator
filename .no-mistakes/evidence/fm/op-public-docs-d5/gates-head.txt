@@ -1,0 +1,26 @@
+## Fork-contract assertions step extracted from .github/workflows/pixeloven-gates.yml, run at HEAD b02e4988 (only local tweak: BSD-sed-portable '1{/^$/d;}' in A5)
+== A1 - the project is never named firstmate
+== A2 - every self-referential PixelOven URL is a real PixelOven repo
+== A3 - the project is never capitalized as a proper noun (G-7)
+== A4 - O-1: the diff against upstream 0e82f3eebd211c025041de0c0fa066d140fd7cbf stays inside PixelOven namespaces and accepted ADR overrides
+== A5 - the README exception stays one bounded banner block
+== A6 - upstream repo invariant: personal fleet paths stay untracked
+== A7 - the recorded upstream pin is a canonical upstream ancestor contained in this tree
+upstream lineage: operator 0e82f3eebd211c025041de0c0fa066d140fd7cbf is an ancestor of https://github.com/kunchenguid/firstmate.git refs/heads/main
+upstream lineage checks passed
+== A8 - companion tools come from upstream sources, not PixelOven forks (ADR-0015)
+== A9 - the ADR-0016 persona hunks stay exactly as listed
+== A10 - the theme canary: mirrored literals, commands, and hooks still match, and every bundled theme validates
+anchors: ok
+validate: nautical ok
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 461 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+validate: operator ok
+fork-contract assertions PASSED
+exit=0
+
+## Relative-link step
+145 relative links in docs/pixeloven and docs/adr all resolve
+exit=0

@@ -1,0 +1,24 @@
+## A4 filter: paths REJECTED (printed) by each allowlist
+--- base workflow (cb5068eb):
+.github/SECURITY.md
+SECURITY.md
+docs/SECURITY.md
+.github/SECURITY.md.bak
+x/.github/SECURITY.md
+.github/workflows/evil.yml
+.github/CODEOWNERS
+--- HEAD workflow (b02e4988):
+SECURITY.md
+docs/SECURITY.md
+.github/SECURITY.md.bak
+x/.github/SECURITY.md
+.github/workflows/evil.yml
+.github/CODEOWNERS
+--- HEAD identity.md documented A4 command:
+SECURITY.md
+docs/SECURITY.md
+.github/SECURITY.md.bak
+x/.github/SECURITY.md
+.github/workflows/evil.yml
+.github/CODEOWNERS
+identity.md A4 regex == workflow A4 regex: identical
