@@ -422,7 +422,7 @@ Redo this read when any of these happen:
 ---
 
 *Published in two places (task A0.2): this file, and the knowledge-corpus note
-`operator-supply-chain-read`. Linked from ductiletoaster/harmony#1237.*
+`operator-supply-chain-read`. Linked from a private tracking issue.*
 
 ---
 
@@ -766,7 +766,7 @@ firstmate's install hints append `&& <tool> setup hooks` for `gh-axi`,
 It is idempotent by marker and it only ever touches its own entries. But the
 rewrite is a full `JSON.stringify(..., 2)` round-trip: any formatting or comments
 in the operator's `~/.claude/settings.json` are lost, and every Claude Code
-session on the bastion — including our own harmony work — gains a hook that
+session on the bastion — including our own private work — gains a hook that
 executes a third-party binary at session start.
 
 `tasks-axi` also exposes `setup hooks`; `quota-axi` does not.
@@ -899,15 +899,15 @@ lint → rebase → push → PR → CI**.
   default-branch copy** — a pushed branch cannot turn it off — so a gate agent
   never loads firstmate's fleet-captain `AGENTS.md` identity. Read alongside
   `bin/fm-gate-refuse-lib.sh`'s lifecycle refusal, that is a genuine two-layer
-  authority boundary, and it is the model to copy when we register `harmony`
-  under this posture in P2.1.
+  authority boundary, and it is the model to copy when we register our private
+  repositories under this posture in P2.1.
 
 ---
 
 ## 9. The pins
 
 Exact versions, integrity hashes, and the floor each one clears. These are what
-`ansible/roles/bastion/defaults/main.yml` carries.
+the provisioning host role's defaults carry.
 
 | Package | Pin | Published | Integrity / digest | Floor cleared |
 |---|---|---|---|---|
@@ -1004,8 +1004,8 @@ In addition to A0.3's triggers:
 ---
 
 *Part 2 published for task P1.6 (H-1, G-2). Pins feed
-`ansible/roles/bastion/defaults/main.yml` in P1.2. Linked from
-ductiletoaster/harmony#512 and pixeloven/operator#1.*
+the provisioning host role's defaults in P1.2. Linked from
+a private tracking issue and pixeloven/operator#1.*
 
 ---
 

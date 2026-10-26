@@ -30,8 +30,8 @@ state**: it names the projects *this* operator instance works on, on *this* mach
 it were the project's configuration, and would collide on every merge.
 
 So: the **policy** (posture `no-mistakes`, and why) is version-controlled — here, and in
-ADR-0005. The **instance** of that policy is provisioned per machine, by the harmony
-bastion role (`ansible/roles/bastion/tasks/agentic.yml`, task P1.2).
+ADR-0005. The **instance** of that policy is provisioned per machine, by a provisioning
+host's role (task P1.2).
 
 Note the shape this produces, which surprises people: the fleet home *is* a clone of this
 repository — firstmate's model is that the cloned repo is the distro — and it then holds a
@@ -106,7 +106,7 @@ A pipeline-delivered pull request is expected to make that check green before me
 
 ## 5. Verification
 
-Registration and gate initialisation were verified on the harmony bastion, 2026-08-17:
+Registration and gate initialisation were verified on the provisioning host, 2026-08-17:
 
 ```console
 $ no-mistakes doctor
@@ -155,10 +155,10 @@ error: step rebase failed: git rebase origin/main: exit status 128:
 ```
 
 The cause is host git configuration, not the tool. Globally this machine sets
-`commit.gpgsign=true`, `gpg.format=ssh`, and `gpg.ssh.program=/opt/1Password/op-ssh-sign` —
-but **`user.signingkey` is unset**, and the 1Password SSH agent holds no identities in a
+`commit.gpgsign=true`, `gpg.format=ssh`, and an SSH signing program —
+but **`user.signingkey` is unset**, and the SSH signing agent holds no identities in a
 non-interactive context (`ssh-add -L` → *"The agent has no identities"*). Existing repos on
-this box work around it individually; harmony's clone carries a local
+this box work around it individually; one carries a local
 `commit.gpgsign=false`.
 
 Setting the same locally in the project clone **does not** fix the pipeline, and the reason
@@ -168,10 +168,10 @@ inherits the **global** config. That gate repo also has **no `user.email`**, so 
 
 **Status: the posture is registered and enforced; the pipeline check is pending first real
 use.** Two host-level gaps have to close first. Both belong to the provisioning task
-(harmony's `ansible/roles/bastion/tasks/agentic.yml`), and one needs a human decision that
+(the provisioning host's role), and one needs a human decision that
 should not be made silently:
 
-1. **Commit signing.** Either unlock the 1Password SSH agent and set `user.signingkey` from
+1. **Commit signing.** Either unlock the SSH signing agent and set `user.signingkey` from
    `ssh-add -L` — the intent the global config already expresses — or deliberately exempt
    agent-authored commits from signing. Disabling signing machine-wide to unblock a robot
    changes a human's commit provenance across every repository on the box, so it is the
@@ -186,7 +186,7 @@ would otherwise have surfaced during the first real overnight run, which is the 
 for having attempted the validation rather than asserting it.
 
 Two environment settings are required on any host that runs the gate, and are baked into
-the bastion role rather than left to the shell:
+the provisioning host's role rather than left to the shell:
 
 - `NO_MISTAKES_TELEMETRY=0` — the tool ships default-on analytics. The variable must reach
   the **daemon**, whose generated unit forwards only `HOME`, `PATH`, and proxy variables;
