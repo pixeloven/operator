@@ -1,0 +1,28 @@
+CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --da
+ngerously-skip-permissions
+➜  wt CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claud
+e --dangerously-skip-permissions
+ ▐▛███▛█   Claude Code v2.1.311
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   /…/T/fm-ctl-live.kM7bxY/wt
+
+  ⎿  SessionStart:startup says: dotfiles: 7 changes
+     not codified - run /codify
+
+──────────────────────────────────────────────────────
+❯ /exit
+──────────────────────────────────────────────────────
+  ⚠ Transcript saving is off — inherited CLAUDE_COD…
+  ❯ /exit                Exit the CLI
+    /context             Visualize current context
+                         usage as a colored grid
+    /usage-credits       Configure usage credits or
+                         request them from your adm…
+    …rew:seam-detection  (crew) Use when scanning a
+                         diff for protected changes…
+
+
+
+
+➜  wt git:(ctl)
+➜  wt git:(ctl)

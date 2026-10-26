@@ -1,0 +1,6 @@
+[fixed] task ctl -> fm-lab-fmctl-live-89978-2390:w1:p2
+[fixed] agent state before: alive
+[fixed] $ fm-control.sh ctl exit
+stopped ctl harness=claude backend=herdr endpoint=fm-lab-fmctl-live-89978-2390:w1:p2 worktree=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-ctl-live.kM7bxY/wt
+[fixed] fm-control exit rc=0
+[fixed] agent state after: dead

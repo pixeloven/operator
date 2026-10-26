@@ -1,0 +1,3 @@
+ok - live Herdr submit confirm: Claude Code (2.1.311 (Claude Code)) on herdr 0.8.0 reports empty and renders the requested reply in isolated session fm-lab-herdr-submit-con-75038-30913
+ok - live Herdr submit confirm: Claude Code (2.1.311 (Claude Code)) on herdr 0.8.0 submits a U+2063 away-supervisor payload whose read-back drops the mark
+not ok - Claude Code (2.1.311 (Claude Code)) on herdr 0.8.0: a typed /context behind its command popup must confirm empty, got 'send-failed'

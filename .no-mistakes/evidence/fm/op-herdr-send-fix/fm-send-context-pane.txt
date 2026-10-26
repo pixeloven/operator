@@ -1,0 +1,21 @@
+CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --d
+angerously-skip-permissions
+➜  01M5X309MNEATV0SA27T1B6F74 CLAUDE_CODE_ENABLE_PROM
+PT_SUGGESTION=false claude --dangerously-skip-permiss
+ions
+ ▐▛███▛█   Claude Code v2.1.311
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/…/01M5X309MNEATV0SA27T1B6F74
+
+  ⎿  SessionStart:startup says: dotfiles: 7 changes
+     not codified - run /codify
+
+❯ /context
+
+✶ Dilly-dallying…
+
+─────────────────────────────────────────────────────
+❯
+─────────────────────────────────────────────────────
+  ⚠ Transcript saving is off — inherited CLAUDE_CO…
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · …

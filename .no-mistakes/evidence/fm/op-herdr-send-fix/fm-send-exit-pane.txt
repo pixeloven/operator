@@ -1,0 +1,40 @@
+     tokens
+     ├ superpowers:requesting-code-review: < 20
+     tokens
+     ├ superpowers:test-driven-development: < 20
+     tokens
+     └ superpowers:using-superpowers: < 20 tokens
+
+     Built-in
+     ├ dataviz: ~480 tokens
+     ├ claude-api: ~360 tokens
+     ├ code-review: ~280 tokens
+     ├ update-config: ~240 tokens
+     ├ schedule: ~130 tokens
+     ├ run: ~120 tokens
+     ├ loop: ~120 tokens
+     ├ plugin-authoring: ~90 tokens
+     ├ workflow-authoring: ~80 tokens
+     ├ keybindings-help: ~80 tokens
+     ├ fewer-permission-prompts: ~60 tokens
+     ├ simplify: ~60 tokens
+     ├ init: ~20 tokens
+     └ security-review: < 20 tokens
+
+─────────────────────────────────────────────────────
+❯ /exit
+─────────────────────────────────────────────────────
+  ⚠ Transcript saving is off — inherited CLAUDE_CO…
+  ❯ /exit                Exit the CLI
+    /context             Visualize current context
+                         usage as a colored grid
+    /usage-credits       Configure usage credits or
+                         request them from your ad…
+    …rew:seam-detection  (crew) Use when scanning a
+                         diff for protected change…
+    /quiet               Enter quiet supervision
+                         mode when the captain inv…
+
+
+➜  01M5X309MNEATV0SA27T1B6F74 git:(1393c29a)
+➜  01M5X309MNEATV0SA27T1B6F74 git:(1393c29a)

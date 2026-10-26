@@ -1,0 +1,9 @@
+target=fm-lab-fmsend-live-80092-7235:w1:p1
+--- fm-send.sh fm-lab-fmsend-live-80092-7235:w1:p1 /context
+fm-send exit=0
+Context Usage occurrences: 0
+agent still alive after /context
+--- fm-send.sh fm-lab-fmsend-live-80092-7235:w1:p1 /exit
+error: text not submitted to fm-lab-fmsend-live-80092-7235:w1:p1 (delivery unconfirmed; verdict=unknown; tried meta=/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-send-live.nXFafS/home/state/fm-lab-fmsend-live-80092-7235:w1:p1.meta; metadata window/terminal lookup; backend=herdr; endpoint=verified)
+fm-send exit=1
+agent exited after /exit (1s)

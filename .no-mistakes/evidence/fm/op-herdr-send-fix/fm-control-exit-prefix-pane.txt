@@ -1,0 +1,17 @@
+CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --da
+ngerously-skip-permissions
+➜  wt CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claud
+e --dangerously-skip-permissions
+ ▐▛███▛█   Claude Code v2.1.311
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   /…/T/fm-ctl-live.0BCRz5/wt
+
+  ⎿  SessionStart:startup says: dotfiles: 7 changes
+     not codified - run /codify
+
+──────────────────────────────────────────────────────
+❯
+──────────────────────────────────────────────────────
+  ⚠ Transcript saving is off — inherited CLAUDE_COD…
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+                        Ctrl+Y to paste deleted text

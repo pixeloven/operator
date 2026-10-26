@@ -1,0 +1,6 @@
+[prefix] task ctl -> fm-lab-fmctl-live-94266-27139:w1:p2
+[prefix] agent state before: alive
+[prefix] $ fm-control.sh ctl exit
+error: the exit command could not be sent to task ctl on herdr
+[prefix] fm-control exit rc=1
+[prefix] agent state after: alive
