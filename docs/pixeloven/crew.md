@@ -37,6 +37,8 @@ bin/po-crew.sh check    # read-only; exit 1 when any row is `fail`
 ```
 
 It prints one row for the catalogue, one per tool and plugin, and one for the fence.
+It compares each install against the published `pixeloven/marketplace` catalogue on its default branch, read with `gh api`, so a reviewed re-pin shows as `behind` before the machine's local catalogue copy refreshes on update.
+When that read fails, it prints one `warn` row, `comparing against the local copy`, and uses the local copy instead, which may predate a re-pin.
 A tool that is not installed prints a `skip` row.
 A Codex plugin whose cache directory is not a git checkout prints a `warn` row, `installed commit not readable from cache`, which does not fail the check.
 

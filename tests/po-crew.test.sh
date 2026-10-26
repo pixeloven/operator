@@ -11,9 +11,13 @@
 #     reports a missing, disabled, or behind plugin, a missing catalogue, an
 #     absent tool, and a missing fence as the right rows, and warns without
 #     failing when a Codex cache directory is not a git checkout
+#   - check compares against the published catalogue a stub gh serves, so a
+#     re-pin the local copy lacks reads as behind, and falls back to the local
+#     copy with one warn row when gh is absent, fails, or serves malformed JSON
 #
 # Every tool is a stub on PATH and every tool state path is a fixture, so no
-# case reads or writes this machine's real install or operator home.
+# case reads or writes this machine's real install or operator home, and no
+# case reaches the network: gh is absent unless a case stubs it.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -213,7 +217,7 @@ test_check_absent_tools_and_fence() {
   assert_contains "$out" "rc=0" "check failed in a secondmate home with absent tools: $out"
   rm -f "$m/claude/plugins/marketplaces/pixeloven/.claude-plugin/marketplace.json"
   out=$(run_check "$m" "$home")
-  printf '%s\n' "$out" | grep -qE '^fail +catalogue +not found' || fail "missing catalogue not reported: $out"
+  printf '%s\n' "$out" | grep -qE '^fail +catalogue +local copy not found' || fail "missing catalogue not reported: $out"
   printf '%s\n' "$out" | grep -qE '^fail +claude crew@pixeloven +enabled, but the catalogue has no pin' || fail "pin compare without a catalogue not reported: $out"
   pass "check skips absent tools and a secondmate fence, and reports a missing fence or catalogue"
 }
@@ -229,6 +233,58 @@ test_check_codex_cache_without_git() {
   assert_equals "$(printf '%s\n' "$out" | grep -cE '^warn +codex .*installed commit not readable from cache')" 5 "expected one warn row per Codex plugin: $out"
   assert_not_contains "$out" "fail " "a Codex cache without .git reported a failure"
   pass "check warns without failing when the Codex cache is not a git checkout, ignoring a parent repository"
+}
+
+# stub_gh <machine> <published-file|fail>: a gh that serves the published
+# catalogue from <published-file>, or exits 1 for "fail".
+stub_gh() {
+  if [ "$2" = fail ]; then
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$1/fakebin/gh"
+  else
+    cat > "$1/fakebin/gh" <<SH
+#!/usr/bin/env bash
+[ "\$*" = "api -H Accept: application/vnd.github.raw repos/pixeloven/marketplace/contents/.claude-plugin/marketplace.json" ] || exit 2
+cat "$2"
+SH
+  fi
+  chmod +x "$1/fakebin/gh"
+}
+
+test_check_reads_published_catalogue() {
+  local m home out local_cat
+  m=$(new_install published)
+  home=$(fenced_home published "$m")
+  local_cat="$m/claude/plugins/marketplaces/pixeloven/.claude-plugin/marketplace.json"
+  jq '.plugins |= map(if .name == "crew" then .source.sha = "1111111111111111111111111111111111111111" else . end)' "$local_cat" > "$m/published.json"
+  stub_gh "$m" "$m/published.json"
+  out=$(run_check "$m" "$home")
+  assert_contains "$out" "rc=1" "a re-pin in the published catalogue did not fail check: $out"
+  printf '%s\n' "$out" | grep -qE '^ok +catalogue +pins for all five plugins, from the published pixeloven/marketplace' || fail "catalogue row does not name the published source: $out"
+  assert_equals "$(printf '%s\n' "$out" | grep -cE '^fail +(claude|codex|pi) crew@pixeloven +.*behind: .* catalogue pins 1111111')" 3 "expected crew behind the published pin on all three tools: $out"
+  printf '%s\n' "$out" | grep -qE '^ok +pi infra-skills@pixeloven' || fail "an unchanged pin did not pass: $out"
+  assert_not_contains "$out" "local copy" "a published read still warned about the local copy"
+  pass "check compares against the published catalogue, so a re-pin the local copy lacks reads as behind"
+}
+
+test_check_falls_back_to_local_copy() {
+  local m home out
+  m=$(new_install fallback)
+  home=$(fenced_home fallback "$m")
+  out=$(run_check "$m" "$home")
+  assert_contains "$out" "rc=0" "check failed on the local copy with gh absent: $out"
+  assert_equals "$(printf '%s\n' "$out" | grep -cE '^warn +catalogue +published pixeloven/marketplace catalogue unreadable; comparing against the local copy')" 1 "expected one fallback warn row with gh absent: $out"
+  printf '%s\n' "$out" | grep -qE '^ok +catalogue +pins for all five plugins, from the local copy' || fail "catalogue row does not name the local copy: $out"
+  stub_gh "$m" fail
+  out=$(run_check "$m" "$home")
+  assert_contains "$out" "rc=0" "check failed on the local copy when gh failed: $out"
+  assert_equals "$(printf '%s\n' "$out" | grep -c 'comparing against the local copy')" 1 "expected one fallback warn row when gh failed: $out"
+  printf '{"plugins": ' > "$m/published.json"
+  stub_gh "$m" "$m/published.json"
+  out=$(run_check "$m" "$home")
+  assert_contains "$out" "rc=0" "check failed on the local copy when gh served malformed JSON: $out"
+  assert_equals "$(printf '%s\n' "$out" | grep -c 'comparing against the local copy')" 1 "expected one fallback warn row on malformed JSON: $out"
+  assert_equals "$(printf '%s\n' "$out" | grep -c '^ok .*@pixeloven')" 15 "the local copy did not serve every pin: $out"
+  pass "check falls back to the local copy with one warning when gh is absent, fails, or serves malformed JSON"
 }
 
 test_check_is_read_only() {
@@ -250,6 +306,8 @@ test_check_complete_install
 test_check_reports_failures
 test_check_absent_tools_and_fence
 test_check_codex_cache_without_git
+test_check_reads_published_catalogue
+test_check_falls_back_to_local_copy
 test_check_is_read_only
 
 echo "all po-crew tests passed"
