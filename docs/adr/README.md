@@ -28,6 +28,7 @@ Use [`_template.md`](_template.md).
 | [0014](0014-stale-lock-publication-serialization.md) | Stale-lock publication serialization may modify bounded upstream surfaces | Withdrawn 2026-10-22 | Hosted stale-lock scheduling race correction |
 | [0015](0015-companion-tools-from-upstream-sources.md) | Companion tools are acquired from upstream sources | Accepted | Captain decisions for the five-stage upstream synchronization |
 | [0016](0016-persona-themed-at-the-edge.md) | Persona and vocabulary are themed at the edge, never rewritten in place | Accepted | Captain decisions on persona customization |
+| [0017](0017-go-public-criteria.md) | Go-public criteria for every public PixelOven repository | Accepted | ADR-0003 go-public review; retroactive review of `operator` |
 | [0018](0018-security-policy-file.md) | PixelOven claims `.github/SECURITY.md` for its security policy | Accepted | Go-public review decision D5 |
 
 ## Conventions
