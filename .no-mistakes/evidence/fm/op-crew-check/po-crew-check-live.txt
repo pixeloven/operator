@@ -1,0 +1,23 @@
+$ bin/po-crew.sh check $LAB    # fenced lab home, real claude/codex/pi on this machine
+ok    catalogue                          pins for all five plugins
+ok    claude crew@pixeloven              enabled, at the catalogue pin e16391d
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin d430ed6
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+fail  codex crew@pixeloven               not installed; run chezmoi apply
+fail  codex infra-skills@pixeloven       not installed; run chezmoi apply
+fail  codex planning-skills@pixeloven    not installed; run chezmoi apply
+fail  codex identity-skills@pixeloven    not installed; run chezmoi apply
+fail  codex language-skills@pixeloven    not installed; run chezmoi apply
+fail  pi crew@pixeloven                  not installed; run chezmoi apply
+fail  pi infra-skills@pixeloven          not installed; run chezmoi apply
+fail  pi planning-skills@pixeloven       not installed; run chezmoi apply
+fail  pi identity-skills@pixeloven       not installed; run chezmoi apply
+fail  pi language-skills@pixeloven       not installed; run chezmoi apply
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a
+exit=1
+
+$ bin/po-crew.sh check $LAB/unfenced   # home without the fence
+fail  fence                              0 of five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a/unfenced.TAQCqX; run bin/po-crew.sh fence
+exit=

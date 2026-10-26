@@ -1,0 +1,25 @@
+## Isolated PI_CODING_AGENT_DIR=$LAB/pi; packages installed by the real `pi install`, infra-skills deliberately at an older commit
+{
+  "packages": [
+    "git:github.com/pixeloven/crew@e16391da924b220bb7cfe193fd6ad4da6a7959cb",
+    "git:github.com/pixeloven/planning-skills@c4bae5932d040a8905cbe23513ee599edc593d98",
+    "git:github.com/pixeloven/identity-skills@0d13897766615b8b3771437a499b6493156e8075",
+    "git:github.com/pixeloven/language-skills@12700b6263b8a23f5c3d1a5eb97dc092e86dad65",
+    "git:github.com/pixeloven/infra-skills@5cab4e7a5116406b357dc43e6aa577465945dc68"
+  ]
+}
+$ PI_CODING_AGENT_DIR=$LAB/pi bin/po-crew.sh check $LAB | grep "^.... *pi "
+ok    pi crew@pixeloven                  installed, at the catalogue pin e16391d
+fail  pi infra-skills@pixeloven          installed, behind: 5cab4e7 installed, catalogue pins d430ed6; run the dotfiles plugin update
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+
+## Re-pin infra-skills with real `pi remove` + `pi install` at the catalogue SHA
+Removed git:github.com/pixeloven/infra-skills@5cab4e7a5116406b357dc43e6aa577465945dc68
+Installed git:github.com/pixeloven/infra-skills@d430ed63329d6bf7c4de602274227401373b34da
+ok    pi crew@pixeloven                  installed, at the catalogue pin e16391d
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin d430ed6
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6

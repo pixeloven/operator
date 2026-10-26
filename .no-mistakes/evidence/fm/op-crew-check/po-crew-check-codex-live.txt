@@ -1,0 +1,18 @@
+## Isolated CODEX_HOME=$LAB/codex with the five pixeloven plugins installed by the real `codex plugin add`
+$ CODEX_HOME=$LAB/codex bin/po-crew.sh check $LAB | grep codex
+ok    codex crew@pixeloven               enabled, at the catalogue pin e16391d
+ok    codex infra-skills@pixeloven       enabled, at the catalogue pin d430ed6
+ok    codex planning-skills@pixeloven    enabled, at the catalogue pin c4bae59
+ok    codex identity-skills@pixeloven    enabled, at the catalogue pin 0d13897
+ok    codex language-skills@pixeloven    enabled, at the catalogue pin 12700b6
+
+## Adversarial: move the infra-skills cache checkout one commit back (behind the pin)
+infra-skills cache HEAD now 5cab4e7
+fail  codex infra-skills@pixeloven       enabled, behind: 5cab4e7 installed, catalogue pins d430ed6; run the dotfiles plugin update
+
+## Adversarial: strip .git from the language-skills cache (non-git cache layout)
+warn  codex language-skills@pixeloven    enabled, installed commit not readable from cache
+
+## Adversarial: real `codex plugin remove planning-skills@pixeloven`
+Removed plugin `planning-skills` from marketplace `pixeloven`.
+fail  codex planning-skills@pixeloven    not installed; run chezmoi apply

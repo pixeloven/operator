@@ -1,0 +1,50 @@
+## LAB home: $LAB (disposable)
+$ cat .claude/settings.local.json  (before)
+{"permissions":{"allow":["Bash(ls:*)"]},"enabledPlugins":{"crew@pixeloven":true,"other@x":true}}
+$ bin/po-crew.sh fence $LAB
+fence: applied to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a/.claude/settings.local.json
+exit=0
+$ jq . .claude/settings.local.json  (after)
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "crew@pixeloven": false,
+    "other@x": true,
+    "infra-skills@pixeloven": false,
+    "planning-skills@pixeloven": false,
+    "identity-skills@pixeloven": false,
+    "language-skills@pixeloven": false
+  }
+}
+mode: 600
+$ cat state/po-crew/settings.local.json.bak
+{"permissions":{"allow":["Bash(ls:*)"]},"enabledPlugins":{"crew@pixeloven":true,"other@x":true}}
+$ ls -a .claude (no backup or temp beside settings)
+.
+..
+settings.local.json
+$ bin/po-crew.sh fence $LAB   (second run)
+fence: already present in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a/.claude/settings.local.json
+exit=0
+settings unchanged on second run
+--- real claude plugin list --json from the lab home (machine user scope, read-only)
+[{"id":"crew@pixeloven","scope":"user","enabled":false},{"id":"identity-skills@pixeloven","scope":"user","enabled":false},{"id":"infra-skills@pixeloven","scope":"user","enabled":false},{"id":"language-skills@pixeloven","scope":"user","enabled":false},{"id":"planning-skills@pixeloven","scope":"user","enabled":false}]
+--- secondmate home
+fence: skipped, /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a/sm.o6CVjm is a secondmate home
+exit=0
+.
+..
+.fm-secondmate-home
+--- malformed settings
+po-crew: malformed JSON, left unchanged: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a/bad.pegGy3/.claude/settings.local.json
+exit=1
+file now: {"permissions": [
+--- fresh home (no settings file)
+fence: applied to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.b4DY9a/fresh.ULCoHz/.claude/settings.local.json
+exit=0
+{"enabledPlugins":{"crew@pixeloven":false,"infra-skills@pixeloven":false,"planning-skills@pixeloven":false,"identity-skills@pixeloven":false,"language-skills@pixeloven":false}}
+ls: $LAB/fresh.ULCoHz/state: No such file or directory
