@@ -270,6 +270,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".github/SECURITY.md",
+      "audience": "public-product"
+    },
+    {
       "path": ".greptile/rules.md",
       "audience": "maintainer-architecture"
     },
@@ -359,6 +363,10 @@
     },
     {
       "path": "docs/adr/0016-persona-themed-at-the-edge.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0018-security-policy-file.md",
       "audience": "maintainer-architecture"
     },
     {
