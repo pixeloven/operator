@@ -29,6 +29,7 @@ Use [`_template.md`](_template.md).
 | [0015](0015-companion-tools-from-upstream-sources.md) | Companion tools are acquired from upstream sources | Accepted | Captain decisions for the five-stage upstream synchronization |
 | [0016](0016-persona-themed-at-the-edge.md) | Persona and vocabulary are themed at the edge, never rewritten in place | Accepted | Captain decisions on persona customization |
 | [0017](0017-go-public-criteria.md) | Go-public criteria for every public PixelOven repository | Accepted | ADR-0003 go-public review; retroactive review of `operator` |
+| [0019](0019-crew-machine-level-delivery.md) | `crew` reaches workers through the machine-level install that dotfiles maintains | Accepted | Crew-everywhere investigation; closes the parked crew delivery decisions |
 
 ## Conventions
 

@@ -8,8 +8,9 @@
 [ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md), which supersedes
 [ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
 [ADR-0012](../adr/0012-notification-reconciliation.md),
-[ADR-0013](../adr/0013-archived-captain-hold-completion.md), and
-[ADR-0016](../adr/0016-persona-themed-at-the-edge.md).
+[ADR-0013](../adr/0013-archived-captain-hold-completion.md),
+[ADR-0016](../adr/0016-persona-themed-at-the-edge.md), and
+[ADR-0019](../adr/0019-crew-machine-level-delivery.md), which claims a `po-*` helper and no upstream hunk.
 [ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock exception was withdrawn and carries no hunks.
 [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) superseded the companion-distribution exception of
 [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
@@ -41,8 +42,8 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 |---|---|---|
 | Runtime backends | `bin/backends/` | new adapter files only |
 | Skills | `.agents/skills/po-*` | the `po-` prefix exists so upstream can never collide with us |
-| Fork scripts | `bin/po-*` | claimed by ADR-0016; today the persona theme helper |
-| Fork tests | `tests/po-*` | claimed by ADR-0016; upstream's runner picks them up by name |
+| Fork scripts | `bin/po-*` | claimed by ADR-0016 for the persona theme helper; ADR-0019 adds the `crew` delivery helper |
+| Fork tests | `tests/po-*` | claimed by ADR-0016 and ADR-0019; upstream's runner picks them up by name |
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
 | CI we own | `.github/workflows/pixeloven-*.yml` | |

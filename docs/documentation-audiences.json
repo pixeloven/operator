@@ -366,6 +366,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0019-crew-machine-level-delivery.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
@@ -492,6 +496,10 @@
     {
       "path": "docs/pi-supervision-branch.md",
       "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/pixeloven/crew.md",
+      "audience": "operator-current"
     },
     {
       "path": "docs/pixeloven/fork-contract.md",
@@ -699,6 +707,10 @@
     },
     {
       "path": ".agents/skills/operational-home-layout/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/po-crew/SKILL.md",
       "audience": "agent-runtime"
     },
     {
