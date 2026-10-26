@@ -58,7 +58,7 @@ between the two vocabularies silently — a crewmate is a running process in a g
 worktree; a crew role is a capability definition.
 
 A persona theme's worker and crew words (for example the bundled `operator`
-theme's Specialist and squad) are an explicit, documented display translation of
+theme's specialist and squad) are an explicit, documented display translation of
 this repository's crewmate and crew, never of a `pixeloven/crew` role; the theme
 files and [`persona-themes.md`](persona-themes.md) record them, and the platform
 glossary should record them too.
