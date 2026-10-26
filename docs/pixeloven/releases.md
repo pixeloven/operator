@@ -30,8 +30,8 @@ entire chain. We take on the obligation to mean the number.**
 
 Consumers pin the tag, and the pin lives as a **variable in the consumer's own
 configuration** so it is visible and greppable rather than buried in a command.
-For Harmony that is `ansible/roles/bastion` defaults (task P1.2, requirement
-H-1). Consumers never pin `main`, never pin an upstream SHA.
+For the release host that is its provisioning role's defaults (task P1.2,
+requirement H-1). Consumers never pin `main`, never pin an upstream SHA.
 
 Upstream SHAs are still recorded — in [`NOTICE`](../../NOTICE) (the fork point)
 and in [`upstream-tracking.md`](upstream-tracking.md) (every merge) — but they
@@ -41,7 +41,7 @@ are **provenance, not a consumer interface**.
 
 While the major version is `0`, the minor position carries breaking changes and
 the patch position carries everything else. This is normal 0.x semver and it is
-what the first Harmony pilot runs against.
+what the first pilot runs against.
 
 ## 2. How a release relates to upstream merges
 
@@ -186,7 +186,7 @@ Upstream ancestry and corrective ancestry pull requests additionally follow the 
 
 | Tag | Date | Upstream merged through | Notes |
 |---|---|---|---|
-| `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag Harmony's `bastion` role installs (P1.2). |
+| `v0.1.0` | 2026-08-17 | none — the fork point `6789876442d0` | First tag, commit `d6d7f85`. The reviewed **pre-upstream-merge** state: fork contract, ADR-0001…0007, supply-chain verdict, identity doc, PixelOven gates and this release workflow. This is the tag the provisioning host's role installs (P1.2). |
 | `v0.2.0` | 2026-10-21 | `355f46fe5528` | Commit `09acb8af` on `main`, all gates green. Carries the three upstream synchronizations through `bdae21ed09d2`, `1fbc7bb1fba2`, and `355f46fe5528`, plus ADR-0008 and ADR-0010 through ADR-0014. A **minor** bump per §2: consumer-visible runtime, supervision, backend, documentation, and test behavior recorded in [`upstream-merges.md`](upstream-merges.md). |
 | `v0.3.0` | 2026-10-22 | `0e82f3eebd21` | Cut from `main` with this release record on top of `d0307f42`. Carries the fourth synchronization in two stages, `355f46fe5528` through `8fd5575b1179` to `0e82f3eebd21` (PRs #25 and #26), plus ADR-0015 (PR #24) and ADR-0016 (PR #27). A **minor** bump per §2: upstream behavior changes a consumer can notice and two PixelOven-authored changes, detailed below. |
 
