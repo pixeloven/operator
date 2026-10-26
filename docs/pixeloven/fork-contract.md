@@ -46,6 +46,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
 | CI we own | `.github/workflows/pixeloven-*.yml` | |
+| Security policy | `.github/SECURITY.md` | claimed by ADR-0018 |
 | Upstream lineage check | `bin/fm-pixeloven-upstream-check.sh` | canonical ancestry verification for the operator upstream pin |
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
