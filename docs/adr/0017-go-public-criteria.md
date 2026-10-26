@@ -32,13 +32,17 @@ metadata (author/committer name and email, trailers) as well as content; PR, iss
 release and comment text; committed binaries/screenshots.
 - No credentials. A live credential is **must-fix now**: rotate first, then decide on
   history. A rotated or fake credential is acceptable once allowlisted with a reason.
+- No employer names in files, docs, or PR, issue, release and comment text.
 - No colleague names or contact details.
 - No internal host names, IP addresses, internal URLs, or SaaS tenant URLs.
 - No content copied from private references. A bare link to a private repository is
   should-fix in mutable docs and acceptable in immutable records (accepted ADRs, merged
   PR text, commit messages).
-- The maintainer's own names and email addresses, work and personal, are acceptable
-  content, including in commit metadata. This does not extend to colleagues.
+- The one exception is the maintainer's own identity. Their names and email addresses,
+  work and personal, are acceptable content, including an employer email domain in
+  commit metadata. This does not extend to colleagues.
+- This ADR amends ADR-0003's content rule only to the extent of that exception.
+  ADR-0003 itself is not edited.
 - History is rewritten only for a live, unrotatable exposure. Everything else gets a
   forward fix.
 
