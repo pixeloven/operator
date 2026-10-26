@@ -161,8 +161,11 @@ EOF
   derive "$home" pipe 's/^crew = .*/crew = "a | b"/'
   out=$(run_in "$code" "$home" validate pipe 2>&1) && fail "validate accepted a table pipe in a value"
   assert_contains "$out" "crew: forbidden character" "a table pipe was refused for the wrong reason"
-  derive "$home" taskforce 's/^fleet = .*/fleet = "Task Force"/'
+  derive "$home" taskforce 's/^fleet = .*/fleet = "task force"/'
   run_in "$code" "$home" validate taskforce >/dev/null 2>&1 || fail "a role title using the noun 'force' was refused"
+  derive "$home" upper 's/^fleet = .*/fleet = "Task Force"/'
+  out=$(run_in "$code" "$home" validate upper 2>&1) && fail "validate accepted an uppercase role term"
+  assert_contains "$out" "fleet: must be 1-24 lowercase letters" "an uppercase role term was refused for the wrong reason"
   pass "validation refuses every unsafe, malformed, or colliding theme with its named reason"
 }
 
@@ -233,7 +236,7 @@ test_operator_apply() {
   assert_contains "$first" "- Prefers terse summaries." "apply dropped the captain's own prose"
   assert_contains "$first" '## Persona: operator' "the block has no Persona heading"
   assert_contains "$first" 'reply exactly `Operator, all systems nominal.`' "the block has no themed no-op reply"
-  assert_contains "$first" '| first mate, firstmate (you) | Spotter |' "the block does not map the first mate"
+  assert_contains "$first" '| first mate, firstmate (you) | spotter |' "the block does not map the first mate"
   assert_contains "$first" 'grant no authority and change no rule' "the block does not disclaim authority"
   assert_contains "$first" '/sitrep = /bearings' "the block does not list the aliases"
   assert_equals "-rw-r-----" "$(ls -l "$home/data/captain-shared.md" | cut -c1-10)" "apply changed the shared file's mode"
@@ -327,7 +330,7 @@ test_worker_role_contract() {
   added=$(diff <(printf '%s\n' "$nautical") <(printf '%s\n' "$operator") | grep -E '^[<>]' || true)
   assert_equals "$(printf '%s\n' "$added" | wc -l | tr -d ' ')" 1 "the operator role contract changed more than one line"
   assert_contains "$added" '> Vocabulary for prose a person reads' "the operator role contract did not add the vocabulary line"
-  assert_contains "$added" 'firstmate "Spotter", crewmates "Specialists"' "the vocabulary line does not carry the theme words"
+  assert_contains "$added" 'firstmate "spotter", crewmates "specialists"' "the vocabulary line does not carry the theme words"
   pass "the worker role contract is upstream under nautical and gains exactly one line under a theme"
 }
 
@@ -338,7 +341,7 @@ test_secondmate_home() {
   mate="$TMP_ROOT/secondmate/mate"
   mkdir -p "$mate/data" "$mate/config"
   printf 'fmtest-sm\n' > "$mate/.fm-secondmate-home"
-  derive "$primary" drill 's/^self = .*/self = "Sergeant"/; s/^self_plural = .*/self_plural = "Sergeants"/; s/^user_address = .*/user_address = "Boss"/; s/^user = .*/user = "boss"/; s/^user_plural = .*/user_plural = "bosses"/; s/^product = .*/product = "operator"/; s/^noop_reply = .*/noop_reply = "Boss, all quiet."/; s/^bad_news_example = .*/bad_news_example = "Boss, the build broke - ..."/; /^avoid.operator/d'
+  derive "$primary" drill 's/^self = .*/self = "sergeant"/; s/^self_plural = .*/self_plural = "sergeants"/; s/^user_address = .*/user_address = "Boss"/; s/^user = .*/user = "boss"/; s/^user_plural = .*/user_plural = "bosses"/; s/^product = .*/product = "operator"/; s/^noop_reply = .*/noop_reply = "Boss, all quiet."/; s/^bad_news_example = .*/bad_news_example = "Boss, the build broke - ..."/; /^avoid.operator/d'
   run_in "$code" "$primary" validate drill >/dev/null 2>&1 || fail "the custom drill theme did not validate: $(run_in "$code" "$primary" validate drill 2>&1)"
   run_in "$code" "$primary" persona drill > "$mate/data/captain-shared.md" || fail "persona drill failed"
   chmod 0444 "$mate/data/captain-shared.md"
@@ -346,7 +349,7 @@ test_secondmate_home() {
   out=$(run_in "$ROOT" "$mate" resolve 2>&1) || fail "the secondmate home could not resolve its inherited theme: $out"
   assert_contains "$out" "drill inherited:" "the secondmate home did not resolve the inherited custom theme"
   assert_equals "Boss" "$(run_in "$ROOT" "$mate" address-alt)" "the secondmate home did not resolve the inherited vocative"
-  assert_contains "$(role_of "$ROOT/bin" "$mate")" 'the captain "boss", firstmate "Sergeant"' "the secondmate's worker role contract is not themed"
+  assert_contains "$(role_of "$ROOT/bin" "$mate")" 'the captain "boss", firstmate "sergeant"' "the secondmate's worker role contract is not themed"
   intent_refused "$ROOT/bin" "$mate" 'Boss, add a flag.' || fail "the secondmate home allowed the inherited vocative in an intent"
   out=$(run_in "$ROOT" "$mate" verify 2>&1) || fail "verify failed on an untouched inherited block: $out"
   printf 'operator\n' > "$mate/config/po-theme"
@@ -454,7 +457,7 @@ test_verify_reports_drift() {
   assert_contains "$out" "stale or hand-edited" "verify did not report the hand edit"
   mv "$home/data/captain-shared.md.bak" "$home/data/captain-shared.md"
 
-  derive "$home" drill 's/^self = .*/self = "Sergeant"/; s/^self_plural = .*/self_plural = "Sergeants"/'
+  derive "$home" drill 's/^self = .*/self = "sergeant"/; s/^self_plural = .*/self_plural = "sergeants"/'
   printf 'drill\n' > "$home/config/po-theme"
   out=$(run_in "$code" "$home" verify 2>&1) && fail "verify passed after the selection changed without apply"
   assert_contains "$out" "stale or hand-edited" "verify did not report the stale block"
@@ -478,7 +481,7 @@ test_terms_and_resolve() {
   assert_equals "nautical $ROOT/.agents/skills/po-theme/themes/nautical.theme" "$(FM_HOME="$home" "$PT" resolve)" \
     "a home without a selection did not resolve the bundled nautical theme"
   printf 'operator\n' > "$home/config/po-theme"
-  assert_equals "Task Force" "$(FM_HOME="$home" "$PT" term fleet)" "term did not read the active theme"
+  assert_equals "task force" "$(FM_HOME="$home" "$PT" term fleet)" "term did not read the active theme"
   assert_equals "fleet" "$(FM_HOME="$home" "$PT" term fleet --theme nautical)" "term --theme did not read the named theme"
   printf 'no-such\n' > "$home/config/po-theme"
   FM_HOME="$home" "$PT" resolve >/dev/null 2>&1 && fail "an unknown selection resolved"
