@@ -1,0 +1,68 @@
+## 1. validate bundled operator theme
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+validate: operator ok
+exit=0
+## 2. validate bundled nautical theme
+validate: nautical ok
+exit=0
+## 3. custom theme fleet="Task Force"
+error: fleet: must be 1-24 lowercase letters, spaces, or hyphens
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+exit=1
+## 3. custom theme fleet="Task force"
+error: fleet: must be 1-24 lowercase letters, spaces, or hyphens
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+exit=1
+## 3. custom theme fleet="tASK force"
+error: fleet: must be 1-24 lowercase letters, spaces, or hyphens
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+exit=1
+## 3. custom theme fleet="task force"
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+validate: probe ok
+exit=0
+## 4. custom theme self="Spotter"
+error: self: must be 1-24 lowercase letters, spaces, or hyphens
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+exit=1
+## 5. custom theme user_address lowercase (still must be capitalized)
+error: user_address: must be one capitalized word of at most 24 characters
+error: bad_news_example: must open with the user_address followed by a comma
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+exit=1
+## 6. term lookups with operator selected
+self = spotter
+self_plural = spotters
+worker = specialist
+worker_plural = specialists
+submate = navigator
+submate_plural = navigators
+fleet = task force
+user = operator
+user_address = Operator
+crew = squad
+ship_task = deploy
+scout_task = recon
+## 7. worker-line
+Vocabulary for prose a person reads (reports, summaries): this home calls the captain "operator", firstmate "spotter", crewmates "specialists", the crew "squad", second mates "navigators", the fleet "task force", ship tasks "deploy", and scout tasks "recon"; identifiers and brief headings stay as written.

@@ -1,0 +1,19 @@
+## upgrade: home applied by pre-ADR-0020 code (capitalized words)
+| first mate, firstmate (you) | Spotter |
+| fleet | Task Force |
+## new code verify on that home
+drift: the Persona block in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.Oa3jGR/home3/data/captain-shared.md is stale or hand-edited; run apply
+drift: alias /debrief for /ahoy is missing; run apply
+drift: alias /flush for /stow is missing; run apply
+drift: alias /sitrep for /bearings is missing; run apply
+drift: alias /updateoperator for /updatefirstmate is missing; run apply
+drift: alias /debrief is not excluded from git status; run apply
+drift: alias /flush is not excluded from git status; run apply
+drift: alias /sitrep is not excluded from git status; run apply
+drift: alias /updateoperator is not excluded from git status; run apply
+exit=1
+## new code apply then verify
+verify: ok (operator)
+exit=0
+| first mate, firstmate (you) | spotter |
+| fleet | task force |
