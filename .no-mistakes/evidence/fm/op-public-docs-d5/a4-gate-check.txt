@@ -1,0 +1,8 @@
+A4 regex parsed from workflow YAML; PIN=0e82f3eebd211c025041de0c0fa066d140fd7cbf
+== HEAD (clean):
+A4 PASS (no out-of-namespace paths)
+== adversarial: add .github/SECURITY.md.bak, .github/CODEOWNERS, docs/SECURITY.md
+rejected paths:
+.github/CODEOWNERS
+.github/SECURITY.md.bak
+docs/SECURITY.md
