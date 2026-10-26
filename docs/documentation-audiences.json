@@ -362,6 +362,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0017-go-public-criteria.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
