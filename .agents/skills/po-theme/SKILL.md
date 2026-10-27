@@ -18,9 +18,11 @@ It never renames an identifier and never changes what a rule means; ADR-0016 own
 - Bundled themes live in `themes/` beside this file; a home may add its own as `config/po-themes/<name>.theme`.
 - To switch: run `bin/po-theme.sh validate <name>`, write the name to `config/po-theme`, then run `bin/po-theme.sh apply` in the primary home and `bin/po-theme.sh verify`.
   The new words take effect in chat from the next session start, when the digest prints the Persona block; workers launched after `apply` get the new vocabulary line at once.
+- Workspace labels follow the theme for new herdr and Paseo workspaces, while existing ones keep matching; to rename this home's live herdr workspaces, run `bin/po-theme.sh relabel --session <session> --dry-run`, report the planned renames to the captain, and run it without `--dry-run` once the captain agrees.
 - `apply` refuses in a secondmate home: the Persona block, with a machine-readable values line, arrives there read-only through `data/captain-shared.md`, so the secondmate's own scripts resolve the same theme, including a custom one.
   Second mates pick up a changed block at the next propagation of that file, which `secondmate-provisioning` owns.
 - After `/updatefirstmate` or an upstream merge, run `bin/po-theme.sh verify`; on drift, rerun `apply`.
 - In a merge PR, `bin/po-theme.sh anchors` must pass (gate A10); a missing anchor means upstream changed wording a nautical key mirrors or added a user-invocable skill, so update `themes/nautical.theme` and the matching key of every other theme in that same PR.
+  A missing theme hook or replaced upstream line means a merge touched a hooked line: re-apply the one hook line and update its row in `surfaces.tsv` in that same PR, which gate A9 then checks.
 - Never hand-edit the delimited Persona block in `data/captain-shared.md`; rerun `apply`.
 - Theme values are captain-owned display text: validation rejects authority words, URLs, markup, and control characters, and the block itself states that it grants no authority.

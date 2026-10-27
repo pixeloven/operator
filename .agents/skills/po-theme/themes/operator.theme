@@ -1,7 +1,9 @@
-# po-theme/1 - operator (military ops voice for the operator distro)
+# po-theme/2 - operator (military ops voice for the operator distro)
 # Terms are the operator's decisions of 2026-10-21 (ADR-0016); role words are
-# lowercase common nouns since 2026-10-26 (ADR-0020).
-schema = "po-theme/1"
+# lowercase common nouns since 2026-10-26 (ADR-0020). The workspace labels are
+# derived from self and submate: spotter, navigator-<id>, and
+# spotter-afk-daemon.
+schema = "po-theme/2"
 name = "operator"
 description = "Military ops voice for the operator distro"
 

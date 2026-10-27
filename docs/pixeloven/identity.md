@@ -145,7 +145,7 @@ pull request** by [`.github/workflows/pixeloven-gates.yml`](../../.github/workfl
 (job `fork-contract`), so this section is a description of a live gate rather
 than a one-time claim.
 
-Except for A7's affirmative lineage report and A10's affirmative theme reports, every command below is expected to print **nothing**; any other output is a finding.
+Except for A7's affirmative lineage report, A9's affirmative registry report, and A10's and A11's affirmative theme reports, every command below is expected to print **nothing**; any other output is a finding.
 The workflow runs exactly these, in this order, and fails the job when a check reports a finding.
 
 ```sh
@@ -195,10 +195,12 @@ ADR-0004 and this page.
 ```
 
 **A4 - O-1: the diff against the current upstream pin touches only our namespaces and accepted ADR override paths.**
-No second ref means this covers the working tree as well as committed history:
+No second ref means this covers the working tree as well as committed history.
+An upstream-owned file that carries [ADR-0020](../adr/0020-themes-first-class.md) theme hooks is admitted because the hook registry lists it, and A9 then holds every changed line in it to its registered hook:
 
 ```sh
 git diff --name-only "$PIN" \
+  | grep -vxF -f <(bin/po-theme.sh registry files) \
   | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|\.github/SECURITY\.md$|bin/backends/|\.agents/skills/po-|bin/po-[a-z0-9-]+\.sh$|tests/po-[a-z0-9-]+\.test\.sh$|AGENTS\.md$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-composer-lib|fm-dod-lib|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr|fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-composer-lib|fm-herdr-submit-confirm-live-e2e|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|verification/delivery-lane\.md)$|tests/captures/claude-2\.1\.291-slash-popup/|README\.md$|NOTICE$)'
 ```
 
@@ -238,7 +240,7 @@ git grep -nE 'fm-install-pixel''oven-tool|pixeloven/(gh-axi|chrome-devtools-axi|
 
 The installer name is split in the pattern so the gate's own source cannot match itself.
 
-**A9 - the persona hunks stay exactly as [ADR-0016](../adr/0016-persona-themed-at-the-edge.md) lists them.**
+**A9 - the persona hunks stay exactly as [ADR-0016](../adr/0016-persona-themed-at-the-edge.md) lists them, and every theme hook matches its registry row ([ADR-0020](../adr/0020-themes-first-class.md)).**
 `AGENTS.md` may differ from the pin by exactly one added line beginning `Persona: `, and `bin/fm-dod-lib.sh` only by ADR-0016's exact added and removed lines, each at most once, with no mode change on either file:
 
 ```sh
@@ -259,13 +261,27 @@ changed bin/fm-dod-lib.sh | sort | uniq -d
 git diff --summary "$PIN" -- AGENTS.md bin/fm-dod-lib.sh | grep 'mode change'
 ```
 
+In each upstream-owned file `bin/po-theme.sh registry files` lists, every added line must be exactly one row's hook line, at most once, and every removed line must be the upstream line a row says its hook replaces; `registry check-diff` reports an affirmative line when they all match:
+
+```sh
+bin/po-theme.sh registry check-diff "$PIN"
+```
+
 **A10 - the theme canary** ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md)).
-`anchors` fails when upstream changes a literal the `nautical` theme mirrors, adds a user-invocable skill with no alias key, or a merge drops a hook line; `validate` re-checks every bundled theme against the current upstream text.
+`anchors` fails when upstream changes a literal the `nautical` theme mirrors, adds a user-invocable skill with no alias key, a merge drops a hook line or a registered theme hook, or upstream at the pin no longer has a line a registered hook replaces; `validate` re-checks every bundled theme against the current upstream text.
 Both report affirmatively, with notes and warnings, and fail only on a finding:
 
 ```sh
 bin/po-theme.sh anchors
 for t in .agents/skills/po-theme/themes/*.theme; do bin/po-theme.sh validate "$(basename "$t" .theme)"; done
+```
+
+**A11 - architectural invariance** ([ADR-0020](../adr/0020-themes-first-class.md)).
+In scratch primary and secondmate homes, the hometag, the cmux, zellij, and Paseo routing names, the zellij and herdr session names, the worker role contract without its theme vocabulary line, and the generated definition of done are produced under every bundled theme and must be byte-identical.
+It reports affirmatively and fails only on a difference:
+
+```sh
+bash tests/po-theme-labels.test.sh a11
 ```
 
 ### Why A4/A5 track a moving pin

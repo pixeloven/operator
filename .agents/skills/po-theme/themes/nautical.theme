@@ -1,11 +1,15 @@
-# po-theme/1 - nautical (the default)
+# po-theme/2 - nautical (the default)
 # Every value here is the literal upstream firstmate wording. Selecting this
 # theme writes no Persona block and no command aliases, so a home behaves
 # byte-for-byte as upstream. `bin/po-theme.sh anchors` asserts that each value
 # still appears in the upstream text it mirrors, so a sync that changes the
 # wording fails the merge PR instead of drifting. This file is also the schema:
-# every theme defines exactly these keys, plus optional avoid.<word> entries.
-schema = "po-theme/1"
+# every theme defines exactly these keys, plus optional avoid.<word> entries;
+# the label.* keys are optional elsewhere and derive from self and submate.
+# The label values mirror upstream's herdr, Paseo, and away-daemon workspace
+# labels, which bin/po-theme-lib.sh also compiles in for the nautical fast path;
+# `anchors` checks the upstream lines through the hook registry.
+schema = "po-theme/2"
 name = "nautical"
 description = "Upstream firstmate's nautical voice"
 
@@ -27,6 +31,10 @@ scout_task = "scout"
 seasoning = "aye, on deck, shipshape, under way, ahoy"
 noop_reply = "Captain, shipshape."
 bad_news_example = "Captain, the build broke - ..."
+
+label.primary = "firstmate"
+label.submate = "2ndmate"
+label.afk = "firstmate-afk-daemon"
 
 alias.afk = "afk"
 alias.ahoy = "ahoy"
