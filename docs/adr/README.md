@@ -34,6 +34,9 @@ Use [`_template.md`](_template.md).
 | [0020](0020-themes-first-class.md) | Themes are a first-class feature | Accepted | operator decisions on persona completion; amends ADR-0016 |
 | [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Accepted | Herdr send-failure investigation; self-retiring upstream carry |
 
+Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
+[`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).
+
 ## Conventions
 
 - **Status** is `Proposed`, `Accepted`, or `Superseded by ADR-XXXX`.
