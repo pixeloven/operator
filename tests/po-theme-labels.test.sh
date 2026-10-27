@@ -286,10 +286,9 @@ test_relabel_keeps_history_other_containers_use() {
 
   printf 'nautical\n' > "$home/config/po-theme"
   FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed under nautical"
-  jq -cn --arg p "$home/projects/app" --arg o "$TMP_ROOT/elsewhere" \
-    '[{workspaceId: "p1", name: "spotter", cwd: $p}, {workspaceId: "p2", name: "navigator-x", cwd: $o}]' > "$fake/paseo.json"
+  jq -cn --arg o "$TMP_ROOT/secondmate-home" '[{workspaceId: "p1", name: "spotter", cwd: $o}]' > "$fake/paseo.json"
   out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel failed: $out"
-  assert_not_contains "$out" "history retired" "relabel retired a label a Paseo workspace or another session still uses"
+  assert_not_contains "$out" "history retired" "relabel retired a label a Paseo workspace outside projects/ or another session still uses"
   assert_equals "primary	spotter
 submate	navigator" "$(cat "$home/state/po-theme/history")" "the history lost a label a live container uses"
 

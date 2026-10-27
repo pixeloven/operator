@@ -64,7 +64,7 @@
 #                                     label, then retire history words no live
 #                                     workspace of this home still uses (herdr
 #                                     sessions S and those its task records name,
-#                                     and Paseo workspaces for its projects); an
+#                                     and every Paseo workspace); an
 #                                     unlistable one keeps every history word
 #   po-theme.sh registry files        upstream-owned files that carry theme hooks
 #   po-theme.sh registry check-diff <ref>
@@ -698,10 +698,10 @@ paseo_workspaces() {
 
 # live_labels <session> <list-json>: every live workspace label the history
 # protects - <list-json> for <session>, each other herdr session this home's
-# task records name, and Paseo workspaces for this home's projects. Fails
+# task records name, and every Paseo workspace, whatever its cwd. Fails
 # when any of them cannot be listed.
 live_labels() {
-  local session=$1 s l logical real
+  local session=$1 s l
   printf '%s' "$2" | jq -r '.result.workspaces[]?.label | strings' 2>/dev/null || return 1
   while IFS= read -r s; do
     [ -n "$s" ] && [ "$s" != "$session" ] || continue
@@ -709,10 +709,7 @@ live_labels() {
     printf '%s' "$l" | jq -r '.result.workspaces[]?.label | strings' 2>/dev/null || return 1
   done < <(sed -n 's/^herdr_session=//p' "$STATE"/*.meta 2>/dev/null | sort -u)
   l=$(paseo_workspaces) && printf '%s' "$l" | jq -e 'type == "array"' >/dev/null 2>&1 || return 1
-  logical=$(cd "$FM_HOME" 2>/dev/null && pwd) || logical=$FM_HOME
-  real=$(cd "$FM_HOME" 2>/dev/null && pwd -P) || real=$FM_HOME
-  printf '%s' "$l" | jq -r --arg a "$FM_HOME/projects/" --arg b "$logical/projects/" --arg c "$real/projects/" \
-    '.[] | select((.cwd // "") as $d | [$a, $b, $c] | any(. as $p | $d | startswith($p))) | .name | strings' 2>/dev/null
+  printf '%s' "$l" | jq -r '.[].name | strings' 2>/dev/null
 }
 
 # relabel --session <name> [--dry-run]
