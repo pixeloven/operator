@@ -5,7 +5,9 @@
 # Upstream firstmate text stays byte-identical. A theme changes only display
 # words: what the agents call themselves and the user in chat, their seasoning,
 # the fixed no-op reply, the vocabulary workers use in prose a person reads, the
-# slash commands a person types, and the herdr and Paseo workspace labels. It
+# slash commands a person types, the herdr and Paseo workspace labels, and the
+# registered display strings (the herdr sidebar state and the wedge-alarm
+# title). It
 # never renames an identifier (script, path, environment variable, skill
 # directory, status verb, or a brief heading that code parses) and never changes
 # what a rule means.
@@ -15,8 +17,8 @@
 # Bundled themes live in .agents/skills/po-theme/themes/; a home may add its own
 # as config/po-themes/<name>.theme. The bundled nautical theme is the schema:
 # every theme defines exactly its keys, plus optional avoid.<word> entries;
-# the label.* keys are optional under schema po-theme/2 and derive from self and
-# submate when absent.
+# the label.* and str.* keys are optional under schema po-theme/2 and derive
+# from the role words when absent.
 #
 # Selection: the first line of config/po-theme in the primary home; absent means
 # nautical, which writes nothing, so a home without a selection is byte-for-byte
@@ -144,7 +146,7 @@ parse() {
     /^[[:space:]]*(#|$)/ { next }
     {
       line = $0
-      if (line !~ /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_-]*)?[[:space:]]*=[[:space:]]*"[^"\\]*"[[:space:]]*(#.*)?$/) {
+      if (line !~ /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_-]*)*[[:space:]]*=[[:space:]]*"[^"\\]*"[[:space:]]*(#.*)?$/) {
         printf "line %d: malformed (expected key = \"value\"): %s\n", NR, line > "/dev/stderr"; bad = 1; next
       }
       key = line; sub(/[[:space:]]*=.*/, "", key)
@@ -174,7 +176,7 @@ values_to_theme() {
   awk -v p="$VALUES_PREFIX" '
     index($0, p) == 1 {
       line = substr($0, length(p) + 1); sub(/ -->$/, "", line)
-      while (match(line, /[a-z][a-z0-9_]*(\.[a-z][a-z0-9_-]*)?="[^"]*"/)) {
+      while (match(line, /[a-z][a-z0-9_]*(\.[a-z][a-z0-9_-]*)*="[^"]*"/)) {
         pair = substr(line, RSTART, RLENGTH); line = substr(line, RSTART + RLENGTH)
         eq = index(pair, "=")
         printf "%s = %s\n", substr(pair, 1, eq - 1), substr(pair, eq + 1)
@@ -260,6 +262,45 @@ resolve_active() {
   ACTIVE_KV=$(load_named "$n")
 }
 
+# strs_of <kv>: "<key><TAB><string>" for every registered str.* key, using the
+# derived default for an absent key: the needs state is "needs-" and the user
+# word lowercased with spaces as hyphens, and the wedge title opens with the
+# product word.
+strs_of() {
+  awk -F '\t' '
+    { v[$1] = $2 }
+    END {
+      u = tolower(v["user"]); gsub(/ /, "-", u)
+      sn = ("str.sidebar.needs" in v) ? v["str.sidebar.needs"] : "needs-" u
+      wt = ("str.alert.wedge_title" in v) ? v["str.alert.wedge_title"] : v["product"] ": away-mode escalations WEDGED"
+      printf "str.sidebar.needs\t%s\nstr.alert.wedge_title\t%s\n", sn, wt
+    }
+  ' "$1"
+}
+
+# check_strs <kv>: ADR-0020 decision 8 for every str.* string, given or
+# derived: at most 80 characters, no architectural token (a status verb,
+# FIRSTMATE_OP, a brief heading, or an fm- prefix), and a sidebar state that is
+# a herdr token value distinct from the other group states.
+check_strs() {
+  strs_of "$1" | LC_ALL=C awk -F '\t' -v tokens="$STATUS_TOKENS" '
+    function bad(m) { print "error: " m; failed = 1 }
+    BEGIN { nt = split(tokens, T, " ") }
+    {
+      k = $1; v = $2
+      if (length(v) > 80) bad(k ": longer than 80 characters")
+      s = " " v " "; gsub(/[^A-Za-z0-9_-]/, " ", s)
+      for (j = 1; j <= nt; j++) if (index(s, " " T[j] " ")) bad(k ": '"'"'" v "'"'"' contains the status verb " T[j])
+      if (index(v, "FIRSTMATE_OP") || index(v, "##") || index(s, " fm-")) bad(k ": '"'"'" v "'"'"' contains an architectural token")
+      if (k == "str.sidebar.needs") {
+        if (v !~ /^[a-z0-9][a-z0-9-]*[a-z0-9]$/ || length(v) > 24) bad(k ": '"'"'" v "'"'"' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit")
+        else if (v == "running" || v == "problem" || v == "done") bad(k ": '"'"'" v "'"'"' equals another herdr group state")
+      }
+    }
+    END { exit failed }
+  '
+}
+
 # check_values <name> <kv>: schema, shape, and safety findings that need no
 # corpus, in one awk pass so per-spawn resolution stays cheap. Regexes avoid
 # interval expressions, which mawk and older BSD awk do not support. Prints
@@ -289,7 +330,7 @@ check_values() {
       nd = split(deny, D, " "); nrd = split(roledeny, RD, " "); nt = split(tokens, T, " ")
       if (val["schema"] != "po-theme/1" && val["schema"] != "po-theme/2") bad("schema must be \"po-theme/1\" or \"po-theme/2\"")
       if (val["name"] != name) bad("name must equal the theme name (" name ")")
-      for (i = 1; i <= n; i++) if (!(order[i] in val) && order[i] !~ /^label\./) bad("missing key: " order[i])
+      for (i = 1; i <= n; i++) if (!(order[i] in val) && order[i] !~ /^(label|str)\./) bad("missing key: " order[i])
       for (i = 1; i <= m; i++) { k = keys[i]; if (k !~ /^avoid\./ && !(k in canon)) bad("unknown key: " k) }
       for (i = 1; i <= m; i++) {
         k = keys[i]; v = val[k]
@@ -312,7 +353,7 @@ check_values() {
         }
         else if (k ~ /^alias\./) { if (v !~ /^[a-z][a-z0-9-]+$/ || length(v) > 31) bad(k ": alias must be 2-31 lowercase letters, digits, or hyphens") }
         else if (k ~ /^avoid\./) { if (length(v) > 120) bad(k ": longer than 120 characters") }
-        else if (k ~ /^label\./) { if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2") }
+        else if (k ~ /^(label|str)\./) { if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2") }
       }
       lp = ("label.primary" in val) ? val["label.primary"] : dashed(val["self"])
       ls = ("label.submate" in val) ? val["label.submate"] : dashed(val["submate"])
@@ -337,6 +378,7 @@ check_values() {
       exit failed
     }
   ' "$schema_kv" "$kv" || err=1
+  check_strs "$kv" || err=1
 
   : > "$TMPD/aliases"
   while IFS="$TAB" read -r k v; do
@@ -567,7 +609,8 @@ labels_of() {
   ' "$1"
 }
 
-# refresh: the values cache bin/po-theme-lib.sh reads, plus the history of
+# refresh: the values cache bin/po-theme-lib.sh reads (labels and str.* strings,
+# tagged with the cache format po__fresh requires), plus the history of
 # labels this home applied, which keeps older workspace names matchable.
 refresh() {
   local dir="$STATE/po-theme" kind=primary src role v canon
@@ -582,8 +625,9 @@ refresh() {
   src=${ACTIVE_SRC#inherited:}
   labels_of "$ACTIVE_KV" > "$TMPD/labels"
   {
-    printf 'kind\t%s\nname\t%s\nsource\t%s\n' "$kind" "$ACTIVE_NAME" "$src"
+    printf 'cache\tpo-theme-values/2\nkind\t%s\nname\t%s\nsource\t%s\n' "$kind" "$ACTIVE_NAME" "$src"
     sed 's/^/label./' "$TMPD/labels"
+    strs_of "$ACTIVE_KV"
   } > "$dir/values.$$"
   mv "$dir/values.$$" "$dir/values"
   while IFS="$TAB" read -r role v; do
@@ -591,7 +635,7 @@ refresh() {
     [ "$v" != "$canon" ] || continue
     grep -qxF "$role$TAB$v" "$dir/history" 2>/dev/null || printf '%s\t%s\n' "$role" "$v" >> "$dir/history"
   done < "$TMPD/labels"
-  echo "values: $ACTIVE_NAME labels written to $dir/values"
+  echo "values: $ACTIVE_NAME labels and strings written to $dir/values"
 }
 
 verify() {
@@ -643,6 +687,9 @@ anchors() {
   while IFS="$TAB" read -r k v; do
     case "$k" in
       schema|name|description|*_plural|avoid.*|label.*) ;;
+      str.*)
+        registry_rows | awk -F '\t' -v k="$k" -v v="$v" '$1 == k && index($6, v) { found = 1 } END { exit !found }' \
+          || { printf 'anchor missing: nautical %s is not in the upstream line of any registered %s hook\n' "$k" "$k"; miss=1; } ;;
       seasoning)
         printf '%s\n' "$v" | tr ',' '\n' | sed 's/^ *//' > "$TMPD/season"
         while read -r w; do chk AGENTS.md "\"$w\""; done < "$TMPD/season" ;;

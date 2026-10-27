@@ -201,6 +201,8 @@ load_status_libs() {
   . "$SCRIPT_DIR/fm-wake-lib.sh" || return 1
   # shellcheck source=bin/fm-classify-lib.sh
   . "$SCRIPT_DIR/fm-classify-lib.sh" || return 1
+  # shellcheck source=bin/po-theme-lib.sh
+  . "$SCRIPT_DIR/po-theme-lib.sh" || return 1
   LIBS_LOADED=1
 }
 
@@ -217,7 +219,7 @@ resolve_state() {
   verb=$(status_line_verb "$line" 2>/dev/null) || verb=
   case "$verb" in
     needs-decision|"${FM_CLASSIFY_CAPTAIN_HELD_VERB:-$FM_CLASSIFY_CAPTAIN_HELD_VERB_DEFAULT}")
-      STATE_LABEL=needs-captain; STATE_RANK=1 ;;
+      STATE_LABEL=$(po_str sidebar.needs); STATE_RANK=1 ;;
     blocked|failed) STATE_LABEL=problem; STATE_RANK=2 ;;
     done) STATE_LABEL="done"; STATE_RANK=4 ;;
   esac

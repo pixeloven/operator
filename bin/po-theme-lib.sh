@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# po-theme-lib.sh - sourceable workspace-label hooks for the PixelOven theme
-# layer (ADR-0020 decisions 5 and 6). Bash 3.2; defines functions only.
+# po-theme-lib.sh - sourceable workspace-label and display-string hooks for the
+# PixelOven theme layer (ADR-0020 decisions 5 and 6). Bash 3.2; defines functions only.
 #
 # Upstream-owned files call these from single registered hook lines
 # (.agents/skills/po-theme/surfaces.tsv). A home is nautical when it selects no
@@ -36,6 +36,9 @@
 #   po_jq_labels                     JSON for jq --argjson: {"primary": regex of
 #                                    accepted primary labels, "submate": regex of
 #                                    accepted secondmate label prefixes}
+#   po_str <surface.name>            the themed display string for a registered
+#                                    str.<surface.name> key (sidebar.needs,
+#                                    alert.wedge_title); fails for any other key
 
 PO_THEME_LIB_ROOT="$(d=${BASH_SOURCE[0]%/*}; [ "$d" != "${BASH_SOURCE[0]}" ] || d=.; cd "${d:-/}/.." && pwd)"
 
@@ -64,13 +67,24 @@ po__nautical() {
   return 1
 }
 
-# po__fresh <values-file>: true when the cache still matches its sources.
+# po__str_canonical <surface.name>: upstream's literal for a registered str key.
+po__str_canonical() {
+  case "$1" in
+    sidebar.needs) printf 'needs-captain' ;;
+    alert.wedge_title) printf 'firstmate: away-mode escalations WEDGED' ;;
+    *) return 1 ;;
+  esac
+}
+
+# po__fresh <values-file>: true when the cache still matches its sources and
+# was written in the current cache format.
 po__fresh() {
-  local vals=$1 home k v name='' src='' kind='' sel
+  local vals=$1 home k v name='' src='' kind='' cache='' sel
   [ -f "$vals" ] || return 1
   while IFS="$(printf '\t')" read -r k v; do
-    case "$k" in name) name=$v ;; source) src=$v ;; kind) kind=$v ;; esac
+    case "$k" in name) name=$v ;; source) src=$v ;; kind) kind=$v ;; cache) cache=$v ;; esac
   done < "$vals"
+  [ "$cache" = po-theme-values/2 ] || return 1
   home=$(po__home)
   if [ -e "$home/.fm-secondmate-home" ]; then
     [ "$kind" = secondmate ] || return 1
@@ -85,19 +99,36 @@ po__fresh() {
   return 0
 }
 
+# po__refresh: rebuild this home's values cache, handing the home paths read
+# here to po-theme.sh even when the caller set them without exporting them.
+po__refresh() {
+  local home
+  home=$(po__home)
+  (
+    [ -z "${FM_CONFIG_OVERRIDE:-}" ] || export FM_CONFIG_OVERRIDE
+    [ -z "${FM_DATA_OVERRIDE:-}" ] || export FM_DATA_OVERRIDE
+    [ -z "${FM_STATE_OVERRIDE:-}" ] || export FM_STATE_OVERRIDE
+    FM_HOME=$home "$PO_THEME_LIB_ROOT/bin/po-theme.sh" refresh
+  ) >/dev/null 2>&1
+}
+
+# po__value <key>: the active theme's cached value for <key>; fails when the
+# home is nautical or the theme cannot be resolved.
+po__value() {
+  local key=$1 vals k v
+  po__nautical && return 1
+  vals="$(po__state)/values"
+  { po__fresh "$vals" || po__refresh; } && [ -f "$vals" ] || return 1
+  while IFS="$(printf '\t')" read -r k v; do
+    [ "$k" = "$key" ] && [ -n "$v" ] && { printf '%s' "$v"; return 0; }
+  done < "$vals"
+  return 1
+}
+
 # po__current <role>: the active theme's label for <role>; canonical when
 # nautical or when the theme cannot be resolved.
 po__current() {
-  local role=$1 vals k v
-  if ! po__nautical; then
-    vals="$(po__state)/values"
-    if { po__fresh "$vals" || "$PO_THEME_LIB_ROOT/bin/po-theme.sh" refresh >/dev/null 2>&1; } && [ -f "$vals" ]; then
-      while IFS="$(printf '\t')" read -r k v; do
-        [ "$k" = "label.$role" ] && [ -n "$v" ] && { printf '%s' "$v"; return 0; }
-      done < "$vals"
-    fi
-  fi
-  po__canonical "$role"
+  po__value "label.$1" || po__canonical "$1"
 }
 
 # po__words <role>: the accept-set words for <role>, one per line, canonical first.
@@ -193,4 +224,9 @@ po_jq_labels() {
   p=$(po__words primary | paste -sd '|' -)
   s=$(po__words submate | paste -sd '|' -)
   printf '{"primary":"^(%s)$","submate":"^(%s)-"}' "$p" "$s"
+}
+
+po_str() {  # <surface.name>
+  po__str_canonical "${1:-}" >/dev/null || return 1
+  po__value "str.$1" || po__str_canonical "$1"
 }

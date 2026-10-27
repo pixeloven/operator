@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # tests/po-theme-labels.test.sh - behavior tests for the ADR-0020 workspace
-# label hooks (bin/po-theme-lib.sh), `bin/po-theme.sh refresh`, `label`,
-# `relabel`, and `registry`, and the A11 architectural-invariance gate.
+# label and display-string hooks (bin/po-theme-lib.sh), `bin/po-theme.sh
+# refresh`, `label`, `relabel`, and `registry`, and the A11
+# architectural-invariance gate.
 #
 # Coverage:
 #   - nautical: every label, accept-set, and herdr and Paseo matcher answers
@@ -24,6 +25,12 @@
 #     workspace or another recorded herdr session still uses, or any it
 #     cannot list (fake clients)
 #   - the validator refuses bad labels
+#   - display strings: nautical gives upstream's herdr group state
+#     `needs-captain` and wedge-alarm title, operator gives `needs-operator` and
+#     `operator: away-mode escalations WEDGED` (plan output, and the real
+#     osascript and herdr argv against recording fakes, the macOS title as argv
+#     item 2), an S1-era values cache is rebuilt, absent keys derive from the
+#     role words, and the validator refuses bad strings
 #   - the registry check refuses an unregistered changed line, and anchors fail
 #     when a registered hook line is lost
 #   - A11: routing names, hometags, session names, and the worker role contract
@@ -392,7 +399,7 @@ canonprefix|label.primary = "2ndmate-x"|overlap as prefixes
 afkhome|label.afk = "spotter"|label.afk: 'spotter' equals a home label
 afksub|label.afk = "navigator-afk"|would read as a secondmate label
 EOF
-  sed -e 's/^name = .*/name = "oldschema"/' -e 's#^schema = .*#schema = "po-theme/1"#' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldschema.theme"
+  sed -e 's/^name = .*/name = "oldschema"/' -e 's#^schema = .*#schema = "po-theme/1"#' -e '/^str\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldschema.theme"
   FM_HOME="$home" "$PT" validate oldschema >/dev/null 2>&1 || fail "a po-theme/1 theme without label keys was refused"
   printf 'label.primary = "spotter"\n' >> "$home/config/po-themes/oldschema.theme"
   out=$(FM_HOME="$home" "$PT" validate oldschema 2>&1) && fail "a po-theme/1 theme accepted a label key"
@@ -401,6 +408,98 @@ EOF
   out=$(FM_HOME="$home" "$PT" validate derived 2>&1) && fail "a derived fm- label was accepted"
   assert_contains "$out" "label.primary: 'fm-boss' must not start with fm-" "a derived label was refused for the wrong reason"
   pass "the validator refuses bad, overlapping, colliding, and misplaced labels"
+}
+
+# groups_plan <home>: `fm-herdr-groups.sh plan` for one herdr task with an
+# open decision in <home>; no Herdr call is made.
+groups_plan() {
+  printf 'on\n' > "$1/config/herdr-project-groups"
+  printf 'window=s1:w2:p2\nproject=/p/storefront\nkind=ship\nbackend=herdr\nherdr_session=s1\nherdr_workspace_id=w2\nherdr_tab_id=w2:t2\nherdr_pane_id=w2:p2\n' > "$1/state/web-ask.meta"
+  printf 'needs-decision [key=pick]: which one\n' > "$1/state/web-ask.status"
+  env FM_ROOT_OVERRIDE='' FM_HOME="$1" FM_STATE_OVERRIDE="$1/state" FM_CONFIG_OVERRIDE="$1/config" \
+    "$ROOT/bin/fm-herdr-groups.sh" plan 2>&1 | cut -f 1-3
+}
+
+# wedge_argv <home>: the argv the daemon's osascript and herdr wedge notifiers
+# hand to recording fakes, one notifier per line, items joined by "|". The
+# fakes must be the commands resolved, so no real notification is ever posted.
+wedge_argv() {
+  local fake="$TMP_ROOT/wedge-fakes" c
+  mkdir -p "$fake"
+  for c in osascript herdr; do
+    # shellcheck disable=SC2016  # expanded by the fake at run time.
+    printf '#!/usr/bin/env bash\n{ printf %%s %s; printf "|%%s" "$@"; printf "\\n"; } >> "$WEDGE_ARGV_LOG"\n' "$c" > "$fake/$c"
+    chmod +x "$fake/$c"
+  done
+  : > "$TMP_ROOT/wedge-argv"
+  # shellcheck disable=SC2016  # expanded by the child shell.
+  WEDGE_ARGV_LOG="$TMP_ROOT/wedge-argv" FM_HOME="$1" PATH="$fake:$PATH" bash -c '
+    . "$0/bin/fm-supervise-daemon.sh"
+    [ "$(command -v osascript)" = "$1/osascript" ] && [ "$(command -v herdr)" = "$1/herdr" ] || exit 99
+    FM_WEDGE_ALARM_EXEC=
+    wedge_alarm_via_osascript "escalations stuck 900s"
+    wedge_alarm_via_herdr "escalations stuck 900s"
+  ' "$ROOT" "$fake" >/dev/null 2>&1 || fail "the wedge notifiers did not reach the recording fakes"
+  cat "$TMP_ROOT/wedge-argv"
+}
+
+test_display_strings() {
+  local home op mate out
+  home=$(new_home strings-nautical)
+  op=$(new_home strings-operator operator)
+  mate=$(new_mate strings-mate gfm operator)
+  # shellcheck disable=SC2016  # the string calls run in lib's shell.
+  assert_equals "needs-captain|firstmate: away-mode escalations WEDGED" \
+    "$(lib "$home" 'echo "$(po_str sidebar.needs)|$(po_str alert.wedge_title)"')" "nautical strings are not upstream's literals"
+  assert_equals $'web-ask\tstorefront\tneeds-captain' "$(groups_plan "$home")" "the nautical group state is not upstream's"
+  out=$(wedge_argv "$home")
+  assert_equals "osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv) sound name \"Basso\"|-e|end run|escalations stuck 900s|firstmate: away-mode escalations WEDGED
+herdr|notification|show|firstmate: away-mode escalations WEDGED|--body|escalations stuck 900s|--sound|request" "$out" "the nautical wedge notifiers' argv"
+  assert_absent "$home/state/po-theme" "a nautical home wrote theme state"
+  # shellcheck disable=SC2016  # the string calls run in lib's shell.
+  assert_equals "needs-operator|operator: away-mode escalations WEDGED" \
+    "$(lib "$op" 'echo "$(po_str sidebar.needs)|$(po_str alert.wedge_title)"')" "the operator strings are wrong"
+  assert_equals $'web-ask\tstorefront\tneeds-operator' "$(groups_plan "$op")" "the operator group state is wrong"
+  out=$(wedge_argv "$op")
+  assert_contains "$out" "|end run|escalations stuck 900s|operator: away-mode escalations WEDGED" "the macOS title did not travel as argv item 2"
+  assert_contains "$out" "herdr|notification|show|operator: away-mode escalations WEDGED|--body" "the herdr notification title is not themed"
+  assert_equals "needs-operator" "$(lib "$mate" 'po_str sidebar.needs')" "an inheriting secondmate's group state is wrong"
+  # An S1-era cache has labels but no strings and no cache format line.
+  grep -v '^cache\|^str\.' "$op/state/po-theme/values" > "$op/state/po-theme/values.old"
+  mv "$op/state/po-theme/values.old" "$op/state/po-theme/values"
+  assert_equals "needs-operator" "$(lib "$op" 'po_str sidebar.needs')" "an S1-era values cache was not rebuilt"
+  lib "$op" 'po_str sidebar.unknown' >/dev/null 2>&1 && fail "po_str accepted an unregistered key"
+  pass "nautical keeps needs-captain and the firstmate wedge title; operator gives needs-operator and the operator title as macOS argv item 2"
+}
+
+test_string_validation() {
+  local home rc out name edit want
+  home=$(new_home str-validation)
+  mkdir -p "$home/config/po-themes"
+  while IFS='|' read -r name edit want; do
+    { sed -e "s/^name = .*/name = \"$name\"/" -e '/^str\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme"; printf '%s\n' "$edit"; } \
+      > "$home/config/po-themes/$name.theme"
+    rc=0
+    out=$(FM_HOME="$home" "$PT" validate "$name" 2>&1) || rc=$?
+    [ "$rc" -ne 0 ] || fail "validate accepted the $name strings: $out"
+    assert_contains "$out" "$want" "the $name strings were refused for the wrong reason"
+  done <<'EOF'
+state|str.sidebar.needs = "Needs Op"|str.sidebar.needs: 'Needs Op' must be 2-24
+running|str.sidebar.needs = "running"|equals another herdr group state
+verb|str.sidebar.needs = "needs-decision"|contains the status verb needs-decision
+fmtoken|str.alert.wedge_title = "fm-alert WEDGED"|contains an architectural token
+long|str.alert.wedge_title = "operator: away-mode escalations WEDGED and still undelivered after many retries in a row"|longer than 80 characters
+unknown|str.alert.other = "x"|unknown key: str.alert.other
+EOF
+  sed -e 's/^name = .*/name = "derived"/' -e '/^str\./d' -e 's/^user = .*/user = "field boss"/' -e 's/^product = .*/product = "ops"/' \
+    "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/derived.theme"
+  printf 'derived\n' > "$home/config/po-theme"
+  assert_equals "needs-field-boss" "$(lib "$home" 'po_str sidebar.needs')" "an absent sidebar state did not derive from the user word"
+  assert_equals "ops: away-mode escalations WEDGED" "$(lib "$home" 'po_str alert.wedge_title')" "an absent wedge title did not derive from the product word"
+  sed -e 's/^name = .*/name = "oldstr"/' -e 's#^schema = .*#schema = "po-theme/1"#' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldstr.theme"
+  out=$(FM_HOME="$home" "$PT" validate oldstr 2>&1) && fail "a po-theme/1 theme accepted a str key"
+  assert_contains "$out" "str.sidebar.needs: needs schema po-theme/2" "a str key under po-theme/1 was refused for the wrong reason"
+  pass "absent strings derive from the role words, and the validator refuses bad or misplaced strings"
 }
 
 # fixture_repo <name>: a throwaway repository whose first commit carries the
@@ -443,7 +542,8 @@ test_anchors_name_a_lost_hook() {
   local code out s
   code="$TMP_ROOT/anchors/code"
   mkdir -p "$code/bin/backends" "$code/.agents/skills" "$code/docs/pixeloven"
-  cp "$PT" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$ROOT/bin/fm-afk-launch.sh" "$code/bin/"
+  cp "$PT" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$ROOT/bin/fm-afk-launch.sh" \
+    "$ROOT/bin/fm-herdr-groups.sh" "$ROOT/bin/fm-supervise-daemon.sh" "$code/bin/"
   cp "$ROOT/bin/backends/herdr.sh" "$ROOT/bin/backends/paseo.sh" "$code/bin/backends/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"
@@ -507,6 +607,8 @@ test_operator_labels
 test_accept_set_adopts_and_groups
 test_switch_and_back_never_duplicates
 test_label_validation
+test_display_strings
+test_string_validation
 test_registry_gates
 test_anchors_name_a_lost_hook
 test_a11_architectural_invariance
