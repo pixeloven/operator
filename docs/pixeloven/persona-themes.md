@@ -40,6 +40,12 @@ Existing workspaces keep their names and are still found, because every matcher 
 `relabel` finishes a switch in herdr: it renames only the workspaces this home's task records name in that session, and only when their label is one of this home's own; a primary home's second mate record names that second mate's own workspace, which is renamed to its `navigator-<id>` label only when that second mate's own home (the `home=` its record names, else its `data/secondmates.md` entry) already accepts both its current label and the new one; until the block reaches it, relabel skips it and says to rerun after it propagates, and it skips a remote or unreadable home as one it cannot read locally. It then retires history labels no live workspace of this home still uses: that session, every other herdr session its task records name, and every Paseo workspace, whatever its folder. If any of those cannot be listed, it keeps the whole history.
 It never guesses a session, and it does not rename Paseo workspaces, which keep matching by the accept-set.
 
+### Sidebar state and alert title
+
+With Herdr project groups on, a task waiting on the user shows the theme's `str.sidebar.needs` state in the herdr sidebar, `needs-operator` under the bundled operator theme, from the next sync after `apply`.
+The away-mode wedge alarm's macOS and herdr notifications carry the theme's `str.alert.wedge_title`, `operator: away-mode escalations WEDGED` under the operator theme.
+Nothing matches either string, so a switch needs no relabel.
+
 A themed home spends about 1,150 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.
 
 ## Theme format
@@ -47,7 +53,7 @@ A themed home spends about 1,150 estimated tokens of the default 7,500-token sta
 A theme is a strict TOML subset, one `key = "value"` per line with `#` comments and no tables or escapes, so it parses with `awk` under Bash 3.2 and still reads as TOML.
 Bundled themes live in `.agents/skills/po-theme/themes/`; a home may add its own as `config/po-themes/<name>.theme`, which shadows a bundled theme of the same name except `nautical`.
 The bundled `nautical.theme` is the schema: every theme defines exactly its keys, plus any number of `avoid.<word>` entries.
-The `label.*` keys are the exception: they are optional, allowed only under schema `po-theme/2`, and derive from the role words when absent.
+The `label.*` and `str.*` keys are the exception: they are optional, allowed only under schema `po-theme/2`, and derive from the role words when absent.
 
 | Key | Meaning |
 |---|---|
@@ -62,6 +68,7 @@ The `label.*` keys are the exception: they are optional, allowed only under sche
 | `alias.<skill>` | the command a person types for each user-invocable upstream skill; the skill's own name means no alias |
 | `avoid.<word>` | for a theme word upstream already uses with another meaning, the plain words to use in chat for that other meaning |
 | `label.primary`, `label.submate`, `label.afk` | the primary home's workspace label, the prefix of a second mate's `<label>-<id>`, and the away-mode daemon workspace; the defaults are `self` and `submate` lowercased with spaces as hyphens, and `<label.primary>-afk-daemon` |
+| `str.sidebar.needs`, `str.alert.wedge_title` | the herdr group state of a task waiting on the user, and the away-mode wedge-alarm notification title; the defaults are `needs-` and `user` lowercased with spaces as hyphens, and `<product>: away-mode escalations WEDGED` |
 
 ## Validation
 
@@ -74,7 +81,8 @@ The `label.*` keys are the exception: they are optional, allowed only under sche
 - a no-op reply or bad-news example longer than 60 characters or not opening with the vocative and a comma;
 - two roles sharing a term, a role taking another role's nautical word, or a role named after a status verb, harness, or Relay;
 - an alias that names no upstream skill, shadows an existing skill, or repeats;
-- a label, given or derived, that is not 2-24 lowercase letters, digits, or hyphens starting and ending with a letter or digit, starts with `fm-`, makes the primary and second-mate labels equal or prefix each other or the other role's nautical label, or makes the away-daemon label equal a home label, read as a second-mate label, or prefix a home label.
+- a label, given or derived, that is not 2-24 lowercase letters, digits, or hyphens starting and ending with a letter or digit, starts with `fm-`, makes the primary and second-mate labels equal or prefix each other or the other role's nautical label, or makes the away-daemon label equal a home label, read as a second-mate label, or prefix a home label;
+- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, or a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`).
 
 `validate` also counts each role word's existing uses in the upstream text.
 A user or self word that already appears with another meaning is an error until the theme declares `avoid.<word>`; any other role word is a warning.
@@ -92,8 +100,8 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the intent-address guard, slash-command aliases, and the herdr and Paseo workspace labels, as listed above.
-Not yet themed, and scheduled by later ADR-0020 stages: the herdr sidebar states, the wedge-alarm notification title, supervision-note glyphs, Calm text and animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
+Themed today: chat, worker prose a person reads, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels, the herdr sidebar state of a task waiting on the user, and the wedge-alarm notification title, as listed above.
+Not yet themed, and scheduled by later ADR-0020 stages: supervision-note glyphs, Calm text and animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
 
 ## Residue: person-visible strings that stay canonical
 

@@ -5,10 +5,12 @@
 # still appears in the upstream text it mirrors, so a sync that changes the
 # wording fails the merge PR instead of drifting. This file is also the schema:
 # every theme defines exactly these keys, plus optional avoid.<word> entries;
-# the label.* keys are optional elsewhere and derive from self and submate.
-# The label values mirror upstream's herdr, Paseo, and away-daemon workspace
-# labels, which bin/po-theme-lib.sh also compiles in for the nautical fast path;
-# `anchors` checks the upstream lines through the hook registry.
+# the label.* and str.* keys are optional elsewhere and derive from the role
+# words. The label values mirror upstream's herdr, Paseo, and away-daemon
+# workspace labels, and the str values upstream's herdr sidebar state and
+# wedge-alarm title, which bin/po-theme-lib.sh also compiles in for the
+# nautical fast path; `anchors` checks the upstream lines through the hook
+# registry.
 schema = "po-theme/2"
 name = "nautical"
 description = "Upstream firstmate's nautical voice"
@@ -35,6 +37,9 @@ bad_news_example = "Captain, the build broke - ..."
 label.primary = "firstmate"
 label.submate = "2ndmate"
 label.afk = "firstmate-afk-daemon"
+
+str.sidebar.needs = "needs-captain"
+str.alert.wedge_title = "firstmate: away-mode escalations WEDGED"
 
 alias.afk = "afk"
 alias.ahoy = "ahoy"

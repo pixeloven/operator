@@ -26,3 +26,11 @@ label.accept	D	bin/backends/paseo.sh	upstream	'.[]? | select((.name as $n | $wan
 label.accept	D	bin/backends/paseo.sh	upstream	label=$(po_home_accept "$(fm_backend_paseo_workspace_label)")	label=$(fm_backend_paseo_workspace_label)
 label.accept	D	bin/backends/paseo.sh	upstream	'.[] | select(.workspaceId == $id and (.name as $n | $label | split("\n") | any(. == $n))) | .cwd' | head -1)	'.[] | select(.workspaceId == $id and .name == $label) | .cwd' | head -1)
 label.afk	T	bin/fm-afk-launch.sh	upstream	FM_AFK_LAUNCH_WS_LABEL=$("$FM_AFK_LAUNCH_DIR/po-theme.sh" label afk 2>/dev/null || printf 'firstmate-afk-daemon')	FM_AFK_LAUNCH_WS_LABEL="firstmate-afk-daemon"
+lib	-	bin/fm-herdr-groups.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/fm-herdr-groups.sh	upstream	. "$SCRIPT_DIR/po-theme-lib.sh" || return 1	
+str.sidebar.needs	T	bin/fm-herdr-groups.sh	upstream	STATE_LABEL=$(po_str sidebar.needs); STATE_RANK=1 ;;	STATE_LABEL=needs-captain; STATE_RANK=1 ;;
+lib	-	bin/fm-supervise-daemon.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/fm-supervise-daemon.sh	upstream	. "$FM_DAEMON_DIR/po-theme-lib.sh"	
+str.alert.wedge_title	T	bin/fm-supervise-daemon.sh	upstream	-e 'display notification (item 1 of argv) with title (item 2 of argv) sound name "Basso"' \	-e 'display notification (item 1 of argv) with title "firstmate: away-mode escalations WEDGED" sound name "Basso"' \
+str.alert.wedge_title	T	bin/fm-supervise-daemon.sh	upstream	-e 'end run' "$summary" "$(po_str alert.wedge_title)" >/dev/null 2>&1 && return 0	-e 'end run' "$summary" >/dev/null 2>&1 && return 0
+str.alert.wedge_title	T	bin/fm-supervise-daemon.sh	upstream	wedge_alarm_run_bounded herdr herdr notification show "$(po_str alert.wedge_title)" \	wedge_alarm_run_bounded herdr herdr notification show "firstmate: away-mode escalations WEDGED" \
