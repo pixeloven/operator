@@ -71,7 +71,7 @@ At the current pin, the bundled theme's "operator" appears about 460 times and "
 ## Role words are lowercase
 
 Role terms and the product name are common nouns, so a theme writes them in lowercase, such as `spotter`, `specialist`, and `task force`.
-Only `user_address` is capitalized, because it opens a chat line, as in "Operator, ...".
+Only `user_address` is capitalized, because it opens a chat line.
 The Persona block tells the agent to capitalize a role word only where a sentence starts.
 
 ## The boundary

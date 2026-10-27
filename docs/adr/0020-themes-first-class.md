@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-26
 - **Deciders:** Brian Gebel (the operator)
-- **Source:** Operator decisions of 2026-10-26 on persona completion (D1-D4 and the agreed boundary), building on the op-persona-complete-r1 and op-themes-plan-r2 investigations
+- **Source:** operator decisions of 2026-10-26 on persona completion (D1-D4 and the agreed boundary), building on the op-persona-complete-r1 and op-themes-plan-r2 investigations
 - **Amends:** [ADR-0016](0016-persona-themed-at-the-edge.md).
   Decisions 1 (no upstream byte changes except the listed hunks), 4 (exactly three hunks), and 8 (gates A4, A9, A10) are replaced by this record's decisions 6-9.
   ADR-0016's selection, Persona block, aliases, validation, namespace claims, and the bundled `operator` vocabulary stand, except that role words become lowercase (decision 3).
