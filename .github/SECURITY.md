@@ -1,5 +1,10 @@
 # Security policy
 
+## Supported versions
+
+Security fixes land on `main` and ship in the next tagged release.
+Only the latest release and `main` receive fixes; older releases are not patched.
+
 ## Reporting a vulnerability
 
 Please report security vulnerabilities privately through GitHub's private vulnerability reporting:
