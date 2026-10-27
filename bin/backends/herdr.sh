@@ -77,6 +77,8 @@ FM_HOME="${FM_HOME:-${FM_ROOT_OVERRIDE:-$FM_ROOT}}"
 # every backend so the decision cannot drift.
 # shellcheck source=bin/fm-composer-lib.sh
 . "$FM_BACKEND_HERDR_ROOT/bin/fm-composer-lib.sh"
+# shellcheck source=bin/po-theme-lib.sh
+. "$FM_BACKEND_HERDR_ROOT/bin/po-theme-lib.sh"
 
 # Shared, backend-neutral normalized-transition shape and the single-owner
 # status->action policy table (bin/fm-transition-lib.sh). This adapter's event
@@ -362,11 +364,11 @@ fm_backend_herdr_workspace_label() {
   if [ -f "$marker" ]; then
     id=$(tr -d '[:space:]' < "$marker" 2>/dev/null)
     if [ -n "$id" ]; then
-      printf '2ndmate-%s' "$id"
+      po_home_label "2ndmate-$id"
       return 0
     fi
   fi
-  printf 'firstmate'
+  po_home_label firstmate
 }
 
 # fm_backend_herdr_cli: run `herdr <args...>` scoped to <session>, setting
@@ -755,6 +757,7 @@ fm_backend_herdr_projection_journal_replace_endpoint() {  # <journal> <task-id> 
 # built by this helper.
 fm_backend_herdr_projection_concise_task_label() {  # <task-id>
   local task=$1
+  task=$(po_owner_strip "$task")
   case "$task" in
     firstmate/*) task=${task#firstmate/} ;;
     2ndmate-*/*) task=${task#*/} ;;
@@ -1508,7 +1511,7 @@ fm_backend_herdr_projection_order_best_effort() {  # <session> <created-workspac
     echo "warning: herdr presentation ordering could not list workspaces; leaving worker in Herdr's current order" >&2
     return 0
   }
-  analysis=$(printf '%s' "$list" | jq -c --arg created "$created" --arg parent "$parent" --arg parent_ws "$parent_ws" --arg group_key "$group_key" '
+  analysis=$(printf '%s' "$list" | jq -c --arg created "$created" --arg parent "$parent" --arg parent_ws "$parent_ws" --arg group_key "$group_key" --argjson po "$(po_jq_labels)" '
     def is_parent:
       if ($parent_ws | length) > 0
       then .workspace_id == $parent_ws
@@ -1516,7 +1519,7 @@ fm_backend_herdr_projection_order_best_effort() {  # <session> <created-workspac
       end;
     def is_top_level_parent:
       (.label | type) == "string"
-      and ((.label == "firstmate") or (.label | test("^2ndmate-[^/]+$")));
+      and ((.label | test($po.primary)) or (.label | test($po.submate + "[^/]+$")));
     def is_new_child:
       (.label | type) == "string"
       and (.label | test("^└ .+ · p:[A-Za-z0-9_-]{22}$"));
@@ -1524,7 +1527,7 @@ fm_backend_herdr_projection_order_best_effort() {  # <session> <created-workspac
       (.label | type) == "string"
       and (.label | test("^(firstmate|2ndmate-[^/]+)/.+ · p:[A-Za-z0-9_-]{22}$"));
     def is_legacy_child_for($owner):
-      is_legacy_child and (.label | startswith($owner + "/"));
+      is_legacy_child and (.label | startswith(($owner | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) + "/"));
     def is_child_for($owner):
       is_new_child or is_legacy_child_for($owner);
     (.result.workspaces // null) as $spaces
@@ -1717,7 +1720,7 @@ fm_backend_herdr_server_ensure() {  # <session>
 # historical first-match behavior.
 fm_backend_herdr_workspace_find_all() {  # <session>
   local session=$1 label list
-  label=$(fm_backend_herdr_workspace_label)
+  label=$(po_home_accept "$(fm_backend_herdr_workspace_label)")
   list=$(fm_backend_herdr_cli "$session" workspace list 2>/dev/null) || return 0
   # NOTE: the jq variable is $want, NOT $label - `label` is a jq reserved
   # keyword (label/break), so declaring a jq variable named "label" is a
@@ -1725,7 +1728,7 @@ fm_backend_herdr_workspace_find_all() {  # <session>
   # ALWAYS return empty and every spawn mint a fresh "firstmate" workspace
   # (the workspace leak).
   printf '%s' "$list" | jq -r --arg want "$label" \
-    '.result.workspaces[]? | select(.label == $want) | .workspace_id' 2>/dev/null
+    '.result.workspaces[]? | select(.label as $l | $want | split("\n") | any(. == $l)) | .workspace_id' 2>/dev/null
 }
 
 # fm_backend_herdr_workspace_find: this HOME's own workspace id inside
@@ -2749,6 +2752,7 @@ fm_backend_herdr_projection_live_binding_matches() {  # <session> <token> <works
     --arg workspace "$workspace" \
     --arg parent_workspace "$parent_workspace" \
     --arg parent_label "$parent_label" \
+    --argjson po "$(po_jq_labels)" \
     --arg workspace_label "$workspace_label" '
       def is_new_child:
         (.label | type) == "string"
@@ -2756,14 +2760,14 @@ fm_backend_herdr_projection_live_binding_matches() {  # <session> <token> <works
       def is_legacy_child_for($owner):
         (.label | type) == "string"
         and (.label | test("^(firstmate|2ndmate-[^/]+)/.+ · p:[A-Za-z0-9_-]{22}$"))
-        and (.label | startswith($owner + "/"));
+        and (.label | startswith(($owner | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) + "/"));
       (.result.workspaces // null) as $spaces
       | select(($spaces | type) == "array")
       | select(([$spaces[]? | select(.workspace_id == $workspace)] | length) == 1)
       | select(([$spaces[]? | select(.workspace_id == $workspace and .label == $workspace_label)] | length) == 1)
       | select(([$spaces[]? | select((.label | type) == "string" and (.label | endswith(" · p:" + $token)))] | length) == 1)
       | select(([$spaces[]? | select((.label | type) == "string" and (.label | endswith(" · p:" + $token)) and .workspace_id == $workspace)] | length) == 1)
-      | select(([$spaces[]? | select(.workspace_id == $parent_workspace and .label == $parent_label)] | length) == 1)
+      | select(([$spaces[]? | select(.workspace_id == $parent_workspace and ((.label | strings | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) == ($parent_label | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-"))))] | length) == 1)
       | ([range(0; $spaces | length) | select($spaces[.].workspace_id == $parent_workspace)]) as $parents
       | ([range(0; $spaces | length) | select($spaces[.].workspace_id == $workspace)]) as $children
       | select(($parents | length) == 1 and ($children | length) == 1)
@@ -2828,7 +2832,7 @@ fm_backend_herdr_projection_reclaim_task() {  # <session> <journal> <task-id> <h
      || [ "$FM_BACKEND_HERDR_JOURNAL_WORKSPACE_ID" != "$meta_workspace" ] \
      || [ "$FM_BACKEND_HERDR_JOURNAL_TAB_ID" != "$meta_tab" ] \
      || [ "$FM_BACKEND_HERDR_JOURNAL_PANE_ID" != "$meta_pane" ] \
-     || [ "$FM_BACKEND_HERDR_JOURNAL_PARENT_LABEL" != "$parent_label" ] \
+     || ! po_label_same "$FM_BACKEND_HERDR_JOURNAL_PARENT_LABEL" "$parent_label" \
      || [ "$FM_BACKEND_HERDR_JOURNAL_TASK_LABEL" != "$task_label" ]; then
     echo "warning: herdr presentation binding for $id does not match its exact home, endpoint, or parent; spawning flat" >&2
     return 2

@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# po-theme.sh - PixelOven persona and vocabulary theme layer (ADR-0016).
+# po-theme.sh - PixelOven persona and vocabulary theme layer (ADR-0016,
+# amended by ADR-0020).
 #
 # Upstream firstmate text stays byte-identical. A theme changes only display
 # words: what the agents call themselves and the user in chat, their seasoning,
-# the fixed no-op reply, the vocabulary workers use in prose a person reads, and
-# the slash commands a person types. It never renames an identifier (script,
-# path, environment variable, skill directory, status verb, or a brief heading
-# that code parses) and never changes what a rule means.
+# the fixed no-op reply, the vocabulary workers use in prose a person reads, the
+# slash commands a person types, and the herdr and Paseo workspace labels. It
+# never renames an identifier (script, path, environment variable, skill
+# directory, status verb, or a brief heading that code parses) and never changes
+# what a rule means.
 #
 # Theme files are a strict TOML subset: one `key = "value"` per line, `#`
 # comments, no tables, no escapes, so they parse with awk under Bash 3.2.
 # Bundled themes live in .agents/skills/po-theme/themes/; a home may add its own
 # as config/po-themes/<name>.theme. The bundled nautical theme is the schema:
-# every theme defines exactly its keys, plus optional avoid.<word> entries.
+# every theme defines exactly its keys, plus optional avoid.<word> entries;
+# the label.* keys are optional under schema po-theme/2 and derive from self and
+# submate when absent.
 #
 # Selection: the first line of config/po-theme in the primary home; absent means
 # nautical, which writes nothing, so a home without a selection is byte-for-byte
@@ -48,6 +52,28 @@
 #                                     block's, else the selection's (empty for nautical)
 #   po-theme.sh worker-line           one-line worker vocabulary for the launch role
 #                                     contract (empty for nautical)
+#   po-theme.sh label <role>          the workspace label for primary, submate, or
+#                                     afk (bin/po-theme-lib.sh po_label)
+#   po-theme.sh refresh               rebuild state/po-theme/values for this home and
+#                                     record its labels in state/po-theme/history;
+#                                     nautical removes the values file and keeps history
+#   po-theme.sh relabel --session S [--workspace ID]... [--dry-run]
+#                                     herdr: rename this home's recorded workspaces in
+#                                     session S (ids from state/*.meta, plus each
+#                                     --workspace) whose label is in the home's
+#                                     accept-set to the current label, then retire
+#                                     history words no workspace in S still uses
+#   po-theme.sh registry files        upstream-owned files that carry theme hooks
+#   po-theme.sh registry check-diff <ref>
+#                                     gate A9: every line a registered upstream-owned
+#                                     file changes against <ref> is its registered hook
+#
+# The hook registry is .agents/skills/po-theme/surfaces.tsv: one tab-separated
+# row per hook line - key, class (T themed, D dual, - plumbing), file, owner
+# (upstream or pixeloven), the hook line exactly as written (leading
+# whitespace ignored), and the upstream line it replaces (empty for an added
+# line). `anchors` checks that every hook line is present and, when the upstream
+# pin is in this clone, that every replaced line still exists upstream at the pin.
 #
 # Exit status: 0 on success; 1 on a validation, drift, or anchor finding, an
 # unknown theme, a malformed theme, or a usage error.
@@ -62,6 +88,8 @@ SKILLS="$CODE_ROOT/.agents/skills"
 BUNDLED="$SKILLS/po-theme/themes"
 LOCAL_THEMES="$CONFIG/po-themes"
 SHARED="$DATA/captain-shared.md"
+STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
+REGISTRY="$SKILLS/po-theme/surfaces.tsv"
 START_MARK='<!-- po-theme:persona:start -->'
 END_MARK='<!-- po-theme:persona:end -->'
 VALUES_PREFIX='<!-- po-theme:values '
@@ -237,15 +265,25 @@ check_values() {
     -v deny="$DENY_WORDS" -v roledeny="$ROLE_DENY_WORDS" '
     function bad(m) { print "error: " m; failed = 1 }
     function isrole(k) { return (k in R) || k == "product" || k ~ /_plural$/ }
+    function dashed(v) { v = tolower(v); gsub(/ /, "-", v); return v }
+    function pre(a, b) { return index(b, a) == 1 }
+    function label(k, v) {
+      if (v !~ /^[a-z0-9][a-z0-9-]*[a-z0-9]$/ || length(v) > 24) bad(k ": '"'"'" v "'"'"' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit")
+      else if (v ~ /^fm-/) bad(k ": '"'"'" v "'"'"' must not start with fm-")
+    }
+    function overlap(ka, a, kb, b) {
+      if (a == b) bad(ka " equals " kb " ('"'"'" a "'"'"')")
+      else if (pre(a, b) || pre(b, a)) bad(ka " '"'"'" a "'"'"' and " kb " '"'"'" b "'"'"' overlap as prefixes")
+    }
     function hasword(v, w,   s) { s = " " tolower(v) " "; gsub(/[^a-z0-9_]/, " ", s); return index(s, " " w " ") > 0 }
     NR == FNR { canon[$1] = $2; order[++n] = $1; next }
     { val[$1] = $2; keys[++m] = $1 }
     END {
       nr = split(roles, ra, " "); for (i = 1; i <= nr; i++) R[ra[i]] = 1
       nd = split(deny, D, " "); nrd = split(roledeny, RD, " "); nt = split(tokens, T, " ")
-      if (val["schema"] != "po-theme/1") bad("schema must be \"po-theme/1\"")
+      if (val["schema"] != "po-theme/1" && val["schema"] != "po-theme/2") bad("schema must be \"po-theme/1\" or \"po-theme/2\"")
       if (val["name"] != name) bad("name must equal the theme name (" name ")")
-      for (i = 1; i <= n; i++) if (!(order[i] in val)) bad("missing key: " order[i])
+      for (i = 1; i <= n; i++) if (!(order[i] in val) && order[i] !~ /^label\./) bad("missing key: " order[i])
       for (i = 1; i <= m; i++) { k = keys[i]; if (k !~ /^avoid\./ && !(k in canon)) bad("unknown key: " k) }
       for (i = 1; i <= m; i++) {
         k = keys[i]; v = val[k]
@@ -268,7 +306,18 @@ check_values() {
         }
         else if (k ~ /^alias\./) { if (v !~ /^[a-z][a-z0-9-]+$/ || length(v) > 31) bad(k ": alias must be 2-31 lowercase letters, digits, or hyphens") }
         else if (k ~ /^avoid\./) { if (length(v) > 120) bad(k ": longer than 120 characters") }
+        else if (k ~ /^label\./) { if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2") }
       }
+      lp = ("label.primary" in val) ? val["label.primary"] : dashed(val["self"])
+      ls = ("label.submate" in val) ? val["label.submate"] : dashed(val["submate"])
+      la = ("label.afk" in val) ? val["label.afk"] : lp "-afk-daemon"
+      label("label.primary", lp); label("label.submate", ls); label("label.afk", la)
+      overlap("label.primary", lp, "label.submate", ls)
+      overlap("label.primary", lp, "the canonical secondmate label", "2ndmate")
+      overlap("label.submate", ls, "the canonical primary label", "firstmate")
+      if (la == lp || la == ls || la == "firstmate" || la == "2ndmate") bad("label.afk: '"'"'" la "'"'"' equals a home label")
+      else if (pre(ls, la) || pre("2ndmate", la)) bad("label.afk: '"'"'" la "'"'"' would read as a secondmate label")
+      else if (pre(la, lp) || pre(la, ls) || pre(la, "firstmate") || pre(la, "2ndmate")) bad("label.afk: '"'"'" la "'"'"' is a prefix of a home label")
       for (i = 1; i <= nr; i++) {
         k = ra[i]; if (!(k in val)) continue
         lv = tolower(val[k])
@@ -494,6 +543,49 @@ apply() {
     echo "persona: nautical - nothing to write"
   fi
   write_aliases "$ACTIVE_NAME" "$ACTIVE_KV"
+  refresh
+}
+
+# labels_of <kv>: "<role><TAB><label>" for primary, submate, and afk, using the
+# derived default for an absent label.* key (check_values validated both).
+labels_of() {
+  awk -F '\t' '
+    { v[$1] = $2 }
+    END {
+      lp = ("label.primary" in v) ? v["label.primary"] : v["self"]
+      ls = ("label.submate" in v) ? v["label.submate"] : v["submate"]
+      lp = tolower(lp); ls = tolower(ls); gsub(/ /, "-", lp); gsub(/ /, "-", ls)
+      la = ("label.afk" in v) ? v["label.afk"] : lp "-afk-daemon"
+      printf "primary\t%s\nsubmate\t%s\nafk\t%s\n", lp, ls, la
+    }
+  ' "$1"
+}
+
+# refresh: the values cache bin/po-theme-lib.sh reads, plus the history of
+# labels this home applied, which keeps older workspace names matchable.
+refresh() {
+  local dir="$STATE/po-theme" kind=primary src role v canon
+  is_secondmate_home && kind=secondmate
+  resolve_active
+  if [ "$ACTIVE_NAME" = nautical ]; then
+    rm -f "$dir/values"
+    echo "values: nautical - no cache"
+    return 0
+  fi
+  mkdir -p "$dir"
+  src=${ACTIVE_SRC#inherited:}
+  labels_of "$ACTIVE_KV" > "$TMPD/labels"
+  {
+    printf 'kind\t%s\nname\t%s\nsource\t%s\n' "$kind" "$ACTIVE_NAME" "$src"
+    sed 's/^/label./' "$TMPD/labels"
+  } > "$dir/values.$$"
+  mv "$dir/values.$$" "$dir/values"
+  while IFS="$TAB" read -r role v; do
+    case "$role" in primary) canon=firstmate ;; submate) canon=2ndmate ;; *) continue ;; esac
+    [ "$v" != "$canon" ] || continue
+    grep -qxF "$role$TAB$v" "$dir/history" 2>/dev/null || printf '%s\t%s\n' "$role" "$v" >> "$dir/history"
+  done < "$TMPD/labels"
+  echo "values: $ACTIVE_NAME labels written to $dir/values"
 }
 
 verify() {
@@ -544,7 +636,7 @@ anchors() {
   }
   while IFS="$TAB" read -r k v; do
     case "$k" in
-      schema|name|description|*_plural|avoid.*) ;;
+      schema|name|description|*_plural|avoid.*|label.*) ;;
       seasoning)
         printf '%s\n' "$v" | tr ',' '\n' | sed 's/^ *//' > "$TMPD/season"
         while read -r w; do chk AGENTS.md "\"$w\""; done < "$TMPD/season" ;;
@@ -572,8 +664,131 @@ anchors() {
   grep -q '^Persona: ' "$CODE_ROOT/AGENTS.md" || { echo 'anchor missing: the ADR-0016 Persona line in AGENTS.md'; miss=1; }
   chk bin/fm-dod-lib.sh 'po-theme.sh" worker-line'
   chk bin/fm-dod-lib.sh 'po-theme.sh" address-alt'
+  # ADR-0020 hooks: every registered hook line is present, and every upstream
+  # line a hook replaces still exists upstream at the pin.
+  local pin file hook up
+  pin=$(tr -d '[:space:]' < "$CODE_ROOT/docs/pixeloven/upstream-pin" 2>/dev/null || true)
+  if [ -n "$pin" ] && git -C "$CODE_ROOT" cat-file -e "$pin^{commit}" 2>/dev/null; then :; else
+    echo "note: upstream pin ${pin:-?} is not in this clone; replaced upstream lines not checked"; pin=''
+  fi
+  while IFS="$TAB" read -r k w file s hook up; do
+    trim < "$CODE_ROOT/$file" 2>/dev/null | grep -qxF -- "$hook" || { printf 'anchor missing: hook %s not found in %s: %s\n' "$k" "$file" "$hook"; miss=1; }
+    [ -n "$pin" ] && [ -n "$up" ] || continue
+    git -C "$CODE_ROOT" show "$pin:$file" 2>/dev/null | trim | grep -qxF -- "$up" \
+      || { printf 'anchor missing: upstream line for hook %s no longer in %s at the pin: %s\n' "$k" "$file" "$up"; miss=1; }
+  done < <(registry_rows)
   [ $miss -eq 0 ] && echo "anchors: ok"
   return $miss
+}
+
+# herdr_cli <session> <args...>: the herdr adapter's own session-scoped CLI
+# wrapper, so relabel uses the same client selection and --session flag.
+herdr_cli() {
+  FM_HOME="$FM_HOME" bash -c '. "$1/bin/backends/herdr.sh"; shift; fm_backend_herdr_cli "$@"' _ "$CODE_ROOT" "$@"
+}
+
+# relabel --session <name> [--workspace <id>]... [--dry-run]
+relabel() {
+  local session='' dry=0 ids='' id want list cur role w f renamed=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --session) [ $# -ge 2 ] || die "usage: relabel --session <name> [--workspace <id>]... [--dry-run]"; session=$2; shift 2 ;;
+      --workspace) [ $# -ge 2 ] || die "usage: relabel --session <name> [--workspace <id>]... [--dry-run]"; ids="$ids$2
+"; shift 2 ;;
+      --dry-run) dry=1; shift ;;
+      *) die "relabel: unknown argument: $1" ;;
+    esac
+  done
+  [ -n "$session" ] || die "relabel needs --session <herdr session>; it never guesses one"
+  command -v jq >/dev/null 2>&1 || die "relabel needs jq"
+  for f in "$STATE"/*.meta; do
+    [ -f "$f" ] || continue
+    [ "$(awk -F= '$1 == "herdr_session" { print substr($0, index($0, "=") + 1); exit }' "$f")" = "$session" ] || continue
+    id=$(awk -F= '$1 == "herdr_workspace_id" { print substr($0, index($0, "=") + 1); exit }' "$f")
+    [ -z "$id" ] || ids="$ids$id
+"
+  done
+  # shellcheck source=bin/po-theme-lib.sh
+  . "$SCRIPT_DIR/po-theme-lib.sh"
+  if is_secondmate_home; then
+    want=$(po_home_label "2ndmate-$(tr -d '[:space:]' < "$FM_HOME/.fm-secondmate-home")")
+  else
+    want=$(po_home_label firstmate)
+  fi
+  po_home_accept "$want" > "$TMPD/accept"
+  list=$(herdr_cli "$session" workspace list) || die "relabel: could not list herdr workspaces in session '$session'"
+  printf '%s' "$ids" | awk 'NF && !seen[$0]++' > "$TMPD/ids"
+  while IFS= read -r id; do
+    cur=$(printf '%s' "$list" | jq -r --arg id "$id" '.result.workspaces[]? | select(.workspace_id == $id) | .label // empty' 2>/dev/null)
+    [ -n "$cur" ] || { echo "relabel: $id is not live in session '$session'; skipped"; continue; }
+    [ "$cur" != "$want" ] || continue
+    grep -qxF -- "$cur" "$TMPD/accept" || { echo "relabel: $id is labeled '$cur', not one of this home's labels; skipped"; continue; }
+    echo "relabel: $id '$cur' -> '$want'"
+    renamed=1
+    [ "$dry" -eq 1 ] || herdr_cli "$session" workspace rename "$id" "$want" >/dev/null || die "relabel: herdr refused to rename $id"
+  done < "$TMPD/ids"
+  [ "$renamed" -eq 1 ] || echo "relabel: nothing to rename"
+  [ -f "$STATE/po-theme/history" ] || return 0
+  [ "$dry" -eq 1 ] || list=$(herdr_cli "$session" workspace list) || die "relabel: could not re-list herdr workspaces in session '$session'"
+  printf '%s' "$list" | jq -r '.result.workspaces[]?.label | strings' > "$TMPD/live" 2>/dev/null || die "relabel: unreadable herdr workspace list"
+  : > "$TMPD/history"
+  while IFS="$TAB" read -r role w; do
+    if { [ "$role" = primary ] && grep -qxF -- "$w" "$TMPD/live"; } \
+      || { [ "$role" = submate ] && awk -v p="$w-" 'index($0, p) == 1 { f = 1 } END { exit !f }' "$TMPD/live"; } \
+      || [ "$w" = "$(po_label "$role")" ]; then
+      printf '%s\t%s\n' "$role" "$w" >> "$TMPD/history"
+    else
+      echo "relabel: history retired $role '$w'"
+    fi
+  done < "$STATE/po-theme/history"
+  [ "$dry" -eq 1 ] || cat "$TMPD/history" > "$STATE/po-theme/history"
+}
+
+# registry_rows: the registry without comments or blank lines.
+registry_rows() {
+  [ -f "$REGISTRY" ] || die "no hook registry at $REGISTRY"
+  awk -F '\t' '!/^#/ && NF >= 5' "$REGISTRY"
+}
+
+registry_files() {
+  registry_rows | awk -F '\t' '$4 == "upstream" && !seen[$3]++ { print $3 }'
+}
+
+trim() { sed 's/^[[:space:]]*//'; }
+
+# registry_check_diff <ref>: gate A9 for every registered upstream-owned file.
+registry_check_diff() {
+  local ref=$1 f bad=0
+  git -C "$CODE_ROOT" rev-parse --verify -q "$ref^{commit}" >/dev/null || die "registry check-diff: unknown ref $ref"
+  for f in $(registry_files); do
+    git -C "$CODE_ROOT" diff -U0 "$ref" -- "$f" | grep -E '^[-+]' | grep -vE '^(\+\+\+ |--- )' > "$TMPD/d" || true
+    grep '^+' "$TMPD/d" | cut -c2- | trim > "$TMPD/added" || true
+    grep '^-' "$TMPD/d" | cut -c2- | trim > "$TMPD/removed" || true
+    registry_rows | awk -F '\t' -v f="$f" '$3 == f { print $5 "\t" $6 }' > "$TMPD/rows"
+    awk -F '\t' -v f="$f" -v rows="$TMPD/rows" -v removed="$TMPD/removed" '
+      BEGIN {
+        while ((getline l < rows) > 0) { n = index(l, "\t"); h = substr(l, 1, n - 1); hook[h] = 1; up[h] = substr(l, n + 1) }
+        while ((getline l < removed) > 0) rem[l]++
+      }
+      {
+        if (!($0 in hook)) { printf "A9: %s: unregistered changed line: %s\n", f, $0; bad = 1; next }
+        if (used[$0]++) { printf "A9: %s: hook line appears more than once: %s\n", f, $0; bad = 1; next }
+        if (up[$0] != "") {
+          if (rem[up[$0]] > 0) rem[up[$0]]--
+          else { printf "A9: %s: hook does not replace its registered upstream line: %s\n", f, $0; bad = 1 }
+        }
+      }
+      END {
+        for (l in rem) if (rem[l] > 0) { printf "A9: %s: unregistered removed line: %s\n", f, l; bad = 1 }
+        exit bad
+      }
+    ' "$TMPD/added" || bad=1
+    if git -C "$CODE_ROOT" diff --summary "$ref" -- "$f" | grep -q 'mode change'; then
+      echo "A9: $f: a theme hook changed the file mode"; bad=1
+    fi
+  done
+  [ $bad -eq 0 ] && echo "registry: every hook line in the registered upstream files matches its row"
+  return $bad
 }
 
 cmd=${1:-}
@@ -599,6 +814,20 @@ case "$cmd" in
   persona)
     if [ $# -ge 1 ]; then persona "$1" "$(load_named "$1")"; else resolve_active; persona "$ACTIVE_NAME" "$ACTIVE_KV"; fi ;;
   apply) apply ;;
+  refresh) refresh ;;
+  label)
+    [ $# -eq 1 ] || die "usage: label <primary|submate|afk>"
+    # shellcheck source=bin/po-theme-lib.sh
+    . "$SCRIPT_DIR/po-theme-lib.sh"
+    po_label "$1" || die "unknown label role: $1"
+    printf '\n' ;;
+  relabel) relabel "$@" ;;
+  registry)
+    case "${1:-}" in
+      files) registry_files ;;
+      check-diff) [ $# -eq 2 ] || die "usage: registry check-diff <ref>"; registry_check_diff "$2" ;;
+      *) die "usage: registry files | registry check-diff <ref>" ;;
+    esac ;;
   verify) verify ;;
   anchors) anchors ;;
   address-alt)

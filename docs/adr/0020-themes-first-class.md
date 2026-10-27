@@ -58,7 +58,7 @@ Measured cost of the hooks this record permits: replaying upstream's weekly wind
    - `docs.<word>` - the drop-in replacement the docs view uses where upstream already uses a theme word with another meaning (it pairs with `avoid.<word>`).
    `nautical.theme` defines every key explicitly with upstream's literal.
    `.agents/skills/po-theme/surfaces.tsv` is the single owner of where each key is used.
-   Each row gives the key, its class (T or D), the file, the hook token at the site, and whether upstream or PixelOven owns the file.
+   Each row gives the key, its class (T, D, or `-` for a line that loads the library), the file, whether upstream or PixelOven owns it, the exact hook line, and the upstream line it replaces.
 
 5. **Parsers during a transition.**
    A dual site creates or prints with the active theme's word and matches against an accept-set.
@@ -70,7 +70,7 @@ Measured cost of the hooks this record permits: replaying upstream's weekly wind
    Architectural strings never take themed values, so no parser of an architectural format changes.
 
 6. **Mechanism.**
-   - `bin/po-theme-lib.sh` (sourceable, Bash 3.2) provides `po_str`, `po_label`, `po_accept`, and `po_glyph`.
+   - `bin/po-theme-lib.sh` (sourceable, Bash 3.2) provides the label hooks `po_label`, `po_home_label`, and `po_home_accept`, and the later stages add `po_str` and `po_glyph`.
      Each returns the compiled-in nautical literal at once when the home is nautical.
    - `apply` writes the resolved, validated values to `state/po-theme/values` and copies referenced assets beside them.
      A second-mate home builds the same cache from its inherited Persona values line.
@@ -88,7 +88,7 @@ Measured cost of the hooks this record permits: replaying upstream's weekly wind
 
 8. **Validation.**
    Every value is validated before every use, as in ADR-0016, plus these rules:
-   - `label.*` matches `^[a-z][a-z0-9-]{1,15}$`, does not start with `fm-`, and does not equal or prefix another label or a canonical label;
+   - `label.*` is 2-24 lowercase letters, digits, or hyphens that start and end with a letter or digit, so nautical's own `2ndmate` and `firstmate-afk-daemon` qualify; it does not start with `fm-`, and the primary and secondmate labels do not equal or prefix each other or the other role's canonical label;
    - `str.*` follows ADR-0016's character and authority-word rules (at most 80 characters, placeholders only from the fixed set) and may not contain an architectural token: a status verb, `FIRSTMATE_OP`, a brief heading, an `fm-` prefix, or a payload key;
    - `glyph.*` is one code point from the allow-list;
    - every asset passes its own format validator (decision 10).

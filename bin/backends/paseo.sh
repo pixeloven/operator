@@ -91,6 +91,8 @@ FM_HOME="${FM_HOME:-${FM_ROOT_OVERRIDE:-$FM_ROOT}}"
 
 # shellcheck source=bin/fm-backend-hometag-lib.sh
 . "$FM_BACKEND_PASEO_ROOT/bin/fm-backend-hometag-lib.sh"
+# shellcheck source=bin/po-theme-lib.sh
+. "$FM_BACKEND_PASEO_ROOT/bin/po-theme-lib.sh"
 
 # Shared composer-content classifier (empty|pending|unknown, and the fleet-wide
 # dead-shell-vs-agent-composer rule). Owned by bin/fm-composer-lib.sh, reused by
@@ -276,7 +278,7 @@ fm_backend_paseo_terminal_id_for_name() { # <name>
 fm_backend_paseo_workspace_label() {
   local tag
   tag=$(fm_backend_paseo_home_label)
-  printf '%s' "${tag%-*}"
+  po_home_label "${tag%-*}"
 }
 
 # fm_backend_paseo_own_workspace: the live workspace Firstmate itself runs
@@ -323,8 +325,8 @@ fm_backend_paseo_workspace_ensure() { # <cwd>
   fi
   wsid=$(fm_backend_paseo_own_workspace "$list")
   [ -n "$wsid" ] || wsid=$(printf '%s' "$list" |
-    jq -r --arg want "$label" --arg cwd "$cwd" --arg logical "$logical" --arg real "$real" \
-      '.[]? | select(.name == $want and (.cwd == $cwd or .cwd == $logical or .cwd == $real)) | .workspaceId' 2>/dev/null | head -1)
+    jq -r --arg want "$(po_home_accept "$label")" --arg cwd "$cwd" --arg logical "$logical" --arg real "$real" \
+      '.[]? | select((.name as $n | $want | split("\n") | any(. == $n)) and (.cwd == $cwd or .cwd == $logical or .cwd == $real)) | .workspaceId' 2>/dev/null | head -1)
   if [ -n "$wsid" ]; then
     printf '%s' "$wsid"
     return 0
@@ -624,12 +626,12 @@ fm_backend_paseo_retire_workspace() { # <workspace_id>
 }
 fm_backend_paseo_retire_workspace_locked() { # <workspace_id>
   local wsid=$1 label list cwd terminals agents projects pid logical real
-  label=$(fm_backend_paseo_workspace_label)
+  label=$(po_home_accept "$(fm_backend_paseo_workspace_label)")
   list=$(fm_backend_paseo_cli workspace ls --json 2>/dev/null) || return 0
   printf '%s' "$list" | jq -e 'type == "array"' >/dev/null 2>&1 || return 0
   [ "$(fm_backend_paseo_own_workspace "$list")" != "$wsid" ] || return 0
   cwd=$(printf '%s' "$list" | jq -r --arg id "$wsid" --arg label "$label" \
-    '.[] | select(.workspaceId == $id and .name == $label) | .cwd' | head -1)
+    '.[] | select(.workspaceId == $id and (.name as $n | $label | split("\n") | any(. == $n))) | .cwd' | head -1)
   [ -n "$cwd" ] || return 0
   logical=$(cd "$FM_HOME" 2>/dev/null && pwd) || logical=$FM_HOME
   real=$(cd "$FM_HOME" 2>/dev/null && pwd -P) || real=$FM_HOME

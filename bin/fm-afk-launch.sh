@@ -139,7 +139,7 @@ fi
 FM_AFK_LAUNCH_STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 FM_AFK_LAUNCH_RECORD="$FM_AFK_LAUNCH_STATE/.afk-daemon-terminal"
 FM_AFK_LAUNCH_LOCK="$FM_AFK_LAUNCH_STATE/.afk-launch.lock"
-FM_AFK_LAUNCH_WS_LABEL="firstmate-afk-daemon"
+FM_AFK_LAUNCH_WS_LABEL=$("$FM_AFK_LAUNCH_DIR/po-theme.sh" label afk 2>/dev/null || printf 'firstmate-afk-daemon')
 
 # shellcheck source=bin/fm-backend.sh
 . "$FM_AFK_LAUNCH_DIR/fm-backend.sh"

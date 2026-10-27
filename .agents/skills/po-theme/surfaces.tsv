@@ -1,0 +1,28 @@
+# Theme hook registry (ADR-0020 decision 4): the single owner of where each
+# theme key is used. One tab-separated row per hook line:
+# key, class (T themed, D dual, - plumbing), file, owner (upstream or
+# pixeloven), the hook line exactly as written (leading whitespace ignored), and
+# the upstream line it replaces (empty for an added line).
+# bin/po-theme.sh reads it for `registry` (gates A4 and A9) and `anchors` (A10).
+lib	-	bin/backends/herdr.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/backends/herdr.sh	upstream	. "$FM_BACKEND_HERDR_ROOT/bin/po-theme-lib.sh"	
+label.submate	D	bin/backends/herdr.sh	upstream	po_home_label "2ndmate-$id"	printf '2ndmate-%s' "$id"
+label.primary	D	bin/backends/herdr.sh	upstream	po_home_label firstmate	printf 'firstmate'
+label.accept	D	bin/backends/herdr.sh	upstream	task=$(po_owner_strip "$task")	
+label.accept	D	bin/backends/herdr.sh	upstream	analysis=$(printf '%s' "$list" | jq -c --arg created "$created" --arg parent "$parent" --arg parent_ws "$parent_ws" --arg group_key "$group_key" --argjson po "$(po_jq_labels)" '	analysis=$(printf '%s' "$list" | jq -c --arg created "$created" --arg parent "$parent" --arg parent_ws "$parent_ws" --arg group_key "$group_key" '
+label.accept	D	bin/backends/herdr.sh	upstream	and ((.label | test($po.primary)) or (.label | test($po.submate + "[^/]+$")));	and ((.label == "firstmate") or (.label | test("^2ndmate-[^/]+$")));
+label.accept	D	bin/backends/herdr.sh	upstream	is_legacy_child and (.label | startswith(($owner | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) + "/"));	is_legacy_child and (.label | startswith($owner + "/"));
+label.accept	D	bin/backends/herdr.sh	upstream	label=$(po_home_accept "$(fm_backend_herdr_workspace_label)")	label=$(fm_backend_herdr_workspace_label)
+label.accept	D	bin/backends/herdr.sh	upstream	'.result.workspaces[]? | select(.label as $l | $want | split("\n") | any(. == $l)) | .workspace_id' 2>/dev/null	'.result.workspaces[]? | select(.label == $want) | .workspace_id' 2>/dev/null
+label.accept	D	bin/backends/herdr.sh	upstream	--argjson po "$(po_jq_labels)" \	
+label.accept	D	bin/backends/herdr.sh	upstream	and (.label | startswith(($owner | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) + "/"));	and (.label | startswith($owner + "/"));
+label.accept	D	bin/backends/herdr.sh	upstream	| select(([$spaces[]? | select(.workspace_id == $parent_workspace and ((.label | strings | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) == ($parent_label | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-"))))] | length) == 1)	| select(([$spaces[]? | select(.workspace_id == $parent_workspace and .label == $parent_label)] | length) == 1)
+label.accept	D	bin/backends/herdr.sh	upstream	|| ! po_label_same "$FM_BACKEND_HERDR_JOURNAL_PARENT_LABEL" "$parent_label" \	|| [ "$FM_BACKEND_HERDR_JOURNAL_PARENT_LABEL" != "$parent_label" ] \
+lib	-	bin/backends/paseo.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/backends/paseo.sh	upstream	. "$FM_BACKEND_PASEO_ROOT/bin/po-theme-lib.sh"	
+label.primary	D	bin/backends/paseo.sh	upstream	po_home_label "${tag%-*}"	printf '%s' "${tag%-*}"
+label.accept	D	bin/backends/paseo.sh	upstream	jq -r --arg want "$(po_home_accept "$label")" --arg cwd "$cwd" --arg logical "$logical" --arg real "$real" \	jq -r --arg want "$label" --arg cwd "$cwd" --arg logical "$logical" --arg real "$real" \
+label.accept	D	bin/backends/paseo.sh	upstream	'.[]? | select((.name as $n | $want | split("\n") | any(. == $n)) and (.cwd == $cwd or .cwd == $logical or .cwd == $real)) | .workspaceId' 2>/dev/null | head -1)	'.[]? | select(.name == $want and (.cwd == $cwd or .cwd == $logical or .cwd == $real)) | .workspaceId' 2>/dev/null | head -1)
+label.accept	D	bin/backends/paseo.sh	upstream	label=$(po_home_accept "$(fm_backend_paseo_workspace_label)")	label=$(fm_backend_paseo_workspace_label)
+label.accept	D	bin/backends/paseo.sh	upstream	'.[] | select(.workspaceId == $id and (.name as $n | $label | split("\n") | any(. == $n))) | .cwd' | head -1)	'.[] | select(.workspaceId == $id and .name == $label) | .cwd' | head -1)
+label.afk	T	bin/fm-afk-launch.sh	upstream	FM_AFK_LAUNCH_WS_LABEL=$("$FM_AFK_LAUNCH_DIR/po-theme.sh" label afk 2>/dev/null || printf 'firstmate-afk-daemon')	FM_AFK_LAUNCH_WS_LABEL="firstmate-afk-daemon"

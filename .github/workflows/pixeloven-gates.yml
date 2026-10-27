@@ -230,7 +230,9 @@ jobs:
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A3: 'Operator' used as a proper noun - write operator in code style"; }
 
           echo "== A4 - O-1: the diff against upstream $PIN stays inside PixelOven namespaces and accepted ADR overrides"
+          bin/po-theme.sh registry files > "$RUNNER_TEMP/po-registry-files" || bad "A4: the theme hook registry is unreadable"
           out=$(git diff --name-only "$PIN" \
+                | grep -vxF -f "$RUNNER_TEMP/po-registry-files" \
                 | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|\.github/SECURITY\.md$|bin/backends/|\.agents/skills/po-|bin/po-[a-z0-9-]+\.sh$|tests/po-[a-z0-9-]+\.test\.sh$|AGENTS\.md$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-captain-hold|fm-composer-lib|fm-dod-lib|fm-spawn|fm-delivery-lane|fm-procevent-lib|fm-procevent|fm-wake-lib|fm-watch)\.sh$|tests/(fm-backend-herdr|fm-backend-herdr-presentation-e2e|fm-captain-hold-lifecycle|fm-composer-lib|fm-herdr-submit-confirm-live-e2e|fm-lint-workflows|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-wake-queue|fm-watch-triage)\.test\.sh$|docs/(captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|remote-secondmates\.md|verification/delivery-lane\.md)$|tests/captures/claude-2\.1\.291-slash-popup/|README\.md$|NOTICE$)' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A4: path is outside PixelOven namespaces and accepted ADR override sets"; }
 
@@ -260,7 +262,7 @@ jobs:
                   -- . ':!docs/adr/' ':!docs/pixeloven/' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad 'A8: a tracked file still selects a PixelOven companion fork or its installer'; }
 
-          echo '== A9 - the ADR-0016 persona hunks stay exactly as listed'
+          echo '== A9 - the ADR-0016 persona hunks stay exactly as listed, and every ADR-0020 theme hook matches its registry row'
           changed() { git diff -U0 "$PIN" -- "$1" | grep -E '^[-+]' | grep -vE '^(\+\+\+ b/|--- a/)' || true; }
           out=$(changed AGENTS.md | grep -vE '^\+Persona: ' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: AGENTS.md differs from upstream beyond the one Persona line"; }
@@ -280,12 +282,16 @@ jobs:
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: an ADR-0016 line in bin/fm-dod-lib.sh repeats"; }
           out=$(git diff --summary "$PIN" -- AGENTS.md bin/fm-dod-lib.sh | grep 'mode change' || true)
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: a persona hunk changed a file mode"; }
+          bin/po-theme.sh registry check-diff "$PIN" || bad "A9: an upstream-owned file differs beyond its registered theme hooks"
 
           echo '== A10 - the theme canary: mirrored literals, commands, and hooks still match, and every bundled theme validates'
           bin/po-theme.sh anchors || bad "A10: a nautical anchor drifted from upstream; update the themes in this PR"
           for t in .agents/skills/po-theme/themes/*.theme; do
             bin/po-theme.sh validate "$(basename "$t" .theme)" || bad "A10: bundled theme $(basename "$t" .theme) failed validation"
           done
+
+          echo '== A11 - architectural outputs are identical under every bundled theme'
+          bash tests/po-theme-labels.test.sh a11 || bad "A11: an architectural output changed under a theme"
 
           [ "$fail" -eq 0 ] || { echo 'fork-contract assertions FAILED'; exit 1; }
           echo 'fork-contract assertions PASSED'

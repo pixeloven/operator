@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # po-crew.sh - PixelOven crew delivery helper (ADR-0019).
 #
-# Crew and its skill packs reach every Specialist through the machine-level,
+# Crew and its skill packs reach every specialist through the machine-level,
 # user-scope install that dotfiles maintains for Claude Code, Codex, and pi,
 # pinned by the commit SHAs in the pixeloven marketplace catalogue. Operator
 # installs nothing itself. This helper checks that install and applies the one
