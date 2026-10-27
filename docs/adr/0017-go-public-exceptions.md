@@ -10,9 +10,7 @@ and the operator's approval date. The criteria failures come from the 2026-10-26
 retroactive go-public review of the public PixelOven repositories.
 
 An exception means the repository is left as it is: no content fix, history rewrite,
-visibility change, licence change or branch cleanup is planned for it. It does not stop
-org-level settings (for example secret scanning or a read-only default workflow token)
-from reaching the repository when they are applied to the whole organization.
+visibility change, licence change or branch cleanup is planned for it.
 
 ## Exceptions
 
