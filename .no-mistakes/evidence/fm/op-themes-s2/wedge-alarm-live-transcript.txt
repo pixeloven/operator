@@ -1,0 +1,31 @@
+=== BASE a869401, nautical home
+resolved: <lab>/bin/osascript <lab>/bin/herdr
+wedge_alarm_via_osascript rc=0
+wedge_alarm_via_herdr rc=0
+osascript|-e|on run argv|-e|display notification (item 1 of argv) with title "firstmate: away-mode escalations WEDGED" sound name "Basso"|-e|end run|escalations stuck 900s "quoted" & co
+  -> osacompile of the exact daemon script: ok
+  -> real osascript resolves rc=0: title=[firstmate: away-mode escalations WEDGED] body=[escalations stuck 900s "quoted" & co]
+herdr|notification|show|firstmate: away-mode escalations WEDGED|--body|escalations stuck 900s "quoted" & co|--sound|request
+  -> real herdr (session fm-lab-s2theme-51465-29673) rc=0: {"id":"cli:notification:show","result":{"reason":"shown","shown":true,"type":"notification_show"}}
+=== HEAD 790076e, nautical home
+resolved: <lab>/bin/osascript <lab>/bin/herdr
+wedge_alarm_via_osascript rc=0
+wedge_alarm_via_herdr rc=0
+osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv) sound name "Basso"|-e|end run|escalations stuck 900s "quoted" & co|firstmate: away-mode escalations WEDGED
+  -> osacompile of the exact daemon script: ok
+  -> real osascript resolves rc=0: title=[firstmate: away-mode escalations WEDGED] body=[escalations stuck 900s "quoted" & co]
+herdr|notification|show|firstmate: away-mode escalations WEDGED|--body|escalations stuck 900s "quoted" & co|--sound|request
+  -> real herdr (session fm-lab-s2theme-51465-29673) rc=0: {"id":"cli:notification:show","result":{"reason":"busy","shown":false,"type":"notification_show"}}
+=== HEAD 790076e, operator home
+resolved: <lab>/bin/osascript <lab>/bin/herdr
+wedge_alarm_via_osascript rc=0
+wedge_alarm_via_herdr rc=0
+osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv) sound name "Basso"|-e|end run|escalations stuck 900s "quoted" & co|operator: away-mode escalations WEDGED
+  -> osacompile of the exact daemon script: ok
+  -> real osascript resolves rc=0: title=[operator: away-mode escalations WEDGED] body=[escalations stuck 900s "quoted" & co]
+herdr|notification|show|operator: away-mode escalations WEDGED|--body|escalations stuck 900s "quoted" & co|--sound|request
+  -> real herdr (session fm-lab-s2theme-51465-29673) rc=0: {"id":"cli:notification:show","result":{"reason":"busy","shown":false,"type":"notification_show"}}
+=== HEAD 790076e, operator home (retry until herdr idle, attempt 1)
+wedge_alarm_via_herdr rc=0
+herdr|notification|show|operator: away-mode escalations WEDGED|--body|escalations stuck 900s|--sound|request
+  -> real herdr (session fm-lab-s2theme-51465-29673) rc=0: {"id":"cli:notification:show","result":{"reason":"shown","shown":true,"type":"notification_show"}}

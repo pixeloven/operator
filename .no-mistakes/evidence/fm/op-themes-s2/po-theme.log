@@ -1,0 +1,15 @@
+ok - every bundled theme validates, and the operator theme covers its real-word collisions
+ok - validation refuses every unsafe, malformed, or colliding theme with its named reason
+ok - anchors pass on this tree and fail on drifted wording, a new command, or a lost hook
+ok - nautical writes nothing: no block, no aliases, no exclude entries
+ok - operator apply writes one idempotent block, keeps prose and mode, and rolls back byte-exact
+ok - the real session-start digest prints the Persona block in CONTEXT
+ok - the intent check refuses the themed vocative and matches upstream under nautical
+ok - the worker role contract is upstream under nautical and gains exactly one line under a theme
+ok - a secondmate home resolves an inherited custom theme, refuses apply, and rejects tampering
+ok - the intent check keeps the applied vocative when the selection breaks after apply
+ok - the Persona block advertises the aliases as primary-home commands only
+ok - aliases are generated clean and nautical apply removes them and their exclude entries
+ok - verify reports stale, hand-edited, missing, and unexpected blocks and alias drift
+ok - resolve and term read the selection and refuse unknown or path-shaped names
+all po-theme tests passed

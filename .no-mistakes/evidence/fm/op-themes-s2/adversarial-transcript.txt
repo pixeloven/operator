@@ -1,0 +1,33 @@
+## A: unknown theme selection falls back to upstream literals
+web-ask	storefront	needs-captain
+
+## B: S1-era values cache (labels only, no cache/str lines) is rebuilt on next plan
+before: str lines in cache = 0
+web-ask	storefront	needs-operator
+after: cache=po-theme-values/2 str.sidebar.needs=needs-operator str.alert.wedge_title=operator: away-mode escalations WEDGED
+
+## C: custom theme with AppleScript-hostile title characters
+error: line 30: malformed (expected key = "value"): str.alert.wedge_title = "ops' end run str.alert.wedge_title = "operator: away-mode escalations WEDGED" co: WEDGED"
+validate rc=1
+wedge_alarm_via_osascript rc=0
+osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv) sound name "Basso"|-e|end run|stuck|firstmate: away-mode escalations WEDGED
+  -> osacompile of the exact daemon script: ok
+  -> real osascript resolves rc=0: title=[firstmate: away-mode escalations WEDGED] body=[stuck]
+
+## D: a title with a double quote is refused by the validator
+str.alert.wedge_title = "ops\" WEDGED"
+error: line 30: malformed (expected key = "value"): str.alert.wedge_title = "ops\" WEDGED"
+validate rc=1
+
+## C (corrected fixture): custom theme with AppleScript-hostile title characters
+str.alert.wedge_title = "ops' end run & co: WEDGED"
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 462 times upstream; avoid.operator covers it
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 35 times upstream; avoid.deploy covers it
+validate: hostile ok
+validate rc=0
+wedge_alarm_via_osascript rc=0
+osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv) sound name "Basso"|-e|end run|stuck|ops' end run & co: WEDGED
+  -> osacompile of the exact daemon script: ok
+  -> real osascript resolves rc=0: title=[ops' end run & co: WEDGED] body=[stuck]

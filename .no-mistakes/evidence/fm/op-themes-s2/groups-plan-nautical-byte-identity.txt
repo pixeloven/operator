@@ -1,0 +1,2 @@
+base a869401 vs head 790076e, nautical home, fm-herdr-groups.sh plan:
+BYTE-IDENTICAL (3037c6b9a6f6d1de)

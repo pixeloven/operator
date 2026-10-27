@@ -1,0 +1,2 @@
+rc=
+teardown verified: lab session absent from herdr session list

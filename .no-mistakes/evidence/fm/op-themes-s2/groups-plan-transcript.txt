@@ -1,0 +1,9 @@
+$ FM_HOME=<nautical lab home> bin/fm-herdr-groups.sh plan
+web-ask	storefront	needs-captain	000.storefront.1.web-ask	000.storefront
+web-run	storefront	running	000.storefront.3.web-run	000.storefront
+
+$ FM_HOME=<operator lab home: config/po-theme=operator> bin/fm-herdr-groups.sh plan
+web-ask	storefront	needs-operator	000.storefront.1.web-ask	000.storefront
+web-run	storefront	running	000.storefront.3.web-run	000.storefront
+
+nautical home wrote theme state? no
