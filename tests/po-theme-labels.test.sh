@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/po-theme-labels.test.sh - behavior tests for the ADR-0020 workspace
 # label and display-string hooks (bin/po-theme-lib.sh), `bin/po-theme.sh
-# refresh`, `label`, `str`, `relabel`, and `registry`, and the A11
+# refresh`, `label`, `relabel`, and `registry`, and the A11
 # architectural-invariance gate.
 #
 # Coverage:
@@ -459,7 +459,6 @@ herdr|notification|show|firstmate: away-mode escalations WEDGED|--body|escalatio
   # shellcheck disable=SC2016  # the string calls run in lib's shell.
   assert_equals "needs-operator|operator: away-mode escalations WEDGED" \
     "$(lib "$op" 'echo "$(po_str sidebar.needs)|$(po_str alert.wedge_title)"')" "the operator strings are wrong"
-  assert_equals "operator: away-mode escalations WEDGED" "$(FM_HOME="$op" "$PT" str alert.wedge_title)" "po-theme.sh str is not themed"
   assert_equals $'web-ask\tstorefront\tneeds-operator' "$(groups_plan "$op")" "the operator group state is wrong"
   out=$(wedge_argv "$op")
   assert_contains "$out" "|end run|escalations stuck 900s|operator: away-mode escalations WEDGED" "the macOS title did not travel as argv item 2"
@@ -495,8 +494,8 @@ EOF
   sed -e 's/^name = .*/name = "derived"/' -e '/^str\./d' -e 's/^user = .*/user = "field boss"/' -e 's/^product = .*/product = "ops"/' \
     "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/derived.theme"
   printf 'derived\n' > "$home/config/po-theme"
-  assert_equals "needs-field-boss" "$(FM_HOME="$home" "$PT" str sidebar.needs)" "an absent sidebar state did not derive from the user word"
-  assert_equals "ops: away-mode escalations WEDGED" "$(FM_HOME="$home" "$PT" str alert.wedge_title)" "an absent wedge title did not derive from the product word"
+  assert_equals "needs-field-boss" "$(lib "$home" 'po_str sidebar.needs')" "an absent sidebar state did not derive from the user word"
+  assert_equals "ops: away-mode escalations WEDGED" "$(lib "$home" 'po_str alert.wedge_title')" "an absent wedge title did not derive from the product word"
   sed -e 's/^name = .*/name = "oldstr"/' -e 's#^schema = .*#schema = "po-theme/1"#' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldstr.theme"
   out=$(FM_HOME="$home" "$PT" validate oldstr 2>&1) && fail "a po-theme/1 theme accepted a str key"
   assert_contains "$out" "str.sidebar.needs: needs schema po-theme/2" "a str key under po-theme/1 was refused for the wrong reason"

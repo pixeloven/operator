@@ -56,8 +56,6 @@
 #                                     contract (empty for nautical)
 #   po-theme.sh label <role>          the workspace label for primary, submate, or
 #                                     afk (bin/po-theme-lib.sh po_label)
-#   po-theme.sh str <surface.name>    a registered display string (bin/po-theme-lib.sh
-#                                     po_str): sidebar.needs or alert.wedge_title
 #   po-theme.sh refresh               rebuild state/po-theme/values for this home and
 #                                     record its labels in state/po-theme/history;
 #                                     nautical removes the values file and keeps history
@@ -930,12 +928,6 @@ case "$cmd" in
     # shellcheck source=bin/po-theme-lib.sh
     . "$SCRIPT_DIR/po-theme-lib.sh"
     po_label "$1" || die "unknown label role: $1"
-    printf '\n' ;;
-  str)
-    [ $# -eq 1 ] || die "usage: str <surface.name>"
-    # shellcheck source=bin/po-theme-lib.sh
-    . "$SCRIPT_DIR/po-theme-lib.sh"
-    po_str "$1" || die "unknown display string: $1"
     printf '\n' ;;
   relabel) relabel "$@" ;;
   registry)
