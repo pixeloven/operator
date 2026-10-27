@@ -1,0 +1,8 @@
+## nautical primary (no theme selected) ensure -> w1 rc=0
+   theme state written? 
+## operator-inheriting secondmate gfm ensure -> w2 rc=0
+## nautical secondmate gfm ensure (accept-set must not adopt navigator-gfm? canonical 2ndmate-gfm) -> w3 rc=0
+w1	firstmate
+w2	navigator-gfm
+w3	2ndmate-gfm
+## nautical afk label: firstmate-afk-daemon

@@ -1,0 +1,36 @@
+## 1. operator theme selected; real herdr adapter ensures this home's workspace
+values: operator labels written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-s1home.4cCfWF/state/po-theme/values
+label afk: spotter-afk-daemon
+ensure -> w1 rc=0
+w1	spotter
+## 2. ensure again under operator (must adopt, not duplicate)
+ensure -> w1 rc=0
+w1	spotter
+## 3. switch to nautical; ensure must adopt the live 'spotter' via accept-set
+values: nautical - no cache
+ensure -> w1 rc=0
+w1	spotter
+history:
+primary	spotter
+submate	navigator
+## 4. foreign unrecorded 'firstmate' workspace created by someone else
+w2
+w1	spotter
+w2	firstmate
+## 5. relabel --session (nautical): renames only recorded spotter -> firstmate
+relabel: w1 'spotter' -> 'firstmate'
+relabel: history retired primary 'spotter'
+relabel: history retired submate 'navigator'
+rc=0
+w1	firstmate
+w2	firstmate
+history after:
+(end history)
+## 6. relabel without --session refused; --workspace refused
+po-theme: relabel needs --session <herdr session>; it never guesses one
+rc=1
+po-theme: relabel: unknown argument: --workspace
+rc=1
+## 7. relabel against default session refused?
+relabel: nothing to rename
+rc=0
