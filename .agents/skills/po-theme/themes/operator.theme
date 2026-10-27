@@ -1,5 +1,6 @@
 # po-theme/1 - operator (military ops voice for the operator distro)
-# Terms are the operator's decisions of 2026-10-21 (ADR-0016).
+# Terms are the operator's decisions of 2026-10-21 (ADR-0016); role words are
+# lowercase common nouns since 2026-10-26 (ADR-0020).
 schema = "po-theme/1"
 name = "operator"
 description = "Military ops voice for the operator distro"
@@ -7,15 +8,15 @@ description = "Military ops voice for the operator distro"
 user = "operator"
 user_plural = "operators"
 user_address = "Operator"
-self = "Spotter"
-self_plural = "Spotters"
+self = "spotter"
+self_plural = "spotters"
 product = "operator"
-worker = "Specialist"
-worker_plural = "Specialists"
+worker = "specialist"
+worker_plural = "specialists"
 crew = "squad"
-submate = "Navigator"
-submate_plural = "Navigators"
-fleet = "Task Force"
+submate = "navigator"
+submate_plural = "navigators"
+fleet = "task force"
 ship_task = "deploy"
 scout_task = "recon"
 

@@ -4,6 +4,7 @@
 - **Date:** 2026-10-21
 - **Deciders:** Brian Gebel (the operator)
 - **Source:** Captain decisions of 2026-10-21 on the persona customization design (questions Q1 through Q5)
+- **Amended by:** [ADR-0020](0020-themes-first-class.md), which replaces decisions 1, 4, and 8 and lowercases the role words.
 - **Supersedes:** the vocabulary clause of [`identity.md`](../pixeloven/identity.md) §3 ("Nothing inside the upstream surface is renamed ... not the vocabulary") and the matching sentence in [`fork-contract.md`](../pixeloven/fork-contract.md); ADR-0001's additive default and ADR-0004's name and prose rule stand.
 
 ## Context

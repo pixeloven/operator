@@ -201,8 +201,12 @@ resolve_active() {
   if is_secondmate_home; then
     block_of "$SHARED" > "$TMPD/inherited.block"
     if [ -s "$TMPD/inherited.block" ]; then
-      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.theme" \
+      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.raw" \
         || die "the inherited Persona block in $SHARED has no values line; rerun apply in the primary home"
+      awk -v roles="$ROLE_KEYS" '
+        BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
+        { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
+      ' "$TMPD/inherited.raw" > "$TMPD/inherited.theme"
       parse "$TMPD/inherited.theme" > "$TMPD/inherited.kv" 2>/dev/null || die "the inherited Persona values line is malformed"
       n=$(get "$TMPD/inherited.kv" name 2>/dev/null || true)
       valid_name "$n" || die "the inherited Persona values line has no valid name"
@@ -251,7 +255,7 @@ check_values() {
         else { for (j = 1; j <= nd; j++) if (hasword(v, D[j])) bad(k ": value contains the authority word '"'"'" D[j] "'"'"'") }
         if (k == "schema" || k == "name") continue
         if (k == "description") { if (length(v) > 80) bad(k ": longer than 80 characters") }
-        else if (isrole(k)) { if (v !~ /^[A-Za-z][A-Za-z -]*$/ || length(v) > 24) bad(k ": must be 1-24 letters, spaces, or hyphens") }
+        else if (isrole(k)) { if (v !~ /^[a-z][a-z -]*$/ || length(v) > 24) bad(k ": must be 1-24 lowercase letters, spaces, or hyphens") }
         else if (k == "user_address") { if (v !~ /^[A-Z][A-Za-z-]*$/ || length(v) > 24) bad(k ": must be one capitalized word of at most 24 characters") }
         else if (k == "seasoning") {
           np = split(v, parts, ", "); ok = (np >= 1 && np <= 6)
@@ -358,6 +362,7 @@ persona() {  # <name> <kv>
   printf '| scout (a report task) | %s |\n' "$(t scout_task)"
   printf '| ship (a change task) | %s |\n\n' "$(t ship_task)"
   printf -- '- Wherever AGENTS.md or a skill requires or models addressing the captain, including example replies that open with "Captain,", address the user as "%s," instead, capitalized at the start of a chat line; every limit on that address, including chat only and never in commits, PRs, briefs, code, or comments, applies unchanged.\n' "$(t user_address)"
+  printf -- '- Role words are common nouns: write them lowercase except where a sentence starts; only the address word is capitalized, at the start of a chat line.\n'
   printf -- '- The optional seasoning words are "%s", under the same fit-only, never-for-bad-news limits as the nautical ones they replace.\n' "$seasoning"
   printf -- '- Wherever AGENTS.md requires the exact reply `Captain, shipshape.`, reply exactly `%s` under exactly the same conditions; a bad-news opening reads like "%s".\n' "$(t noop_reply)" "$(t bad_news_example)"
   if [ "$(lower "$(t product)")" = "$(lower "$(t user)")" ]; then

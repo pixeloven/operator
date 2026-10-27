@@ -378,6 +378,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0020-themes-first-class.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/0021-carry-upstream-herdr-slash-popup-fix.md",
       "audience": "maintainer-architecture"
     },
