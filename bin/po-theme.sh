@@ -57,12 +57,15 @@
 #   po-theme.sh refresh               rebuild state/po-theme/values for this home and
 #                                     record its labels in state/po-theme/history;
 #                                     nautical removes the values file and keeps history
-#   po-theme.sh relabel --session S [--workspace ID]... [--dry-run]
+#   po-theme.sh relabel --session S [--dry-run]
 #                                     herdr: rename this home's recorded workspaces in
-#                                     session S (ids from state/*.meta, plus each
-#                                     --workspace) whose label is in the home's
-#                                     accept-set to the current label, then retire
-#                                     history words no workspace in S still uses
+#                                     session S (ids from state/*.meta) whose label
+#                                     is in the home's accept-set to the current
+#                                     label, then retire history words no live
+#                                     workspace of this home still uses (herdr
+#                                     sessions S and those its task records name,
+#                                     and Paseo workspaces for its projects); an
+#                                     unlistable one keeps every history word
 #   po-theme.sh registry files        upstream-owned files that carry theme hooks
 #   po-theme.sh registry check-diff <ref>
 #                                     gate A9: every line a registered upstream-owned
@@ -687,14 +690,37 @@ herdr_cli() {
   FM_HOME="$FM_HOME" bash -c '. "$1/bin/backends/herdr.sh"; shift; fm_backend_herdr_cli "$@"' _ "$CODE_ROOT" "$@"
 }
 
-# relabel --session <name> [--workspace <id>]... [--dry-run]
+# paseo_workspaces: the Paseo adapter's `workspace ls --json` through its own
+# CLI resolution, or `[]` when no Paseo client is installed.
+paseo_workspaces() {
+  FM_HOME="$FM_HOME" bash -c '. "$1/bin/backends/paseo.sh"; fm_backend_paseo_bin >/dev/null 2>&1 || { printf "[]"; exit 0; }; fm_backend_paseo_cli workspace ls --json 2>/dev/null' _ "$CODE_ROOT"
+}
+
+# live_labels <session> <list-json>: every live workspace label the history
+# protects - <list-json> for <session>, each other herdr session this home's
+# task records name, and Paseo workspaces for this home's projects. Fails
+# when any of them cannot be listed.
+live_labels() {
+  local session=$1 s l logical real
+  printf '%s' "$2" | jq -r '.result.workspaces[]?.label | strings' 2>/dev/null || return 1
+  while IFS= read -r s; do
+    [ -n "$s" ] && [ "$s" != "$session" ] || continue
+    l=$(herdr_cli "$s" workspace list 2>/dev/null) || return 1
+    printf '%s' "$l" | jq -r '.result.workspaces[]?.label | strings' 2>/dev/null || return 1
+  done < <(sed -n 's/^herdr_session=//p' "$STATE"/*.meta 2>/dev/null | sort -u)
+  l=$(paseo_workspaces) && printf '%s' "$l" | jq -e 'type == "array"' >/dev/null 2>&1 || return 1
+  logical=$(cd "$FM_HOME" 2>/dev/null && pwd) || logical=$FM_HOME
+  real=$(cd "$FM_HOME" 2>/dev/null && pwd -P) || real=$FM_HOME
+  printf '%s' "$l" | jq -r --arg a "$FM_HOME/projects/" --arg b "$logical/projects/" --arg c "$real/projects/" \
+    '.[] | select((.cwd // "") as $d | [$a, $b, $c] | any(. as $p | $d | startswith($p))) | .name | strings' 2>/dev/null
+}
+
+# relabel --session <name> [--dry-run]
 relabel() {
   local session='' dry=0 ids='' id want list cur role w f renamed=0
   while [ $# -gt 0 ]; do
     case "$1" in
-      --session) [ $# -ge 2 ] || die "usage: relabel --session <name> [--workspace <id>]... [--dry-run]"; session=$2; shift 2 ;;
-      --workspace) [ $# -ge 2 ] || die "usage: relabel --session <name> [--workspace <id>]... [--dry-run]"; ids="$ids$2
-"; shift 2 ;;
+      --session) [ $# -ge 2 ] || die "usage: relabel --session <name> [--dry-run]"; session=$2; shift 2 ;;
       --dry-run) dry=1; shift ;;
       *) die "relabel: unknown argument: $1" ;;
     esac
@@ -730,7 +756,7 @@ relabel() {
   [ "$renamed" -eq 1 ] || echo "relabel: nothing to rename"
   [ -f "$STATE/po-theme/history" ] || return 0
   [ "$dry" -eq 1 ] || list=$(herdr_cli "$session" workspace list) || die "relabel: could not re-list herdr workspaces in session '$session'"
-  printf '%s' "$list" | jq -r '.result.workspaces[]?.label | strings' > "$TMPD/live" 2>/dev/null || die "relabel: unreadable herdr workspace list"
+  live_labels "$session" "$list" > "$TMPD/live" || { echo "relabel: could not list every workspace this home may still use; history kept"; return 0; }
   : > "$TMPD/history"
   while IFS="$TAB" read -r role w; do
     if { [ "$role" = primary ] && grep -qxF -- "$w" "$TMPD/live"; } \

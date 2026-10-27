@@ -15,7 +15,10 @@
 #   - switching themes and back never mints a duplicate home workspace
 #   - relabel renames only this home's recorded workspaces in a named
 #     non-default Herdr lab session and retires unused history (real Herdr;
-#     capability-skipped when herdr or jq is absent)
+#     capability-skipped when herdr or jq is absent), never renames an
+#     unrecorded `firstmate` workspace, and keeps a history label a Paseo
+#     workspace or another recorded herdr session still uses, or any it
+#     cannot list (fake clients)
 #   - the validator refuses bad labels
 #   - the registry check refuses an unregistered changed line, and anchors fail
 #     when a registered hook line is lost
@@ -230,6 +233,7 @@ test_relabel_in_lab() {
 
   printf 'nautical\n' > "$home/config/po-theme"
   FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed under nautical"
+  rm "$home/state/t3.meta"
   out=$(FM_HOME="$home" "$PT" relabel --session "$HERDR_LAB_SESSION" 2>&1) || fail "relabel back failed: $out"
   assert_equals "firstmate" "$(label_of "$wa")" "relabel did not rename the workspace back"
   assert_contains "$out" "history retired primary 'spotter'" "relabel did not retire the unused primary label"
@@ -240,6 +244,70 @@ test_relabel_in_lab() {
   "$HERDR_LAB_HELPER" teardown "$HERDR_LAB_SESSION" >/dev/null || fail "herdr lab teardown failed"
   HERDR_LAB_SESSION=''
   pass "relabel renames only recorded workspaces in a named lab session and retires unused history"
+}
+
+# fake_clis <dir>: fake herdr and paseo clients in <dir>. herdr answers
+# `workspace list --session S` from <dir>/herdr-S.json (failing when absent) and
+# logs every rename to <dir>/calls; paseo answers `workspace ls --json` from
+# <dir>/paseo.json (failing when absent).
+fake_clis() {
+  mkdir -p "$1"
+  cat > "$1/herdr" <<'SH'
+#!/usr/bin/env bash
+d=$(dirname "$0")
+case "$1 $2" in
+  "workspace list") cat "$d/herdr-${*: -1}.json" 2>/dev/null ;;
+  "workspace rename") printf '%s\n' "$*" >> "$d/calls" ;;
+  *) exit 1 ;;
+esac
+SH
+  cat > "$1/paseo" <<'SH'
+#!/usr/bin/env bash
+[ "$*" = "workspace ls --json" ] && cat "$(dirname "$0")/paseo.json" 2>/dev/null
+SH
+  chmod +x "$1/herdr" "$1/paseo"
+}
+
+test_relabel_keeps_history_other_containers_use() {
+  local home fake out
+  command -v jq >/dev/null 2>&1 || { echo "skip: relabel history case needs jq"; return 0; }
+  fake="$TMP_ROOT/fakecli"
+  fake_clis "$fake"
+  home=$(new_home relabel-history operator)
+  printf 'herdr_session=lab\nherdr_workspace_id=w1\n' > "$home/state/t1.meta"
+  printf 'herdr_session=side\nherdr_workspace_id=s1\n' > "$home/state/t2.meta"
+  FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed"
+  ws firstmate firstmate > "$fake/herdr-lab.json"
+  ws navigator-gfm > "$fake/herdr-side.json"
+  printf '[]' > "$fake/paseo.json"
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel failed: $out"
+  assert_equals "workspace rename w1 spotter --session lab" "$(cat "$fake/calls")" "relabel did not rename only the recorded workspace"
+  assert_contains "$out" "relabel: w1 'firstmate' -> 'spotter'" "relabel did not report the recorded rename"
+
+  printf 'nautical\n' > "$home/config/po-theme"
+  FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed under nautical"
+  jq -cn --arg p "$home/projects/app" --arg o "$TMP_ROOT/elsewhere" \
+    '[{workspaceId: "p1", name: "spotter", cwd: $p}, {workspaceId: "p2", name: "navigator-x", cwd: $o}]' > "$fake/paseo.json"
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel failed: $out"
+  assert_not_contains "$out" "history retired" "relabel retired a label a Paseo workspace or another session still uses"
+  assert_equals "primary	spotter
+submate	navigator" "$(cat "$home/state/po-theme/history")" "the history lost a label a live container uses"
+
+  printf '[]' > "$fake/paseo.json"
+  rm "$fake/herdr-side.json"
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel failed: $out"
+  assert_contains "$out" "history kept" "relabel did not keep the history when a recorded session could not be listed"
+  assert_equals "primary	spotter
+submate	navigator" "$(cat "$home/state/po-theme/history")" "an unlistable session did not keep the history"
+
+  ws navigator-gfm > "$fake/herdr-side.json"
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel failed: $out"
+  assert_contains "$out" "history retired primary 'spotter'" "relabel did not retire a label no container uses"
+  assert_equals "submate	navigator" "$(cat "$home/state/po-theme/history")" "relabel retired the label another session still uses"
+  assert_equals "workspace rename w1 spotter --session lab" "$(cat "$fake/calls")" "relabel renamed an unrecorded workspace"
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab --workspace w2 2>&1) && fail "relabel accepted a caller-supplied workspace id"
+  assert_contains "$out" "unknown argument: --workspace" "relabel refused --workspace for the wrong reason"
+  pass "relabel renames only recorded workspaces and keeps history labels any listed container uses"
 }
 
 test_label_validation() {
@@ -384,6 +452,7 @@ test_label_validation
 test_registry_gates
 test_anchors_name_a_lost_hook
 test_a11_architectural_invariance
+test_relabel_keeps_history_other_containers_use
 test_relabel_in_lab
 
 echo "all po-theme-labels tests passed"
