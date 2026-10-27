@@ -370,6 +370,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0017-go-public-exceptions.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/0018-security-policy-file.md",
       "audience": "maintainer-architecture"
     },
