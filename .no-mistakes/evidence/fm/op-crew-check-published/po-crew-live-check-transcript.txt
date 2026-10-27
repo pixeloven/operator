@@ -1,0 +1,134 @@
+Published pins (real gh api read of pixeloven/marketplace):
+  crew bfb434712cbef617a2e064b260fa971752682f8d
+  infra-skills c84a575df6c537ca60b6180366858996fb1b8e3c
+  language-skills 12700b6263b8a23f5c3d1a5eb97dc092e86dad65
+  planning-skills c4bae5932d040a8905cbe23513ee599edc593d98
+  identity-skills 0d13897766615b8b3771437a499b6493156e8075
+  design 9e856c9f9fd2c3e9954fb8b760af52f382e41ae1
+  comfyui-docker 8940fdc2cf04e7ee5377e65ef922bf00b1ceee0f
+
+=== S1 up-to-date install vs real published catalogue
+$ po-crew.sh check   # script=po-crew.sh gh=yes 
+ok    catalogue                          pins for all five plugins, from the published pixeloven/marketplace
+ok    claude crew@pixeloven              enabled, at the catalogue pin bfb4347
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin c84a575
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+skip  codex                              not installed
+ok    pi crew@pixeloven                  installed, at the catalogue pin bfb4347
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin c84a575
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/current/home
+exit=0
+
+=== S2a re-pin ahead of local copy: BASE script (pre-change) cannot see it
+$ po-crew.sh check   # script=po-crew.base.sh gh=yes 
+ok    catalogue                          pins for all five plugins
+ok    claude crew@pixeloven              enabled, at the catalogue pin 0000000
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin c84a575
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+skip  codex                              not installed
+ok    pi crew@pixeloven                  installed, at the catalogue pin 0000000
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin c84a575
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/stale/home
+exit=0
+
+=== S2b re-pin ahead of local copy: CHANGED script, real gh
+$ po-crew.sh check   # script=po-crew.sh gh=yes 
+ok    catalogue                          pins for all five plugins, from the published pixeloven/marketplace
+fail  claude crew@pixeloven              enabled, behind: 0000000 installed, catalogue pins bfb4347; run the dotfiles plugin update
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin c84a575
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+skip  codex                              not installed
+fail  pi crew@pixeloven                  installed, behind: 0000000 installed, catalogue pins bfb4347; run the dotfiles plugin update
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin c84a575
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/stale/home
+exit=1
+
+=== S3a gh absent -> fallback to local copy
+$ po-crew.sh check   # script=po-crew.sh gh=no 
+warn  catalogue                          published pixeloven/marketplace catalogue unreadable; comparing against the local copy, which may predate a re-pin
+ok    catalogue                          pins for all five plugins, from the local copy /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//pocrew-live.OyXHht/stale/claude/plugins/marketplaces/pixeloven/.claude-plugin/marketplace.json
+ok    claude crew@pixeloven              enabled, at the catalogue pin 0000000
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin c84a575
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+skip  codex                              not installed
+ok    pi crew@pixeloven                  installed, at the catalogue pin 0000000
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin c84a575
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/stale/home
+exit=0
+
+=== S3b real gh with an invalid token (401) -> fallback
+$ po-crew.sh check   # script=po-crew.sh gh=yes GH_TOKEN=invalid-token-for-test
+warn  catalogue                          published pixeloven/marketplace catalogue unreadable; comparing against the local copy, which may predate a re-pin
+ok    catalogue                          pins for all five plugins, from the local copy /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//pocrew-live.OyXHht/stale/claude/plugins/marketplaces/pixeloven/.claude-plugin/marketplace.json
+ok    claude crew@pixeloven              enabled, at the catalogue pin 0000000
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin c84a575
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+skip  codex                              not installed
+ok    pi crew@pixeloven                  installed, at the catalogue pin 0000000
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin c84a575
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/stale/home
+exit=0
+
+=== S3c real gh against an unreachable host -> fallback
+$ po-crew.sh check   # script=po-crew.sh gh=yes GH_HOST=unreachable.invalid GH_ENTERPRISE_TOKEN=x
+warn  catalogue                          published pixeloven/marketplace catalogue unreadable; comparing against the local copy, which may predate a re-pin
+ok    catalogue                          pins for all five plugins, from the local copy /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//pocrew-live.OyXHht/stale/claude/plugins/marketplaces/pixeloven/.claude-plugin/marketplace.json
+ok    claude crew@pixeloven              enabled, at the catalogue pin 0000000
+ok    claude infra-skills@pixeloven      enabled, at the catalogue pin c84a575
+ok    claude planning-skills@pixeloven   enabled, at the catalogue pin c4bae59
+ok    claude identity-skills@pixeloven   enabled, at the catalogue pin 0d13897
+ok    claude language-skills@pixeloven   enabled, at the catalogue pin 12700b6
+skip  codex                              not installed
+ok    pi crew@pixeloven                  installed, at the catalogue pin 0000000
+ok    pi infra-skills@pixeloven          installed, at the catalogue pin c84a575
+ok    pi planning-skills@pixeloven       installed, at the catalogue pin c4bae59
+ok    pi identity-skills@pixeloven       installed, at the catalogue pin 0d13897
+ok    pi language-skills@pixeloven       installed, at the catalogue pin 12700b6
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/stale/home
+exit=0
+
+=== S4 gh fails and no local copy -> warn + fail
+$ po-crew.sh check   # script=po-crew.sh gh=no 
+warn  catalogue                          published pixeloven/marketplace catalogue unreadable; comparing against the local copy, which may predate a re-pin
+fail  catalogue                          local copy not found at /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//pocrew-live.OyXHht/nolocal/claude/plugins/marketplaces/pixeloven/.claude-plugin/marketplace.json; add the pixeloven marketplace through dotfiles
+fail  claude crew@pixeloven              enabled, but the catalogue has no pin to compare
+fail  claude infra-skills@pixeloven      enabled, but the catalogue has no pin to compare
+fail  claude planning-skills@pixeloven   enabled, but the catalogue has no pin to compare
+fail  claude identity-skills@pixeloven   enabled, but the catalogue has no pin to compare
+fail  claude language-skills@pixeloven   enabled, but the catalogue has no pin to compare
+skip  codex                              not installed
+fail  pi crew@pixeloven                  installed, but the catalogue has no pin to compare
+fail  pi infra-skills@pixeloven          installed, but the catalogue has no pin to compare
+fail  pi planning-skills@pixeloven       installed, but the catalogue has no pin to compare
+fail  pi identity-skills@pixeloven       installed, but the catalogue has no pin to compare
+fail  pi language-skills@pixeloven       installed, but the catalogue has no pin to compare
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/pocrew-live.OyXHht/nolocal/home
+exit=1
+
+=== S5 read-only
+fixture tool state and home unchanged after a live check

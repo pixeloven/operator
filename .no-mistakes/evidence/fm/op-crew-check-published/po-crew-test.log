@@ -1,0 +1,12 @@
+ok - fence writes the five entries into a fresh home
+ok - fence keeps every other key, backs up once, overrides an enabled entry, and is idempotent
+ok - fence refuses malformed settings and leaves them unchanged
+ok - fence skips a secondmate home, resolving it from FM_HOME
+ok - check passes a complete, fenced install with one row per tool and plugin
+ok - check reports a disabled, a missing, and a behind plugin and exits 1
+ok - check skips absent tools and a secondmate fence, and reports a missing fence or catalogue
+ok - check warns without failing when the Codex cache is not a git checkout, ignoring a parent repository
+ok - check compares against the published catalogue, so a re-pin the local copy lacks reads as behind
+ok - check falls back to the local copy with one warning when gh is absent, fails, or serves malformed JSON
+ok - check writes nothing to the home or tool state
+all po-crew tests passed
