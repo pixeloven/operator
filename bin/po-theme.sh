@@ -716,9 +716,12 @@ live_labels() {
 }
 
 # mate_accept <home> <canonical-label>: <canonical-label>'s accept-set as that
-# secondmate home resolves it itself; fails when the home is unreadable.
+# secondmate home resolves it itself; fails when the home is not a readable
+# local secondmate home.
 mate_accept() {
-  [ -n "$1" ] && [ -r "$1/.fm-secondmate-home" ] || return 1
+  case "$1" in /*) ;; *) return 1 ;; esac
+  [ -r "$1/.fm-secondmate-home" ] || return 1
+  # shellcheck disable=SC2016
   env -u FM_CONFIG_OVERRIDE -u FM_DATA_OVERRIDE -u FM_STATE_OVERRIDE FM_HOME="$1" \
     bash -c '. "$1/bin/po-theme-lib.sh"; po_home_accept "$2"' _ "$CODE_ROOT" "$2"
 }
@@ -737,6 +740,8 @@ relabel() {
   command -v jq >/dev/null 2>&1 || die "relabel needs jq"
   # shellcheck source=bin/po-theme-lib.sh
   . "$SCRIPT_DIR/po-theme-lib.sh"
+  # shellcheck source=bin/fm-secondmate-registry-lib.sh
+  . "$SCRIPT_DIR/fm-secondmate-registry-lib.sh"
   if is_secondmate_home; then
     home=$(po_home_label "2ndmate-$(tr -d '[:space:]' < "$FM_HOME/.fm-secondmate-home")")
   else
@@ -753,6 +758,12 @@ relabel() {
     if ! is_secondmate_home && grep -qx 'kind=secondmate' "$f"; then
       mid=$(basename "$f" .meta)
       mhome=$(awk -F= '$1 == "home" { print substr($0, index($0, "=") + 1); exit }' "$f")
+      if [ -n "$(awk -F= '$1 == "remote_host" { print substr($0, index($0, "=") + 1); exit }' "$f")" ]; then
+        mhome=''
+      elif [ -z "$mhome" ]; then
+        mhome=$(secondmate_registry_field "$DATA/secondmates.md" "$mid" home || true)
+        [ "$(secondmate_registry_field "$DATA/secondmates.md" "$mid" remote || true)" != 1 ] || mhome=''
+      fi
       want=$(po_home_label "2ndmate-$mid")
     else
       want=$home
@@ -767,7 +778,7 @@ relabel() {
     [ -n "$cur" ] || { echo "relabel: $id is not live in session '$session'; skipped"; continue; }
     [ "$cur" != "$want" ] || continue
     if [ -n "$mid" ]; then
-      accept=$(mate_accept "$mhome" "2ndmate-$mid") || { echo "relabel: $id skipped: second mate $mid has not received the current theme yet; rerun after it propagates"; continue; }
+      accept=$(mate_accept "$mhome" "2ndmate-$mid") || { echo "relabel: $id skipped: second mate $mid's home cannot be read locally"; continue; }
       printf '%s\n' "$accept" | grep -qxF -- "$cur" || { echo "relabel: $id is labeled '$cur', not one of second mate $mid's labels; skipped"; continue; }
       printf '%s\n' "$accept" | grep -qxF -- "$want" || { echo "relabel: $id skipped: second mate $mid has not received the current theme yet; rerun after it propagates"; continue; }
     else
