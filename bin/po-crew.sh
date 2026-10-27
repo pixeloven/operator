@@ -20,6 +20,11 @@
 # `check` is read-only. It prints one row per item and exits 1 when any row is
 # `fail`; a tool that is not installed prints `skip` rows instead, and a Codex
 # plugin whose cache directory is not a git checkout prints a `warn` row.
+# It compares against the published catalogue, pixeloven/marketplace's
+# .claude-plugin/marketplace.json on its default branch, read with `gh api`, so
+# a reviewed re-pin shows before any machine updates its local copy. When that
+# read fails it prints one `warn` row and compares against the local copy under
+# CLAUDE_CONFIG_DIR instead.
 #   - the catalogue lists a pin for every plugin
 #   - Claude Code, Codex, and pi each have every plugin installed at user scope,
 #     enabled (Claude Code and Codex), and at the catalogue pin
@@ -46,7 +51,10 @@ PLUGINS='crew infra-skills planning-skills identity-skills language-skills'
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 PI_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
-CATALOGUE="$CLAUDE_DIR/plugins/marketplaces/$MARKET/.claude-plugin/marketplace.json"
+CATALOGUE_REPO=pixeloven/marketplace
+CATALOGUE_PATH=.claude-plugin/marketplace.json
+CATALOGUE="$CLAUDE_DIR/plugins/marketplaces/$MARKET/$CATALOGUE_PATH"
+CATALOGUE_JSON=''
 REL_SETTINGS='.claude/settings.local.json'
 REL_BACKUP='state/po-crew/settings.local.json.bak'
 
@@ -108,7 +116,7 @@ row() {  # <ok|warn|fail|skip> <item> <detail>
 }
 
 pin_of() {  # <plugin>: the catalogue SHA, empty when unknown
-  jq -r --arg p "$1" '[.plugins[]? | select(.name == $p) | .source.sha // empty][0] // empty' "$CATALOGUE" 2>/dev/null || true
+  printf '%s' "$CATALOGUE_JSON" | jq -r --arg p "$1" '[.plugins[]? | select(.name == $p) | .source.sha // empty][0] // empty' 2>/dev/null || true
 }
 
 short() { printf '%s' "$1" | cut -c1-7; }
@@ -128,16 +136,29 @@ at_pin() {
   fi
 }
 
+# Loads CATALOGUE_JSON from the published catalogue, else from the local copy.
 check_catalogue() {
-  local p
-  if [ ! -f "$CATALOGUE" ]; then
-    row fail catalogue "not found at $CATALOGUE; add the $MARKET marketplace through dotfiles"
-    return 0
+  local p from published=''
+  if command -v gh >/dev/null 2>&1; then
+    published=$(GH_PROMPT_DISABLED=1 gh api -H 'Accept: application/vnd.github.raw' \
+      "repos/$CATALOGUE_REPO/contents/$CATALOGUE_PATH" 2>/dev/null) || published=''
+  fi
+  if printf '%s' "$published" | jq -e '.plugins | type == "array"' >/dev/null 2>&1; then
+    CATALOGUE_JSON=$published
+    from="published $CATALOGUE_REPO"
+  else
+    row warn catalogue "published $CATALOGUE_REPO catalogue unreadable; comparing against the local copy, which may predate a re-pin"
+    if [ ! -f "$CATALOGUE" ]; then
+      row fail catalogue "local copy not found at $CATALOGUE; add the $MARKET marketplace through dotfiles"
+      return 0
+    fi
+    CATALOGUE_JSON=$(cat "$CATALOGUE")
+    from="local copy $CATALOGUE"
   fi
   for p in $PLUGINS; do
-    [ -n "$(pin_of "$p")" ] || { row fail catalogue "no pin for $p"; return 0; }
+    [ -n "$(pin_of "$p")" ] || { row fail catalogue "no pin for $p in the $from"; return 0; }
   done
-  row ok catalogue "pins for all five plugins"
+  row ok catalogue "pins for all five plugins, from the $from"
 }
 
 check_claude() {
