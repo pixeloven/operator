@@ -1,0 +1,66 @@
+# lab session: fm-lab-po-relabel-ev-32874-23585
+# operator workspace (captain's, unrecorded): w4
+## herdr workspace list BEFORE
+  w1	firstmate
+  w2	2ndmate-gfm
+  w3	2ndmate-pixeloven
+  w4	operator
+  w5	2ndmate-stale
+  w6	2ndmate-legacy
+  w7	2ndmate-remote
+## $ po-theme.sh relabel --session fm-lab-po-relabel-ev-32874-23585 --dry-run
+relabel: w2 '2ndmate-gfm' -> 'navigator-gfm'
+relabel: w6 '2ndmate-legacy' -> 'navigator-legacy'
+relabel: w3 '2ndmate-pixeloven' -> 'navigator-pixeloven'
+relabel: w7 skipped: second mate remote's home cannot be read locally
+relabel: w5 skipped: second mate stale has not received the current theme yet; rerun after it propagates
+relabel: w1 'firstmate' -> 'spotter'
+  (exit 0)
+## herdr workspace list after dry run
+  w1	firstmate
+  w2	2ndmate-gfm
+  w3	2ndmate-pixeloven
+  w4	operator
+  w5	2ndmate-stale
+  w6	2ndmate-legacy
+  w7	2ndmate-remote
+## $ po-theme.sh relabel --session fm-lab-po-relabel-ev-32874-23585
+relabel: w2 '2ndmate-gfm' -> 'navigator-gfm'
+relabel: w6 '2ndmate-legacy' -> 'navigator-legacy'
+relabel: w3 '2ndmate-pixeloven' -> 'navigator-pixeloven'
+relabel: w7 skipped: second mate remote's home cannot be read locally
+relabel: w5 skipped: second mate stale has not received the current theme yet; rerun after it propagates
+relabel: w1 'firstmate' -> 'spotter'
+  (exit 0)
+## herdr workspace list AFTER
+  w1	spotter
+  w2	navigator-gfm
+  w3	navigator-pixeloven
+  w4	operator
+  w5	2ndmate-stale
+  w6	navigator-legacy
+  w7	2ndmate-remote
+## gfm second mate home resolves its own home workspace via the real herdr adapter
+  label=navigator-gfm found=w2 
+## $ po-theme.sh relabel (second run, idempotent)
+relabel: w7 skipped: second mate remote's home cannot be read locally
+relabel: w5 skipped: second mate stale has not received the current theme yet; rerun after it propagates
+relabel: nothing to rename
+  (exit 0)
+## switch primary back to nautical, refresh, relabel
+relabel: w2 'navigator-gfm' -> '2ndmate-gfm'
+relabel: w6 'navigator-legacy' -> '2ndmate-legacy'
+relabel: w3 'navigator-pixeloven' -> '2ndmate-pixeloven'
+relabel: w1 'spotter' -> 'firstmate'
+relabel: history retired primary 'spotter'
+relabel: history retired submate 'navigator'
+  (exit 0)
+## herdr workspace list after switching back
+  w1	firstmate
+  w2	2ndmate-gfm
+  w3	2ndmate-pixeloven
+  w4	operator
+  w5	2ndmate-stale
+  w6	2ndmate-legacy
+  w7	2ndmate-remote
+# teardown done
