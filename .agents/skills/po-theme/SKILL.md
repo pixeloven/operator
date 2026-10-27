@@ -18,7 +18,7 @@ It never renames an identifier and never changes what a rule means; ADR-0016 own
 - Bundled themes live in `themes/` beside this file; a home may add its own as `config/po-themes/<name>.theme`.
 - To switch: run `bin/po-theme.sh validate <name>`, write the name to `config/po-theme`, then run `bin/po-theme.sh apply` in the primary home and `bin/po-theme.sh verify`.
   The new words take effect in chat from the next session start, when the digest prints the Persona block; workers launched after `apply` get the new vocabulary line at once.
-- Workspace labels follow the theme for new herdr and Paseo workspaces, while existing ones keep matching; to rename this home's live herdr workspaces, run `bin/po-theme.sh relabel --session <session> --dry-run`, report the planned renames to the captain, and run it without `--dry-run` once the captain agrees.
+- Workspace labels follow the theme for new herdr and Paseo workspaces, while existing ones keep matching; to rename this home's live herdr workspaces (from the primary home, each second mate's own workspace too), run `bin/po-theme.sh relabel --session <session> --dry-run`, report the planned renames to the captain, and run it without `--dry-run` once the captain agrees.
 - `apply` refuses in a secondmate home: the Persona block, with a machine-readable values line, arrives there read-only through `data/captain-shared.md`, so the secondmate's own scripts resolve the same theme, including a custom one.
   Second mates pick up a changed block at the next propagation of that file, which `secondmate-provisioning` owns.
 - After `/updatefirstmate` or an upstream merge, run `bin/po-theme.sh verify`; on drift, rerun `apply`.

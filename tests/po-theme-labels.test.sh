@@ -16,7 +16,9 @@
 #   - relabel renames only this home's recorded workspaces in a named
 #     non-default Herdr lab session and retires unused history (real Herdr;
 #     capability-skipped when herdr or jq is absent), never renames an
-#     unrecorded `firstmate` workspace, and keeps a history label a Paseo
+#     unrecorded `firstmate` workspace, renames a primary home's second mate
+#     record to that second mate's own label (skipping a label foreign to that
+#     second mate, and planning only under --dry-run), and keeps a history label a Paseo
 #     workspace or another recorded herdr session still uses, or any it
 #     cannot list (fake clients)
 #   - the validator refuses bad labels
@@ -203,7 +205,7 @@ test_switch_and_back_never_duplicates() {
 }
 
 test_relabel_in_lab() {
-  local home out list wa wb wc
+  local home out list wa wb wc wd
   if ! command -v herdr >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
     echo "skip: relabel lab case needs herdr and jq"
     return 0
@@ -212,30 +214,35 @@ test_relabel_in_lab() {
   case "$HERDR_LAB_SESSION" in default|'') fail "refusing herdr lab session '$HERDR_LAB_SESSION'" ;; esac
   "$HERDR_LAB_HELPER" provision "$HERDR_LAB_SESSION" >/dev/null || fail "herdr lab provision failed"
   mklabel() { "$HERDR_LAB_HELPER" run "$HERDR_LAB_SESSION" workspace create --cwd "$TMP_ROOT" --label "$1" --no-focus | jq -r '.result.workspace.workspace_id'; }
-  wa=$(mklabel firstmate); wb=$(mklabel firstmate); wc=$(mklabel 2ndmate-gfm)
-  [ -n "$wa" ] && [ -n "$wb" ] && [ -n "$wc" ] || fail "could not create lab workspaces"
+  wa=$(mklabel firstmate); wb=$(mklabel firstmate); wc=$(mklabel 2ndmate-gfm); wd=$(mklabel 2ndmate-gfm)
+  [ -n "$wa" ] && [ -n "$wb" ] && [ -n "$wc" ] && [ -n "$wd" ] || fail "could not create lab workspaces"
   home=$(new_home relabel operator)
   printf 'herdr_session=%s\nherdr_workspace_id=%s\n' "$HERDR_LAB_SESSION" "$wa" > "$home/state/t1.meta"
   printf 'herdr_session=%s\nherdr_workspace_id=%s\n' "$HERDR_LAB_SESSION" "$wc" > "$home/state/t2.meta"
   printf 'herdr_session=other\nherdr_workspace_id=%s\n' "$wb" > "$home/state/t3.meta"
+  printf 'kind=secondmate\nherdr_session=%s\nherdr_workspace_id=%s\n' "$HERDR_LAB_SESSION" "$wd" > "$home/state/gfm.meta"
   FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed"
   label_of() { "$HERDR_LAB_HELPER" run "$HERDR_LAB_SESSION" workspace list | jq -r --arg id "$1" '.result.workspaces[] | select(.workspace_id == $id) | .label'; }
 
   out=$(FM_HOME="$home" "$PT" relabel --session "$HERDR_LAB_SESSION" --dry-run 2>&1) || fail "relabel --dry-run failed: $out"
   assert_contains "$out" "$wa 'firstmate' -> 'spotter'" "the dry run did not plan the recorded workspace rename"
+  assert_contains "$out" "$wd '2ndmate-gfm' -> 'navigator-gfm'" "the dry run did not plan the secondmate workspace rename"
   assert_equals "firstmate" "$(label_of "$wa")" "the dry run renamed a workspace"
+  assert_equals "2ndmate-gfm" "$(label_of "$wd")" "the dry run renamed the secondmate workspace"
 
   out=$(FM_HOME="$home" "$PT" relabel --session "$HERDR_LAB_SESSION" 2>&1) || fail "relabel failed: $out"
   assert_equals "spotter" "$(label_of "$wa")" "relabel did not rename the recorded workspace"
   assert_equals "firstmate" "$(label_of "$wb")" "relabel renamed a workspace this home did not record in that session"
   assert_equals "2ndmate-gfm" "$(label_of "$wc")" "relabel renamed a workspace outside this home's accept-set"
   assert_contains "$out" "is labeled '2ndmate-gfm', not one of this home's labels" "relabel did not report the foreign label"
+  assert_equals "navigator-gfm" "$(label_of "$wd")" "relabel did not rename the secondmate's own workspace to its label"
 
   printf 'nautical\n' > "$home/config/po-theme"
   FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed under nautical"
   rm "$home/state/t3.meta"
   out=$(FM_HOME="$home" "$PT" relabel --session "$HERDR_LAB_SESSION" 2>&1) || fail "relabel back failed: $out"
   assert_equals "firstmate" "$(label_of "$wa")" "relabel did not rename the workspace back"
+  assert_equals "2ndmate-gfm" "$(label_of "$wd")" "relabel did not rename the secondmate workspace back"
   assert_contains "$out" "history retired primary 'spotter'" "relabel did not retire the unused primary label"
   assert_contains "$out" "history retired submate 'navigator'" "relabel did not retire the unused secondmate label"
   assert_equals "" "$(cat "$home/state/po-theme/history")" "retired history entries were kept"
@@ -307,6 +314,44 @@ submate	navigator" "$(cat "$home/state/po-theme/history")" "an unlistable sessio
   out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab --workspace w2 2>&1) && fail "relabel accepted a caller-supplied workspace id"
   assert_contains "$out" "unknown argument: --workspace" "relabel refused --workspace for the wrong reason"
   pass "relabel renames only recorded workspaces and keeps history labels any listed container uses"
+}
+
+test_relabel_secondmate_records() {
+  local home fake out
+  command -v jq >/dev/null 2>&1 || { echo "skip: relabel secondmate case needs jq"; return 0; }
+  fake="$TMP_ROOT/fakecli-mate"
+  fake_clis "$fake"
+  home=$(new_home relabel-mates operator)
+  printf 'herdr_session=lab\nherdr_workspace_id=w1\n' > "$home/state/t1.meta"
+  printf 'kind=secondmate\nherdr_session=lab\nherdr_workspace_id=w2\n' > "$home/state/gfm.meta"
+  printf 'kind=secondmate\nherdr_session=lab\nherdr_workspace_id=w3\n' > "$home/state/pixeloven.meta"
+  printf 'kind=secondmate\nherdr_session=lab\nherdr_workspace_id=w4\n' > "$home/state/odd.meta"
+  FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed"
+  ws firstmate 2ndmate-gfm 2ndmate-pixeloven 2ndmate-gfm operator > "$fake/herdr-lab.json"
+  printf '[]' > "$fake/paseo.json"
+
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab --dry-run 2>&1) || fail "relabel --dry-run failed: $out"
+  assert_contains "$out" "relabel: w2 '2ndmate-gfm' -> 'navigator-gfm'" "the dry run did not plan the secondmate rename"
+  assert_contains "$out" "relabel: w3 '2ndmate-pixeloven' -> 'navigator-pixeloven'" "the dry run did not plan the second secondmate rename"
+  assert_equals "" "$(cat "$fake/calls" 2>/dev/null)" "the dry run renamed a workspace"
+
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel failed: $out"
+  assert_equals "workspace rename w1 spotter --session lab
+workspace rename w2 navigator-gfm --session lab
+workspace rename w3 navigator-pixeloven --session lab" "$(sort "$fake/calls")" "relabel did not rename exactly the recorded worker and secondmate workspaces"
+  assert_contains "$out" "relabel: w4 is labeled '2ndmate-gfm', not one of this home's labels; skipped" "relabel renamed a secondmate record whose label belongs to another secondmate"
+  assert_not_contains "$out" "w5" "relabel touched the operator's unrecorded workspace"
+
+  : > "$fake/calls"
+  printf 'nautical\n' > "$home/config/po-theme"
+  FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed under nautical"
+  ws spotter navigator-gfm navigator-pixeloven 2ndmate-gfm operator > "$fake/herdr-lab.json"
+  out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel back failed: $out"
+  assert_equals "workspace rename w1 firstmate --session lab
+workspace rename w2 2ndmate-gfm --session lab
+workspace rename w3 2ndmate-pixeloven --session lab" "$(sort "$fake/calls")" "relabel did not rename the secondmate workspaces back"
+  assert_contains "$(cat "$home/state/po-theme/history")" "submate	navigator" "relabel retired the secondmate label a live secondmate workspace still uses"
+  pass "relabel renames a primary home's secondmate workspaces to their own labels and skips a foreign one"
 }
 
 test_label_validation() {
@@ -452,6 +497,7 @@ test_registry_gates
 test_anchors_name_a_lost_hook
 test_a11_architectural_invariance
 test_relabel_keeps_history_other_containers_use
+test_relabel_secondmate_records
 test_relabel_in_lab
 
 echo "all po-theme-labels tests passed"

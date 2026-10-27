@@ -37,7 +37,7 @@ After `/updatefirstmate` or an upstream merge, run `verify` and rerun `apply` if
 
 New herdr and Paseo home workspaces take the theme's label from the first spawn after `apply`, and a second mate takes it once the block reaches it.
 Existing workspaces keep their names and are still found, because every matcher accepts the nautical label, the current label, and every label this home applied earlier, kept in `state/po-theme/history`.
-`relabel` finishes a switch in herdr: it renames only the workspaces this home's task records name in that session, and only when their label is one of this home's own, then retires history labels no live workspace of this home still uses: that session, every other herdr session its task records name, and every Paseo workspace, whatever its folder. If any of those cannot be listed, it keeps the whole history.
+`relabel` finishes a switch in herdr: it renames only the workspaces this home's task records name in that session, and only when their label is one of this home's own; a primary home's second mate record names that second mate's own workspace, which is renamed to its `navigator-<id>` label only when its current label is one of that second mate's own. It then retires history labels no live workspace of this home still uses: that session, every other herdr session its task records name, and every Paseo workspace, whatever its folder. If any of those cannot be listed, it keeps the whole history.
 It never guesses a session, and it does not rename Paseo workspaces, which keep matching by the accept-set.
 
 A themed home spends about 1,150 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.

@@ -61,7 +61,9 @@
 #                                     herdr: rename this home's recorded workspaces in
 #                                     session S (ids from state/*.meta) whose label
 #                                     is in the home's accept-set to the current
-#                                     label, then retire history words no live
+#                                     label (a primary home's kind=secondmate record:
+#                                     that secondmate's accept-set and label), then
+#                                     retire history words no live
 #                                     workspace of this home still uses (herdr
 #                                     sessions S and those its task records name,
 #                                     and every Paseo workspace); an
@@ -714,7 +716,7 @@ live_labels() {
 
 # relabel --session <name> [--dry-run]
 relabel() {
-  local session='' dry=0 ids='' id want list cur role w f renamed=0
+  local session='' dry=0 ids='' id home want list cur role w f renamed=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --session) [ $# -ge 2 ] || die "usage: relabel --session <name> [--dry-run]"; session=$2; shift 2 ;;
@@ -724,28 +726,35 @@ relabel() {
   done
   [ -n "$session" ] || die "relabel needs --session <herdr session>; it never guesses one"
   command -v jq >/dev/null 2>&1 || die "relabel needs jq"
+  # shellcheck source=bin/po-theme-lib.sh
+  . "$SCRIPT_DIR/po-theme-lib.sh"
+  if is_secondmate_home; then
+    home=$(po_home_label "2ndmate-$(tr -d '[:space:]' < "$FM_HOME/.fm-secondmate-home")")
+  else
+    home=$(po_home_label firstmate)
+  fi
+  # A primary home's kind=secondmate record names that secondmate's own
+  # workspace, so its target is the secondmate's label, not this home's.
   for f in "$STATE"/*.meta; do
     [ -f "$f" ] || continue
     [ "$(awk -F= '$1 == "herdr_session" { print substr($0, index($0, "=") + 1); exit }' "$f")" = "$session" ] || continue
     id=$(awk -F= '$1 == "herdr_workspace_id" { print substr($0, index($0, "=") + 1); exit }' "$f")
-    [ -z "$id" ] || ids="$ids$id
+    [ -n "$id" ] || continue
+    if ! is_secondmate_home && grep -qx 'kind=secondmate' "$f"; then
+      want=$(po_home_label "2ndmate-$(basename "$f" .meta)")
+    else
+      want=$home
+    fi
+    ids="$ids$id$TAB$want
 "
   done
-  # shellcheck source=bin/po-theme-lib.sh
-  . "$SCRIPT_DIR/po-theme-lib.sh"
-  if is_secondmate_home; then
-    want=$(po_home_label "2ndmate-$(tr -d '[:space:]' < "$FM_HOME/.fm-secondmate-home")")
-  else
-    want=$(po_home_label firstmate)
-  fi
-  po_home_accept "$want" > "$TMPD/accept"
   list=$(herdr_cli "$session" workspace list) || die "relabel: could not list herdr workspaces in session '$session'"
-  printf '%s' "$ids" | awk 'NF && !seen[$0]++' > "$TMPD/ids"
-  while IFS= read -r id; do
+  printf '%s' "$ids" | awk -F "$TAB" 'NF && !seen[$1]++' > "$TMPD/ids"
+  while IFS="$TAB" read -r id want; do
     cur=$(printf '%s' "$list" | jq -r --arg id "$id" '.result.workspaces[]? | select(.workspace_id == $id) | .label // empty' 2>/dev/null)
     [ -n "$cur" ] || { echo "relabel: $id is not live in session '$session'; skipped"; continue; }
     [ "$cur" != "$want" ] || continue
-    grep -qxF -- "$cur" "$TMPD/accept" || { echo "relabel: $id is labeled '$cur', not one of this home's labels; skipped"; continue; }
+    po_home_accept "$want" | grep -qxF -- "$cur" || { echo "relabel: $id is labeled '$cur', not one of this home's labels; skipped"; continue; }
     echo "relabel: $id '$cur' -> '$want'"
     renamed=1
     [ "$dry" -eq 1 ] || herdr_cli "$session" workspace rename "$id" "$want" >/dev/null || die "relabel: herdr refused to rename $id"
