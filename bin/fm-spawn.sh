@@ -438,7 +438,10 @@
 #                  supplies its own trailing space, empty never used)
 #     __CLAUDESETTINGS__ the single claude --settings value: a quoted inline
 #                  JSON object for a crewmate or scout, or a quoted path to
-#                  state/<task-id>.claude-settings.json for a secondmate
+#                  state/<task-id>.claude-settings.json for a secondmate; only
+#                  the crewmate or scout object carries permissions.deny from
+#                  bin/fm-worker-connector-deny.list (docs/configuration.md
+#                  "Claude worker connector deny list")
 #     __PIBIN__    quoted concrete Pi-family executable path resolved from PATH
 #     __PITUIMODE__ optional --tui-mode regular when that executable advertises it
 #     __PIAPPROVE__ optional --approve on a seeded Pi/pi-signed secondmate when
@@ -719,6 +722,10 @@ case "$CLAUDE_PERMISSION_MODE" in
 auto) CLAUDE_PERM_FLAG='--permission-mode auto' ;;
 *) CLAUDE_PERM_FLAG='--dangerously-skip-permissions' ;;
 esac
+# bin/fm-worker-connector-deny.list (header above): resolved before any
+# mutation so a malformed tracked list refuses instead of launching a Claude
+# worker without its connector deny rules.
+CLAUDE_WORKER_DENY=$(fm_worker_connector_deny_fragment "$SCRIPT_DIR") || exit 1
 # config/lavish-axi-host is the primary-owned per-machine address for the
 # shared Lavish server. Read it once per launch and refuse malformed values so
 # every worker reaches the same server instead of starting a second one.
@@ -6021,7 +6028,7 @@ case "$LAUNCH" in
   if [ "$KIND" = secondmate ]; then
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$(shell_quote "$STATE_REAL/$ID.claude-settings.json")}
   else
-    claude_settings="'{\"feedbackDrafts\":\"off\"__CLAUDEATTRIBUTION__}'"
+    claude_settings="'{\"feedbackDrafts\":\"off\"__CLAUDEATTRIBUTION__$CLAUDE_WORKER_DENY}'"
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$claude_settings}
   fi
   ;;

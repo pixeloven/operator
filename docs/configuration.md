@@ -1066,6 +1066,21 @@ Each relaunch installs a fresh worker extension with the home's current list, so
 
 [`bin/fm-exclude-tools-lib.sh`](../bin/fm-exclude-tools-lib.sh) implements parsing and pre-launch validation for this contract; [`bin/fm-spawn.sh`](../bin/fm-spawn.sh)'s header owns the launch-flag mechanics.
 
+## Claude worker connector deny list
+
+Every Claude ship and scout launch, including a relaunch, denies the claude.ai connector tools named in the tracked [`bin/fm-worker-connector-deny.list`](../bin/fm-worker-connector-deny.list).
+The list names tools that send, post, schedule, share, create, edit, delete, trash, or transition something outside the worktree, such as mail send, chat post, calendar event changes, issue creation, and document sharing.
+Every get, list, search, read, fetch, query, and export tool stays allowed.
+Firstmate's own session, a secondmate's agent, a raw launch command, and every other runtime are unaffected.
+
+The entries ride the launch's inline `--settings` JSON as `permissions.deny`, so they apply under both the default `--dangerously-skip-permissions` posture and `--permission-mode auto`, and the worker cannot edit them away.
+A denied tool is absent from the worker's tool list and from tool search, and a direct call returns `No such tool available: <name>`.
+There is no per-home or per-task override; a worker whose task genuinely needs one of these tools reports a blocker so firstmate or the captain can act instead.
+
+The file holds one exact tool name per line, with blank lines and `#` comment lines allowed, under the same entry syntax as `config/crew-exclude-tools`; wildcards are not used, so a new connector tool stays allowed until it is classified.
+When a connector adds or renames tools, list the session's tools (for example from the `tools` array of a `claude -p --output-format stream-json --verbose` init event), add each new write-class name under its connector, and leave read-class names out.
+A malformed list refuses every spawn before any endpoint, local copy, or task record exists.
+
 ## Worker account pin (config/claude-account, config/pi-account)
 
 A home that mixes accounts for one runner, such as a work login and a personal one, can pin the account its own Claude and Pi workers launch on.
