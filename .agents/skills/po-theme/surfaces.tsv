@@ -18,6 +18,8 @@ label.accept	D	bin/backends/herdr.sh	upstream	--argjson po "$(po_jq_labels)" \
 label.accept	D	bin/backends/herdr.sh	upstream	and (.label | startswith(($owner | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) + "/"));	and (.label | startswith($owner + "/"));
 label.accept	D	bin/backends/herdr.sh	upstream	| select(([$spaces[]? | select(.workspace_id == $parent_workspace and ((.label | strings | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-")) == ($parent_label | sub($po.primary; "firstmate") | sub($po.submate; "2ndmate-"))))] | length) == 1)	| select(([$spaces[]? | select(.workspace_id == $parent_workspace and .label == $parent_label)] | length) == 1)
 label.accept	D	bin/backends/herdr.sh	upstream	|| ! po_label_same "$FM_BACKEND_HERDR_JOURNAL_PARENT_LABEL" "$parent_label" \	|| [ "$FM_BACKEND_HERDR_JOURNAL_PARENT_LABEL" != "$parent_label" ] \
+label.accept	D	bin/backends/herdr.sh	upstream	printf '%s' "$list" | jq -er --arg want "$(po_home_accept "$parent_label")" '	printf '%s' "$list" | jq -er --arg parent_label "$parent_label" '
+label.accept	D	bin/backends/herdr.sh	upstream	| [$spaces[]? | select(.label as $l | $want | split("\n") | any(. == $l))]	| [$spaces[]? | select(.label == $parent_label)]
 lib	-	bin/backends/paseo.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
 lib	-	bin/backends/paseo.sh	upstream	. "$FM_BACKEND_PASEO_ROOT/bin/po-theme-lib.sh"	
 label.primary	D	bin/backends/paseo.sh	upstream	po_home_label "${tag%-*}"	printf '%s' "${tag%-*}"

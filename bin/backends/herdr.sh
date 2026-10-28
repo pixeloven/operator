@@ -2726,10 +2726,10 @@ fm_backend_herdr_projection_cleanup_exact() {  # <session> <task-pane> <seeded-p
 fm_backend_herdr_projection_parent_workspace_exact() {  # <session> <parent-label>
   local session=$1 parent_label=$2 list
   list=$(fm_backend_herdr_cli "$session" workspace list 2>/dev/null) || return 1
-  printf '%s' "$list" | jq -er --arg parent_label "$parent_label" '
+  printf '%s' "$list" | jq -er --arg want "$(po_home_accept "$parent_label")" '
     (.result.workspaces // null) as $spaces
     | select(($spaces | type) == "array")
-    | [$spaces[]? | select(.label == $parent_label)]
+    | [$spaces[]? | select(.label as $l | $want | split("\n") | any(. == $l))]
     | if length == 1
         and (.[0].workspace_id | type) == "string"
         and (.[0].workspace_id | length) > 0
