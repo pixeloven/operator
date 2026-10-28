@@ -390,6 +390,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0022-worker-connector-deny-list.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
