@@ -1,0 +1,61 @@
+treehouse get
+
+notes  main
+❯ treehouse get
+A new version of treehouse is available: v3.1.6 → v3.1.7
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Entered worktree at /private/tmp/fmlab.idMRLB/treehouse/.treehouse/notes-7c0be8/1/notes. Type 'exit' to return.
+
+notes  HEAD
+❯ cd -- '/private/tmp/fmlab.idMRLB/treehouse/.treehouse/notes-7c0be8/1/notes'
+
+notes  HEAD
+❯ export GOTMPDIR=/tmp/fm-labcdeny01-worker/gotmp
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL='/tmp/fm-labcdeny01-worker/gitconfig'
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=labcdeny01-worker
+
+notes  HEAD
+❯ export GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL='/tmp/fm-labcdeny01-worker/gitconfig'
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=labcdeny01-worker
+
+notes  HEAD
+❯ export GIT_CONFIG_GLOBAL='/tmp/fm-labcdeny01-worker/gitconfig'
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=labcdeny01-worker
+
+notes  HEAD
+❯ export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=labcdeny01-worker
+
+notes  HEAD
+❯ export FM_TASK_ID=labcdeny01-worker
+
+notes  HEAD
+❯ . '/tmp/fm-labcdeny01-worker+7f3d982d9a3a3973fb28be3b18077efaf2781fe8a706f616bbea1b6b5341b54b/launch.s1793218259.57248.22943.sh'
+ ▐▛███▛█   Claude Code v2.1.312
+▝▜██████▀  Sonnet 5.5 with low effort · Claude Enterprise
+ ▝▝   ▝▝   /private/tmp/fmlab.idMRLB/treehouse/.treehouse/notes-7c0be8/1/notes
+
+
+❯ : Firstmate operational input waiting: read '/private/tmp/fmlab.idMRLB/home/state/operational-inbox/1793218260-ed0070a542024003.msg' and handle its contents as Firstmate operational input.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ TOOLPROBE: mcp__claude_ai_Gmail__send_message=MISSING, mcp__claude_ai_Slack__slack_send_message=MISSING, mcp__claude_ai_Google_Calendar__delete_event=MISSING, mcp__claude_ai_Gmail__search_threads=LOADED,
+  mcp__claude_ai_Slack__slack_read_channel=LOADED
+
+  Status: done. I made no code changes and invoked none of the probed tools.
+
+✻ Cooked for 12s · done 1:11 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+

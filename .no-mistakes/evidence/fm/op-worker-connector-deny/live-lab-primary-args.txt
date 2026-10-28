@@ -1,0 +1,1 @@
+29405 claude --setting-sources project,local --model sonnet --effort medium --permission-mode auto

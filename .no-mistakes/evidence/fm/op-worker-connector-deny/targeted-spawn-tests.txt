@@ -1,0 +1,6 @@
+ok - a runtime that cannot hide tools, or a raw launch, refuses a non-empty exclusion list
+ok - claude ship and scout launches deny exactly the tools config/crew-exclude-tools lists
+ok - placeholder-shaped exclusion entries reach the claude deny array verbatim
+ok - a secondmate's own claude agent keeps its tools when the home has an exclusion list
+ok - docs/examples/crew-exclude-tools parses for claude
+# all fm-spawn-dispatch-profile tests passed
