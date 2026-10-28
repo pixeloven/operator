@@ -1386,9 +1386,9 @@ test_pi_exclude_tools_absent_and_empty_lists() {
   pass "an absent or empty exclusion list leaves every runtime unaffected"
 }
 
-test_exclude_tools_non_pi_runtime_refuses_non_empty_list() {
+test_exclude_tools_unsupported_runtime_refuses_non_empty_list() {
   local harness rec id out status
-  for harness in claude codex grok; do
+  for harness in codex grok; do
     id="excl-refuse-${harness}-z9i"
     rec=$(make_spawn_case "excl-refuse-${harness}" "$harness" "$id")
     read_case_record "$rec"
@@ -1412,6 +1412,103 @@ test_exclude_tools_non_pi_runtime_refuses_non_empty_list() {
   assert_contains "$out" "config/crew-exclude-tools" "the raw-launch refusal must name the config file"
   [ ! -s "$LAUNCH_LOG" ] || fail "a raw launch ignored the exclusion list"
   pass "a runtime that cannot hide tools, or a raw launch, refuses a non-empty exclusion list"
+}
+
+# Claude honors config/crew-exclude-tools through permissions.deny in the ship
+# or scout launch's own inline settings, which the worker cannot edit.
+claude_settings_deny() {  # <launch-command>: the launch's deny array, or null
+  claude_settings_json_arg "$1" | jq -c '.permissions.deny // null'
+}
+
+test_claude_exclude_tools_deny_on_ship_and_scout_launches() {
+  local rec id out status launch kindflag
+  for kindflag in --ship --scout; do
+    id="excl-claude-${kindflag#--}-z9e"
+    rec=$(make_spawn_case "excl-claude-${kindflag#--}" claude "$id")
+    read_case_record "$rec"
+    write_exclude_file "$HOME_DIR" '# connector writes' 'mcp__claude_ai_Gmail__send_message' '' \
+      '  mcp__claude_ai_Slack__slack_send_message  '
+    if [ "$kindflag" = --scout ]; then
+      out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" --scout 2>&1)
+    else
+      out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" 2>&1)
+    fi
+    status=$?
+    expect_code 0 "$status" "claude $kindflag spawn with an exclusion list should succeed"$'\n'"$out"
+    launch=$(cat "$LAUNCH_LOG")
+    [ "$(claude_settings_deny "$launch")" = '["mcp__claude_ai_Gmail__send_message","mcp__claude_ai_Slack__slack_send_message"]' ] \
+      || fail "claude $kindflag launch does not deny exactly the listed tools: $(claude_settings_json_arg "$launch")"
+    assert_attribution_policy "$launch" "claude $kindflag with an exclusion list"
+    assert_not_contains "$launch" "--exclude-tools" "claude $kindflag must not receive Pi's exclusion flag"
+    assert_not_contains "$out" "named like a read tool" "a write-only list must not warn"
+    if [ -f "$WT_DIR/.claude/settings.local.json" ]; then
+      jq -e 'has("permissions") | not' "$WT_DIR/.claude/settings.local.json" >/dev/null \
+        || fail "claude $kindflag spawn wrote the deny rules into a settings file the worker can edit"
+    fi
+  done
+
+  id=excl-claude-noentries-z9f
+  rec=$(make_spawn_case excl-claude-noentries claude "$id")
+  read_case_record "$rec"
+  write_exclude_file "$HOME_DIR" '# nothing yet' ''
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
+  expect_code 0 "$?" "claude spawn with a comment-only file should succeed"$'\n'"$out"
+  [ "$(claude_settings_deny "$(cat "$LAUNCH_LOG")")" = null ] \
+    || fail "a list with no entries still put deny rules in the claude launch"
+  pass "claude ship and scout launches deny exactly the tools config/crew-exclude-tools lists"
+}
+
+test_claude_exclude_tools_warn_on_read_named_entry() {
+  local rec id out status
+  id=excl-claude-read-z9g
+  rec=$(make_spawn_case excl-claude-read claude "$id")
+  read_case_record "$rec"
+  write_exclude_file "$HOME_DIR" 'mcp__claude_ai_Gmail__send_message' 'mcp__claude_ai_Gmail__list_labels'
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" 2>&1)
+  status=$?
+  expect_code 0 "$status" "a read-named entry warns rather than refusing"$'\n'"$out"
+  assert_contains "$out" "warning: config/crew-exclude-tools hides 'mcp__claude_ai_Gmail__list_labels', which is named like a read tool" \
+    "a read-named entry must warn and name the entry"
+  assert_not_contains "$out" "'mcp__claude_ai_Gmail__send_message', which is named like a read tool" \
+    "a write-named entry must not warn"
+  claude_settings_deny "$(cat "$LAUNCH_LOG")" | jq -e 'index("mcp__claude_ai_Gmail__list_labels") != null' >/dev/null \
+    || fail "the operator's read-named entry must still apply"
+  pass "a read-named exclusion entry applies to claude with a warning"
+}
+
+test_claude_secondmate_launch_ignores_exclude_tools() {
+  local rec id sm out status settings
+  id=excl-claude-secondmate-z9h
+  rec=$(make_spawn_case excl-claude-secondmate claude "$id")
+  read_case_record "$rec"
+  write_exclude_file "$HOME_DIR" 'mcp__claude_ai_Gmail__send_message'
+  sm="$CASE_DIR/secondmate-home"
+  make_seeded_secondmate_home "$sm" "$id"
+  out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$sm" --secondmate)
+  status=$?
+  expect_code 0 "$status" "secondmate claude spawn should succeed"$'\n'"$out"
+  settings=$(claude_settings_json_arg "$(cat "$LAUNCH_LOG")")
+  printf '%s' "$settings" | jq -e '.feedbackDrafts == "off" and (has("permissions") | not)' >/dev/null \
+    || fail "a secondmate's own claude agent received worker deny rules: $settings"
+  pass "a secondmate's own claude agent keeps its tools when the home has an exclusion list"
+}
+
+# The shipped example is meant to be copied verbatim, so it must parse and must
+# not trip the read-name warning.
+test_exclude_tools_example_parses_for_claude() {
+  local dir err fragment
+  dir="$TMP_ROOT/exclude-tools-example"
+  mkdir -p "$dir"
+  cp "$ROOT/docs/examples/crew-exclude-tools" "$dir/crew-exclude-tools"
+  err="$dir/err"
+  # shellcheck source=bin/fm-exclude-tools-lib.sh
+  fragment=$(. "$ROOT/bin/fm-exclude-tools-lib.sh" &&
+    fm_exclude_tools_claude_deny "$(fm_exclude_tools_check claude 0 "$dir")" 2>"$err") \
+    || fail "the example exclusion list did not parse: $(cat "$err")"
+  [ ! -s "$err" ] || fail "the example exclusion list warned: $(cat "$err")"
+  printf '{%s}' "${fragment#,}" | jq -e '.permissions.deny | length > 0 and all(startswith("mcp__claude_ai_"))' >/dev/null \
+    || fail "the example exclusion list did not produce claude.ai connector deny rules: $fragment"
+  pass "docs/examples/crew-exclude-tools parses for claude with no read-name warning"
 }
 
 test_pi_exclude_tools_malformed_entry_refuses_before_endpoint() {
@@ -1541,7 +1638,7 @@ test_claude_forwards_firstmate_config_dir_when_set() {
   status=$?
   expect_code 0 "$status" "claude spawn with CLAUDE_CONFIG_DIR set should succeed"
   launch=$(cat "$LAUNCH_LOG")
-  assert_contains "$launch" "CLAUDE_CONFIG_DIR='$CASE_DIR/claude-work' env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude --dangerously-skip-permissions $(claude_worker_add_dirs "$HOME_DIR" "$id")--settings '$(fm_test_claude_worker_settings)'" \
+  assert_contains "$launch" "CLAUDE_CONFIG_DIR='$CASE_DIR/claude-work' env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude --dangerously-skip-permissions $(claude_worker_add_dirs "$HOME_DIR" "$id")--settings '{\"feedbackDrafts\":\"off\",\"attribution\":{\"commit\":\"\",\"pr\":\"\",\"sessionUrl\":false}}'" \
     "claude launch did not forward firstmate's CLAUDE_CONFIG_DIR to the crewmate pane"
   pass "claude forwards firstmate's CLAUDE_CONFIG_DIR so the crewmate uses the same credential store"
 }
@@ -1780,66 +1877,6 @@ test_claude_secondmate_launch_carries_the_attribution_policy() {
   launch=$(cat "$LAUNCH_LOG")
   assert_attribution_policy "$launch" "claude secondmate"
   pass "a claude secondmate launch carries the attribution-off policy too"
-}
-
-# bin/fm-worker-connector-deny.list keeps claude.ai connector write tools away
-# from Claude ship and scout workers through the launch's own inline settings,
-# which the worker cannot edit, and leaves every read tool allowed.
-assert_connector_deny() {  # <launch-command> <what>
-  local launch=$1 what=$2 settings expected
-  settings=$(claude_settings_json_arg "$launch")
-  expected=$(fm_test_claude_worker_settings | jq -c '.permissions.deny')
-  [ "$(printf '%s' "$expected" | jq 'length')" -gt 0 ] || fail "the tracked connector deny list is empty"
-  printf '%s' "$settings" | jq -e --argjson want "$expected" '.permissions.deny == $want' >/dev/null \
-    || fail "$what launch settings JSON does not deny the tracked connector tools: $settings"
-  printf '%s' "$settings" | jq -e '
-    all(.permissions.deny[];
-      startswith("mcp__claude_ai_")
-      and ((split("__") | last | ascii_downcase)
-        | test("^(get|list|search|read|fetch|query|export|download|lookup|suggest)") | not))
-  ' >/dev/null || fail "$what launch denies a read-class or non-connector tool: $settings"
-}
-
-test_claude_worker_launches_deny_connector_writes() {
-  local rec id out status launch kindflag
-  for kindflag in --ship --scout; do
-    id=profile-claude-connector-deny${kindflag#--}-z26
-    rec=$(make_spawn_case "profile-claude-connector-deny${kindflag#--}" claude "$id")
-    read_case_record "$rec"
-    if [ "$kindflag" = --scout ]; then
-      out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" --scout)
-    else
-      out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
-    fi
-    status=$?
-    expect_code 0 "$status" "claude $kindflag spawn should succeed"$'\n'"$out"
-    launch=$(cat "$LAUNCH_LOG")
-    assert_connector_deny "$launch" "claude $kindflag"
-    if [ -f "$WT_DIR/.claude/settings.local.json" ]; then
-      jq -e 'has("permissions") | not' "$WT_DIR/.claude/settings.local.json" >/dev/null \
-        || fail "claude $kindflag spawn wrote the connector deny into an on-disk settings scope other sessions share"
-    fi
-  done
-  pass "claude ship and scout launches deny the tracked connector write tools and no read tool"
-}
-
-test_claude_secondmate_launch_omits_connector_deny() {
-  local rec id sm out status launch settings
-  id=profile-secondmate-connector-deny-z27
-  rec=$(make_spawn_case profile-secondmate-connector-deny claude "$id")
-  read_case_record "$rec"
-  sm="$CASE_DIR/secondmate-home"
-  make_seeded_secondmate_home "$sm" "$id"
-
-  out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$sm" --secondmate)
-  status=$?
-  expect_code 0 "$status" "secondmate claude spawn should succeed"$'\n'"$out"
-  launch=$(cat "$LAUNCH_LOG")
-  settings=$(claude_settings_json_arg "$launch")
-  printf '%s' "$settings" | jq -e '.feedbackDrafts == "off" and (has("permissions") | not)' >/dev/null \
-    || fail "persistent secondmate launch received the worker connector deny list: $settings"
-  assert_not_contains "$launch" "mcp__claude_ai_" "persistent secondmate launch names a connector tool"
-  pass "a persistent claude secondmate launch keeps its connector tools"
 }
 
 test_active_dispatch_profile_does_not_block_secondmate_launch() {
@@ -2216,7 +2253,7 @@ claude_expected_launch() {  # <launch> <home> <id> <permission-flag>
   [ "$(printf '%s' "$doorbell" | "$ROOT/bin/fm-operational-input.sh" doorbell-kind)" = launch-brief ] \
     || doorbell="not a launch-brief doorbell"
   quoted="'$(printf '%s' "$doorbell" | sed "s/'/'\\\\''/g")'"
-  printf '%s' "export COMPACT_ADVISER_DISABLE=1; $(task_inbox_export "$2" "$3")$(fm_test_launch_git_prefix "$1")env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude $4 $(claude_worker_add_dirs "$2" "$3")--settings '$(fm_test_claude_worker_settings)' $CLAUDE_CONTROL_CHANNEL_FLAG $quoted"
+  printf '%s' "export COMPACT_ADVISER_DISABLE=1; $(task_inbox_export "$2" "$3")$(fm_test_launch_git_prefix "$1")env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude $4 $(claude_worker_add_dirs "$2" "$3")--settings '{\"feedbackDrafts\":\"off\",\"attribution\":{\"commit\":\"\",\"pr\":\"\",\"sessionUrl\":false}}' $CLAUDE_CONTROL_CHANNEL_FLAG $quoted"
 }
 
 test_claude_permission_mode_bypass_matches_absent_launch() {
@@ -2391,7 +2428,11 @@ test_pi_approve_probe_omits_unsupported_flag
 test_pi_exclude_tools_reach_ship_and_scout_launches
 test_pi_exclude_tools_worker_registry_reports
 test_pi_exclude_tools_absent_and_empty_lists
-test_exclude_tools_non_pi_runtime_refuses_non_empty_list
+test_exclude_tools_unsupported_runtime_refuses_non_empty_list
+test_claude_exclude_tools_deny_on_ship_and_scout_launches
+test_claude_exclude_tools_warn_on_read_named_entry
+test_claude_secondmate_launch_ignores_exclude_tools
+test_exclude_tools_example_parses_for_claude
 test_pi_exclude_tools_malformed_entry_refuses_before_endpoint
 test_pi_exclude_tools_read_failure_refuses_before_launch
 test_pi_exclude_tools_do_not_leak_across_homes_or_to_secondmates
@@ -2414,8 +2455,6 @@ test_claude_crewmate_launch_carries_the_attribution_policy
 test_keep_ai_trailers_omits_attribution_settings_and_strip_hooks
 test_keep_ai_trailers_reaches_secondmate_crew_launches
 test_claude_secondmate_launch_carries_the_attribution_policy
-test_claude_worker_launches_deny_connector_writes
-test_claude_secondmate_launch_omits_connector_deny
 test_active_dispatch_profile_does_not_block_secondmate_launch
 
 echo "# all fm-spawn-dispatch-profile tests passed"

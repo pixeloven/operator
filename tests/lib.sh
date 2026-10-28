@@ -127,17 +127,6 @@ fm_test_launch_command() {  # <launch>
   printf '%s' "$command"
 }
 
-# The inline --settings JSON a Claude ship or scout launch carries, with the
-# attribution policy on, as an unquoted string. The deny fragment comes from
-# the tracked list through its public library function.
-fm_test_claude_worker_settings() {
-  local deny
-  # shellcheck source=bin/fm-exclude-tools-lib.sh
-  deny=$(. "$ROOT/bin/fm-exclude-tools-lib.sh" && fm_worker_connector_deny_fragment "$ROOT/bin") \
-    || fail "the tracked connector deny list did not parse"
-  printf '%s' '{"feedbackDrafts":"off","attribution":{"commit":"","pr":"","sessionUrl":false}'"$deny}"
-}
-
 # --- self-cleaning temp root ------------------------------------------------
 #
 # fm_test_tmproot <prefix> echoes a fresh temp dir and registers it for removal

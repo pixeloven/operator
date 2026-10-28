@@ -412,7 +412,8 @@
 # Worker tool exclusions:
 #   docs/configuration.md "Worker tool exclusions" owns config/crew-exclude-tools
 #   and its operator contract. Resolve it with bin/fm-exclude-tools-lib.sh
-#   before provisioning; __PIEXCLUDE__ below owns the Pi launch substitution.
+#   before provisioning; __PIEXCLUDE__ below owns the Pi launch substitution,
+#   and __CLAUDESETTINGS__ carries the Claude ship and scout deny rules.
 # Worker account pin (config/claude-account, config/pi-account):
 #   Opt-in. With no file, a Claude or Pi launch is unchanged: Claude still
 #   receives this process's own CLAUDE_CONFIG_DIR when it is set, and Pi the
@@ -439,9 +440,8 @@
 #     __CLAUDESETTINGS__ the single claude --settings value: a quoted inline
 #                  JSON object for a crewmate or scout, or a quoted path to
 #                  state/<task-id>.claude-settings.json for a secondmate; only
-#                  the crewmate or scout object carries permissions.deny from
-#                  bin/fm-worker-connector-deny.list (docs/configuration.md
-#                  "Claude worker connector deny list")
+#                  the crewmate or scout object carries permissions.deny, from
+#                  config/crew-exclude-tools
 #     __PIBIN__    quoted concrete Pi-family executable path resolved from PATH
 #     __PITUIMODE__ optional --tui-mode regular when that executable advertises it
 #     __PIAPPROVE__ optional --approve on a seeded Pi/pi-signed secondmate when
@@ -722,10 +722,6 @@ case "$CLAUDE_PERMISSION_MODE" in
 auto) CLAUDE_PERM_FLAG='--permission-mode auto' ;;
 *) CLAUDE_PERM_FLAG='--dangerously-skip-permissions' ;;
 esac
-# bin/fm-worker-connector-deny.list (header above): resolved before any
-# mutation so a malformed tracked list refuses instead of launching a Claude
-# worker without its connector deny rules.
-CLAUDE_WORKER_DENY=$(fm_worker_connector_deny_fragment "$SCRIPT_DIR") || exit 1
 # config/lavish-axi-host is the primary-owned per-machine address for the
 # shared Lavish server. Read it once per launch and refuse malformed values so
 # every worker reaches the same server instead of starting a second one.
@@ -2746,8 +2742,10 @@ fi
 # config/crew-exclude-tools (header above): refuse before worker provisioning
 # if this launch cannot honor the list. Secondmate agents are not covered.
 EXCLUDE_TOOLS=
+CLAUDE_WORKER_DENY=
 if [ "$KIND" != secondmate ]; then
   EXCLUDE_TOOLS=$(fm_exclude_tools_check "$HARNESS" "$RAW_LAUNCH" "$CONFIG") || exit 1
+  [ "$HARNESS" != claude ] || CLAUDE_WORKER_DENY=$(fm_exclude_tools_claude_deny "$EXCLUDE_TOOLS")
 fi
 
 case "$HARNESS" in

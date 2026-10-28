@@ -73,7 +73,7 @@ Assertion A8 fails if a tracked file outside decision and documentation history 
 
 ADR-0008 owns the isolated unsigned delivery lane, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, ADR-0015 owns the documentation-audience entries that classify PixelOven prose, and ADR-0016 owns the persona hunks: one line in `AGENTS.md` and the worker-vocabulary and themed-vocative hunks in `bin/fm-dod-lib.sh`, which assertion A9 holds to exactly the lines that ADR lists.
 ADR-0021 carries upstream's unmerged Herdr slash-popup composer fix in `bin/fm-composer-lib.sh`, its three tests, and their captured screens, byte-identical to that pull request, until an upstream synchronization brings it.
-ADR-0022 carries the Claude worker connector deny list in `bin/fm-worker-connector-deny.list`, `bin/fm-exclude-tools-lib.sh`, `bin/fm-spawn.sh`, `docs/configuration.md`, and the spawn, Orca, and shared test-library tests that assert the worker launch.
+ADR-0022 carries Claude support for `config/crew-exclude-tools` in `bin/fm-exclude-tools-lib.sh`, `bin/fm-spawn.sh`, `docs/configuration.md`, its example list, and the spawn tests that assert the worker launch.
 
 ## Taking upstream changes
 

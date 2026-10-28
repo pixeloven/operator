@@ -9,7 +9,7 @@ Start with the directory layout, then use the setting reference for the behavior
 | --- | --- |
 | Firstmate's code, private files, or project location | [FM_HOME](#fm_home) and [operational home layout](#operational-home-layout-and-state) |
 | Task windows and worker tools | [Runtime backend](#runtime-backend-configbackend--fm_backend) and [harness support](#harness-support) |
-| Worker permissions, accounts, or environment | [Claude permission mode](#claude-permission-mode-configclaude-permission-mode), [worker account pin](#worker-account-pin-configclaude-account-configpi-account), [worker tool exclusions](#worker-tool-exclusions-configcrew-exclude-tools), [Claude worker connector deny list](#claude-worker-connector-deny-list), [worker launch environment](#worker-launch-environment-configlaunch-env-allowlist), and its [Orca environment source](#orca-environment-source-configlaunch-env-tmux-session) |
+| Worker permissions, accounts, or environment | [Claude permission mode](#claude-permission-mode-configclaude-permission-mode), [worker account pin](#worker-account-pin-configclaude-account-configpi-account), [worker tool exclusions](#worker-tool-exclusions-configcrew-exclude-tools), [worker launch environment](#worker-launch-environment-configlaunch-env-allowlist), and its [Orca environment source](#orca-environment-source-configlaunch-env-tmux-session) |
 | Backlog, preferences, and memory | [Backlog backend](#backlog-backend-taskstoml--configbacklog-backend), [captain preferences](#captain-preferences-datacaptainmd--datacaptain-sharedmd), [external memory tiers](#external-memory-tiers-memory-layering-section), and [startup memory budget](#startup-memory-budget-configstartup-memory-budget) |
 | Supervision and presentation | [Pi supervision branch](#pi-supervision-branch), [supervision host](#supervision-host-configsupervision-host), and [Calm preference](#calm-preference-configcalm) |
 | Persistent secondmates | [Secondmate routes](#secondmate-routes-datasecondmatesmd) |
@@ -1037,6 +1037,7 @@ With no file, or a file with no entries, every launch on every runtime is unchan
 
 Create the file with one tool name per line, such as `mcp__<server>__<tool>` for an MCP tool.
 Blank lines and lines beginning with `#` are allowed, and surrounding whitespace on a line is trimmed; a trailing comment on an entry line is not allowed.
+[`docs/examples/crew-exclude-tools`](examples/crew-exclude-tools) is a copyable starting list of claude.ai connector write tools, such as mail send, chat post, calendar event changes, issue creation, and document sharing, to edit for the connectors you use.
 The file is read from this home's own configuration directory on every launch, so a change reaches the next worker or relaunch without a restart.
 It is not in the inherited configuration set, so no other home, including a secondmate home, receives it; create the file in each home that wants it.
 It does not apply to a secondmate's own agent, which neither reads nor refuses on it.
@@ -1046,9 +1047,19 @@ It does not apply to a secondmate's own agent, which neither reads nor refuses o
 | Runtime | With a non-empty list |
 | --- | --- |
 | `pi`, `pi-signed` | Hides listed tool names, MCP tools included, on every ship and scout spawn and relaunch. |
+| `claude` | Denies listed tool names, MCP tools included, through `permissions.deny` in the launch's inline `--settings` on every ship and scout spawn and relaunch. |
 | Every other runtime, and a raw launch command | The launch refuses with an error naming `config/crew-exclude-tools`, because that runtime has no verified way to hide tools. |
 
 A relaunch validates the list and the replacement runtime's support before stopping the running worker, so an exclusion-list refusal preserves the running agent.
+
+### Claude workers
+
+A Claude worker's deny rules apply under both the default `--dangerously-skip-permissions` posture and `--permission-mode auto`, and because they ride the launch's own settings rather than a file in the task's local copy, the worker cannot edit them away.
+A denied tool is absent from the worker's tool list and from tool search, and a direct call returns `No such tool available: <name>`.
+Firstmate's own session and a secondmate's own agent are unaffected.
+An entry whose tool name, after its last `__`, starts with get, list, search, read, fetch, query, export, download, lookup, or suggest still applies, but each Claude launch prints a warning naming it, because the list is meant for write-class tools and the worker loses that read too.
+Claude has no loaded-tool check like Pi's below, so an entry that matches no tool in the session is silently a no-op.
+Because entries are exact names, a connector tool that is new, renamed, or from a connector authorized later stays available until it is added; to refresh the list, read the `tools` array of the init event from `claude -p --output-format stream-json --verbose` in a session with your connectors.
 
 ### Validation
 
@@ -1065,21 +1076,6 @@ Names present in the registry produce no report; unknown or unverified names do 
 Each relaunch installs a fresh worker extension with the home's current list, so the replacement performs the same check.
 
 [`bin/fm-exclude-tools-lib.sh`](../bin/fm-exclude-tools-lib.sh) implements parsing and pre-launch validation for this contract; [`bin/fm-spawn.sh`](../bin/fm-spawn.sh)'s header owns the launch-flag mechanics.
-
-## Claude worker connector deny list
-
-Every Claude ship and scout launch, including a relaunch, denies the claude.ai connector tools named in the tracked [`bin/fm-worker-connector-deny.list`](../bin/fm-worker-connector-deny.list).
-The list names tools that send, post, schedule, share, create, edit, delete, trash, or transition something outside the worktree, such as mail send, chat post, calendar event changes, issue creation, and document sharing.
-Every get, list, search, read, fetch, query, and export tool stays allowed.
-Firstmate's own session, a secondmate's agent, a raw launch command, and every other runtime are unaffected.
-
-The entries ride the launch's inline `--settings` JSON as `permissions.deny`, so they apply under both the default `--dangerously-skip-permissions` posture and `--permission-mode auto`, and the worker cannot edit them away.
-A denied tool is absent from the worker's tool list and from tool search, and a direct call returns `No such tool available: <name>`.
-There is no per-home or per-task override; a worker whose task genuinely needs one of these tools reports a blocker so firstmate or the captain can act instead.
-
-The file holds one exact tool name per line, with blank lines and `#` comment lines allowed, under the same entry syntax as `config/crew-exclude-tools`; wildcards are not used, so a new connector tool stays allowed until it is classified.
-When a connector adds or renames tools, list the session's tools (for example from the `tools` array of a `claude -p --output-format stream-json --verbose` init event), add each new write-class name under its connector, and leave read-class names out.
-A malformed list refuses every spawn before any endpoint, local copy, or task record exists.
 
 ## Worker account pin (config/claude-account, config/pi-account)
 

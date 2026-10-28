@@ -1,13 +1,20 @@
-# Claude.ai connector tools denied to Claude ship and scout workers.
-# docs/configuration.md "Claude worker connector deny list" owns the contract;
-# bin/fm-exclude-tools-lib.sh parses this file for bin/fm-spawn.sh.
+# config/crew-exclude-tools - tools that this home's ship and scout workers
+# launch without. Copy this into a local, gitignored config/crew-exclude-tools
+# and edit it to match the connectors you use.
+# docs/configuration.md "Worker tool exclusions" owns the contract; an ABSENT
+# or empty file means no exclusions.
 #
 # One exact tool name per line; blank lines and # comment lines are allowed.
-# List only tools that send, post, schedule, share, create, edit, delete,
-# trash, transition, or otherwise change state outside the worktree.
-# Never list a get, list, search, read, fetch, query, or export tool.
-# Tools that take a read-or-write action argument are left allowed and are
-# reviewed by hand, noted beside their connector below.
+# These entries are claude.ai connector write tools: tools that send, post,
+# schedule, share, create, edit, delete, trash, or transition something
+# outside the worktree. Get, list, search, read, fetch, query, and export
+# tools are deliberately absent; a Claude launch warns about any such entry.
+# Tools that take a read-or-write action argument are left allowed here and
+# noted beside their connector below.
+#
+# Listed as they appeared on Claude Code 2.1.312; connectors add and rename
+# tools, so refresh this from your own session's tool list. Pi workers report
+# entries their session does not load as unverified.
 
 # Gmail
 mcp__claude_ai_Gmail__send_message
