@@ -1,0 +1,4 @@
+ok - claude ship and scout launches deny the tracked connector write tools and no read tool
+ok - a persistent claude secondmate launch keeps its connector tools
+ok - config/claude-permission-mode=bypass launches exactly as an absent file does
+# focused connector-deny tests passed

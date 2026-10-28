@@ -1,0 +1,6 @@
+Real claude 2.1.312 init-event tool lists (claude -p --output-format stream-json --verbose)
+baseline-init-skip: total=303 connector=201 denied-list-entries-present=78
+worker-init-skip: total=225 connector=123 denied-list-entries-present=0
+worker-init-auto: total=203 connector=123 denied-list-entries-present=0
+deny list entries=78; entries that are real tools in baseline=78
+non-denied connector tools missing from worker (skip)=0 (auto)=0
