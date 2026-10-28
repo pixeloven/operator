@@ -11,15 +11,18 @@
 #   - operator: the primary labels `spotter` and `spotter-afk-daemon`, and a
 #     secondmate home inheriting the block labels itself `navigator-<id>`
 #   - accept-set: an operator home adopts a live `2ndmate-gfm` workspace without
-#     creating one, and keeps a legacy `firstmate/` child grouped under a
-#     relabeled `spotter` parent
+#     creating one, resolves a live `2ndmate-gfm` or `firstmate` workspace as
+#     the projection parent of a worker spawned with no launcher pane, and
+#     keeps a legacy `firstmate/` child grouped under a relabeled `spotter`
+#     parent
 #   - switching themes and back never mints a duplicate home workspace
 #   - relabel renames only this home's recorded workspaces in a named
 #     non-default Herdr lab session and retires unused history (real Herdr;
 #     capability-skipped when herdr or jq is absent), never renames an
 #     unrecorded `firstmate` workspace, renames a primary home's second mate
 #     record to that second mate's own label (skipping a label foreign to that
-#     second mate, or one its own home does not resolve yet, or whose home is
+#     second mate, or one its own home or its home's own checkout does not
+#     resolve yet, or whose home is
 #     remote or unreadable; a record without home= falls back to the registry;
 #     planning only under --dry-run), and keeps a history label a Paseo
 #     workspace or another recorded herdr session still uses, or any it
@@ -67,10 +70,13 @@ new_home() {  # <name> [<theme>]: a primary home, optionally selecting <theme>
   printf '%s\n' "$home"
 }
 
-# new_mate <name> <id> [<theme>]: a secondmate home inheriting <theme>'s block.
+# new_mate <name> <id> [<theme>]: a secondmate home inheriting <theme>'s block,
+# whose own checkout is this tree's code as a local secondmate home's is.
 new_mate() {
   local home="$TMP_ROOT/$1"
   mkdir -p "$home/config" "$home/data" "$home/state"
+  ln -s "$ROOT/bin" "$home/bin"
+  ln -s "$ROOT/.agents" "$home/.agents"
   printf '%s\n' "$2" > "$home/.fm-secondmate-home"
   [ -z "${3:-}" ] || "$PT" persona "$3" > "$home/data/captain-shared.md"
   printf '%s\n' "$home"
@@ -134,6 +140,7 @@ test_nautical_matches_upstream() {
     fm_backend_herdr_projection_workspace_label firstmate/t1 '"$TOKEN"'; echo
     fm_backend_herdr_projection_workspace_label 2ndmate-gfm/t2 '"$TOKEN"'; echo
     fm_backend_herdr_workspace_find_all fmtest; echo "ensure=$(fm_backend_herdr_workspace_ensure fmtest /tmp none; echo " rc=$?")"
+    echo "parent=[$(fm_backend_herdr_projection_parent_workspace_exact fmtest "$(fm_backend_herdr_workspace_label)")]"
     fm_backend_herdr_projection_order_best_effort fmtest w4 "$(fm_backend_herdr_workspace_label)" "" ""; echo "order=$?"'
   list=$(ws firstmate "firstmate/old · p:$TOKEN" 2ndmate-gfm "└ new · p:$TOKEN" spotter navigator-gfm)
   up=$(upstream_bin)
@@ -146,6 +153,8 @@ test_nautical_matches_upstream() {
   done
   assert_contains "$(adapter "$ROOT/bin" "$home" "$list" "$probe")" "ensure=w1 rc=0" "a nautical primary did not adopt its firstmate workspace"
   assert_contains "$(adapter "$ROOT/bin" "$mate" "$list" "$probe")" "ensure=w3 rc=0" "a nautical secondmate did not adopt its 2ndmate workspace"
+  assert_contains "$(adapter "$ROOT/bin" "$home" "$list" "$probe")" "parent=[w1]" "a nautical primary did not resolve its firstmate projection parent"
+  assert_contains "$(adapter "$ROOT/bin" "$mate" "$list" "$probe")" "parent=[w3]" "a nautical secondmate did not resolve its 2ndmate projection parent"
   [ -n "$up" ] || printf 'note: upstream pin %s is not in this clone; nautical answers checked only against literals\n' "${PIN:-?}"
   assert_absent "$home/state/po-theme" "a nautical home wrote theme state"
   assert_absent "$mate/state/po-theme" "a nautical secondmate home wrote theme state"
@@ -188,6 +197,30 @@ test_accept_set_adopts_and_groups() {
     'fm_backend_herdr_projection_order_best_effort fmtest w3 spotter w1 ""; echo "rc=$?"')
   assert_contains "$out" "ambiguous workspace layout" "the grouping case is vacuous: a home that never applied a theme also grouped it"
   pass "the accept-set adopts a live 2ndmate-gfm and keeps legacy children grouped under a renamed parent"
+}
+
+# A worker spawned with no herdr launcher pane finds its projection parent by
+# label; a themed home whose live workspace still carries the canonical label
+# (the window before relabel) must resolve it rather than fall back to flat tabs.
+test_accept_set_resolves_projection_parent() {
+  local mate home probe
+  # shellcheck disable=SC2016  # the probe is evaluated by adapter's shell.
+  probe='echo "parent=[$(fm_backend_herdr_projection_parent_workspace_exact fmtest "$(fm_backend_herdr_workspace_label)")]"'
+  mate=$(new_mate parent-mate gfm operator)
+  assert_equals "parent=[w2]" "$(adapter "$ROOT/bin" "$mate" "$(ws firstmate 2ndmate-gfm)" "$probe")" \
+    "an operator secondmate did not resolve its live 2ndmate-gfm projection parent"
+  assert_equals "parent=[w2]" "$(adapter "$ROOT/bin" "$mate" "$(ws firstmate navigator-gfm)" "$probe")" \
+    "an operator secondmate did not resolve its relabeled navigator-gfm projection parent"
+  assert_equals "parent=[]" "$(adapter "$ROOT/bin" "$mate" "$(ws 2ndmate-gfm navigator-gfm)" "$probe")" \
+    "two live workspaces for one secondmate home were not left ambiguous"
+  home=$(new_home parent-primary operator)
+  assert_equals "parent=[w1]" "$(adapter "$ROOT/bin" "$home" "$(ws firstmate 2ndmate-gfm)" "$probe")" \
+    "an operator primary did not resolve its live firstmate projection parent"
+  # shellcheck disable=SC2016  # the probe is evaluated by adapter's shell.
+  assert_equals "parent=[]" "$(adapter "$ROOT/bin" "$(new_home parent-nautical)" "$(ws firstmate)" \
+    'echo "parent=[$(fm_backend_herdr_projection_parent_workspace_exact fmtest spotter)]"')" \
+    "the parent case is vacuous: a home that never applied a theme also resolved spotter to firstmate"
+  pass "the accept-set resolves a projection parent that still carries its canonical or relabeled label"
 }
 
 test_switch_and_back_never_duplicates() {
@@ -326,7 +359,7 @@ submate	navigator" "$(cat "$home/state/po-theme/history")" "an unlistable sessio
 }
 
 test_relabel_secondmate_records() {
-  local home fake out
+  local home fake out mate
   command -v jq >/dev/null 2>&1 || { echo "skip: relabel secondmate case needs jq"; return 0; }
   fake="$TMP_ROOT/fakecli-mate"
   fake_clis "$fake"
@@ -341,8 +374,13 @@ test_relabel_secondmate_records() {
   printf -- '- legacy - Legacy mate (home: %s; scope: legacy work; projects: none; added 2026-10-01)\n' "$(new_mate mate-legacy legacy operator)" > "$home/data/secondmates.md"
   printf 'kind=secondmate\nherdr_session=lab\nherdr_workspace_id=w9\nhome=%s\nremote_host=box\n' "$(new_mate mate-remote remote operator)" > "$home/state/remote.meta"
   printf 'kind=secondmate\nherdr_session=lab\nherdr_workspace_id=w10\nhome=box:%s\n' "$(new_mate mate-hostpath hostpath operator)" > "$home/state/hostpath.meta"
+  # The block reached this second mate, but its own checkout predates the
+  # label library, so its workers still look for 2ndmate-oldcode.
+  mate=$(new_mate mate-oldcode oldcode operator)
+  rm "$mate/bin" && mkdir "$mate/bin"
+  printf 'kind=secondmate\nherdr_session=lab\nherdr_workspace_id=w11\nhome=%s\n' "$mate" > "$home/state/oldcode.meta"
   FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed"
-  ws firstmate 2ndmate-gfm 2ndmate-pixeloven 2ndmate-gfm operator 2ndmate-stale 2ndmate-missing 2ndmate-legacy 2ndmate-remote 2ndmate-hostpath > "$fake/herdr-lab.json"
+  ws firstmate 2ndmate-gfm 2ndmate-pixeloven 2ndmate-gfm operator 2ndmate-stale 2ndmate-missing 2ndmate-legacy 2ndmate-remote 2ndmate-hostpath 2ndmate-oldcode > "$fake/herdr-lab.json"
   printf '[]' > "$fake/paseo.json"
 
   out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab --dry-run 2>&1) || fail "relabel --dry-run failed: $out"
@@ -356,7 +394,8 @@ workspace rename w2 navigator-gfm --session lab
 workspace rename w3 navigator-pixeloven --session lab
 workspace rename w8 navigator-legacy --session lab" "$(sort "$fake/calls")" "relabel did not rename exactly the recorded worker and secondmate workspaces"
   assert_contains "$out" "relabel: w4 is labeled '2ndmate-gfm', not one of second mate odd's labels; skipped" "relabel renamed a secondmate record whose label belongs to another secondmate"
-  assert_contains "$out" "relabel: w6 skipped: second mate stale has not received the current theme yet; rerun after it propagates" "relabel renamed a secondmate workspace before that secondmate resolves the new label"
+  assert_contains "$out" "relabel: w6 skipped: second mate stale does not resolve the current theme in its own checkout yet; rerun after the theme and code propagate" "relabel renamed a secondmate workspace before that secondmate resolves the new label"
+  assert_contains "$out" "relabel: w11 skipped: second mate oldcode does not resolve the current theme in its own checkout yet; rerun after the theme and code propagate" "relabel renamed a secondmate workspace its own pre-theme checkout would no longer find"
   assert_contains "$out" "relabel: w7 skipped: second mate missing's home cannot be read locally" "relabel renamed a secondmate workspace whose home it could not read"
   assert_contains "$out" "relabel: w9 skipped: second mate remote's home cannot be read locally" "relabel read a remote secondmate's home as a local one"
   assert_contains "$out" "relabel: w10 skipped: second mate hostpath's home cannot be read locally" "relabel read a HOST:path secondmate home as a local one"
@@ -365,7 +404,7 @@ workspace rename w8 navigator-legacy --session lab" "$(sort "$fake/calls")" "rel
   : > "$fake/calls"
   printf 'nautical\n' > "$home/config/po-theme"
   FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed under nautical"
-  ws spotter navigator-gfm navigator-pixeloven 2ndmate-gfm operator 2ndmate-stale 2ndmate-missing navigator-legacy 2ndmate-remote 2ndmate-hostpath > "$fake/herdr-lab.json"
+  ws spotter navigator-gfm navigator-pixeloven 2ndmate-gfm operator 2ndmate-stale 2ndmate-missing navigator-legacy 2ndmate-remote 2ndmate-hostpath 2ndmate-oldcode > "$fake/herdr-lab.json"
   out=$(PATH="$fake:$PATH" FM_HOME="$home" "$PT" relabel --session lab 2>&1) || fail "relabel back failed: $out"
   assert_equals "workspace rename w1 firstmate --session lab
 workspace rename w2 2ndmate-gfm --session lab
@@ -605,6 +644,7 @@ fi
 test_nautical_matches_upstream
 test_operator_labels
 test_accept_set_adopts_and_groups
+test_accept_set_resolves_projection_parent
 test_switch_and_back_never_duplicates
 test_label_validation
 test_display_strings

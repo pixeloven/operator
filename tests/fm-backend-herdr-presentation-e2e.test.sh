@@ -1498,6 +1498,70 @@ teardown_task "$LOCK_WAIT_ID" "$HOME_DIR" > "$TMP_ROOT/lock-wait-teardown.out" 2
 "$REAL_TREEHOUSE" return --force "$LOCK_WAIT_NEW_WT" >/dev/null 2>&1 || true
 pass "real Herdr lab: --herdr-resume-lock-wait waits out session lock contention instead of refusing"
 
+# A themed home's worker spawned with no launcher pane must render as a nested
+# child of its own live parent whether that parent still carries the canonical
+# label (the window before relabel) or the themed one (after relabel).
+# assert_nested_under <parent-label> <home> <id>: the worker's workspace is a
+# "└ <id>" child whose nearest preceding workspace that is no task space (new
+# or legacy, both token-suffixed) is <parent-label>.
+assert_nested_under() {
+  local parent=$1 home=$2 id=$3 wsid owner
+  wsid=$(grep '^herdr_workspace_id=' "$home/state/$id.meta" | cut -d= -f2-)
+  owner=$(lab workspace list | jq -r --arg ws "$wsid" '
+    .result.workspaces as $spaces
+    | ([range(0; $spaces | length) | select($spaces[.].workspace_id == $ws)] | first) as $child
+    | select($child != null and ($spaces[$child].label | startswith("└ ")))
+    | [range(0; $child) | select(($spaces[.].label | test(" · p:[A-Za-z0-9_-]{22}$")) | not)] | last
+    | $spaces[.].label')
+  case "$(lab workspace get "$wsid" | jq -r '.result.workspace.label')" in
+    "└ $id · p:"*) ;;
+    *) fail "themed $id was not projected as a nested child: $(lab workspace get "$wsid" | jq -r '.result.workspace.label')" ;;
+  esac
+  [ "$owner" = "$parent" ] || fail "themed $id was nested under '$owner', not its live $parent parent"
+  ! grep -F "presentation parent is absent or ambiguous" "$TMP_ROOT/$id.err" >/dev/null \
+    || fail "themed $id reported a missing projection parent"
+}
+"$ROOT/bin/po-theme.sh" persona operator > "$SECOND_HOME_A/data/captain-shared.md" \
+  || fail "could not write the operator persona into secondmate A"
+printf 'operator\n' > "$HOME_DIR/config/po-theme"
+# shellcheck disable=SC2016  # the label call runs in the child shell.
+THEMED_A_LABEL=$(FM_HOME="$SECOND_HOME_A" bash -c '. "$1/bin/backends/herdr.sh"; fm_backend_herdr_workspace_label' _ "$ROOT")
+# shellcheck disable=SC2016  # the label call runs in the child shell.
+THEMED_P_LABEL=$(FM_HOME="$HOME_DIR" bash -c '. "$1/bin/backends/herdr.sh"; fm_backend_herdr_workspace_label' _ "$ROOT")
+[ "$THEMED_A_LABEL" = navigator-alpha ] && [ "$THEMED_P_LABEL" = spotter ] \
+  || fail "the themed-parent cases are vacuous: the homes resolve $THEMED_P_LABEL and $THEMED_A_LABEL"
+for THEMED_CASE in "a3:$SECOND_HOME_A:2ndmate-alpha" "p3:$HOME_DIR:firstmate" \
+  rename "a4:$SECOND_HOME_A:navigator-alpha" "p4:$HOME_DIR:spotter"
+do
+  if [ "$THEMED_CASE" = rename ]; then
+    # Relabel the live parents as `po-theme.sh relabel` would.
+    for RENAME_PAIR in firstmate:spotter 2ndmate-alpha:navigator-alpha; do
+      RENAME_ID=$(lab workspace list | jq -r --arg l "${RENAME_PAIR%%:*}" '[.result.workspaces[] | select(.label == $l) | .workspace_id] | if length == 1 then .[0] else empty end')
+      [ -n "$RENAME_ID" ] || fail "no single live ${RENAME_PAIR%%:*} workspace to relabel"
+      lab workspace rename "$RENAME_ID" "${RENAME_PAIR#*:}" >/dev/null \
+        || fail "could not relabel ${RENAME_PAIR%%:*} to ${RENAME_PAIR#*:}"
+    done
+    continue
+  fi
+  THEMED_ID=${THEMED_CASE%%:*}
+  THEMED_REST=${THEMED_CASE#*:}
+  THEMED_HOME=${THEMED_REST%:*}
+  write_ship_brief "$THEMED_HOME" "$THEMED_ID" "Themed $THEMED_ID fixture."
+  spawn_task "$THEMED_ID" "$THEMED_HOME" "$PROJECT_DIR" > "$TMP_ROOT/$THEMED_ID.out" 2> "$TMP_ROOT/$THEMED_ID.err" \
+    || fail "themed $THEMED_ID failed: $(cat "$TMP_ROOT/$THEMED_ID.err")"
+  remember_meta_worktree "$THEMED_HOME/state/$THEMED_ID.meta" >/dev/null
+  assert_nested_under "${THEMED_REST##*:}" "$THEMED_HOME" "$THEMED_ID"
+done
+pass "real Herdr lab: themed spotter and navigator homes nest workers under their live parents before and after relabel"
+# Hand the later cases their canonical parents and nautical homes back.
+for RENAME_PAIR in spotter:firstmate navigator-alpha:2ndmate-alpha; do
+  RENAME_ID=$(lab workspace list | jq -r --arg l "${RENAME_PAIR%%:*}" '[.result.workspaces[] | select(.label == $l) | .workspace_id] | if length == 1 then .[0] else empty end')
+  [ -n "$RENAME_ID" ] || fail "no single live ${RENAME_PAIR%%:*} workspace to restore"
+  lab workspace rename "$RENAME_ID" "${RENAME_PAIR#*:}" >/dev/null \
+    || fail "could not restore ${RENAME_PAIR%%:*} to ${RENAME_PAIR#*:}"
+done
+rm -f "$HOME_DIR/config/po-theme" "$SECOND_HOME_A/data/captain-shared.md"
+
 # Seed a legacy old-format primary projection and a flat secondmate tab; correction must not migrate them.
 LEGACY_OUT=$(lab workspace create --cwd "$PROJECT_DIR" --label "firstmate/legacy-seed · p:AbCdEfGhIjKlMnOpQrStUv" --no-focus) \
   || fail "could not seed a legacy old-format presentation space"
@@ -1520,7 +1584,8 @@ pass "real Herdr lab: legacy projection labels and flat secondmate tabs are left
 # Teardown multi-home projected tasks by exact pane only.
 for META_HOME_PAIR in \
   "p1:$HOME_DIR" "p2:$HOME_DIR" "pcw:$HOME_DIR" "post-legacy:$HOME_DIR" \
-  "a1:$SECOND_HOME_A" "a2:$SECOND_HOME_A" "acw:$SECOND_HOME_A" \
+  "p3:$HOME_DIR" "p4:$HOME_DIR" \
+  "a1:$SECOND_HOME_A" "a2:$SECOND_HOME_A" "acw:$SECOND_HOME_A" "a3:$SECOND_HOME_A" "a4:$SECOND_HOME_A" \
   "alpha:$HOME_DIR" \
   "b1:$SECOND_HOME_B" "b2:$SECOND_HOME_B" "bcw:$SECOND_HOME_B"
 do

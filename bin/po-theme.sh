@@ -65,7 +65,7 @@
 #                                     is in the home's accept-set to the current
 #                                     label (a primary home's kind=secondmate record:
 #                                     that secondmate's label, only once its own
-#                                     home resolves it and accepts the current one), then
+#                                     home's checkout resolves it and accepts the current one), then
 #                                     retire history words no live
 #                                     workspace of this home still uses (herdr
 #                                     sessions S and those its task records name,
@@ -764,13 +764,17 @@ live_labels() {
 
 # mate_accept <home> <canonical-label>: <canonical-label>'s accept-set as that
 # secondmate home resolves it itself; fails when the home is not a readable
-# local secondmate home.
+# local secondmate home. A local secondmate home is its own firstmate checkout
+# whose workers spawn from its own bin/, and its Persona block propagates
+# independently of that checkout's code, so the set comes from the home's own
+# label library; a checkout without one matches only the canonical label.
 mate_accept() {
   case "$1" in /*) ;; *) return 1 ;; esac
   [ -r "$1/.fm-secondmate-home" ] || return 1
+  [ -f "$1/bin/po-theme-lib.sh" ] || { printf '%s\n' "$2"; return 0; }
   # shellcheck disable=SC2016
   env -u FM_CONFIG_OVERRIDE -u FM_DATA_OVERRIDE -u FM_STATE_OVERRIDE FM_HOME="$1" \
-    bash -c '. "$1/bin/po-theme-lib.sh"; po_home_accept "$2"' _ "$CODE_ROOT" "$2"
+    bash -c '. "$1/bin/po-theme-lib.sh"; po_home_accept "$2"' _ "$1" "$2"
 }
 
 # relabel --session <name> [--dry-run]
@@ -827,7 +831,7 @@ relabel() {
     if [ -n "$mid" ]; then
       accept=$(mate_accept "$mhome" "2ndmate-$mid") || { echo "relabel: $id skipped: second mate $mid's home cannot be read locally"; continue; }
       printf '%s\n' "$accept" | grep -qxF -- "$cur" || { echo "relabel: $id is labeled '$cur', not one of second mate $mid's labels; skipped"; continue; }
-      printf '%s\n' "$accept" | grep -qxF -- "$want" || { echo "relabel: $id skipped: second mate $mid has not received the current theme yet; rerun after it propagates"; continue; }
+      printf '%s\n' "$accept" | grep -qxF -- "$want" || { echo "relabel: $id skipped: second mate $mid does not resolve the current theme in its own checkout yet; rerun after the theme and code propagate"; continue; }
     else
       po_home_accept "$want" | grep -qxF -- "$cur" || { echo "relabel: $id is labeled '$cur', not one of this home's labels; skipped"; continue; }
     fi
