@@ -2722,8 +2722,7 @@ fm_backend_herdr_projection_cleanup_exact() {  # <session> <task-pane> <seeded-p
 }
 
 # fm_backend_herdr_projection_parent_workspace_exact: resolve one exact parent
-# workspace only when exactly one workspace in the named session carries a
-# label from the parent label's accept-set (canonical, current, or history).
+# workspace only when its presentation label is unique in the named session.
 fm_backend_herdr_projection_parent_workspace_exact() {  # <session> <parent-label>
   local session=$1 parent_label=$2 list
   list=$(fm_backend_herdr_cli "$session" workspace list 2>/dev/null) || return 1

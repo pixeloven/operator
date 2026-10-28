@@ -1528,14 +1528,15 @@ printf 'operator\n' > "$HOME_DIR/config/po-theme"
 THEMED_A_LABEL=$(FM_HOME="$SECOND_HOME_A" bash -c '. "$1/bin/backends/herdr.sh"; fm_backend_herdr_workspace_label' _ "$ROOT")
 # shellcheck disable=SC2016  # the label call runs in the child shell.
 THEMED_P_LABEL=$(FM_HOME="$HOME_DIR" bash -c '. "$1/bin/backends/herdr.sh"; fm_backend_herdr_workspace_label' _ "$ROOT")
-[ "$THEMED_A_LABEL" = navigator-alpha ] && [ "$THEMED_P_LABEL" = spotter ] \
+[ "$THEMED_A_LABEL" != 2ndmate-alpha ] && [ "${THEMED_A_LABEL%-alpha}" != "$THEMED_A_LABEL" ] \
+  && [ "$THEMED_P_LABEL" != firstmate ] \
   || fail "the themed-parent cases are vacuous: the homes resolve $THEMED_P_LABEL and $THEMED_A_LABEL"
 for THEMED_CASE in "a3:$SECOND_HOME_A:2ndmate-alpha" "p3:$HOME_DIR:firstmate" \
-  rename "a4:$SECOND_HOME_A:navigator-alpha" "p4:$HOME_DIR:spotter"
+  rename "a4:$SECOND_HOME_A:$THEMED_A_LABEL" "p4:$HOME_DIR:$THEMED_P_LABEL"
 do
   if [ "$THEMED_CASE" = rename ]; then
     # Relabel the live parents as `po-theme.sh relabel` would.
-    for RENAME_PAIR in firstmate:spotter 2ndmate-alpha:navigator-alpha; do
+    for RENAME_PAIR in "firstmate:$THEMED_P_LABEL" "2ndmate-alpha:$THEMED_A_LABEL"; do
       RENAME_ID=$(lab workspace list | jq -r --arg l "${RENAME_PAIR%%:*}" '[.result.workspaces[] | select(.label == $l) | .workspace_id] | if length == 1 then .[0] else empty end')
       [ -n "$RENAME_ID" ] || fail "no single live ${RENAME_PAIR%%:*} workspace to relabel"
       lab workspace rename "$RENAME_ID" "${RENAME_PAIR#*:}" >/dev/null \
@@ -1552,9 +1553,9 @@ do
   remember_meta_worktree "$THEMED_HOME/state/$THEMED_ID.meta" >/dev/null
   assert_nested_under "${THEMED_REST##*:}" "$THEMED_HOME" "$THEMED_ID"
 done
-pass "real Herdr lab: themed spotter and navigator homes nest workers under their live parents before and after relabel"
+pass "real Herdr lab: themed primary and secondmate homes nest workers under their live parents before and after relabel"
 # Hand the later cases their canonical parents and nautical homes back.
-for RENAME_PAIR in spotter:firstmate navigator-alpha:2ndmate-alpha; do
+for RENAME_PAIR in "$THEMED_P_LABEL:firstmate" "$THEMED_A_LABEL:2ndmate-alpha"; do
   RENAME_ID=$(lab workspace list | jq -r --arg l "${RENAME_PAIR%%:*}" '[.result.workspaces[] | select(.label == $l) | .workspace_id] | if length == 1 then .[0] else empty end')
   [ -n "$RENAME_ID" ] || fail "no single live ${RENAME_PAIR%%:*} workspace to restore"
   lab workspace rename "$RENAME_ID" "${RENAME_PAIR#*:}" >/dev/null \
