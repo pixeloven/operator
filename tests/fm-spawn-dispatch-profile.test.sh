@@ -1440,7 +1440,6 @@ test_claude_exclude_tools_deny_on_ship_and_scout_launches() {
       || fail "claude $kindflag launch does not deny exactly the listed tools: $(claude_settings_json_arg "$launch")"
     assert_attribution_policy "$launch" "claude $kindflag with an exclusion list"
     assert_not_contains "$launch" "--exclude-tools" "claude $kindflag must not receive Pi's exclusion flag"
-    assert_not_contains "$out" "named like a read tool" "a write-only list must not warn"
     if [ -f "$WT_DIR/.claude/settings.local.json" ]; then
       jq -e 'has("permissions") | not' "$WT_DIR/.claude/settings.local.json" >/dev/null \
         || fail "claude $kindflag spawn wrote the deny rules into a settings file the worker can edit"
@@ -1458,22 +1457,18 @@ test_claude_exclude_tools_deny_on_ship_and_scout_launches() {
   pass "claude ship and scout launches deny exactly the tools config/crew-exclude-tools lists"
 }
 
-test_claude_exclude_tools_warn_on_read_named_entry() {
+test_claude_exclude_tools_names_survive_launch_placeholders() {
   local rec id out status
-  id=excl-claude-read-z9g
-  rec=$(make_spawn_case excl-claude-read claude "$id")
+  id=excl-claude-placeholder-z9g
+  rec=$(make_spawn_case excl-claude-placeholder claude "$id")
   read_case_record "$rec"
-  write_exclude_file "$HOME_DIR" 'mcp__claude_ai_Gmail__send_message' 'mcp__claude_ai_Gmail__list_labels'
+  write_exclude_file "$HOME_DIR" 'mcp__x__BRIEF__' 'mcp__y__CLAUDEATTRIBUTION__' 'mcp__z__CLAUDEDENY__'
   out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" 2>&1)
   status=$?
-  expect_code 0 "$status" "a read-named entry warns rather than refusing"$'\n'"$out"
-  assert_contains "$out" "warning: config/crew-exclude-tools hides 'mcp__claude_ai_Gmail__list_labels', which is named like a read tool" \
-    "a read-named entry must warn and name the entry"
-  assert_not_contains "$out" "'mcp__claude_ai_Gmail__send_message', which is named like a read tool" \
-    "a write-named entry must not warn"
-  claude_settings_deny "$(cat "$LAUNCH_LOG")" | jq -e 'index("mcp__claude_ai_Gmail__list_labels") != null' >/dev/null \
-    || fail "the operator's read-named entry must still apply"
-  pass "a read-named exclusion entry applies to claude with a warning"
+  expect_code 0 "$status" "claude spawn with placeholder-shaped entries should succeed"$'\n'"$out"
+  [ "$(claude_settings_deny "$(cat "$LAUNCH_LOG")")" = '["mcp__x__BRIEF__","mcp__y__CLAUDEATTRIBUTION__","mcp__z__CLAUDEDENY__"]' ] \
+    || fail "claude launch rewrote placeholder-shaped deny entries: $(claude_settings_json_arg "$(cat "$LAUNCH_LOG")")"
+  pass "placeholder-shaped exclusion entries reach the claude deny array verbatim"
 }
 
 test_claude_secondmate_launch_ignores_exclude_tools() {
@@ -1493,8 +1488,7 @@ test_claude_secondmate_launch_ignores_exclude_tools() {
   pass "a secondmate's own claude agent keeps its tools when the home has an exclusion list"
 }
 
-# The shipped example is meant to be copied verbatim, so it must parse and must
-# not trip the read-name warning.
+# The shipped example is meant to be copied verbatim, so it must parse.
 test_exclude_tools_example_parses_for_claude() {
   local dir err fragment
   dir="$TMP_ROOT/exclude-tools-example"
@@ -1505,10 +1499,9 @@ test_exclude_tools_example_parses_for_claude() {
   fragment=$(. "$ROOT/bin/fm-exclude-tools-lib.sh" &&
     fm_exclude_tools_claude_deny "$(fm_exclude_tools_check claude 0 "$dir")" 2>"$err") \
     || fail "the example exclusion list did not parse: $(cat "$err")"
-  [ ! -s "$err" ] || fail "the example exclusion list warned: $(cat "$err")"
   printf '{%s}' "${fragment#,}" | jq -e '.permissions.deny | length > 0 and all(startswith("mcp__claude_ai_"))' >/dev/null \
     || fail "the example exclusion list did not produce claude.ai connector deny rules: $fragment"
-  pass "docs/examples/crew-exclude-tools parses for claude with no read-name warning"
+  pass "docs/examples/crew-exclude-tools parses for claude"
 }
 
 test_pi_exclude_tools_malformed_entry_refuses_before_endpoint() {
@@ -2430,7 +2423,7 @@ test_pi_exclude_tools_worker_registry_reports
 test_pi_exclude_tools_absent_and_empty_lists
 test_exclude_tools_unsupported_runtime_refuses_non_empty_list
 test_claude_exclude_tools_deny_on_ship_and_scout_launches
-test_claude_exclude_tools_warn_on_read_named_entry
+test_claude_exclude_tools_names_survive_launch_placeholders
 test_claude_secondmate_launch_ignores_exclude_tools
 test_exclude_tools_example_parses_for_claude
 test_pi_exclude_tools_malformed_entry_refuses_before_endpoint

@@ -67,19 +67,9 @@ fm_exclude_tools_check() {
 # fragment a Claude ship or scout launch appends to its inline --settings JSON
 # for the comma-joined names fm_exclude_tools_check printed, empty for none.
 # Every name passed fm_exclude_tools_names' character check, so none needs
-# JSON escaping. A name whose tool part starts with a read verb still applies,
-# with a warning on stderr, because the list is meant for write-class tools.
+# JSON escaping.
 fm_exclude_tools_claude_deny() {
-  local names=$1 name verb
+  local names=$1
   [ -n "$names" ] || return 0
-  local IFS=,
-  for name in $names; do
-    verb=$(printf '%s' "${name##*__}" | tr '[:upper:]' '[:lower:]')
-    case "$verb" in
-    get* | list* | search* | read* | fetch* | query* | export* | download* | lookup* | suggest*)
-      echo "warning: config/crew-exclude-tools hides '$name', which is named like a read tool; the list is meant for write-class tools, so Claude workers lose this read too" >&2
-      ;;
-    esac
-  done
   printf ',"permissions":{"deny":["%s"]}' "${names//,/\",\"}"
 }

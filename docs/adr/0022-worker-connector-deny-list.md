@@ -19,11 +19,11 @@ The runtime check lives in `bin/fm-exclude-tools-lib.sh` and the Claude launch s
 
 ADR-0001 remains the default, but the following inherited files may carry Claude support for `config/crew-exclude-tools`:
 
-- `bin/fm-exclude-tools-lib.sh`: `claude` in the supported-runtime check and its refusal text, and `fm_exclude_tools_claude_deny` with its read-name warning
-- `bin/fm-spawn.sh`: building the deny fragment from the checked list for Claude ship and scout launches, appending it to their inline `--settings` JSON, and the header notes naming it
+- `bin/fm-exclude-tools-lib.sh`: `claude` in the supported-runtime check and its refusal text, and `fm_exclude_tools_claude_deny`
+- `bin/fm-spawn.sh`: building the deny fragment from the checked list for Claude ship and scout launches, appending it to their inline `--settings` JSON through `__CLAUDEDENY__` after every other placeholder, and the header notes naming it
 - `docs/configuration.md`: the Claude rows and "Claude workers" subsection of "Worker tool exclusions"
 - `docs/examples/crew-exclude-tools`: the copyable example list of claude.ai connector write tools, with its `docs/documentation-audiences.json` entry
-- `tests/fm-spawn-dispatch-profile.test.sh`: the Claude ship, scout, secondmate, warning, and example assertions, and Claude's removal from the refusal loop
+- `tests/fm-spawn-dispatch-profile.test.sh`: the Claude ship, scout, secondmate, placeholder, and example assertions, and Claude's removal from the refusal loop
 
 Firstmate's own session, a secondmate's own agent, raw launch commands, and every other runtime are outside this exception.
 

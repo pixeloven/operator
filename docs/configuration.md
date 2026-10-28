@@ -1057,7 +1057,7 @@ A relaunch validates the list and the replacement runtime's support before stopp
 A Claude worker's deny rules apply under both the default `--dangerously-skip-permissions` posture and `--permission-mode auto`, and because they ride the launch's own settings rather than a file in the task's local copy, the worker cannot edit them away.
 A denied tool is absent from the worker's tool list and from tool search, and a direct call returns `No such tool available: <name>`.
 Firstmate's own session and a secondmate's own agent are unaffected.
-An entry whose tool name, after its last `__`, starts with get, list, search, read, fetch, query, export, download, lookup, or suggest still applies, but each Claude launch prints a warning naming it, because the list is meant for write-class tools and the worker loses that read too.
+The list is shared by every runtime, and each runtime matches names exactly against its own tool names, so an entry that names another runtime's tool, such as Pi's lowercase `bash` or `write`, restricts nothing in a Claude worker, whose tools are `Bash` and `Write`.
 Claude has no loaded-tool check like Pi's below, so an entry that matches no tool in the session is silently a no-op.
 Because entries are exact names, a connector tool that is new, renamed, or from a connector authorized later stays available until it is added; to refresh the list, read the `tools` array of the init event from `claude -p --output-format stream-json --verbose` in a session with your connectors.
 

@@ -8,7 +8,7 @@
 # These entries are claude.ai connector write tools: tools that send, post,
 # schedule, share, create, edit, delete, trash, or transition something
 # outside the worktree. Get, list, search, read, fetch, query, and export
-# tools are deliberately absent; a Claude launch warns about any such entry.
+# tools are deliberately absent.
 # Tools that take a read-or-write action argument are left allowed here and
 # noted beside their connector below.
 #
