@@ -1,0 +1,12 @@
+== fix: before relabel
+    w1	firstmate
+    w2	2ndmate-gfm
+    w3	2ndmate-oldcode
+== fix: po-theme.sh relabel --session <lab>
+    relabel: w2 '2ndmate-gfm' -> 'navigator-gfm'
+    relabel: w3 skipped: second mate oldcode does not resolve the current theme in its own checkout yet; rerun after the theme and code propagate
+    relabel: w1 'firstmate' -> 'spotter'
+== fix: after relabel
+    w1	spotter
+    w2	navigator-gfm
+    w3	2ndmate-oldcode

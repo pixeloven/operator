@@ -1,0 +1,20 @@
+== fix: phase 1 - live parents still canonical (firstmate, 2ndmate-gfm)
+  [gfm-before] home label=navigator-gfm -> parent=w2, projected workspace w3
+  [prim-before] home label=spotter -> parent=w1, projected workspace w4
+  herdr workspace list (sidebar order):
+    w1	firstmate
+    w4	└ prim-before · p:axEeKVYlvYbSsrXXJY66PA
+    w2	2ndmate-gfm
+    w3	└ gfm-before · p:oE5Dcy9KEoxYVrbWIN6PUA
+== fix: phase 2 - parents relabelled (spotter, navigator-gfm) as po-theme relabel would
+  [gfm-after] home label=navigator-gfm -> parent=w2, projected workspace w5
+  [prim-after] home label=spotter -> parent=w1, projected workspace w6
+  herdr workspace list (sidebar order):
+    w1	spotter
+    w4	└ prim-before · p:axEeKVYlvYbSsrXXJY66PA
+    w6	└ prim-after · p:ShAY0i2UWn7WSPUm82MQww
+    w2	navigator-gfm
+    w3	└ gfm-before · p:oE5Dcy9KEoxYVrbWIN6PUA
+    w5	└ gfm-after · p:S5bYgbDbD0PaRQibOwiPOA
+== fix: phase 3 (adversarial) - two live workspaces for gfm (2ndmate-gfm + navigator-gfm)
+  [gfm-ambig] home label=navigator-gfm -> parent absent/ambiguous: FLAT fallback (no projection)

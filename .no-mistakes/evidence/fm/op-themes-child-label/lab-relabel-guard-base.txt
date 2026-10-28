@@ -1,0 +1,12 @@
+== base: before relabel
+    w1	firstmate
+    w2	2ndmate-gfm
+    w3	2ndmate-oldcode
+== base: po-theme.sh relabel --session <lab>
+    relabel: w2 '2ndmate-gfm' -> 'navigator-gfm'
+    relabel: w3 '2ndmate-oldcode' -> 'navigator-oldcode'
+    relabel: w1 'firstmate' -> 'spotter'
+== base: after relabel
+    w1	spotter
+    w2	navigator-gfm
+    w3	navigator-oldcode
