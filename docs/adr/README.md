@@ -33,6 +33,7 @@ Use [`_template.md`](_template.md).
 | [0019](0019-crew-machine-level-delivery.md) | `crew` reaches workers through the machine-level install that dotfiles maintains | Accepted | Crew-everywhere investigation; closes the parked crew delivery decisions |
 | [0020](0020-themes-first-class.md) | Themes are a first-class feature | Accepted | operator decisions on persona completion; amends ADR-0016 |
 | [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Accepted | Herdr send-failure investigation; self-retiring upstream carry |
+| [0022](0022-delivery-lane-github-credential-helper.md) | The delivery lane may carry an operator-configured GitHub credential helper | Accepted | Worker GitHub credentials from a non-personal source |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).
