@@ -394,6 +394,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0023-repeatable-allow-red-waiver.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
