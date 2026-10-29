@@ -1,0 +1,12 @@
+# Run 1 (Pi/refusal subset): the 'command not found' failure came from the validator's trimmed runner, which left out a helper defined later in the file. Run 2 below includes every helper and reruns the Claude tests.
+ok - Pi and pi-signed ship and scout launches carry the configured tool exclusions
+ok - Pi worker registries report unmatched and unverified exclusions without reporting exact matches
+ok - an absent or empty exclusion list leaves every runtime unaffected
+ok - a runtime that cannot hide tools, or a raw launch, refuses a non-empty exclusion list
+/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/tmp.8LWYcvAQqs/sub.test.sh: line 1420: claude_settings_json_arg: command not found
+/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/tmp.8LWYcvAQqs/sub.test.sh: line 1440: claude_settings_json_arg: command not found
+not ok - claude --ship launch does not deny exactly the listed tools: 
+ok - claude ship and scout launches deny exactly the tools config/crew-exclude-tools lists
+ok - placeholder-shaped exclusion entries reach the claude deny array verbatim
+ok - a secondmate's own claude agent keeps its tools when the home has an exclusion list
+ok - docs/examples/crew-exclude-tools parses for claude

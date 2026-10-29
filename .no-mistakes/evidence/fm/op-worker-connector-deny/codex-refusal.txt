@@ -1,0 +1,16 @@
+$ cat config/crew-exclude-tools
+# live test: builtin harmless tool + connector writes
+WebSearch
+mcp__claude_ai_Slack__slack_send_message
+mcp__claude_ai_Gmail__send_message
+$ fm-spawn.sh labdeny-codex projects/notes --scout --harness codex
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  repair missing watcher supervision according to the session-start block for this harness; do not use shell &.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: config/crew-exclude-tools lists tools to hide, but the codex runtime cannot hide tools, so this launch is refused rather than running with them available; empty the file or launch a runtime that supports exclusion (pi, pi-signed, claude)
+exit=1
+state meta present: no

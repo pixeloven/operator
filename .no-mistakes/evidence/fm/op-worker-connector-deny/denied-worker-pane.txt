@@ -1,0 +1,60 @@
+
+ ▐▛███▛█   Claude Code v2.1.312
+▝▜██████▀  Sonnet 5.5 with low effort · Claude Enterprise
+ ▝▝   ▝▝   /private/tmp/fmlab.mZFgKq/treehouse/.treehouse/notes-00bfe6/1/notes
+
+
+❯ : Firstmate operational input waiting: read '/private/tmp/fmlab.mZFgKq/home/state/operational-inbox/1793298198-144ee34895adb337.msg' and handle its contents as Firstmate operational input.                              
+
+  Read 1 file, ran 2 shell commands                                                                  
+
+⏺ Three of the six tools are available and three are not. I wrote the table to /private/tmp/fmlab.mZFgKq/home/data/labdeny-scout/report.md and appended a done line to the status file.
+                                                                                                                                             
+  ┌─────────────────────────────────────────────┬────────────────┬─────────────────────────────────────────────────────────────────────────────────────┐
+  │                    Tool                     │   Available    │                                      Evidence                                       │
+  ├─────────────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ WebSearch                                   │ no             │ Not in my tool list or the deferred list, and ToolSearch returned no schema for it. │
+  ├─────────────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ WebFetch                                    │ yes (deferred) │ ToolSearch returned its schema.                                                     │
+  ├─────────────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ mcp__claude_ai_Slack__slack_send_message    │ no             │ Only slack_send_message_draft exists among the Slack tools.                         │
+  ├─────────────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ mcp__claude_ai_Gmail__send_message          │ no             │ Gmail has create_draft, forward and reply, but no send_message.                     │
+  ├─────────────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ mcp__claude_ai_Slack__slack_search_channels │ yes (deferred) │ ToolSearch returned its schema.                                                     │
+  ├─────────────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ mcp__claude_ai_Gmail__search_threads        │ yes (deferred) │ ToolSearch returned its schema.                                                     │
+  └─────────────────────────────────────────────┴────────────────┴─────────────────────────────────────────────────────────────────────────────────────┘
+
+  Because WebSearch doesn't exist in this session, I skipped the single WebSearch('example') call, so there is no result or error to record for it.
+
+  I made no mcp__ calls. I checked only by listing the tools and running one ToolSearch select: query for the six names.
+
+✻ Cooked for 22s · done 11:23 AM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                          
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ bypass permissions on (shift+tab to cycle)                                  
