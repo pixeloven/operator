@@ -1,4 +1,4 @@
-# ADR-0022: Claude workers honor config/crew-exclude-tools
+# ADR-0024: Claude workers honor config/crew-exclude-tools
 
 - **Status:** Proposed
 - **Date:** 2026-10-28

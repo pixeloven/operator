@@ -1171,6 +1171,20 @@ The text is static and never executed or expanded; secondmate charters never tak
 
 `bin/fm-brief.sh`'s header owns the placement rule and its safety argument.
 
+## Worker GitHub credential helper (config/delivery-lane-github-credential-helper)
+
+The optional local, gitignored `config/delivery-lane-github-credential-helper` names one Git credential helper that autonomous workers use for `https://github.com`.
+Workers run Git with a task-owned global configuration and `GIT_CONFIG_NOSYSTEM=1`, so without this file they have no credential helper and HTTPS access to private repositories fails.
+When the file is present and not blank, `bin/fm-delivery-lane.sh prepare` writes its value through `git config` as that configuration's single `credential.https://github.com.helper` entry, while signing stays disabled and the autonomous identity is unchanged.
+
+The whole file is the helper value exactly as Git's `credential.helper` accepts it, such as a helper name, an absolute command path, or a `!`-prefixed shell snippet, so `#` does not start a comment.
+Surrounding whitespace is trimmed, and an absent, empty, or whitespace-only file leaves the task configuration unchanged.
+A value spanning more than one line, or a path that is not a readable regular file, stops the spawn before the worker starts.
+
+The file holds a command, never a credential: keep the secret in the store the helper reads.
+Firstmate never prints the helper or anything it returns, and the credential exists only in the Git process that asked for it.
+Changes apply to tasks launched afterward, the file is local to each home rather than inherited into secondmate homes, and [`bin/fm-delivery-lane.sh`](../bin/fm-delivery-lane.sh) owns the mechanics.
+
 ## Worker launch environment (config/launch-env-allowlist)
 
 The optional local, gitignored `config/launch-env-allowlist` limits the ambient environment passed to newly launched workers, scouts, and secondmates, including relaunches.

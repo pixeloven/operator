@@ -390,7 +390,15 @@
       "audience": "maintainer-architecture"
     },
     {
-      "path": "docs/adr/0022-worker-connector-deny-list.md",
+      "path": "docs/adr/0022-delivery-lane-github-credential-helper.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0023-repeatable-allow-red-waiver.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0024-worker-connector-deny-list.md",
       "audience": "maintainer-architecture"
     },
     {
