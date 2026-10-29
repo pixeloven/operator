@@ -1,0 +1,40 @@
+ok - fm-pr-merge refuses red GitHub checks and waives only a named --allow-red check
+ok - fm-pr-merge keeps --allow-red scoped to its named check beside a superseded failure
+ok - fm-pr-merge rechecks away presence before an attended red merge
+ok - fm-pr-merge keeps a quiet-mode home's merges attended, the named red-check waiver included
+ok - fm-pr-merge takes each red-check waiver as a separate nonempty name and a repeated name idempotently
+ok - fm-pr-merge waives each repeated --allow-red name and still refuses an unnamed red check
+ok - fm-pr-merge refuses --allow-red on GitLab
+ok - fm-pr-merge --allow-missing is single use, attended-only, and GitHub-only like --allow-red
+ok - fm-pr-merge refuses --allow-red on Forgejo
+--- two waivers while away: rc=2
+error: --allow-red is attended-only; while the away-posture record exists the green check is absolute
+ok - two waivers are still refused while away (attended-only)
+--- two waivers on GitLab: rc=2
+error: --allow-red does not apply to GitLab, where a merge already requires the head pipeline to have succeeded; --allow-no-pipeline waives only a merge request with no head pipeline at all
+ok - two waivers are still refused on GitLab
+--- two waivers, third check red: rc=1
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: refusing to merge https://github.com/example/repo/pull/92
+  - check 'lint' is not green
+error: these checks are not green: lint
+ok - two waivers still refuse a third unnamed red check
+--- PR#43-shaped two waivers: stdout
+armed: state/task-x1.check.sh
+verified: https://github.com/example/repo/pull/43 is merged (state=MERGED, merged=true, isInMergeQueue=false)
+--- forge merge call:
+pr merge 43 --repo example/repo --match-head-commit a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5 --squash
+--- merge-authority:
+fm-merge-authority-v1
+github
+github.com
+example/repo
+43
+attended
+ok - PR#43-shaped double waiver merges with head bound
