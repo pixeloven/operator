@@ -49,16 +49,27 @@ fm_exclude_tools_check() {
   names=$(fm_exclude_tools_names "$config") || return 1
   if [ -n "$names" ]; then
     if [ "$raw" = 1 ]; then
-      echo "error: config/crew-exclude-tools lists tools to hide, but a raw launch command cannot hide tools; remove the entries or launch a runtime that supports them (pi, pi-signed)" >&2
+      echo "error: config/crew-exclude-tools lists tools to hide, but a raw launch command cannot hide tools; remove the entries or launch a runtime that supports them (pi, pi-signed, claude)" >&2
       return 1
     fi
     case "$harness" in
-    pi | pi-signed) ;;
+    pi | pi-signed | claude) ;;
     *)
-      echo "error: config/crew-exclude-tools lists tools to hide, but the $harness runtime cannot hide tools, so this launch is refused rather than running with them available; empty the file or launch a runtime that supports exclusion (pi, pi-signed)" >&2
+      echo "error: config/crew-exclude-tools lists tools to hide, but the $harness runtime cannot hide tools, so this launch is refused rather than running with them available; empty the file or launch a runtime that supports exclusion (pi, pi-signed, claude)" >&2
       return 1
       ;;
     esac
   fi
   printf '%s' "$names"
+}
+
+# fm_exclude_tools_claude_deny <names>: print the ,"permissions":{"deny":[...]}
+# fragment a Claude ship or scout launch appends to its inline --settings JSON
+# for the comma-joined names fm_exclude_tools_check printed, empty for none.
+# Every name passed fm_exclude_tools_names' character check, so none needs
+# JSON escaping.
+fm_exclude_tools_claude_deny() {
+  local names=$1
+  [ -n "$names" ] || return 0
+  printf ',"permissions":{"deny":["%s"]}' "${names//,/\",\"}"
 }

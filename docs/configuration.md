@@ -1037,6 +1037,7 @@ With no file, or a file with no entries, every launch on every runtime is unchan
 
 Create the file with one tool name per line, such as `mcp__<server>__<tool>` for an MCP tool.
 Blank lines and lines beginning with `#` are allowed, and surrounding whitespace on a line is trimmed; a trailing comment on an entry line is not allowed.
+[`docs/examples/crew-exclude-tools`](examples/crew-exclude-tools) is a copyable starting list of claude.ai connector write tools, such as mail send, chat post, calendar event changes, issue creation, and document sharing, to edit for the connectors you use.
 The file is read from this home's own configuration directory on every launch, so a change reaches the next worker or relaunch without a restart.
 It is not in the inherited configuration set, so no other home, including a secondmate home, receives it; create the file in each home that wants it.
 It does not apply to a secondmate's own agent, which neither reads nor refuses on it.
@@ -1046,9 +1047,19 @@ It does not apply to a secondmate's own agent, which neither reads nor refuses o
 | Runtime | With a non-empty list |
 | --- | --- |
 | `pi`, `pi-signed` | Hides listed tool names, MCP tools included, on every ship and scout spawn and relaunch. |
+| `claude` | Denies listed tool names, MCP tools included, through `permissions.deny` in the launch's inline `--settings` on every ship and scout spawn and relaunch. |
 | Every other runtime, and a raw launch command | The launch refuses with an error naming `config/crew-exclude-tools`, because that runtime has no verified way to hide tools. |
 
 A relaunch validates the list and the replacement runtime's support before stopping the running worker, so an exclusion-list refusal preserves the running agent.
+
+### Claude workers
+
+A Claude worker's deny rules apply under both the default `--dangerously-skip-permissions` posture and `--permission-mode auto`, and because they ride the launch's own settings rather than a file in the task's local copy, the worker cannot edit them away.
+A denied tool is absent from the worker's tool list and from tool search, and a direct call returns `No such tool available: <name>`.
+Firstmate's own session and a secondmate's own agent are unaffected.
+The list is shared by every runtime, and each runtime matches names exactly against its own tool names, so an entry that names another runtime's tool, such as Pi's lowercase `bash` or `write`, restricts nothing in a Claude worker, whose tools are `Bash` and `Write`.
+Claude has no loaded-tool check like Pi's below, so an entry that matches no tool in the session is silently a no-op.
+Because entries are exact names, a connector tool that is new, renamed, or from a connector authorized later stays available until it is added; to refresh the list, read the `tools` array of the init event from `claude -p --output-format stream-json --verbose` in a session with your connectors.
 
 ### Validation
 

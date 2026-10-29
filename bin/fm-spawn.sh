@@ -412,7 +412,8 @@
 # Worker tool exclusions:
 #   docs/configuration.md "Worker tool exclusions" owns config/crew-exclude-tools
 #   and its operator contract. Resolve it with bin/fm-exclude-tools-lib.sh
-#   before provisioning; __PIEXCLUDE__ below owns the Pi launch substitution.
+#   before provisioning; __PIEXCLUDE__ below owns the Pi launch substitution,
+#   and __CLAUDESETTINGS__ carries the Claude ship and scout deny rules.
 # Worker account pin (config/claude-account, config/pi-account):
 #   Opt-in. With no file, a Claude or Pi launch is unchanged: Claude still
 #   receives this process's own CLAUDE_CONFIG_DIR when it is set, and Pi the
@@ -438,7 +439,11 @@
 #                  supplies its own trailing space, empty never used)
 #     __CLAUDESETTINGS__ the single claude --settings value: a quoted inline
 #                  JSON object for a crewmate or scout, or a quoted path to
-#                  state/<task-id>.claude-settings.json for a secondmate
+#                  state/<task-id>.claude-settings.json for a secondmate; only
+#                  the crewmate or scout object carries __CLAUDEDENY__
+#     __CLAUDEDENY__ the permissions.deny fragment from config/crew-exclude-tools,
+#                  substituted after every other placeholder so listed names
+#                  are never rewritten
 #     __PIBIN__    quoted concrete Pi-family executable path resolved from PATH
 #     __PITUIMODE__ optional --tui-mode regular when that executable advertises it
 #     __PIAPPROVE__ optional --approve on a seeded Pi/pi-signed secondmate when
@@ -2739,8 +2744,10 @@ fi
 # config/crew-exclude-tools (header above): refuse before worker provisioning
 # if this launch cannot honor the list. Secondmate agents are not covered.
 EXCLUDE_TOOLS=
+CLAUDE_WORKER_DENY=
 if [ "$KIND" != secondmate ]; then
   EXCLUDE_TOOLS=$(fm_exclude_tools_check "$HARNESS" "$RAW_LAUNCH" "$CONFIG") || exit 1
+  [ "$HARNESS" != claude ] || CLAUDE_WORKER_DENY=$(fm_exclude_tools_claude_deny "$EXCLUDE_TOOLS")
 fi
 
 case "$HARNESS" in
@@ -6021,7 +6028,7 @@ case "$LAUNCH" in
   if [ "$KIND" = secondmate ]; then
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$(shell_quote "$STATE_REAL/$ID.claude-settings.json")}
   else
-    claude_settings="'{\"feedbackDrafts\":\"off\"__CLAUDEATTRIBUTION__}'"
+    claude_settings="'{\"feedbackDrafts\":\"off\"__CLAUDEATTRIBUTION____CLAUDEDENY__}'"
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$claude_settings}
   fi
   ;;
@@ -6100,6 +6107,7 @@ case "$LAUNCH" in
   LAUNCH=${LAUNCH//__CLAUDEADDDIRS__/$CLAUDE_ADD_DIRS}
   ;;
 esac
+LAUNCH=${LAUNCH//__CLAUDEDENY__/$CLAUDE_WORKER_DENY}
 case "$HARNESS" in
 claude | codex | opencode | pi | pi-signed | grok | kimi | gemini | muse | rovo | agy | devin | commandcode)
   LAUNCH="env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI $LAUNCH"

@@ -398,6 +398,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0024-worker-connector-deny-list.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
@@ -455,6 +459,10 @@
     },
     {
       "path": "docs/examples/crew-dispatch.json",
+      "audience": "operator-example"
+    },
+    {
+      "path": "docs/examples/crew-exclude-tools",
       "audience": "operator-example"
     },
     {

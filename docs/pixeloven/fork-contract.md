@@ -53,7 +53,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, and 0021 through 0023 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, and 0021 through 0024 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -74,6 +74,7 @@ Assertion A8 fails if a tracked file outside decision and documentation history 
 ADR-0008 owns the isolated unsigned delivery lane and ADR-0022 its one `docs/configuration.md` section for an operator-configured GitHub credential helper, ADR-0011 owns the exact standard GitHub-hosted workflow routing exceptions, ADR-0012 owns the exact notification-reconciliation exceptions, ADR-0013 owns the archived captain-hold completion exception, ADR-0015 owns the documentation-audience entries that classify PixelOven prose, and ADR-0016 owns the persona hunks: one line in `AGENTS.md` and the worker-vocabulary and themed-vocative hunks in `bin/fm-dod-lib.sh`, which assertion A9 holds to exactly the lines that ADR lists.
 ADR-0021 carries upstream's unmerged Herdr slash-popup composer fix in `bin/fm-composer-lib.sh`, its three tests, and their captured screens, byte-identical to that pull request, until an upstream synchronization brings it.
 ADR-0023 lets `bin/fm-pr-merge.sh` accept a repeated `--allow-red` waiver, with its tests, until an upstream synchronization brings an equivalent change.
+ADR-0024 carries Claude support for `config/crew-exclude-tools` in `bin/fm-exclude-tools-lib.sh`, `bin/fm-spawn.sh`, `docs/configuration.md`, its example list, and the spawn tests that assert the worker launch.
 
 ## Taking upstream changes
 
