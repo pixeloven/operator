@@ -76,12 +76,17 @@ case "${1:-}" in
         ". '"*"'") staged=${payload#". '"}; staged=${staged%"'"}; [ ! -f "$staged" ] || payload=$(cat "$staged") ;;
       esac
       printf '%s\n' "$payload" >> "$D/literal"
+      # Whether any secondmate liveness lock is held at the moment the agent
+      # stops and the moment the replacement launches.
+      liveness_locks=$(find "${FM_HOME:-/nonexistent}/state" -maxdepth 1 -name '.secondmate-liveness-*.lock' 2>/dev/null | wc -l | tr -d ' ')
       case "$payload" in
         /exit|/quit)
+          printf 'exit %s\n' "$liveness_locks" >> "$D/liveness-locks"
           printf 'zsh' > "$D/command"
           [ -z "${FM_FAKE_EXIT_TRANSPORT_FAIL_AFTER_STOP:-}" ] || exit 1
           ;;
         *'encode launch-brief'* | *'Firstmate operational input waiting: read'*)
+          printf 'launch %s\n' "$liveness_locks" >> "$D/liveness-locks"
           cat "$D/becomes" > "$D/command"
           [ -z "${FM_FAKE_LAUNCH_TRANSPORT_FAIL_AFTER_START:-}" ] || exit 1
           ;;
@@ -180,6 +185,14 @@ SH
 exit 0
 SH
   chmod +x "$fb/sleep"
+  # Claude's session listing reports no background session, so exit and
+  # relaunch never consult the developer's real Claude daemon.
+  cat > "$fb/claude" <<'SH'
+#!/usr/bin/env bash
+[ "${1:-}" != agents ] || printf '[]\n'
+exit 0
+SH
+  chmod +x "$fb/claude"
 }
 
 # new_case <name> [id] -> echoes a case dir with a live claude ship task.
@@ -1981,6 +1994,84 @@ test_secondmate_relaunch_checkpoints_child_work_and_spares_the_charter() {
   pass "fm-control relaunch: a secondmate's child work is accounted for and its charter is left alone"
 }
 
+# add_secondmate_task <case-dir> <id>: a live claude secondmate with a marked,
+# git-backed home and nothing else, for relaunch tests that need only that.
+add_secondmate_task() {
+  local dir=$1 id=$2
+  mkdir -p "$dir/home/config"
+  printf 'claude\n' > "$dir/home/config/secondmate-harness"
+  fm_git_worktree "$dir/proj" "$dir/smhome" sm-branch
+  mkdir -p "$dir/smhome/state" "$dir/smhome/data" "$dir/smhome/bin"
+  printf '%s\n' "$id" > "$dir/smhome/.fm-secondmate-home"
+  printf '# charter\n' > "$dir/smhome/data/charter.md"
+  printf '# agents\n' > "$dir/smhome/AGENTS.md"
+  {
+    echo "window=fmses:fm-$id"
+    echo "endpoint_task_id=$id"
+    echo "worktree=$dir/smhome"
+    echo "project=$dir/smhome"
+    echo "harness=claude"
+    echo "kind=secondmate"
+    echo "mode=secondmate"
+    echo "yolo=off"
+    echo "model=default"
+    echo "effort=default"
+    echo "home=$dir/smhome"
+    echo "projects="
+  } > "$dir/home/state/$id.meta"
+  printf '%s\n' "fm-$id" > "$dir/fake/windows"
+  printf '%s' "$dir/smhome" > "$dir/fake/cwd"
+}
+
+# Between the old agent's exit and the replacement coming up the endpoint holds
+# only a shell, which the watcher's liveness tick reads as a dead mate. The
+# relaunch holds the per-task liveness lock across that gap, which every
+# liveness probe skips, and releases it once the transaction settles.
+test_secondmate_relaunch_holds_the_liveness_lock_across_the_gap() {
+  local dir out rc
+  dir=$(new_case smlive sml2)
+  add_secondmate_task "$dir" sml2
+  out=$(run_control "$dir" sml2 relaunch); rc=$?
+  expect_code 0 "$rc" "a secondmate relaunch should succeed"$'\n'"$out"
+  [ "$(cat "$dir/fake/liveness-locks" 2>/dev/null)" = "exit 1"$'\n'"launch 1" ] \
+    || fail "the liveness lock must be held when the old agent stops and when the replacement launches, got: $(cat "$dir/fake/liveness-locks" 2>/dev/null)"
+  [ ! -e "$dir/home/state/.secondmate-liveness-sml2.lock" ] \
+    || fail "a settled relaunch must release the mate's liveness lock"
+  pass "fm-control relaunch: a secondmate's liveness lock spans the agent-free gap and is released after"
+}
+
+# A liveness check already holding the lock (it may be relaunching the mate
+# itself) keeps it past the bounded wait: the relaunch refuses before the agent
+# is touched rather than stopping a mate that check is acting on.
+test_secondmate_relaunch_refuses_while_a_liveness_check_holds_the_lock() {
+  local dir out rc lock holder i=0
+  dir=$(new_case smbusy sml3)
+  add_secondmate_task "$dir" sml3
+  lock="$dir/home/state/.secondmate-liveness-sml3.lock"
+  (
+    # shellcheck source=/dev/null
+    . "$ROOT/bin/fm-wake-lib.sh"
+    fm_lock_try_acquire "$lock" || exit 1
+    sleep 30
+  ) &
+  holder=$!
+  while [ ! -e "$lock" ] && [ "$i" -lt 100 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -e "$lock" ] || { kill "$holder" 2>/dev/null; fail "could not stage a held liveness lock"; }
+  out=$(FM_CONTROL_LIVENESS_WAIT=1 run_control "$dir" sml3 relaunch); rc=$?
+  kill "$holder" 2>/dev/null || true
+  wait "$holder" 2>/dev/null || true
+  expect_code 1 "$rc" "a relaunch must refuse while a liveness check holds the mate"
+  assert_contains "$out" "secondmate sml3's liveness check still held its per-task lock after 1s" \
+    "the refusal should name the liveness check holding the mate"
+  [ "$(cat "$dir/fake/command")" = claude ] \
+    || fail "a refused relaunch must not stop the agent"
+  [ ! -s "$dir/fake/literal" ] || fail "a refused relaunch typed into the agent: $(cat "$dir/fake/literal")"
+  pass "fm-control relaunch: a mate held by a liveness check is refused before its agent is touched"
+}
+
 test_secondmate_relaunch_refuses_an_unmarked_home() {
   local dir home out rc
   dir=$(new_case smbad sm2)
@@ -3026,6 +3117,8 @@ test_complete_journal_failure_rolls_back_from_durable_phase
 test_prepublication_abort_retires_replacement_wiring_and_busy_state
 test_journal_records_the_checkpoint_it_proved
 test_secondmate_relaunch_checkpoints_child_work_and_spares_the_charter
+test_secondmate_relaunch_holds_the_liveness_lock_across_the_gap
+test_secondmate_relaunch_refuses_while_a_liveness_check_holds_the_lock
 test_secondmate_relaunch_refuses_an_unmarked_home
 test_secondmate_checkpoint_refuses_unreadable_child_state
 test_secondmate_checkpoint_ignores_a_vanished_scratch_find_walk

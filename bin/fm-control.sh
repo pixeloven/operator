@@ -79,6 +79,10 @@
 #              The same pre-stop refusal applies to this home's worker tool
 #              exclusions (bin/fm-exclude-tools-lib.sh): a malformed list, or a
 #              replacement runtime that cannot hide the listed tools.
+#              A secondmate relaunch holds that mate's per-task liveness lock
+#              (bin/fm-secondmate-liveness-lib.sh) from before the old agent
+#              stops until the transaction settles, so no liveness probe can
+#              read the agent-free gap as a dead mate and kill its endpoint.
 #              --note is required for a ship or scout, whose replacement
 #              inherits the local copy but none of the conversation; a
 #              secondmate reconciles its own home's records at startup, so its
@@ -123,6 +127,9 @@
 #     classified state acts.
 #   - A composer that visibly holds pending text refuses before an exit command
 #     is typed, so existing text is preserved instead of being concatenated.
+#   - A Claude agent that Claude's own session listing reports as a
+#     background-kind session refuses `exit` and `relaunch` before any key is
+#     sent, because its /exit only detaches; the refusal names the recovery.
 #
 # Environment knobs (all bounded waits, seconds):
 #   FM_CONTROL_POLL              poll interval for postcondition waits (0.5)
@@ -132,6 +139,8 @@
 #   FM_CONTROL_EXIT_WAIT         alive->dead wait after the exit command (30)
 #   FM_CONTROL_LAUNCH_WAIT       dead->alive wait after a relaunch (90)
 #   FM_CONTROL_EXIT_RETRIES      Enter retries for the exit command (3)
+#   FM_CONTROL_LIVENESS_WAIT     wait for a secondmate's liveness lock before a
+#                                relaunch stops it (30)
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -183,6 +192,8 @@ DATA="${FM_DATA_OVERRIDE:-$FM_HOME/data}"
 . "$SCRIPT_DIR/fm-worker-account-lib.sh"
 # shellcheck source=bin/fm-exclude-tools-lib.sh
 . "$SCRIPT_DIR/fm-exclude-tools-lib.sh"
+# shellcheck source=bin/fm-secondmate-liveness-lib.sh
+. "$SCRIPT_DIR/fm-secondmate-liveness-lib.sh"
 
 POLL=${FM_CONTROL_POLL:-0.5}
 SETTLE_WAIT=${FM_CONTROL_SETTLE_WAIT:-5}
@@ -190,6 +201,7 @@ ARM_WAIT=${FM_CONTROL_ARM_WAIT:-1.5}
 EXIT_WAIT=${FM_CONTROL_EXIT_WAIT:-30}
 LAUNCH_WAIT=${FM_CONTROL_LAUNCH_WAIT:-90}
 EXIT_RETRIES=${FM_CONTROL_EXIT_RETRIES:-3}
+LIVENESS_WAIT=${FM_CONTROL_LIVENESS_WAIT:-30}
 
 die() {  # <message>
   echo "error: $1" >&2
@@ -198,6 +210,7 @@ die() {  # <message>
 
 CONTROL_LOCK=
 CONTROL_LOCK_HELD=0
+LIVENESS_LOCK_HELD=0
 RELAUNCH_ACTIVE=0
 RELAUNCH_PHASE=start
 
@@ -211,6 +224,12 @@ control_cleanup() {
   # the next lifecycle command for this task writes the same path.
   if [ -n "${FM_COMPOSER_DIALOG_SINK:-}" ]; then
     rm -f "$FM_COMPOSER_DIALOG_SINK"
+  fi
+  # Released only after rollback above, so no liveness probe reads the mate
+  # until the replacement is confirmed or the rollback has settled its state.
+  if [ "$LIVENESS_LOCK_HELD" = 1 ]; then
+    LIVENESS_LOCK_HELD=0
+    fm_secondmate_liveness_unlock "$ID"
   fi
   if [ "$CONTROL_LOCK_HELD" = 1 ]; then
     CONTROL_LOCK_HELD=0
@@ -379,6 +398,56 @@ agent_state() {
 
 busy_verdict() {
   fm_busy_classify_meta "$META" "$ID" "$STATE"
+}
+
+# A Claude Code session sent to the background (/background, /bg, or --bg)
+# runs as a background-kind session under Claude's per-user daemon. There /exit
+# only detaches: the agent keeps running outside its recorded endpoint, whose
+# pane keeps an attached client that still classifies alive, so no exit wait can
+# ever see it stop. Claude's own session listing names that kind structurally.
+# Prints "<session-id> <pid>" for a background-kind session started in <dir>
+# whose process is alive. Returns 1 when there is none or the listing cannot
+# answer (claude or jq absent, agent view disabled for this user, unparseable
+# output); the exit wait then stays the only authority, as it always was.
+# The listing reads the Claude store the agent was launched on: the task's
+# recorded worker account, else this process's own non-empty CLAUDE_CONFIG_DIR,
+# else the ordinary store - never an empty value, which Claude would take as a
+# config directory at the current path.
+claude_background_session() {  # <dir>
+  local dir=$1 real out sid pid account
+  local -a store=(env -u CLAUDE_CONFIG_DIR)
+  command -v claude >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || return 1
+  real=$(cd "$dir" 2>/dev/null && pwd -P) || return 1
+  account=$(fm_meta_get "$META" account)
+  case "$account" in
+    /*) store=(env "CLAUDE_CONFIG_DIR=$account") ;;
+    ordinary) ;;
+    *) [ -z "${CLAUDE_CONFIG_DIR:-}" ] || store=(env) ;;
+  esac
+  out=$(fm_run_timed 15 "${store[@]}" claude agents --json --cwd "$real" </dev/null 2>/dev/null) || return 1
+  out=$(printf '%s' "$out" | jq -er --arg a "$dir" --arg b "$real" \
+    '[.[] | select(.kind == "background" and (.cwd == $a or .cwd == $b) and (.pid | type) == "number")]
+     | .[] | "\(.id // .sessionId // "unknown") \(.pid)"' 2>/dev/null) || return 1
+  while read -r sid pid; do
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      printf '%s %s' "$sid" "$pid"
+      return 0
+    fi
+  done <<EOF
+$out
+EOF
+  return 1
+}
+
+# Refuse before any key reaches a Claude agent that /exit cannot stop, naming
+# the recovery: persist, stop the background session, then relaunch.
+refuse_claude_background_session() {
+  local found sid pid
+  [ "$HARNESS" = claude ] && [ -n "$WT" ] || return 0
+  found=$(claude_background_session "$WT") || return 0
+  sid=${found%% *}
+  pid=${found#* }
+  die "task $ID's Claude agent runs as a Claude Code background session (session $sid, pid $pid), where /exit only detaches and the agent keeps running outside its endpoint $T; refusing to send '$VERB' input that cannot stop it. Recover it by asking the agent to persist its open work, then run 'claude stop $sid' and confirm with 'claude agents --json --cwd $WT' that pid $pid is gone, then relaunch it ('fm-control.sh $ID relaunch' once the endpoint reads dead)"
 }
 
 # wait_agent_state <wanted...> <timeout>: poll until agent_state prints one of
@@ -707,6 +776,7 @@ do_exit() {
       ;;
     *) die "task $ID's endpoint reads '$state' rather than a positively classified state; refusing to send a lifecycle command into an unattributed endpoint" ;;
   esac
+  refuse_claude_background_session
   # A busy agent is interrupted first before the exit command is submitted.
   case "$(busy_verdict)" in
     busy*)
@@ -1138,6 +1208,17 @@ do_relaunch() {
       # The charter in the secondmate's own home is its instruction source and
       # stays untouched.
       RELAUNCH_BRIEF=
+      # Between the old agent's exit and the replacement coming up the
+      # endpoint holds only a shell. The watcher's liveness tick and the
+      # session-start sweep probe a mate only under its per-task liveness lock
+      # and skip it while that lock is busy, so holding it across the whole
+      # transaction keeps them from reading that gap as a dead mate and killing
+      # the endpoint this relaunch is about to launch into.
+      local liveness_rc=0
+      fm_secondmate_liveness_lock_wait "$ID" "$LIVENESS_WAIT" || liveness_rc=$?
+      [ "$liveness_rc" -eq 0 ] \
+        || die "secondmate $ID's liveness check still held its per-task lock after ${LIVENESS_WAIT}s (it may be relaunching the mate itself); refusing to relaunch before the agent is touched. Retry once that check finishes"
+      LIVENESS_LOCK_HELD=1
       ;;
     *)
       die "task $ID records kind '$KIND', which has no defined relaunch shape"

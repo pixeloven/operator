@@ -42,8 +42,15 @@
 #          when a relaunch is actually authorized.
 #
 # Concurrency: fm_secondmate_liveness_lock serializes probe+kill+relaunch per
-# task across the bootstrap sweep and the watcher tick, so a concurrent
-# relaunch can never be observed mid-flight as a dead endpoint and killed.
+# task across the bootstrap sweep, the watcher tick, and bin/fm-control.sh's
+# secondmate relaunch (which holds it from before the old agent stops until the
+# replacement is confirmed), so a concurrent relaunch can never be observed
+# mid-flight as a dead endpoint and killed.
+# The kill itself is additionally guarded by fm-spawn's per-task spawn lock: a
+# relaunch never kills an endpoint while any spawn of that task is in flight,
+# including a hand-run `fm-spawn.sh <id> --secondmate` that holds no liveness
+# lock, and it re-reads the endpoint under that lock so a replacement published
+# since the probe is never mistaken for the dead one.
 # A separate per-home lock serializes relaunches of different mates, since each
 # fresh spawn owns the same task-set lock. The watcher uses its spawn timeout
 # as the lock-wait bound; an untimed sweep defaults to 600 seconds.
@@ -77,6 +84,14 @@ fm_sm_live_require_locks() {
 fm_secondmate_liveness_lock() {  # <id>
   fm_sm_live_require_locks || return 1
   fm_lock_try_acquire "$STATE/.secondmate-liveness-$1.lock"
+}
+
+# Bounded wait for the same lock, for an actor that must not skip: a relaunch
+# about to stop the mate waits out a probe already in flight. Returns
+# fm_lock_acquire_wait_bounded's status (124 when a live holder kept it).
+fm_secondmate_liveness_lock_wait() {  # <id> <seconds>
+  fm_sm_live_require_locks || return 1
+  fm_lock_acquire_wait_bounded "$STATE/.secondmate-liveness-$1.lock" "$2"
 }
 
 fm_secondmate_liveness_unlock() {  # <id>
@@ -265,13 +280,18 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
 # wraps the spawn in fm_run_timed so a watcher poll stays bounded; 124/137 mean
 # the bound fired. Returns the spawn exit status; combined spawn output is in
 # FM_SM_LIVE_OUT and the status in FM_SM_LIVE_RC. When the lock wait expires,
-# the ledger cannot be read, or the attempt row cannot be appended, nothing is
-# killed or spawned and no attempt is recorded: the verdict becomes
-# FM_SM_LIVE_STATUS=skipped with FM_SM_LIVE_REASON set and this returns 1.
+# the ledger cannot be read, a kill is due while a spawn of <id> holds its spawn
+# lock or the endpoint no longer reads dead, or the attempt row cannot be
+# appended, nothing is killed or spawned and no attempt is recorded: the
+# verdict becomes FM_SM_LIVE_STATUS=skipped with FM_SM_LIVE_REASON set and this
+# returns 1.
+# FM_SM_LIVE_DEFERRED=1 marks the two skips that are not faults - a spawn in
+# flight, or an endpoint that no longer reads dead - so a poller can log them
+# and re-probe on its next tick instead of reporting an error.
 # Caller holds the liveness lock and owns reporting.
 fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
   local meta=$1 id=$2 timeout=${3:-} relaunch_lock wait_seconds rc=0
-  FM_SM_LIVE_OUT='' FM_SM_LIVE_RC=0
+  FM_SM_LIVE_OUT='' FM_SM_LIVE_RC=0 FM_SM_LIVE_DEFERRED=0
   if ! fm_secondmate_liveness_recent_attempts "$id" 0 >/dev/null; then
     FM_SM_LIVE_STATUS=skipped
     FM_SM_LIVE_REASON="relaunch ledger $STATE/.secondmate-relaunch-$id is unreadable; endpoint left $FM_SM_LIVE_STATE"
@@ -287,7 +307,38 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
     FM_SM_LIVE_RC=1
     return 1
   fi
+  local backend='' target='' spawn_lock="$STATE/.spawn-$id.lock" current_state
+  if [ "$FM_SM_LIVE_KILL" = 1 ]; then
+    # A spawn of this task in flight (a relaunch between its old agent's exit
+    # and the replacement coming up, or a hand-run respawn) owns this endpoint
+    # even while it reads dead. Killing it there strands that spawn with no
+    # endpoint, and this relaunch's own spawn would then be refused by the
+    # same lock, so leave it alone and let the next probe see the outcome.
+    if ! fm_lock_try_acquire "$spawn_lock"; then
+      fm_lock_release "$relaunch_lock" || true
+      FM_SM_LIVE_STATUS=skipped
+      FM_SM_LIVE_REASON="a spawn of $id is already in flight; endpoint left $FM_SM_LIVE_STATE"
+      FM_SM_LIVE_RC=1 FM_SM_LIVE_DEFERRED=1
+      return 1
+    fi
+    backend=$(fm_backend_of_meta "$meta")
+    target=$(fm_backend_target_of_meta "$meta")
+    [ -n "$target" ] || target=$(fm_meta_get "$meta" window)
+    # The probe may predate a spawn that finished while this waited for the
+    # relaunch lock and republished the record onto a fresh endpoint. Only the
+    # endpoint the record names now, still reading dead, may be killed.
+    current_state=$(fm_backend_agent_state "$backend" "$target" 2>/dev/null) || current_state=unreadable
+    if [ "$current_state" != dead ]; then
+      fm_lock_release "$spawn_lock" || true
+      fm_lock_release "$relaunch_lock" || true
+      FM_SM_LIVE_STATUS=skipped
+      FM_SM_LIVE_REASON="endpoint now reads $current_state rather than dead; left untouched"
+      FM_SM_LIVE_RC=1 FM_SM_LIVE_DEFERRED=1
+      return 1
+    fi
+  fi
   if ! fm_secondmate_liveness_ledger_add "$id" attempt; then
+    [ "$FM_SM_LIVE_KILL" != 1 ] || fm_lock_release "$spawn_lock" || true
     fm_lock_release "$relaunch_lock" || true
     FM_SM_LIVE_STATUS=skipped
     FM_SM_LIVE_REASON="relaunch ledger $STATE/.secondmate-relaunch-$id is unwritable; endpoint left $FM_SM_LIVE_STATE"
@@ -295,14 +346,11 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
     return 1
   fi
   if [ "$FM_SM_LIVE_KILL" = 1 ]; then
-    local backend target window
-    backend=$(fm_backend_of_meta "$meta")
-    target=$(fm_backend_target_of_meta "$meta")
-    if [ -z "$target" ]; then
-      window=$(fm_meta_get "$meta" window)
-      target=$window
-    fi
     [ -z "$target" ] || fm_backend_kill "$backend" "$target" 2>/dev/null || true
+    # fm-spawn takes this lock itself; a spawn that slips in between this
+    # release and that acquisition finds the endpoint already gone and this
+    # relaunch's spawn is refused, but no live endpoint was killed under it.
+    fm_lock_release "$spawn_lock" || true
   fi
   if [ -n "$timeout" ]; then
     FM_SM_LIVE_OUT=$(FM_SPAWN_NO_GUARD=1 fm_run_timed "$timeout" "$FM_ROOT/bin/fm-spawn.sh" "$id" --secondmate 2>&1) || rc=$?

@@ -3516,6 +3516,51 @@ test_secondmate_liveness_tick_skips_mate_whose_lock_is_held() {
   pass "watch liveness: a mate mid-episode under the shared liveness lock is skipped entirely"
 }
 
+# The 2026-10-27 navigator restart failure: a relaunch (fm-control relaunch
+# through fm-spawn --relaunch) holds the mate's spawn lock while its endpoint
+# holds only a shell between the old agent's exit and the replacement. The
+# tick read that as dead, killed the endpoint, and only then had its own spawn
+# refused by that lock - leaving the mate with no endpoint at all.
+test_secondmate_liveness_tick_never_kills_during_an_in_flight_spawn() {
+  local dir state pid holder i=0
+  dir=$(make_secondmate_liveness_case liveness-spawn-in-flight)
+  state="$dir/state"
+
+  ( STATE="$state" bash -c '. "$1" && fm_lock_acquire_wait "$2" && sleep 30' \
+      _ "$ROOT/bin/fm-wake-lib.sh" "$state/.spawn-sm1.lock" ) &
+  holder=$!
+  while [ ! -d "$state/.spawn-sm1.lock" ] && [ "$i" -lt 100 ]; do
+    sleep 0.05
+    i=$((i + 1))
+  done
+  [ -d "$state/.spawn-sm1.lock" ] || fail "the fixture never acquired the spawn lock"
+
+  run_liveness_leg "$dir" spawn-in-flight FM_FAKE_TMUX_CURRENT_COMMAND=zsh; pid=$LIVENESS_PID
+  i=0
+  while ! grep -qF 'secondmate sm1 liveness:' "$state/.watch-triage.log" 2>/dev/null && [ "$i" -lt 600 ]; do
+    sleep 0.05
+    i=$((i + 1))
+  done
+  is_live_non_zombie "$pid" \
+    || fail "the watcher exited against a mate whose spawn is in flight: $(cat "$dir/watch-spawn-in-flight.out" "$dir/watch-spawn-in-flight.err")"
+  kill_liveness_leg "$pid"
+  kill "$holder" 2>/dev/null || true
+  wait "$holder" 2>/dev/null || true
+  assert_not_contains "$(cat "$dir/tmux.log" 2>/dev/null)" "kill-window" \
+    "the tick killed an endpoint while a spawn of that mate was in flight"
+  assert_not_contains "$(cat "$dir/tmux.log" 2>/dev/null)" "new-window" \
+    "the tick spawned over a spawn already in flight"
+  [ ! -e "$state/.secondmate-relaunch-sm1" ] \
+    || fail "a deferred relaunch was ledgered as an attempt: $(cat "$state/.secondmate-relaunch-sm1")"
+  [ ! -s "$state/.wake-queue" ] || fail "a deferred relaunch queued a wake: $(cat "$state/.wake-queue")"
+  grep -F 'secondmate sm1 liveness: a spawn of sm1 is already in flight; endpoint left dead' \
+    "$state/.watch-triage.log" >/dev/null \
+    || fail "the deferral did not land in the triage log: $(cat "$state/.watch-triage.log" 2>/dev/null)"
+  assert_not_contains "$(cat "$dir/watch-spawn-in-flight.err")" "liveness check failed" \
+    "a deferral to an in-flight spawn must not fail the watcher cycle"
+  pass "watch liveness: a dead-reading mate whose spawn is in flight is left intact, not killed"
+}
+
 test_secondmate_liveness_tick_preserves_unreachable_remote() {
   local dir state
   dir=$(make_secondmate_liveness_case liveness-remote-down)
@@ -3627,4 +3672,5 @@ test_secondmate_liveness_tick_fails_closed_on_ledger_errors
 test_secondmate_liveness_tick_error_keeps_scanning_and_wakes
 test_secondmate_liveness_tick_unqueued_outcome_is_an_error_not_a_wake
 test_secondmate_liveness_tick_skips_mate_whose_lock_is_held
+test_secondmate_liveness_tick_never_kills_during_an_in_flight_spawn
 test_secondmate_liveness_tick_preserves_unreachable_remote

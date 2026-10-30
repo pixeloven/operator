@@ -5362,9 +5362,10 @@ BUSY_GEN=
     fi
     hooks_json="\"hooks\":{\"UserPromptSubmit\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$j_submit\"}]}],${stop_entry}\"StopFailure\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$j_stopfail\"}]}],\"SessionEnd\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$j_sessionend\"}]}]}"
     if [ "$KIND" = secondmate ]; then
-      session_keys='"feedbackDrafts":"off",'
+      # disableAgentView: see the crewmate __CLAUDESETTINGS__ value below.
+      session_keys='"feedbackDrafts":"off","disableAgentView":true,'
       if [ "$KEEP_AI_TRAILERS" != 1 ]; then
-        session_keys='"feedbackDrafts":"off","attribution":{"commit":"","pr":"","sessionUrl":false},'
+        session_keys='"feedbackDrafts":"off","disableAgentView":true,"attribution":{"commit":"","pr":"","sessionUrl":false},'
       fi
       printf '{%s%s}\n' "$session_keys" "$hooks_json" >"$STATE_REAL/$ID.claude-settings.json"
     else
@@ -6028,7 +6029,12 @@ case "$LAUNCH" in
   if [ "$KIND" = secondmate ]; then
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$(shell_quote "$STATE_REAL/$ID.claude-settings.json")}
   else
-    claude_settings="'{\"feedbackDrafts\":\"off\"__CLAUDEATTRIBUTION____CLAUDEDENY__}'"
+    # disableAgentView turns off /background, /bg, --bg, agent view, and the
+    # on-demand daemon for this agent only. A firstmate-launched agent sent to
+    # the background leaves its endpoint while a client there still reads
+    # alive, and its /exit then only detaches, so no lifecycle verb could stop
+    # it. The user's own Claude settings are never touched.
+    claude_settings="'{\"feedbackDrafts\":\"off\",\"disableAgentView\":true__CLAUDEATTRIBUTION____CLAUDEDENY__}'"
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$claude_settings}
   fi
   ;;

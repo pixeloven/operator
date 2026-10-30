@@ -131,6 +131,13 @@ esac
 exit 0
 SH
   chmod +x "$fb/sleep"
+  # Claude's session listing reports no background session.
+  cat > "$fb/claude" <<'SH'
+#!/usr/bin/env bash
+[ "${1:-}" != agents ] || printf '[]\n'
+exit 0
+SH
+  chmod +x "$fb/claude"
 }
 
 # new_case <name> -> a parent home with a stub session provider.
@@ -481,7 +488,10 @@ case "${rargs[1]:-}" in
     case "${FM_FAKE_SSH_MODE:-ok}" in
       slow-relaunch)
         : > "$FM_FAKE_DIR/remote-relaunch-start"
-        /bin/sleep 2
+        # Long enough that a concurrent local relaunch, which first takes the
+        # mate's liveness lock and reads Claude's session listing, reaches its
+        # /exit inside this window on a loaded host.
+        /bin/sleep 4
         : > "$FM_FAKE_DIR/remote-relaunch-end"
         ;;
     esac
@@ -743,6 +753,76 @@ test_post_stop_failure_is_reported_unreached() {
   pass "T11 post-stop restart failure is never misreported as a nudge"
 }
 
+# --- T11b: advisories printed on the way never become the reported reason ----
+# A relaunch passes fm-spawn's stderr through, and fm-spawn prints advisories
+# first: the guard's branch-held NOTICE and fm-config-inherit's non-fatal
+# inheritance report among them. Reporting the first line hid the real failure
+# behind one of those. The report names the first error line (the cause) and
+# the last (the state the restart left), and no advisory.
+test_failed_restart_reports_its_error_lines_not_advisories() {
+  local dir out rc
+  dir=$(new_case masked-reason)
+  add_local_mate "$dir" sm1
+  arm_answer "$dir" sm1
+  cp -R "$ROOT/bin" "$dir/bin"
+  cat > "$dir/bin/fm-control.sh" <<'SH'
+#!/usr/bin/env bash
+cat >&2 <<'EOF'
+NOTICE: wake rows held by the live supervision branch - it presents and acknowledges them; do not drain them from here.
+fm-config-inherit: error: primary source header missing in data/captain-shared.md
+warning: an unrelated advisory
+error: another spawn is already creating task sm1
+error: the replacement agent for sm1 could not be launched on claude
+error: sm1's agent was stopped but the replacement did not launch; no agent is running
+EOF
+exit 1
+SH
+  chmod +x "$dir/bin/fm-control.sh"
+
+  out=$(RESTART="$dir/bin/fm-secondmate-restart.sh" run_restart "$dir" sm1); rc=$?
+
+  expect_code 3 "$rc" "a failed restart is not a reload"$'\n'"$out"
+  assert_contains "$out" "unreached: sm1: the restart outcome is unknown: another spawn is already creating task sm1; sm1's agent was stopped but the replacement did not launch; no agent is running" \
+    "the report must carry the restart's own cause and resulting state"
+  assert_not_contains "$out" "wake rows held" "the guard's NOTICE must never be reported as the reason"
+  assert_not_contains "$out" "primary source header" "a non-fatal inheritance report must never be reported as the reason"
+  assert_not_contains "$out" "unrelated advisory" "a warning must never be reported as the reason"
+  pass "T11b a failed restart reports its error lines, never an advisory printed on the way"
+}
+
+# --- T11c: a mate with no agent is reported at once, not waited on -----------
+# Nothing can answer the persist request at an endpoint that is gone or holds
+# only a shell, so the pass reports the mate at once - no request, no wait -
+# and leaves its respawn to the liveness path.
+test_mate_without_an_agent_is_reported_before_any_request() {
+  local dir out rc shape
+  for shape in gone dead; do
+    dir=$(new_case "no-agent-$shape")
+    add_local_mate "$dir" sm1
+    arm_answer "$dir" sm1
+    if [ "$shape" = gone ]; then
+      printf 'other\n' > "$dir/fake/windows"
+    else
+      printf 'zsh' > "$dir/fake/command"
+    fi
+
+    out=$(FM_TEST_PERSIST_WAIT=900 run_restart "$dir" sm1); rc=$?
+
+    expect_code 3 "$rc" "$shape: a mate with no agent is not a reload"$'\n'"$out"
+    if [ "$shape" = gone ]; then
+      assert_contains "$out" "unreached: sm1: its endpoint fmses:fm-sm1 is gone" "$shape: the report must name the missing endpoint"
+    else
+      assert_contains "$out" "unreached: sm1: its endpoint fmses:fm-sm1 holds no running agent" "$shape: the report must name the agent-less endpoint"
+    fi
+    assert_contains "$out" "respawn belongs to the secondmate liveness check" "$shape: the report must name who respawns it"
+    assert_contains "$out" "summary: 0 of 1 restarted, 0 nudged, 1 unreached" "$shape: the summary must count it unreached"
+    [ ! -s "$dir/fake/rings" ] || fail "$shape: a mate with no agent was sent the persist request"
+    [ -z "$(cat "$dir/home/state/sm1.inbox"/*.msg 2>/dev/null)" ] || fail "$shape: a persist request was queued for a mate with no agent"
+    assert_no_grep '^/exit$' "$dir/fake/literal" "$shape: nothing may be typed into an agent-less endpoint"
+  done
+  pass "T11c a gone or agent-less mate is reported at once, with no request and no wait"
+}
+
 # --- T12: relaunch work does not stop polling other persist answers ----------
 test_relaunches_do_not_block_persist_polling() {
   local dir out rc
@@ -944,6 +1024,8 @@ test_unreachable_host_is_reported_unknown
 test_concurrent_reply_cannot_release_persist_gate
 test_persist_waits_are_polled_together
 test_post_stop_failure_is_reported_unreached
+test_failed_restart_reports_its_error_lines_not_advisories
+test_mate_without_an_agent_is_reported_before_any_request
 test_relaunches_do_not_block_persist_polling
 test_unpublished_worker_result_is_accounted_for
 test_result_published_while_reaping_is_honored
