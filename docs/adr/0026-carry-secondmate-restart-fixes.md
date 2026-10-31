@@ -51,3 +51,5 @@ The fork-contract workflow rejects any path outside the PixelOven namespaces and
 - **Lengthen the liveness timeout.** Rejected because any fixed timeout can still land inside the relaunch gap.
 - **Set `disableAgentView` in user settings.** Rejected because that also changes the operator's own Claude sessions.
 - **Stop a background session from the exit verb.** Rejected because stopping it without a persist request can lose the agent's open work.
+- **Wait for upstream.** Rejected because upstream `kunchenguid/firstmate` main `355a3071` (2026-10-30) has no equivalent fix, and navigators keep dying on restart meanwhile.
+- **Contribute upstream first.** Deferred: an upstream offer follows later through the firstmate-self-repo path, and this carry retires when upstream lands an equivalent.
