@@ -648,6 +648,26 @@ skip-runner: pi-signed is not installed, so its pin check was not exercised
 
 The guard submits no prompt and spends no tokens, so it runs by default wherever a runner is installed; rerun it after every Claude or Pi upgrade.
 
+## Claude Code agent view
+
+Every Firstmate Claude launch carries `"disableAgentView": true` in its `--settings` value, and `bin/fm-control.sh` refuses `exit` and `relaunch` for a Claude agent that `claude agents --json --cwd <dir>` lists as kind `background` with a live pid.
+Both rest on vendor surfaces: Claude Code reads `disableAgentView` from its merged settings, so a `--settings` value reaches the same gate that turns off `claude agents`, `--bg`, `/background`, and the on-demand daemon, and its session listing names each session's kind, pid, cwd, and id or sessionId.
+`tests/fm-claude-agent-view-live-e2e.test.sh` runs only that read-only listing against the installed `claude`: with the setting it must refuse naming `disableAgentView`, without it it must print a JSON array, and every listed session must carry the fields the background check reads.
+
+Verified 2026-10-30 on Claude Code 2.1.314 on macOS.
+
+```sh
+bash tests/fm-claude-agent-view-live-e2e.test.sh
+```
+
+```
+ok - claude 2.1.314 (Claude Code): 13 listed session(s) carry the kind, pid, cwd, and id fields the background check reads
+ok - claude 2.1.314 (Claude Code): a disableAgentView --settings value disables agent view, and the session listing is a JSON array
+```
+
+Not verified: typing `/background` into a running agent launched with the setting, because reaching a composer in a fresh directory needs a workspace-trust or login change to the user's own Claude configuration, and a background session that did start would live in the per-user daemon every Claude session on the host shares.
+The guard submits no prompt and spends no tokens, so it runs by default wherever `claude` and `jq` are installed; rerun it after every Claude Code upgrade.
+
 ## Secondmate busy contract
 
 Verified 2026-09-22 on this host with Claude Code 2.1.278, OpenCode 1.18.31, Pi 0.86.1, and Grok 1.0.40.

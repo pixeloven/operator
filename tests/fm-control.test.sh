@@ -209,6 +209,16 @@ fi
 exit 0
 SH
   chmod +x "$fb/sleep"
+  # Claude's session listing: whatever fake/claude-agents.json holds, else none.
+  cat > "$fb/claude" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = agents ]; then
+  printf '%s\n' "${CLAUDE_CONFIG_DIR-<unset>}" >> "$FM_FAKE_DIR/claude-store"
+  cat "$FM_FAKE_DIR/claude-agents.json" 2>/dev/null || printf '[]\n'
+fi
+exit 0
+SH
+  chmod +x "$fb/claude"
   printf '%s\n' "$fb"
 }
 
@@ -832,6 +842,71 @@ test_already_stopped_exit_is_idempotent() {
   pass "fm-control exit: an already-stopped agent is idempotent success with no bytes sent"
 }
 
+# A Claude session sent to the background (/background) keeps running under
+# Claude's daemon while its pane keeps an attached client that reads alive, and
+# its /exit only detaches. Claude's own listing names that kind, so exit and
+# relaunch refuse before typing anything and name the recovery. The same record
+# with the background process gone, or started in another directory, is not
+# that session, and exit proceeds exactly as before.
+test_exit_refuses_a_claude_background_session() {
+  local dir out rc wt bg verb
+  for verb in exit relaunch; do
+    dir=$(new_case "claude-bg-$verb")
+    add_task "$dir" t1 claude
+    alive_as "$dir" claude
+    wt=$(cat "$dir/fake/cwd")
+    sleep 30 &
+    bg=$!
+    printf '[{"kind":"interactive","pid":%s,"cwd":"%s"},{"kind":"background","id":"e181f996","sessionId":"e181f996-0000","pid":%s,"cwd":"%s","status":"idle"}]\n' \
+      "$$" "$wt" "$bg" "$wt" > "$dir/fake/claude-agents.json"
+    if [ "$verb" = exit ]; then
+      # A pinned worker's sessions live in its own Claude store.
+      echo "account=$dir/acct" >> "$dir/home/state/t1.meta"
+      out=$(run_control "$dir" t1 exit); rc=$?
+      [ "$(cat "$dir/fake/claude-store")" = "$dir/acct" ] \
+        || fail "the listing must read the task's pinned Claude store, got: $(cat "$dir/fake/claude-store")"
+    else
+      out=$(run_control "$dir" t1 relaunch --note "background check"); rc=$?
+    fi
+    kill "$bg" 2>/dev/null || true
+    wait "$bg" 2>/dev/null || true
+    expect_code 1 "$rc" "$verb must refuse a Claude background session"$'\n'"$out"
+    assert_contains "$out" "runs as a Claude Code background session (session e181f996, pid $bg), where /exit only detaches" \
+      "the $verb refusal should name the background session"
+    assert_contains "$out" "claude stop e181f996" "the $verb refusal should name the recovery"
+    [ -z "$(literals "$dir")" ] || fail "$verb typed into a background session's client: $(literals "$dir")"
+    [ -z "$(keys_sent "$dir")" ] || fail "$verb sent keys to a background session's client: $(keys_sent "$dir")"
+    [ "$(cat "$dir/fake/command")" = claude ] || fail "$verb on a background session changed the pane"
+  done
+
+  # Divergence: the recorded background process is gone, then a live one runs
+  # under another directory. Neither is this task's agent, so exit proceeds.
+  for verb in dead-pid other-cwd; do
+    dir=$(new_case "claude-bg-$verb")
+    add_task "$dir" t1 claude
+    alive_as "$dir" claude
+    wt=$(cat "$dir/fake/cwd")
+    sleep 30 &
+    bg=$!
+    if [ "$verb" = dead-pid ]; then
+      kill "$bg" 2>/dev/null || true
+      wait "$bg" 2>/dev/null || true
+    else
+      wt="$wt-elsewhere"
+    fi
+    printf '[{"kind":"background","id":"e181f996","pid":%s,"cwd":"%s"}]\n' "$bg" "$wt" \
+      > "$dir/fake/claude-agents.json"
+    out=$(CLAUDE_CONFIG_DIR='' run_control "$dir" t1 exit); rc=$?
+    kill "$bg" 2>/dev/null || true
+    wait "$bg" 2>/dev/null || true
+    [ "$(cat "$dir/fake/claude-store")" = '<unset>' ] \
+      || fail "$verb: an empty CLAUDE_CONFIG_DIR must not reach the listing, got: $(cat "$dir/fake/claude-store")"
+    expect_code 0 "$rc" "$verb: exit should proceed when no live background session is this task's"$'\n'"$out"
+    [ "$(literals "$dir")" = /exit ] || fail "$verb: exit should type /exit, got: $(literals "$dir")"
+  done
+  pass "fm-control exit/relaunch: a Claude background session is refused with its recovery, nothing typed"
+}
+
 test_missing_tmux_endpoint_refuses_rather_than_claiming_a_stop() {
   local dir out rc
   dir=$(new_case gone)
@@ -1242,6 +1317,7 @@ test_verb_allowlist_is_closed
 test_resume_is_refused_with_its_reason
 test_relaunch_only_flags_are_rejected_on_other_verbs
 test_already_stopped_exit_is_idempotent
+test_exit_refuses_a_claude_background_session
 test_missing_tmux_endpoint_refuses_rather_than_claiming_a_stop
 test_interrupt_refuses_when_no_agent_runs
 test_ambiguous_endpoint_refuses

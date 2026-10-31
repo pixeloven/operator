@@ -402,6 +402,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0026-carry-secondmate-restart-fixes.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

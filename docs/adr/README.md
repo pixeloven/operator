@@ -36,6 +36,7 @@ Use [`_template.md`](_template.md).
 | [0022](0022-delivery-lane-github-credential-helper.md) | The delivery lane may carry an operator-configured GitHub credential helper | Accepted | Worker GitHub credentials from a non-personal source |
 | [0023](0023-repeatable-allow-red-waiver.md) | The merge script accepts several named red-check waivers | Accepted | Two-check waived merge stopped on the single-waiver limit |
 | [0024](0024-worker-connector-deny-list.md) | Claude workers honor config/crew-exclude-tools | Proposed | Worker tooling investigation; operator review chose one local list |
+| [0026](0026-carry-secondmate-restart-fixes.md) | Carry the secondmate restart fixes until a sync brings them | Accepted | Navigator restart diagnosis report; self-retiring local carry |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).
