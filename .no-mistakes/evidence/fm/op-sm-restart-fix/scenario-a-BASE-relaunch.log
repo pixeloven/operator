@@ -1,0 +1,4 @@
+error: task labcd1ae061f36d-mate's endpoint reads 'alive'; a relaunch requires a positively agent-free endpoint (stop the agent first with bin/fm-control.sh labcd1ae061f36d-mate exit)
+error: the replacement agent for labcd1ae061f36d-mate could not be launched on claude
+error: labcd1ae061f36d-mate's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at /private/tmp/fmlab.XZn7gz/mate
+relaunch rc=1 after 42s

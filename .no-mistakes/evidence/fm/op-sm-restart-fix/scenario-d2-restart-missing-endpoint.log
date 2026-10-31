@@ -1,0 +1,3 @@
+unreached: labcd1ae061f36d-mate: its endpoint firstmate:fm-labcd1ae061f36d-mate was not found from this home (gone or unreachable), so it cannot answer the request to write down its open work and was not restarted; its respawn belongs to the secondmate liveness check (bin/fm-spawn.sh labcd1ae061f36d-mate --secondmate respawns it by hand)
+summary: 0 of 1 restarted, 0 nudged, 1 unreached
+exit=3 elapsed=1s

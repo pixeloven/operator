@@ -1,0 +1,8 @@
+ ▐▛███▛█   Claude Code v2.1.314
+▝▜██████▀  Sonnet 5.5 with low effort · Claude Enterprise
+ ▝▝   ▝▝   /private/tmp/fmlab.XZn7gz/mate
+  ⎿  SessionStart:startup says: dotfiles: 7 changes not codified - run /codify
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ : Firstmate operational input waiting: read '/private/tmp/fmlab.XZn7gz/mate/state/operational-inbox/1793406717-f4faa7a2f52d9673.msg' and handle its contents as Firstmate operational input.
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)

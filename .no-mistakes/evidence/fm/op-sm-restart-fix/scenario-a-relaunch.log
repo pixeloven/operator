@@ -1,0 +1,2 @@
+relaunched labcd1ae061f36d-mate harness=claude from=claude model=sonnet effort=low backend=tmux endpoint=firstmate:fm-labcd1ae061f36d-mate worktree=/private/tmp/fmlab.XZn7gz/mate
+relaunch rc=0 after 35s

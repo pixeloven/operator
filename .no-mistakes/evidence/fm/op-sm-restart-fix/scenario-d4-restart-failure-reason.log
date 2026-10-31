@@ -1,0 +1,3 @@
+unreached: labcd1ae061f36d-mate: the restart outcome is unknown: secondmate labcd1ae061f36d-mate's liveness check still held its per-task lock after 3s (it may be relaunching the mate itself); refusing to relaunch before the agent is touched. Retry once that check finishes
+summary: 0 of 1 restarted, 0 nudged, 1 unreached
+exit=3 elapsed=28s

@@ -1,0 +1,5 @@
+stopped labcd1ae061f36d-mate harness=claude backend=tmux endpoint=firstmate:fm-labcd1ae061f36d-mate worktree=/private/tmp/fmlab.XZn7gz/mate
+exit rc=0
+lab zsh
+fm-labcd1ae061f36d-mate zsh
+main 2.1.314
