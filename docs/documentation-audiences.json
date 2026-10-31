@@ -402,7 +402,7 @@
       "audience": "maintainer-architecture"
     },
     {
-      "path": "docs/adr/0025-secondmate-restart-reliability.md",
+      "path": "docs/adr/0026-carry-secondmate-restart-fixes.md",
       "audience": "maintainer-architecture"
     },
     {

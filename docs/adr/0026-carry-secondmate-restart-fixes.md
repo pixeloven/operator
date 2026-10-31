@@ -1,4 +1,4 @@
-# ADR-0025: Carry the secondmate restart reliability fixes until a sync brings them
+# ADR-0026: Carry the secondmate restart fixes until a sync brings them
 
 - **Status:** Accepted
 - **Date:** 2026-10-30
@@ -32,6 +32,7 @@ ADR-0001 remains the default, and the following inherited files may carry these 
 The user's own Claude settings, every other verb, and every other runtime are outside this exception.
 
 The change is kept minimal so it can be offered upstream.
+That offer is drafted later; nothing is published upstream now.
 When an upstream synchronization brings an equivalent change, that merge takes upstream's version of these files, the A4 allowlist drops the ones no other ADR still needs, and this ADR is superseded by that merge.
 
 ## Consequences
