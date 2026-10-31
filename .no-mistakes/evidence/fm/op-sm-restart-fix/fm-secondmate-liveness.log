@@ -23,3 +23,4 @@ ok - relaunch: an endpoint that no longer reads dead under the spawn lock is nev
 ok - poll probe: remote states map to the same contract as local, one call each
 ok - poll probe: unreachable or inconclusive remote reads preserve the route
 # all fm-secondmate-liveness tests passed
+exit=0
