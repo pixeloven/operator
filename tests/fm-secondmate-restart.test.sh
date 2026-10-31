@@ -488,10 +488,18 @@ case "${rargs[1]:-}" in
     case "${FM_FAKE_SSH_MODE:-ok}" in
       slow-relaunch)
         : > "$FM_FAKE_DIR/remote-relaunch-start"
-        # Long enough that a concurrent local relaunch, which first takes the
-        # mate's liveness lock and reads Claude's session listing, reaches its
-        # /exit inside this window on a loaded host.
-        /bin/sleep 4
+        if [ "${FM_FAKE_AWAIT_LOCAL_EXIT:-0}" = 1 ]; then
+          # Stay in flight until a concurrent local relaunch stops its agent,
+          # bounded so a pass that serialized it behind this one still ends
+          # and fails, instead of betting on how fast that relaunch starts.
+          n=0
+          while [ ! -e "$FM_FAKE_DIR/local-relaunch-during-remote" ] && [ "$n" -lt 300 ]; do
+            /bin/sleep 0.1
+            n=$((n + 1))
+          done
+        else
+          /bin/sleep 2
+        fi
         : > "$FM_FAKE_DIR/remote-relaunch-end"
         ;;
     esac
@@ -810,7 +818,7 @@ test_mate_without_an_agent_is_reported_before_any_request() {
 
     expect_code 3 "$rc" "$shape: a mate with no agent is not a reload"$'\n'"$out"
     if [ "$shape" = gone ]; then
-      assert_contains "$out" "unreached: sm1: its endpoint fmses:fm-sm1 is gone" "$shape: the report must name the missing endpoint"
+      assert_contains "$out" "unreached: sm1: its endpoint fmses:fm-sm1 was not found from this home (gone or unreachable)" "$shape: the report must not claim more than a missing reading proves"
     else
       assert_contains "$out" "unreached: sm1: its endpoint fmses:fm-sm1 holds no running agent" "$shape: the report must name the agent-less endpoint"
     fi
@@ -832,10 +840,11 @@ test_relaunches_do_not_block_persist_polling() {
   printf -- '- sm2 - local domain (home: %s; scope: things; projects: p; added 2026-09-03)\n' \
     "$dir/sm2-home" >> "$dir/home/data/secondmates.md"
   export FM_FAKE_ANSWER_STATUS="$dir/home/state/sm1.status"
+  export FM_FAKE_AWAIT_LOCAL_EXIT=1
   arm_answer "$dir" sm2
 
   out=$(FM_TEST_PERSIST_WAIT=5 run_restart "$dir" sm1 sm2); rc=$?
-  unset FM_FAKE_ANSWER_STATUS
+  unset FM_FAKE_ANSWER_STATUS FM_FAKE_AWAIT_LOCAL_EXIT
 
   expect_code 0 "$rc" "both confirmed mates should restart independently"$'\n'"$out"
   assert_present "$dir/fake/local-relaunch-during-remote" \

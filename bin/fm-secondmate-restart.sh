@@ -38,9 +38,9 @@
 #
 # A mate whose persist answer did not arrive or whose runtime cannot prove a
 # restart gets the ordinary re-read nudge and is reported as a nudge, never as a
-# clean reload. A local mate whose endpoint already reads missing or dead is
-# reported unreached at once, before any request is sent, since no agent is
-# there to answer it. Once a relaunch is attempted, any failed or ambiguous
+# clean reload. A local mate whose endpoint already reads missing (not found
+# from this home) or dead is reported unreached at once, before any request is
+# sent, since no agent there could be shown to answer it. Once a relaunch is attempted, any failed or ambiguous
 # result is reported as unknown, with the restart's own error lines rather than
 # an advisory printed on the way, and never attributed to either incarnation.
 #
@@ -307,7 +307,9 @@ while [ "$i" -lt "${#IDS[@]}" ]; do
       missing|dead)
         PLAN[i]="unreached"
         if [ "$endpoint_state" = missing ]; then
-          REASON[i]="its endpoint $endpoint_target is gone"
+          # missing alone cannot tell a destroyed endpoint from one this
+          # seat cannot reach, so say only what was observed.
+          REASON[i]="its endpoint $endpoint_target was not found from this home (gone or unreachable)"
         else
           REASON[i]="its endpoint $endpoint_target holds no running agent"
         fi

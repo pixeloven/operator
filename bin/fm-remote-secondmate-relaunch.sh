@@ -18,6 +18,14 @@
 # already uses when it first records a remote route - and republishes this
 # home's own metadata to match. A failed or refused relaunch leaves this
 # parent's record untouched.
+#
+# While the host's agent is stopped and its replacement is not yet up, this
+# parent's watcher can probe the mate's remote endpoint as dead and start its
+# own relaunch of it. The wrapper therefore holds this home's per-task
+# liveness lock for the mate across the whole relaunch, exactly as a local
+# bin/fm-control.sh relaunch does, waiting up to FM_CONTROL_LIVENESS_WAIT
+# seconds (30) for a check already in flight and refusing before anything is
+# sent when that check keeps it.
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,6 +37,8 @@ STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 . "$SCRIPT_DIR/fm-backend.sh"
 # shellcheck source=bin/fm-wake-lib.sh
 . "$SCRIPT_DIR/fm-wake-lib.sh"
+# shellcheck source=bin/fm-secondmate-liveness-lib.sh
+. "$SCRIPT_DIR/fm-secondmate-liveness-lib.sh"
 
 die() { printf 'error: %s\n' "$1" >&2; exit 1; }
 usage() { sed -n '2,4p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
@@ -45,6 +55,11 @@ META="$STATE/$ID.meta"
 REMOTE_HOST=$(fm_meta_get "$META" remote_host)
 [ -n "$REMOTE_HOST" ] \
   || die "task $ID is not a remotely placed secondmate; use bin/fm-control.sh $ID relaunch instead"
+
+LIVENESS_WAIT=${FM_CONTROL_LIVENESS_WAIT:-30}
+fm_secondmate_liveness_lock_wait "$ID" "$LIVENESS_WAIT" \
+  || die "secondmate $ID's liveness check still held its per-task lock after ${LIVENESS_WAIT}s (it may be relaunching the mate itself); refusing to relaunch before anything is sent. Retry once that check finishes"
+trap 'fm_secondmate_liveness_unlock "$ID"' EXIT
 
 RELAUNCH_OUT=$("$SCRIPT_DIR/fm-on.sh" "$ID" fm-remote-secondmate-control.sh \
   relaunch "$ID" "$HARNESS" "$MODEL" "$EFFORT" </dev/null 2>&1) || {
