@@ -523,6 +523,120 @@ test_relaunch_waits_for_other_mates_relaunch_lock() {
   pass "relaunch: the spawn timeout bounds the lock wait before touching the endpoint"
 }
 
+# The lab reproduction of the 2026-10-27 navigator restart failure, on a REAL
+# private tmux server: a mate's endpoint holds only a shell (the gap between a
+# relaunch's /exit and its replacement) while that relaunch holds the mate's
+# spawn lock. One tick, in bin/fm-watch.sh's exact call order, must leave the
+# endpoint intact - before the fix it killed it and then had its own spawn
+# refused by that lock. With the relaunch also holding the liveness lock, as
+# bin/fm-control.sh's secondmate relaunch now does, the tick skips the mate.
+test_tick_during_in_flight_relaunch_leaves_real_endpoint_intact() {
+  local lab tmux_dir out holder run i
+  command -v tmux >/dev/null 2>&1 || { pass "real-tmux reproduction skipped: tmux not found"; return 0; }
+  lab=$(cd "$TMP_ROOT" && pwd -P)/lab-inflight
+  "$ROOT/bin/fm-lab-home.sh" create "$lab" >/dev/null || fail "could not create the lab home"
+  tmux_dir=$("$ROOT/bin/fm-lab-home.sh" tmux-dir "$lab") || fail "could not create the lab tmux dir"
+  mkdir -p "$lab/matehome"
+  cat > "$lab/state/mate1.meta" <<EOF
+window=labsm:mate
+endpoint_task_id=mate1
+worktree=$lab/matehome
+project=$lab/matehome
+harness=claude
+kind=secondmate
+mode=secondmate
+backend=tmux
+home=$lab/matehome
+EOF
+  for run in spawn-lock-only spawn-and-liveness-locks; do
+    env -u TMUX TMUX_TMPDIR="$tmux_dir" tmux kill-server 2>/dev/null || true
+    env -u TMUX TMUX_TMPDIR="$tmux_dir" tmux new-session -d -s labsm -n mate \
+      "exec /bin/bash --noprofile --norc" || fail "could not start the lab tmux endpoint"
+    rm -f "$lab/state/.secondmate-relaunch-mate1"
+    (
+      # shellcheck source=/dev/null
+      . "$ROOT/bin/fm-wake-lib.sh"
+      fm_lock_try_acquire "$lab/state/.spawn-mate1.lock" || exit 1
+      if [ "$run" = spawn-and-liveness-locks ]; then
+        fm_lock_try_acquire "$lab/state/.secondmate-liveness-mate1.lock" || exit 1
+      fi
+      : > "$lab/held-$run"
+      sleep 30
+    ) &
+    holder=$!
+    i=0
+    while [ ! -e "$lab/held-$run" ] && [ "$i" -lt 200 ]; do
+      sleep 0.05
+      i=$((i + 1))
+    done
+    [ -e "$lab/held-$run" ] || fail "$run: the fixture never acquired its locks"
+    # shellcheck disable=SC2016 # positional params expand in the child shell.
+    out=$(env -u TMUX TMUX_TMPDIR="$tmux_dir" FM_HOME="$lab" FM_ROOT="$ROOT" STATE="$lab/state" \
+      bash -c '
+        . "$1/bin/fm-secondmate-liveness-lib.sh"
+        fm_secondmate_liveness_lock mate1 || { echo "tick=locked"; exit 0; }
+        fm_secondmate_liveness_probe "$2" mate1 poll
+        echo "probe=$FM_SM_LIVE_STATUS/$FM_SM_LIVE_STATE"
+        if [ "$FM_SM_LIVE_STATUS" = relaunchable ]; then
+          rc=0
+          fm_secondmate_liveness_relaunch "$2" mate1 120 || rc=$?
+          echo "relaunch=rc$rc/$FM_SM_LIVE_STATUS/deferred$FM_SM_LIVE_DEFERRED reason=$FM_SM_LIVE_REASON"
+        fi
+        fm_secondmate_liveness_unlock mate1
+      ' _ "$ROOT" "$lab/state/mate1.meta" 2>&1)
+    kill "$holder" 2>/dev/null || true
+    wait "$holder" 2>/dev/null || true
+    env -u TMUX TMUX_TMPDIR="$tmux_dir" tmux list-windows -t =labsm -F '#{window_name}' 2>/dev/null \
+      | grep -qx mate || fail "$run: the tick destroyed the endpoint of a mate whose relaunch was in flight: $out"
+    [ ! -e "$lab/state/.secondmate-relaunch-mate1" ] \
+      || fail "$run: a tick during an in-flight relaunch ledgered an attempt: $(cat "$lab/state/.secondmate-relaunch-mate1")"
+    case "$run" in
+      spawn-lock-only)
+        assert_contains "$out" "probe=relaunchable/dead" "$run: the shell-only endpoint must still read dead"
+        assert_contains "$out" "relaunch=rc1/skipped/deferred1 reason=a spawn of mate1 is already in flight; endpoint left dead" \
+          "$run: the relaunch must defer to the spawn in flight"
+        ;;
+      *)
+        assert_contains "$out" "tick=locked" "$run: a relaunch holding the liveness lock must make the tick skip the mate"
+        ;;
+    esac
+  done
+  env -u TMUX TMUX_TMPDIR="$tmux_dir" tmux kill-server 2>/dev/null || true
+  "$ROOT/bin/fm-lab-home.sh" teardown "$lab" >/dev/null 2>&1 || true
+  pass "real tmux: a tick during an in-flight relaunch leaves the mate's endpoint intact"
+}
+
+# The probe can predate a spawn that finished while the relaunch waited for the
+# per-home relaunch lock. Under the spawn lock the endpoint is read again, and
+# one that no longer reads dead is left alone rather than killed on stale data.
+test_relaunch_rereads_the_endpoint_before_killing() {
+  local w fb tmuxfb log out
+  w=$(new_world relaunch-reread)
+  add_sm_home "$w" sm1 firstmate:fm-sm1
+  fb=$(make_toolchain "$w"); tmuxfb=$(make_liveness_tmux "$w")
+  log="$w/calls.log"; : > "$log"
+
+  out=$(PATH="$tmuxfb:$fb:$BASE_PATH" FM_HOME="$w/home" FM_BACKEND=tmux \
+    FM_ROOT="$ROOT" FM_TEST_PANE_CMD=zsh FM_TMUX_CALL_LOG="$log" \
+    STATE="$w/home/state" bash -c '
+      . "$1/bin/fm-secondmate-liveness-lib.sh"
+      fm_secondmate_liveness_probe "$2" sm1 poll
+      export FM_TEST_PANE_CMD=claude
+      rc=0
+      fm_secondmate_liveness_relaunch "$2" sm1 5 || rc=$?
+      printf "probe=%s rc=%s status=%s deferred=%s reason=%s\n" \
+        "$FM_SM_LIVE_STATE" "$rc" "$FM_SM_LIVE_STATUS" "$FM_SM_LIVE_DEFERRED" "$FM_SM_LIVE_REASON"
+    ' _ "$ROOT" "$w/home/state/sm1.meta")
+
+  assert_contains "$out" "probe=dead rc=1 status=skipped deferred=1 reason=endpoint now reads alive rather than dead; left untouched" \
+    "a relaunch must re-read the endpoint under the spawn lock before killing it"
+  [ ! -s "$log" ] || fail "an endpoint that came back alive was killed or respawned: $(cat "$log")"
+  [ ! -e "$w/home/state/.secondmate-relaunch-sm1" ] \
+    || fail "a relaunch that touched nothing was counted as an attempt"
+  [ ! -e "$w/home/state/.spawn-sm1.lock" ] || fail "the re-read left the spawn lock held"
+  pass "relaunch: an endpoint that no longer reads dead under the spawn lock is never killed"
+}
+
 test_sweep_refuses_relaunch_on_ledger_errors() {
   local w fb tmuxfb log out mode ledger word
   if [ "$(id -u)" -eq 0 ]; then
@@ -840,6 +954,8 @@ test_sweep_noop_with_no_secondmate_meta
 test_sweep_skips_mate_whose_liveness_lock_is_held
 test_relaunch_waits_for_other_mates_relaunch_lock
 test_sweep_refuses_relaunch_on_ledger_errors
+test_tick_during_in_flight_relaunch_leaves_real_endpoint_intact
+test_relaunch_rereads_the_endpoint_before_killing
 test_remote_poll_probe_maps_states
 test_remote_poll_probe_unreachable_preserves_route
 

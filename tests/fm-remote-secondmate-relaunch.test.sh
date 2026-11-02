@@ -72,6 +72,13 @@ $command_fields
 EOF
 [ "$cmd" = fm-remote-secondmate-control.sh ] || exit 93
 [ "$action" = relaunch ] || exit 94
+if [ -n "${FM_FAKE_LOCK_LOG:-}" ]; then
+  if [ -e "$FM_HOME/state/.secondmate-liveness-$id.lock" ]; then
+    echo held >> "$FM_FAKE_LOCK_LOG"
+  else
+    echo free >> "$FM_FAKE_LOCK_LOG"
+  fi
+fi
 case "$FM_FAKE_RELAUNCH_MODE" in
   refuse)
     printf 'error: unverified remote secondmate harness: %s\n' "$harness" >&2
@@ -98,6 +105,7 @@ chmod +x "$FAKEBIN/fake-ssh"
 run_relaunch() {  # <args...>
   env FM_HOME="$HOME_DIR" FM_SSH_BIN="$FAKEBIN/fake-ssh" \
     FM_FAKE_RELAUNCH_MODE="${FM_FAKE_RELAUNCH_MODE:-}" \
+    FM_FAKE_LOCK_LOG="${FM_FAKE_LOCK_LOG:-}" \
     "$ROOT/bin/fm-remote-secondmate-relaunch.sh" "$@" 2>&1
 }
 
@@ -188,5 +196,51 @@ expect_code 0 "$RC" "a confirmed remote relaunch should succeed with an armed PR
 fm_pr_poll_artifacts_valid "$HOME_DIR/state" ios "$ROOT/bin/fm-pr-poll.sh" \
   || fail "a remote relaunch broke PR poll authentication by writing harness/model/effort after pr="
 pass "a remote relaunch keeps an already-armed PR poll authenticating"
+
+# --- the parent's liveness lock spans the host relaunch ---------------------
+# While the host's agent is stopped the parent's watcher can probe the remote
+# endpoint as dead and start a relaunch of its own; it skips a mate whose
+# per-task liveness lock is held, so the wrapper holds it for the whole
+# relaunch and releases it after.
+reset_meta
+LOCK_LOG="$TMP/lock.log"
+: > "$LOCK_LOG"
+OUT=$(FM_FAKE_LOCK_LOG="$LOCK_LOG" run_relaunch ios claude claude-opus-5-5 medium); RC=$?
+expect_code 0 "$RC" "a confirmed remote relaunch should succeed"$'\n'"$OUT"
+[ "$(cat "$LOCK_LOG")" = held ] \
+  || fail "the parent's liveness lock must be held while the host relaunches, got: $(cat "$LOCK_LOG")"
+[ ! -e "$HOME_DIR/state/.secondmate-liveness-ios.lock" ] \
+  || fail "the parent's liveness lock must be released after the relaunch"
+pass "a remote relaunch holds the parent's liveness lock across the host relaunch"
+
+# --- a liveness check holding the lock refuses the relaunch untouched -------
+reset_meta
+: > "$LOCK_LOG"
+LIVENESS_LOCK="$HOME_DIR/state/.secondmate-liveness-ios.lock"
+(
+  # shellcheck source=/dev/null
+  . "$ROOT/bin/fm-wake-lib.sh"
+  fm_lock_try_acquire "$LIVENESS_LOCK" || exit 1
+  : > "$TMP/liveness-held"
+  sleep 30
+) &
+HOLDER=$!
+i=0
+while [ ! -e "$TMP/liveness-held" ] && [ "$i" -lt 100 ]; do
+  sleep 0.1
+  i=$((i + 1))
+done
+[ -e "$TMP/liveness-held" ] || fail "could not stage a held liveness lock"
+BEFORE=$(cat "$HOME_DIR/state/ios.meta")
+OUT=$(FM_CONTROL_LIVENESS_WAIT=1 FM_FAKE_LOCK_LOG="$LOCK_LOG" run_relaunch ios claude claude-opus-5-5 medium); RC=$?
+kill "$HOLDER" 2>/dev/null || true
+wait "$HOLDER" 2>/dev/null || true
+expect_code 1 "$RC" "a relaunch must refuse while a liveness check holds the mate"$'\n'"$OUT"
+assert_contains "$OUT" "secondmate ios's liveness check still held its per-task lock after 1s" \
+  "the refusal should name the liveness check holding the mate"
+[ ! -s "$LOCK_LOG" ] || fail "a refused relaunch still reached the host"
+[ "$(cat "$HOME_DIR/state/ios.meta")" = "$BEFORE" ] \
+  || fail "a refused relaunch must leave the parent's record untouched"
+pass "a remote relaunch refuses before reaching the host while a liveness check holds the mate"
 
 echo "ALL TESTS PASSED"

@@ -38,8 +38,11 @@
 #
 # A mate whose persist answer did not arrive or whose runtime cannot prove a
 # restart gets the ordinary re-read nudge and is reported as a nudge, never as a
-# clean reload. Once a relaunch is attempted, any failed or ambiguous result is
-# reported as unknown rather than attributing it to either incarnation.
+# clean reload. A local mate whose endpoint already reads missing (not found
+# from this home) or dead is reported unreached at once, before any request is
+# sent, since no agent there could be shown to answer it. Once a relaunch is attempted, any failed or ambiguous
+# result is reported as unknown, with the restart's own error lines rather than
+# an advisory printed on the way, and never attributed to either incarnation.
 #
 # Placement changes the transport and nothing else. A local mate is restarted
 # with bin/fm-control.sh <id> relaunch, which republishes this home's own
@@ -72,7 +75,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FM_ROOT="${FM_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 
 usage() {
-  sed -n '2,65{s/^# \{0,1\}//;p;}' "$0"
+  sed -n '2,68{s/^# \{0,1\}//;p;}' "$0"
 }
 
 case "${1:-}" in
@@ -142,6 +145,31 @@ first_reported_line() {  # <text>
   printf '%s\n' "$1" | sed -n '/./{s/^error: //;s/[[:space:]]\{1,\}/ /g;p;q;}'
 }
 
+# Why a restart failed, from the restart command's combined output. A launch
+# prints advisories on its way - the guard's NOTICE, WARNING or warning lines,
+# fm-config-inherit's non-fatal inheritance report - and none of them is the
+# reason, so they are skipped. Of the remaining error lines the first names the
+# cause and the last names the state the restart left, so both are reported
+# when they differ; with no error line at all, the last remaining line is.
+failure_reason() {  # <text>
+  local lines errors first last
+  lines=$(printf '%s\n' "$1" \
+    | grep -Ev '^[[:space:]]*(NOTICE:|WARNING:|warning:|fm-config-inherit:)' \
+    | sed -n '/[^[:space:]]/{s/[[:space:]]\{1,\}/ /g;s/^ //;p;}')
+  errors=$(printf '%s\n' "$lines" | sed -n -E 's/^([A-Za-z0-9._-]+: )?error: //p')
+  if [ -z "$errors" ]; then
+    printf '%s\n' "$lines" | sed -n '$p'
+    return 0
+  fi
+  first=$(printf '%s\n' "$errors" | sed -n '1p')
+  last=$(printf '%s\n' "$errors" | sed -n '$p')
+  if [ "$first" = "$last" ]; then
+    printf '%s\n' "$first"
+  else
+    printf '%s; %s\n' "$first" "$last"
+  fi
+}
+
 # Send the ordinary re-read steer to a mate this pass will not restart, and say
 # plainly which it was. A nudge is a partial reload and is never reported as more.
 fall_back_to_nudge() {  # <id> <reason>
@@ -186,7 +214,7 @@ restart_mate() {  # <array-index>
     return
   fi
 
-  restart_reason=$(first_reported_line "$restart_out")
+  restart_reason=$(failure_reason "$restart_out")
   [ -n "$restart_reason" ] || restart_reason="the restart failed without a reported reason"
   report_unreached "$id" "the restart outcome is unknown: $restart_reason"
 }
@@ -267,6 +295,30 @@ while [ "$i" -lt "${#IDS[@]}" ]; do
   PLACEMENT[i]=$FM_SECONDMATE_RESTART_PLACEMENT
   HOST[i]=$FM_SECONDMATE_RESTART_HOST
   HARNESS[i]=$FM_SECONDMATE_RESTART_HARNESS
+  if [ "${PLACEMENT[i]}" = local ]; then
+    # A mate with no running agent can never answer the persist request, so
+    # waiting the full bound on it only delays the report. Its respawn is the
+    # secondmate liveness path's job, not this pass's, so nothing is sent.
+    endpoint_target=$(fm_backend_target_of_meta "$STATE/$id.meta")
+    [ -n "$endpoint_target" ] || endpoint_target=$(fm_meta_get "$STATE/$id.meta" window)
+    endpoint_state=$(fm_backend_agent_state "${FM_SECONDMATE_RESTART_BACKEND}" "$endpoint_target" 2>/dev/null) \
+      || endpoint_state=unreadable
+    case "$endpoint_state" in
+      missing|dead)
+        PLAN[i]="unreached"
+        if [ "$endpoint_state" = missing ]; then
+          # missing alone cannot tell a destroyed endpoint from one this
+          # seat cannot reach, so say only what was observed.
+          REASON[i]="its endpoint $endpoint_target was not found from this home (gone or unreachable)"
+        else
+          REASON[i]="its endpoint $endpoint_target holds no running agent"
+        fi
+        REASON[i]="${REASON[i]}, so it cannot answer the request to write down its open work and was not restarted; its respawn belongs to the secondmate liveness check (bin/fm-spawn.sh $id --secondmate respawns it by hand)"
+        i=$((i + 1))
+        continue
+        ;;
+    esac
+  fi
   if [ "${PLACEMENT[i]}" = remote ]; then
     # A local relaunch re-resolves this home's durable secondmate pin on its own,
     # which is the one owner of that resolution. A remote one cannot: it runs in
@@ -338,6 +390,9 @@ i=0
 while [ "$i" -lt "${#IDS[@]}" ]; do
   if [ "${PLAN[i]}" = persisted-pending ]; then
     pending_count=$((pending_count + 1))
+  elif [ "${PLAN[i]}" = unreached ]; then
+    report_unreached "${IDS[$i]}" "${REASON[i]}"
+    PLAN[i]="done"
   else
     fall_back_to_nudge "${IDS[$i]}" "${REASON[i]}"
     PLAN[i]="done"

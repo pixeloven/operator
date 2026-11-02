@@ -643,6 +643,7 @@ It passes them explicitly because `config/secondmate-harness` is not inherited i
 Letting the far side re-resolve it would silently move the mate onto another runtime.
 SSH exit 255 leaves completion unknown and the route preserved, exactly as every other verb here.
 Move a live remote second mate onto a newly pinned harness, model, or effort with [`bin/fm-remote-secondmate-relaunch.sh`](../bin/fm-remote-secondmate-relaunch.sh) rather than calling `relaunch` through `fm-on.sh` directly: the host-local relaunch it drives can only rewrite the host's own endpoint record, so this wrapper reads the confirmed identity back from that record afterward and republishes the primary's own route metadata to match, the same way launch already records a fresh route.
+The wrapper also holds the primary's own per-task liveness lock for the mate across the whole relaunch, so the primary's liveness tick never reads the host's agent-free gap as a dead mate and relaunches it; when a check keeps that lock past `FM_CONTROL_LIVENESS_WAIT` the wrapper refuses before anything is sent, as [its header](../bin/fm-remote-secondmate-relaunch.sh) describes.
 
 ### Firstmate code convergence
 
