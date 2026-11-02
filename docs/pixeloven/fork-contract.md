@@ -53,7 +53,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, and 0021 through 0024 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, and 0021 through 0025 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -75,6 +75,7 @@ ADR-0008 owns the isolated unsigned delivery lane and ADR-0022 its one `docs/con
 ADR-0021 carries upstream's unmerged Herdr slash-popup composer fix in `bin/fm-composer-lib.sh`, its three tests, and their captured screens, byte-identical to that pull request, until an upstream synchronization brings it.
 ADR-0023 lets `bin/fm-pr-merge.sh` accept a repeated `--allow-red` waiver, with its tests, until an upstream synchronization brings an equivalent change.
 ADR-0024 carries Claude support for `config/crew-exclude-tools` in `bin/fm-exclude-tools-lib.sh`, `bin/fm-spawn.sh`, `docs/configuration.md`, its example list, and the spawn tests that assert the worker launch.
+ADR-0025 carries a timing deflake in `tests/fm-remote-job.test.sh` and `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` until an upstream synchronization brings an equivalent change.
 
 ## Taking upstream changes
 
