@@ -1,0 +1,10 @@
+ ▐▛███▛█   Claude Code v2.1.316
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.OiS7Zt/cwd
+  ⎿  SessionStart:startup says: dotfiles: 2 changes not codified - run /codify
+⏺ Unknown command: /background
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)                    tmux focus-events off · add 'set -g focus-events on' to ~/.tmux.conf and reattach for focus tracking
+no server running on /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.OiS7Zt/tmux/tmux-502/fm-lab
