@@ -6,7 +6,8 @@
 [ADR-0002](../adr/0002-seeded-with-full-upstream-history.md), and the bounded exceptions in
 [ADR-0008](../adr/0008-autonomous-delivery-lane.md) and
 [ADR-0011](../adr/0011-operator-github-hosted-runner-routing.md), which supersedes
-[ADR-0009](../adr/0009-operator-arc-runner-routing.md), plus
+[ADR-0009](../adr/0009-operator-arc-runner-routing.md) and whose runner-label clause
+[ADR-0027](../adr/0027-pinned-github-hosted-runner-images.md) amends, plus
 [ADR-0012](../adr/0012-notification-reconciliation.md),
 [ADR-0013](../adr/0013-archived-captain-hold-completion.md),
 [ADR-0016](../adr/0016-persona-themed-at-the-edge.md),
@@ -75,7 +76,7 @@ ADR-0008 owns the isolated unsigned delivery lane and ADR-0022 its one `docs/con
 ADR-0021 carries upstream's unmerged Herdr slash-popup composer fix in `bin/fm-composer-lib.sh`, its three tests, and their captured screens, byte-identical to that pull request, until an upstream synchronization brings it.
 ADR-0023 lets `bin/fm-pr-merge.sh` accept a repeated `--allow-red` waiver, with its tests, until an upstream synchronization brings an equivalent change.
 ADR-0024 carries Claude support for `config/crew-exclude-tools` in `bin/fm-exclude-tools-lib.sh`, `bin/fm-spawn.sh`, `docs/configuration.md`, its example list, and the spawn tests that assert the worker launch.
-ADR-0025 carries a timing deflake in `tests/fm-remote-job.test.sh` and `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` until an upstream synchronization brings an equivalent change.
+ADR-0025 carries a timing deflake in `tests/fm-remote-job.test.sh` until an upstream synchronization brings an equivalent change; its `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` hunk retired when the fifth synchronization brought upstream's equal fix.
 ADR-0026 carries the secondmate restart reliability fixes and `disableAgentView` on Firstmate-launched Claude agents in the control, liveness, restart, watch, and spawn scripts, their documentation, and their tests, until an upstream synchronization brings an equivalent change.
 
 ## Taking upstream changes

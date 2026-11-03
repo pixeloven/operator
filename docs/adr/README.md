@@ -22,7 +22,7 @@ Use [`_template.md`](_template.md).
 | [0008](0008-autonomous-delivery-lane.md) | Autonomous delivery lane | Accepted | Separate interactive human signing from autonomous delivery |
 | [0009](0009-operator-arc-runner-routing.md) | `operator` Linux CI routes through the PixelOven ARC pool | Superseded by ADR-0011 | PR #10 remediation |
 | [0010](0010-pixeloven-companion-forks-own-distribution.md) | PixelOven companion forks own distribution | Superseded by ADR-0015 | `operator` upstream synchronization and companion-fork migration |
-| [0011](0011-operator-github-hosted-runner-routing.md) | `operator` CI uses standard GitHub-hosted runners | Accepted (Node.js provisioning clause superseded by ADR-0015) | Hosted-runner remediation after PR #11 |
+| [0011](0011-operator-github-hosted-runner-routing.md) | `operator` CI uses standard GitHub-hosted runners | Accepted (Node.js provisioning clause superseded by ADR-0015; label clause amended by ADR-0027) | Hosted-runner remediation after PR #11 |
 | [0012](0012-notification-reconciliation.md) | Notification reconciliation may modify bounded upstream surfaces | Accepted | Process-result notification reliability reconciliation |
 | [0013](0013-archived-captain-hold-completion.md) | Archived captain-hold completion may modify bounded upstream surfaces | Accepted | Captain-approved archived answer compatibility |
 | [0014](0014-stale-lock-publication-serialization.md) | Stale-lock publication serialization may modify bounded upstream surfaces | Withdrawn 2026-10-22 | Hosted stale-lock scheduling race correction |
@@ -36,8 +36,9 @@ Use [`_template.md`](_template.md).
 | [0022](0022-delivery-lane-github-credential-helper.md) | The delivery lane may carry an operator-configured GitHub credential helper | Accepted | Worker GitHub credentials from a non-personal source |
 | [0023](0023-repeatable-allow-red-waiver.md) | The merge script accepts several named red-check waivers | Accepted | Two-check waived merge stopped on the single-waiver limit |
 | [0024](0024-worker-connector-deny-list.md) | Claude workers honor config/crew-exclude-tools | Proposed | Worker tooling investigation; operator review chose one local list |
-| [0025](0025-remote-test-timing-deflake.md) | Carry a timing deflake for two inherited remote tests until a sync brings it | Accepted | "Behavior portable serial 5" CI shard failing on main and pull requests |
+| [0025](0025-remote-test-timing-deflake.md) | Carry a timing deflake for two inherited remote tests until a sync brings it | Accepted (e2e leg retired by the fifth synchronization) | "Behavior portable serial 5" CI shard failing on main and pull requests |
 | [0026](0026-carry-secondmate-restart-fixes.md) | Carry the secondmate restart fixes until a sync brings them | Accepted | Navigator restart diagnosis report; self-retiring local carry |
+| [0027](0027-pinned-github-hosted-runner-images.md) | Linux CI may pin a standard GitHub-hosted runner image version | Accepted | Fifth upstream synchronization; amends ADR-0011 |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).

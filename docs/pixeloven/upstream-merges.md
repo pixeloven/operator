@@ -408,7 +408,32 @@ Local verification before the PR covered the delivery suite, including the new l
 
 The stage is consumer-visible through upstream's behavior changes, including raised tool floors, the self-repository publication gate, and the default-on supervision host, so it counts toward the `v0.3.0` minor bump.
 
-## 8. Merge log
+## 8. Fifth synchronization - 2026-11-02
+
+The fifth synchronization merged upstream `78c69df2b0b231d5cbe849dbc87fce9ea74ba219` into PixelOven `4919eb049d5b`, 145 upstream commits past the previous pin `0e82f3eebd21`.
+Upstream's own changes in that range touch 392 files with 71,333 insertions and 8,598 deletions.
+
+| | |
+|---|---|
+| **Conflicts** | **11 files, 15 hunks** |
+| **Merge wall-clock** | **0.34 s** |
+
+Resolutions:
+
+- `.github/workflows/ci.yml` took upstream, including its `ubuntu-24.04` pin on every Linux job from upstream #7798 and its `full-ci` label gate, and kept ADR-0011's hosted-runner comment and the `workflow_dispatch` trigger.
+  The operator accepted the pin in [ADR-0027](../adr/0027-pinned-github-hosted-runner-images.md), which amends ADR-0011's label clause, and `tests/fm-lint-workflows.test.sh` now accepts `ubuntu-24.04` beside the ADR-0011 labels.
+- `bin/fm-captain-hold.sh` keeps ADR-0013's archive verifier first in `verify_entry_durable`, and upstream's own archived-entry reader from upstream #6094 runs only when that verifier names no archived candidate and active resolution fails.
+  The operator chose that precedence, and `docs/captain-hold-lifecycle.md` states it.
+- `bin/fm-secondmate-liveness-lib.sh` keeps ADR-0026's spawn-lock and still-dead guards around upstream's rewritten kill step, which adds a Rex home-scoped kill and a T3 Code close that must be proven; the still-dead recheck also accepts a T3 thread that reads missing, which upstream kills to re-prove its archive close.
+- `bin/fm-wake-lib.sh` keeps ADR-0012's sequence floor for a lost counter, which also reads process-event presentation markers, and then applies upstream #6467's queue-maximum floor to every append.
+- `bin/fm-control.sh`, `docs/agent-control.md`, `docs/configuration.md`, `docs/documentation-audiences.json`, and `tests/fm-task-delivery.test.sh` union both sides.
+- `tests/fm-watch-triage.test.sh` took upstream's split layout from upstream #7838, and ADR-0012's two process-event cases were re-added to its new invocation list.
+
+ADR-0025's `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` hunk returned to upstream bytes, because upstream 3004ccb107 arrived in this range, so the A4 allowlist drops that path.
+ADR-0021's composer fix (upstream #6695) and ADR-0026's restart fixes have no upstream equivalent yet and stay carried.
+Upstream #7706, which splits `tests/fm-supervision-host.test.sh` so the portable serial shards fit their 30-minute cap, was still open upstream and is not included.
+
+## 9. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
@@ -417,3 +442,4 @@ The stage is consumer-visible through upstream's behavior changes, including rai
 | 2026-09-01 | `1fbc7bb1fba2` | `355f46fe5528` | 10 | **2 files** | not recorded | Third synchronization preserved the two-parent merge, resolved configuration and test overlap, and corrected the new stock-macOS `tasks-axi` acquisition to the pinned PixelOven installer on the same branch. |
 | 2026-10-21 | `355f46fe5528` | `8fd5575b1179` | 50 | **6 files** | 0.14 s | Fourth synchronization, stage 1 of 2. Took upstream for the superseded inbox, reconcile, and serial-timeout hunks; stock macOS now runs on every PR. |
 | 2026-10-21 | `8fd5575b1179` | `0e82f3eebd21` | 427 | **18 files** | 0.29 s | Fourth synchronization, stage 2 of 2. Re-ported the ADR-0012 and ADR-0013 cores onto upstream's rewrites, withdrew ADR-0014, dropped the superseded bootstrap and pr-check hunks, and added the delivery lane to the launch-env floor. |
+| 2026-11-02 | `0e82f3eebd21` | `78c69df2b0b2` | 145 | **11 files** | 0.34 s | Fifth synchronization. Took upstream's `ubuntu-24.04` runner pin under ADR-0027, kept ADR-0013 ahead of upstream's archive reader, re-wove ADR-0026 around upstream's Rex and T3 Code kill step, and retired ADR-0025's e2e leg. |
