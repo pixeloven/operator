@@ -2668,6 +2668,8 @@ fm_wake_append_locked() {
 
 # A missing or corrupt sequence file must not reuse a sequence that a queued
 # row or a sequence-bearing process-event presentation marker still names.
+# The caller's exact decimal pass raises the floor to the queue's highest row;
+# this only refuses a queue that pass could not read and adds the markers.
 _fm_wake_sequence_floor_locked() {
   local seq=0 candidate marker marker_name
   # An empty regular queue holds no rows, so it cannot raise the floor even
@@ -2675,11 +2677,6 @@ _fm_wake_sequence_floor_locked() {
   if [ -L "$FM_WAKE_QUEUE" ] || [ -s "$FM_WAKE_QUEUE" ] \
     || { [ -e "$FM_WAKE_QUEUE" ] && [ ! -f "$FM_WAKE_QUEUE" ]; }; then
     [ -f "$FM_WAKE_QUEUE" ] && [ ! -L "$FM_WAKE_QUEUE" ] && [ -r "$FM_WAKE_QUEUE" ] || return 1
-    candidate=$(awk -F '\t' '
-      NF >= 5 && $2 ~ /^[0-9]+$/ && $2 > max { max=$2 }
-      END { print max + 0 }
-    ' "$FM_WAKE_QUEUE") || return 1
-    [ "$candidate" -le "$seq" ] || seq=$candidate
   fi
   for marker in "$STATE"/.seen-procevent-*; do
     [ -f "$marker" ] && [ ! -L "$marker" ] || continue
