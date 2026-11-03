@@ -1359,6 +1359,20 @@ archived_entry() {  # <origin-or-empty> <entry>; prints the archived id
   return 1
 }
 
+# ADR-0013's canonical reader (archived_inventory_entry) owns the
+# $DATA/done-archive.md archive and decides every row there, refusals included.
+# Upstream's archived_entry fallback therefore reads only a configured archive
+# that the canonical reader never sees.
+upstream_archive_fallback_applies() {
+  local archive canonical="$DATA/done-archive.md" archive_dir canonical_dir
+  archive=$(captain_markdown_archive_path) || return 1
+  [ -f "$archive" ] || return 1
+  [ -f "$canonical" ] || return 0
+  archive_dir=$(cd "$(dirname "$archive")" 2>/dev/null && pwd -P) || return 1
+  canonical_dir=$(cd "$(dirname "$canonical")" 2>/dev/null && pwd -P) || return 1
+  [ "$archive_dir/${archive##*/}" != "$canonical_dir/done-archive.md" ]
+}
+
 # Resolve one entry and verify the row it names is durably captain-held. A
 # resolution failure that is not the read bound keeps resolve_entry's own
 # status - its stderr already named the entry; 124 means the backend never
@@ -1382,7 +1396,7 @@ verify_entry_durable() {  # <origin-or-empty> <entry>; prints "<id> <how> <origi
   resolve_err=$(mktemp "${TMPDIR:-/tmp}/fm-captain-hold-resolve.XXXXXX") \
     || fail "cannot stage the resolution diagnostics for $entry"
   resolved=$(resolve_entry "$origin" "$entry" 2>"$resolve_err") || resolve_status=$?
-  if [ "$resolve_status" -eq 1 ]; then
+  if [ "$resolve_status" -eq 1 ] && upstream_archive_fallback_applies; then
     archived_status=0
     archived=$(archived_entry "$origin" "$entry") || archived_status=$?
     if [ "$archived_status" -eq 0 ]; then
