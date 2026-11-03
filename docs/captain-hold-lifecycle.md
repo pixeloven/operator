@@ -129,8 +129,8 @@ Completion and teardown verification consult the active backlog first, then acce
 The supported legacy terminal boundary includes the pre-collapse answered record with `Routed identities: none` and no `Routed work:` suffix, but no broader missing routing boundary.
 That archive fallback is limited to inventory durability, so an archived row can never receive a new answer or become actionable again, duplicate archived incarnations refuse, and when an archived candidate is involved the exact and legacy-derived candidates must resolve to one unambiguous identity.
 The origin and recorded-origin checks below apply to an archived entry exactly as to an active one.
-The canonical archive check above runs first and is authoritative: whenever it involves an archived candidate it alone accepts or refuses the entry.
-Only when it names no archived candidate, and the active backlog cannot resolve the entry, does completion fall back to the configured Done archive, where an answered entry that markdown Done retention moved still counts, while an archived close with no recorded answer does not.
+The canonical archive check above runs first and is authoritative: it alone accepts or refuses every row in `data/done-archive.md`, refusals included.
+Only when the configured Done archive is a different file from `data/done-archive.md`, and the active backlog cannot resolve the entry, does completion fall back to that configured archive, where an answered entry that markdown Done retention moved still counts, while an archived close with no recorded answer does not.
 The origin is never its own inventory entry, so a hold that failed cannot be vouched for by the origin row.
 For a historical inventory that names its own origin, hold a separate captain task with `--origin`, replace only the invalid entry in the final `decision_keys=` line of the origin metadata with that task id while preserving all other entries, and re-run `complete`.
 An entry whose recorded origin differs from the one being completed is refused, comparing backend identities rather than alias spellings.

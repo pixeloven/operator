@@ -422,7 +422,7 @@ Resolutions:
 
 - `.github/workflows/ci.yml` took upstream, including its `ubuntu-24.04` pin on every Linux job from upstream #7798 and its `full-ci` label gate, and kept ADR-0011's hosted-runner comment and the `workflow_dispatch` trigger.
   The operator accepted the pin in [ADR-0027](../adr/0027-pinned-github-hosted-runner-images.md), which amends ADR-0011's label clause, and `tests/fm-lint-workflows.test.sh` now accepts `ubuntu-24.04` beside the ADR-0011 labels.
-- `bin/fm-captain-hold.sh` keeps ADR-0013's archive verifier first in `verify_entry_durable`, and upstream's own archived-entry reader from upstream #6094 runs only when that verifier names no archived candidate and active resolution fails.
+- `bin/fm-captain-hold.sh` keeps ADR-0013's archive verifier first in `verify_entry_durable`, and upstream's own archived-entry reader from upstream #6094 runs only for a configured Done archive that is a different file from `data/done-archive.md`, after active resolution fails; ADR-0013's verifier decides every row in `data/done-archive.md`, refusals included.
   The operator chose that precedence, and `docs/captain-hold-lifecycle.md` states it.
 - `bin/fm-secondmate-liveness-lib.sh` keeps ADR-0026's spawn-lock and still-dead guards around upstream's rewritten kill step, which adds a Rex home-scoped kill and a T3 Code close that must be proven; the still-dead recheck also accepts a T3 thread that reads missing, which upstream kills to re-prove its archive close.
 - `bin/fm-wake-lib.sh` keeps ADR-0012's sequence floor for a lost counter, which also reads process-event presentation markers, and then applies upstream #6467's queue-maximum floor to every append.

@@ -165,10 +165,11 @@
 # provenance and a structurally valid recorded answer or reconciliation; the
 # origin and self-inventory checks apply to it too, and archive lookup is never
 # used by the answer intake, so historical rows cannot become actionable.
-# When that canonical check names no archived candidate, `complete` and
-# `verify` also read an entry that markdown Done retention moved into the
-# configured Done archive, where it counts only through a recorded resolution;
-# no other subcommand reads either archive.
+# That canonical check decides every row in data/done-archive.md, refusals
+# included. Only when the configured Done archive is a different file from
+# data/done-archive.md do `complete` and `verify` also read an entry that
+# markdown Done retention moved there, where it counts only through a recorded
+# resolution; no other subcommand reads either archive.
 # Metadata compatibility: the attestation keeps the historical
 # `decisions_reviewed=1` and `decision_keys=` keys, and an inventory entry that
 # names no existing task resolves through the legacy `<origin>-decision-<entry>`
