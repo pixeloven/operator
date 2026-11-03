@@ -50,3 +50,8 @@ The fork-contract workflow rejects any path outside the PixelOven namespaces and
 - **Carry only the upstream e2e hunk.** Rejected because the stale-ownership race also fails the shard, and it has a deterministic reproduction.
 - **Change the watcher or the remote job worker.** Rejected because the product behavior is correct; only the tests' timing and crash fixture were wrong.
 - **Wait for an upstream synchronization.** Rejected because a red required shard blocks every pull request, and upstream has no fix for the second leg.
+
+## Partial retirement (2026-11-02)
+
+The fifth upstream synchronization brought upstream 3004ccb107, so `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` returned to upstream bytes and left the A4 allowlist.
+The `tests/fm-remote-job.test.sh` hunk remains carried, because upstream still has no equivalent fix.

@@ -218,7 +218,7 @@ test_current_workflow_model_is_hosted() {
       | ($job.value["runs-on"]) as $runner
       | select(
           ($runner | type) != "string"
-          or (["ubuntu-latest", "macos-latest", "windows-latest"] | index($runner)) == null
+          or (["ubuntu-latest", "ubuntu-24.04", "macos-latest", "windows-latest"] | index($runner)) == null
         )
       | "\($job.key)=\($runner | tojson)"
     ') || fail "could not inspect runner labels in ${workflow#"$ROOT"/}"

@@ -5,6 +5,7 @@
 - **Deciders:** Brian Gebel (the operator)
 - **Source:** Hosted-runner remediation after PR #11
 - **Supersedes:** [ADR-0009](0009-operator-arc-runner-routing.md)
+- **Amended by:** [ADR-0015](0015-companion-tools-from-upstream-sources.md), which supersedes the Node.js provisioning clause, and [ADR-0027](0027-pinned-github-hosted-runner-images.md), which also allows a pinned standard Ubuntu label.
 
 ## Context
 

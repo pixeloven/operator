@@ -28,6 +28,7 @@ ADR-0001 remains the default, and the following inherited files may carry these 
 - `docs/agent-control.md`, `docs/configuration.md`, `docs/remote-secondmates.md`, and `docs/verification/runtime-backends.md`: the sentences and verification record describing these behaviors
 - `tests/fm-control.test.sh`, `tests/fm-control-relaunch.test.sh`, `tests/fm-remote-secondmate-relaunch.test.sh`, `tests/fm-secondmate-liveness.test.sh`, `tests/fm-secondmate-restart.test.sh`, `tests/fm-wake-queue.test.sh`, and the new `tests/fm-claude-agent-view-live-e2e.test.sh`: the regression cases for these behaviors, including the lab reproduction
 - `tests/fm-backend-orca.test.sh`, `tests/fm-secondmate-harness.test.sh`, and `tests/fm-spawn-dispatch-profile.test.sh`: the expected Claude launch settings carrying `disableAgentView`
+- `tests/fm-backend-t3code.test.sh`: the expected refusal when a T3 thread can no longer be read, which the relaunch's dead-endpoint recheck now gives before any kill
 
 The user's own Claude settings, every other verb, and every other runtime are outside this exception.
 
