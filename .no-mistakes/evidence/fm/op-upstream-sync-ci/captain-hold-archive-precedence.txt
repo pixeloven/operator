@@ -1,0 +1,86 @@
+=== Scenario 1: default home, answered call retained into data/done-archive.md (ADR-0013 canonical reader) ===
+--- data/done-archive.md ---
+
+## Archived 2026-11-03
+- [x] trigger - Trigger retention (repo: sample) (kind: ship) (done 2026-11-03)
+- [x] sample-call - Pick option (repo: sample) (kind: captain) (done 2026-11-03) (hold: fm-hold-v1:Y2FwdGFpbiBjaG9pY2UgcGVuZGluZw==) (hold-kind: captain)
+  Resolution recorded by fm-captain-hold.
+  Decision digest: 0a2d3627ad27e6cd00109930f1a94bd8f694752628f83eb2756be8d3e40a61d8
+  Resolution mode: answered
+
+  Captain decision:
+  Captain chose option B.
+
+  Captain hold origin: sample-review
+
+  Origin: sample-review
+
+---
+$ tasks-axi show sample-call (live backlog)
+exit=1 (row no longer live)
+$ fm-captain-hold.sh complete sample-review sample-call
+complete: sample-review captain-call inventory reviewed (sample-call)
+exit=0
+$ fm-captain-hold.sh verify sample-review
+verified: sample-review captain-call inventory
+exit=0
+
+=== Scenario 2 (adversarial): same row in data/done-archive.md but outside any '## Archived YYYY-MM-DD' batch ===
+--- data/done-archive.md (batch heading removed) ---
+
+- [x] trigger - Trigger retention (repo: sample) (kind: ship) (done 2026-11-03)
+- [x] sample-call - Pick option (repo: sample) (kind: captain) (done 2026-11-03) (hold: fm-hold-v1:Y2FwdGFpbiBjaG9pY2UgcGVuZGluZw==) (hold-kind: captain)
+  Resolution recorded by fm-captain-hold.
+  Decision digest: 0a2d3627ad27e6cd00109930f1a94bd8f694752628f83eb2756be8d3e40a61d8
+  Resolution mode: answered
+
+  Captain decision:
+  Captain chose option B.
+
+  Captain hold origin: sample-review
+
+  Origin: sample-review
+
+---
+$ fm-captain-hold.sh complete sample-review sample-call
+fm-captain-hold: no captain-held task sample-call and no migrated hold for it in this home's configured backlog (data directory /tmp/fm-chdrive.49KpX3/outside-batch/data); the nearest legacy identity sample-review-decision-sample-call also resolves to nothing
+exit=1
+$ fm-captain-hold.sh verify sample-review
+fm-captain-hold: origin sample-review has no completed captain-call inventory
+exit=1
+
+=== Scenario 3: configured Done archive is a different file (data/relocated-done-archive.md) -> upstream #6094 fallback ===
+data/done-archive.md exists? no
+--- data/relocated-done-archive.md ---
+
+## Archived 2026-11-03
+- [x] trigger - Trigger retention (repo: sample) (kind: ship) (done 2026-11-03)
+- [x] sample-call - Pick option (repo: sample) (kind: captain) (done 2026-11-03) (hold: fm-hold-v1:Y2FwdGFpbiBjaG9pY2UgcGVuZGluZw==) (hold-kind: captain)
+  Resolution recorded by fm-captain-hold.
+  Decision digest: 0a2d3627ad27e6cd00109930f1a94bd8f694752628f83eb2756be8d3e40a61d8
+  Resolution mode: answered
+
+  Captain decision:
+  Captain chose option B.
+
+  Captain hold origin: sample-review
+
+  Origin: sample-review
+
+---
+$ fm-captain-hold.sh complete sample-review sample-call
+complete: sample-review captain-call inventory reviewed (sample-call)
+exit=0
+$ fm-captain-hold.sh verify sample-review
+verified: sample-review captain-call inventory
+exit=0
+
+=== Scenario 3b (adversarial): relocated archive holds an ordinary Done row with no captain-hold provenance ===
+--- data/relocated-done-archive.md ---
+
+## Archived 2026-11-03
+- [x] plain-done - Ordinary work (repo: sample) (kind: ship) (done 2026-11-03)
+---
+$ fm-captain-hold.sh complete sample-review plain-done
+fm-captain-hold: captain-held task plain-done is neither held for the captain nor closed with a recorded captain answer
+exit=1
