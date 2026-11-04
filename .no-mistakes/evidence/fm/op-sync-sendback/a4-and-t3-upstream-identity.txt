@@ -1,0 +1,4 @@
+PIN=78c69df2b0b231d5cbe849dbc87fce9ea74ba219
+== git diff --stat PIN HEAD -- tests/fm-backend-t3code.test.sh (empty = byte-identical to upstream)
+== A4 residue (files outside allowlist; empty = pass)
+== end

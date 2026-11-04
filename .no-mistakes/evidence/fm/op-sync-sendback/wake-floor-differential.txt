@@ -1,0 +1,10 @@
+== randomized lost-counter cases (missing or malformed .wake-queue.seq), values < 2^30
+equal=300 differ=0 of 300
+
+== near the 64-bit limit: one row 9223372036854775805, counter lost
+old: rc=0 seq=-9223372036854775807 counter=-9223372036854775807
+new: rc=0 seq=9223372036854775806 counter=9223372036854775806
+
+== unreadable non-empty queue, counter lost
+old: rc=1 seq= counter= rows=1
+new: rc=1 seq= counter= rows=1
