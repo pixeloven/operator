@@ -744,12 +744,9 @@ anchors() {
 # producer_files: the tracked files the surface canary scans - script, module,
 # and page sources outside tests and docs.
 producer_files() {
-  if git -C "$CODE_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git -C "$CODE_ROOT" ls-files
-  else
-    ( cd "$CODE_ROOT" && find . -type f ! -path '*/.git/*' ! -path '*/node_modules/*' | sed 's|^\./||' )
-  fi | grep -E '\.(sh|ts|tsx|js|mjs|cjs|html)$' \
-     | grep -vE '(^|/)(tests?|node_modules)/|\.test\.|^docs/' | sort
+  git -C "$CODE_ROOT" ls-files | grep -E '\.(sh|ts|tsx|js|mjs|cjs|html)$' \
+     | grep -vE '(^|/)(tests?|node_modules)/|\.test\.|^docs/' \
+     | while IFS= read -r f; do [ -f "$CODE_ROOT/$f" ] && printf '%s\n' "$f"; done | sort
 }
 
 # canary <nautical-kv>: ADR-0020's surface canary. Scans upstream's

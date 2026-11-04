@@ -17,4 +17,4 @@
 .pi/extensions/fm-branch-supervision.ts	Firstmate's Pi supervision branch uses	S3: Pi /supervision-model command description; themed by stage S3
 .pi/extensions/fm-primary-pi-watch.ts	Arm firstmate watcher supervision through the Pi extension	S3: Pi /fm-watch-arm-pi command description; themed by stage S3
 .omp/extensions/fm-primary-omp-watch.ts	Arm firstmate watcher supervision through the omp extension	S3: omp /fm-watch-arm-omp command description, the sibling of the Pi one stage S3 themes
-bin/fm-usage-warner.sh	with title "Firstmate: Claude usage"	S2: macOS usage-alert title, the same kind as the wedge-alarm title S2 themed; it arrived in an upstream sync after S2 merged and needs a stage before it is themed
+bin/fm-usage-warner.sh	with title "Firstmate: Claude usage"	S3: macOS usage-alert title, person-facing notification text that stage S3 themes; S3's pull request themes it and removes this row

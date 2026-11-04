@@ -267,6 +267,14 @@ test_surface_canary() {
   printf 'bin/fm-usage-warner.sh\tno such producer text\tR4: test\n' >> "$code/.agents/skills/po-theme/residue.tsv"
   out=$(canary_run "$code") || fail "anchors failed on a stale residue row: $out"
   assert_contains "$out" "note: residue row matches no producer line; remove it: bin/fm-usage-warner.sh" "the canary did not note a stale residue row"
+
+  # A tracked producer deleted from the work tree but not staged is skipped.
+  printf '%s\n' 'echo probe' > "$code/bin/fm-canary-probe.sh"
+  git -C "$code" add bin/fm-canary-probe.sh
+  git -C "$code" commit -q -m probe
+  rm "$code/bin/fm-canary-probe.sh"
+  out=$(canary_run "$code") || fail "anchors failed with a deleted, unstaged tracked producer: $out"
+  assert_not_contains "$out" "producer scan failed" "the canary scanned a deleted tracked producer"
   pass "the surface canary fails on an unregistered nautical producer line and passes registered and residue ones"
 }
 
