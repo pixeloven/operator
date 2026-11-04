@@ -690,6 +690,7 @@ if [ "$REEMIT" -eq 1 ]; then
 else
   section "SESSION START - $FM_HOME"
 fi
+FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" headline 2>/dev/null || true
 # --- 1. lock -----------------------------------------------------------
 stage lock
 subsection "LOCK"

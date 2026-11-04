@@ -44,7 +44,14 @@
 #                                     a delimited block of .git/info/exclude
 #   po-theme.sh verify                exit 1 when the Persona block or aliases drifted
 #                                     from the selected theme (stale, hand-edited,
-#                                     missing, or unexpected)
+#                                     missing, or unexpected); in a secondmate home,
+#                                     when the inherited block is hand-edited or
+#                                     differs from the bundled theme of its name
+#   po-theme.sh headline              the session-start head lines: the applied
+#                                     block's address word, no-op reply, and role
+#                                     words, a pointer to the full block, and one
+#                                     "persona drift" line when verify fails
+#                                     (empty for nautical)
 #   po-theme.sh anchors               sync canary: every nautical value still matches
 #                                     the upstream text it mirrors, every
 #                                     user-invocable skill has an alias key, and the
@@ -231,23 +238,31 @@ shared_address() {
   printf '%s\n' "$v"
 }
 
+# load_block <block-file> <out-kv>: the values line of a Persona block, role
+# words read in lowercase, safety-checked into a kv file; sets BLOCK_NAME.
+load_block() {
+  local n
+  values_to_theme "$1" > "$TMPD/block.raw" \
+    || die "the Persona block in $SHARED has no values line; rerun apply in the primary home"
+  awk -v roles="$ROLE_KEYS" '
+    BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
+    { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
+  ' "$TMPD/block.raw" > "$TMPD/block.theme"
+  parse "$TMPD/block.theme" > "$TMPD/block.kv" 2>/dev/null || die "the Persona values line in $SHARED is malformed"
+  n=$(get "$TMPD/block.kv" name 2>/dev/null || true)
+  valid_name "$n" || die "the Persona values line in $SHARED has no valid name"
+  load_file "$n" "$TMPD/block.theme" "$2"
+  BLOCK_NAME=$n
+}
+
 # resolve_active: sets ACTIVE_NAME, ACTIVE_SRC, ACTIVE_KV.
 resolve_active() {
   local n
   if is_secondmate_home; then
     block_of "$SHARED" > "$TMPD/inherited.block"
     if [ -s "$TMPD/inherited.block" ]; then
-      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.raw" \
-        || die "the inherited Persona block in $SHARED has no values line; rerun apply in the primary home"
-      awk -v roles="$ROLE_KEYS" '
-        BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
-        { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
-      ' "$TMPD/inherited.raw" > "$TMPD/inherited.theme"
-      parse "$TMPD/inherited.theme" > "$TMPD/inherited.kv" 2>/dev/null || die "the inherited Persona values line is malformed"
-      n=$(get "$TMPD/inherited.kv" name 2>/dev/null || true)
-      valid_name "$n" || die "the inherited Persona values line has no valid name"
-      load_file "$n" "$TMPD/inherited.theme" "$TMPD/active.kv"
-      ACTIVE_NAME=$n ACTIVE_SRC="inherited:$SHARED" ACTIVE_KV="$TMPD/active.kv"
+      load_block "$TMPD/inherited.block" "$TMPD/active.kv"
+      ACTIVE_NAME=$BLOCK_NAME ACTIVE_SRC="inherited:$SHARED" ACTIVE_KV="$TMPD/active.kv"
       return 0
     fi
     n=nautical
@@ -646,6 +661,16 @@ verify() {
     if [ -s "$TMPD/actual" ]; then
       persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/expected"
       cmp -s "$TMPD/expected" "$TMPD/actual" || { echo "drift: the inherited Persona block does not match its own values line (hand-edited)"; drift=1; }
+      # A bundled theme of the same name is what the primary's apply writes
+      # from, so a block that differs from it is older than this checkout's
+      # theme (or this checkout is behind the primary's). A custom theme that
+      # exists only in the primary home has no bundled file and is not compared.
+      if [ $drift -eq 0 ] && [ -f "$BUNDLED/$ACTIVE_NAME.theme" ]; then
+        load_file "$ACTIVE_NAME" "$BUNDLED/$ACTIVE_NAME.theme" "$TMPD/bundled.kv"
+        persona "$ACTIVE_NAME" "$TMPD/bundled.kv" > "$TMPD/bundled"
+        cmp -s "$TMPD/bundled" "$TMPD/actual" \
+          || { echo "drift: the inherited Persona block differs from the bundled $ACTIVE_NAME theme (an older block); rerun apply in the primary home"; drift=1; }
+      fi
     fi
     [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME, inherited)"
     return $drift
@@ -674,6 +699,24 @@ verify() {
   fi
   [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME)"
   return $drift
+}
+
+# headline: the persona in force, in two lines for the head of the session-start
+# digest, which a harness that spills a large digest still shows inline; then
+# one drift line when verify finds drift. Prints nothing under nautical.
+# shellcheck disable=SC2016  # backticks are literal Markdown code spans for the reading agent.
+headline() {
+  local kv="$TMPD/headline.kv"
+  active_is_nautical && return 0
+  block_of "$SHARED" > "$TMPD/headline.block"
+  if [ -s "$TMPD/headline.block" ] && ( load_block "$TMPD/headline.block" "$kv" ) 2>/dev/null; then
+    t() { get "$kv" "$1"; }
+    printf 'PERSONA (%s theme, chat words only): address the user as "%s,"; the exact no-op reply is `%s`; say %s for captain, %s for first mate, %s for crewmate, %s for crew, %s for second mate, %s for fleet, %s for ship, %s for scout.\n' \
+      "$(t name)" "$(t user_address)" "$(t noop_reply)" "$(t user)" "$(t self)" "$(t worker)" "$(t crew)" \
+      "$(t submate)" "$(t fleet)" "$(t ship_task)" "$(t scout_task)"
+    printf 'The full Persona block is in %s, printed under CONTEXT below; if this output was cut off, read that file before your next reply.\n' "$SHARED"
+  fi
+  ( verify ) > /dev/null 2>&1 || echo "persona drift: rerun apply in the primary home"
 }
 
 anchors() {
@@ -941,6 +984,7 @@ case "$cmd" in
       *) die "usage: registry files | registry check-diff <ref>" ;;
     esac ;;
   verify) verify ;;
+  headline) headline ;;
   anchors) anchors ;;
   address-alt)
     shared_address && exit 0

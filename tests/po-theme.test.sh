@@ -21,7 +21,11 @@
 #   - generated alias skills keep `git status --porcelain` and the guarded
 #     self-update's dirty_status empty, and nautical apply removes them
 #   - verify reports a stale, hand-edited, missing, or unexpected block and
-#     alias drift
+#     alias drift, and in a secondmate home an inherited block older than the
+#     bundled theme of its name, skipping a custom primary-only theme
+#   - headline prints nothing under nautical, the applied persona in two lines
+#     under a theme, and one drift line when verify fails; the real
+#     fm-session-start.sh prints it before LOCK and nothing there under nautical
 #
 # Fixture code roots are throwaway git repositories: apply writes alias skills
 # and .git/info/exclude under the code root of the script it runs, so no case
@@ -256,7 +260,7 @@ test_operator_apply() {
 }
 
 test_session_start_prints_persona() {
-  local code home root out context
+  local code home root out context head
   code=$(new_code session)
   home=$(new_home session)
   root="$TMP_ROOT/session/root"
@@ -271,7 +275,50 @@ test_session_start_prints_persona() {
   context=$(printf '%s\n' "$out" | awk '/^CONTEXT$/ { on = 1 } on')
   assert_contains "$context" '## Persona: operator' "the session-start CONTEXT did not print the Persona block"
   assert_contains "$context" 'Operator, all systems nominal.' "the session-start CONTEXT did not carry the themed no-op reply"
-  pass "the real session-start digest prints the Persona block in CONTEXT"
+  head=$(printf '%s\n' "$out" | awk '/^SESSION START - / { on = 1 } on && /^LOCK$/ { exit } on')
+  assert_contains "$head" 'PERSONA (operator theme, chat words only): address the user as "Operator,"' "the session-start head did not carry the headline before LOCK"
+  out=$(env -u CLAUDECODE -u PI_CODING_AGENT -u FM_PI_HARNESS -u GROK_AGENT \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" "$ROOT/bin/fm-session-start.sh" --reemit 2>&1) \
+    || fail "fm-session-start.sh --reemit failed: $out"
+  head=$(printf '%s\n' "$out" | awk '/^SESSION START [(]CONTEXT RE-EMIT[)] - / { on = 1 } on && /^LOCK$/ { exit } on')
+  assert_contains "$head" 'PERSONA (operator theme' "the re-emit head did not carry the headline before LOCK"
+
+  printf 'nautical\n' > "$home/config/po-theme"
+  run_in "$code" "$home" apply >/dev/null 2>&1 || fail "nautical apply failed before session start"
+  out=$(env -u CLAUDECODE -u PI_CODING_AGENT -u FM_PI_HARNESS -u GROK_AGENT \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" "$ROOT/bin/fm-session-start.sh" 2>&1) \
+    || fail "nautical fm-session-start.sh failed: $out"
+  head=$(printf '%s\n' "$out" | awk '/^SESSION START - / { on = 1; next } on && /^LOCK$/ { exit } on')
+  assert_equals "$(printf '%s\n\n' "$(printf '%s\n' "$out" | awk '/^SESSION START - / { getline; print; exit }')")" "$head" \
+    "nautical session start printed something between its header and LOCK"
+  pass "the real session-start digest prints the headline before LOCK and the Persona block in CONTEXT"
+}
+
+# shellcheck disable=SC2016  # literal Markdown backticks.
+test_headline() {
+  local code home out
+  code=$(new_code headline)
+  home=$(new_home headline)
+  printf '# prefs\n' > "$home/data/captain-shared.md"
+  assert_equals "" "$(run_in "$code" "$home" headline)" "headline printed something under nautical"
+  printf 'operator\n' > "$home/config/po-theme"
+  assert_equals "persona drift: rerun apply in the primary home" "$(run_in "$code" "$home" headline)" \
+    "headline before apply did not print exactly the drift line"
+  run_in "$code" "$home" apply >/dev/null 2>&1 || fail "operator apply failed"
+  out=$(run_in "$code" "$home" headline) || fail "headline failed after apply: $out"
+  assert_equals 2 "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" "headline after apply is not exactly two lines: $out"
+  assert_contains "$out" 'address the user as "Operator,"' "headline did not carry the address word"
+  assert_contains "$out" 'the exact no-op reply is `Operator, all systems nominal.`' "headline did not carry the no-op reply"
+  assert_contains "$out" 'say operator for captain, spotter for first mate, specialist for crewmate' "headline did not carry the role words"
+  assert_contains "$out" "The full Persona block is in $home/data/captain-shared.md" "headline did not point at the full block"
+  assert_not_contains "$out" "persona drift" "headline reported drift right after apply"
+
+  sed -i.bak 's/all systems nominal/all good/' "$home/data/captain-shared.md"
+  out=$(run_in "$code" "$home" headline) || fail "headline failed on a hand-edited block: $out"
+  assert_equals 3 "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" "headline on drift is not exactly three lines: $out"
+  assert_equals "persona drift: rerun apply in the primary home" "$(printf '%s\n' "$out" | tail -n 1)" "headline did not end with the drift line"
+  mv "$home/data/captain-shared.md.bak" "$home/data/captain-shared.md"
+  pass "headline is empty under nautical, prints the applied persona, and adds one drift line on drift"
 }
 
 test_intent_address_check() {
@@ -353,6 +400,7 @@ test_secondmate_home() {
   assert_contains "$(role_of "$ROOT/bin" "$mate")" 'the captain "boss", firstmate "sergeant"' "the secondmate's worker role contract is not themed"
   intent_refused "$ROOT/bin" "$mate" 'Boss, add a flag.' || fail "the secondmate home allowed the inherited vocative in an intent"
   out=$(run_in "$ROOT" "$mate" verify 2>&1) || fail "verify failed on an untouched inherited block: $out"
+  assert_not_contains "$(run_in "$ROOT" "$mate" headline)" "persona drift" "a custom primary-only theme was compared against a bundled theme"
   printf 'operator\n' > "$mate/config/po-theme"
   assert_equals "Boss" "$(run_in "$ROOT" "$mate" address-alt)" "a local selection overrode the primary-authoritative persona"
   out=$(run_in "$code" "$mate" apply 2>&1) && fail "apply ran in a secondmate home"
@@ -373,6 +421,7 @@ test_secondmate_home() {
   assert_contains "$(role_of "$ROOT/bin" "$mate")" 'firstmate "spotter"' "an inherited capitalized values line dropped the worker vocabulary line"
   rm "$mate/data/captain-shared.md"
   assert_equals "" "$(run_in "$ROOT" "$mate" address-alt)" "a secondmate home without an inherited block is not nautical"
+  assert_equals "" "$(run_in "$ROOT" "$mate" headline)" "a secondmate home without an inherited block printed a headline"
   pass "a secondmate home resolves an inherited custom theme, refuses apply, and rejects tampering"
 }
 
@@ -485,6 +534,33 @@ test_verify_reports_drift() {
   pass "verify reports stale, hand-edited, missing, and unexpected blocks and alias drift"
 }
 
+test_secondmate_older_block() {
+  local code primary mate out
+  code=$(new_code older)
+  primary=$(new_home older-primary)
+  mate="$TMP_ROOT/older/mate"
+  mkdir -p "$mate/data" "$mate/config"
+  printf 'fmtest-sm\n' > "$mate/.fm-secondmate-home"
+  run_in "$code" "$primary" persona operator > "$mate/data/captain-shared.md" || fail "persona operator failed"
+  out=$(run_in "$ROOT" "$mate" verify 2>&1) || fail "verify failed on a current inherited bundled block: $out"
+  assert_not_contains "$(run_in "$ROOT" "$mate" headline)" "persona drift" "headline reported drift on a current inherited block"
+
+  # An older block: written before the str.* keys existed, so its values line
+  # lacks them while still matching its own text.
+  run_in "$code" "$primary" persona operator \
+    | sed '/^<!-- po-theme:values /s/ str\.[a-z_.]*="[^"]*"//g' > "$mate/data/captain-shared.md"
+  grep -q 'str\.' "$mate/data/captain-shared.md" && fail "the fixture block still carries str.* keys"
+  out=$(run_in "$ROOT" "$mate" verify 2>&1) && fail "verify passed on an inherited block older than the bundled theme"
+  assert_contains "$out" "differs from the bundled operator theme (an older block); rerun apply in the primary home" \
+    "verify did not report the older inherited block"
+  assert_not_contains "$out" "hand-edited" "verify called a self-consistent older block hand-edited"
+  out=$(run_in "$ROOT" "$mate" headline) || fail "headline failed on an older inherited block: $out"
+  assert_contains "$out" 'address the user as "Operator,"' "headline dropped the inherited persona on drift"
+  assert_equals "persona drift: rerun apply in the primary home" "$(printf '%s\n' "$out" | tail -n 1)" \
+    "headline in a secondmate home did not report the older block"
+  pass "a secondmate home reports an inherited block older than the bundled theme of its name"
+}
+
 test_terms_and_resolve() {
   local home
   home=$(new_home terms)
@@ -506,6 +582,7 @@ test_anchors
 test_nautical_apply_writes_nothing
 test_operator_apply
 test_session_start_prints_persona
+test_headline
 test_intent_address_check
 test_worker_role_contract
 test_secondmate_home
@@ -513,6 +590,7 @@ test_address_guard_survives_broken_selection
 test_persona_aliases_primary_only
 test_aliases_keep_tree_clean
 test_verify_reports_drift
+test_secondmate_older_block
 test_terms_and_resolve
 
 echo "all po-theme tests passed"
