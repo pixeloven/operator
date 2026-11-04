@@ -39,8 +39,9 @@ The Persona block prints near the end of the session-start digest, and a harness
 So every digest and every re-emit after a clear or compaction also prints `headline` right below its section header: one line with the address word, the exact no-op reply, and the role words from the applied block, and one line pointing to the full block in `data/captain-shared.md`.
 The `Persona: ` line in `AGENTS.md` tells the agent to read that file before its next reply whenever a clear or compaction left no Persona block in its context.
 `headline` also runs `verify` and, on any drift, adds the single line `persona drift: rerun apply in the primary home`.
-In a second mate home, `verify` also compares the inherited block with the bundled theme of the same name in that home's checkout and reports a block that differs from it as older, such as one written before a theme gained new keys; a custom theme that exists only in the primary home has no bundled file and skips that comparison.
-Under nautical `headline` prints nothing, so a nautical digest is unchanged.
+In a second mate home, `verify` also compares the inherited block with the bundled theme of the same name in that home's checkout and, when they differ, such as a block written before a theme gained new keys, reports `persona drift: inherited block differs from the bundled <name> theme; rerun apply in the primary home (or update this home if it is newer)`, which `headline` prints in place of the generic drift line.
+A custom primary-only theme skips that comparison: either it has no bundled file, or it is a local theme in the primary home's `config/po-themes/` that shadows a bundled one of the same name, which `apply` records by ending the values line with a bare `source=local` token (the line is otherwise unchanged, and a block from a bundled theme carries no token).
+Under nautical `headline` prints nothing, so a nautical digest is unchanged; only when `data/captain-shared.md` still holds a Persona block that a nautical `apply` has not yet removed does it print the drift line.
 
 ### Workspace labels
 
