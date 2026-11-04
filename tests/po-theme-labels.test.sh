@@ -590,6 +590,9 @@ test_anchors_name_a_lost_hook() {
     mkdir -p "$code/.agents/skills/$s"
     printf -- '---\nname: %s\nuser-invocable: true\n---\n' "$s" > "$code/.agents/skills/$s/SKILL.md"
   done
+  # The surface canary scans tracked files, so the fixture is a work tree.
+  git init -q -b main "$code"
+  git -C "$code" add -A
   out=$(FM_HOME="$TMP_ROOT/anchors" "$code/bin/po-theme.sh" anchors 2>&1) || fail "anchors failed on an intact fixture: $out"
   sed -i.bak 's/^  po_home_label firstmate$/  printf '"'"'firstmate'"'"'/' "$code/bin/backends/herdr.sh"
   out=$(FM_HOME="$TMP_ROOT/anchors" "$code/bin/po-theme.sh" anchors 2>&1) && fail "anchors passed without a registered hook line"
