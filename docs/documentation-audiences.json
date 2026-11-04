@@ -438,6 +438,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0028-carry-wake-drain-signal-trap-fix.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

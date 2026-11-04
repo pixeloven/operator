@@ -2531,6 +2531,98 @@ test_interruption_before_and_after_raw_commit() {
   pass "interruptions preserve durable rows until post-handling acknowledgement"
 }
 
+# Bash 5.2 runs a trap that falls due while it rescans a $(...) word inside that
+# scan's parser state, where a plain action cannot parse and the signal is lost.
+# TERM is raised from inside the first substitution, so it is already pending
+# when the unexecuted ${BASHPID:-$(...)} alternative is scanned (the drain hit
+# this in fm_current_pid). Other Bash versions must exit the same way.
+test_trap_exit_survives_pending_comsub_scan() {
+  local dir rc
+  dir=$(make_case trap-exit-comsub-scan)
+  set +e
+  bash -c '
+    # shellcheck disable=SC1090,SC1091
+    . "$1"
+    marker=$2
+    on_exit() { local status=$?; printf "%s\n" "$status" > "$marker"; }
+    trap on_exit EXIT
+    fm_trap_exit 143 TERM || exit 90
+    probe=$(kill -TERM "$$")${BASHPID:-$(printf unreachable)}
+    printf "survived TERM: %s\n" "$probe" >&2
+    exit 0
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$dir/exit-status" > "$dir/out" 2> "$dir/err"
+  rc=$?
+  set -e
+  ! grep -F 'unexpected EOF' "$dir/err" >/dev/null \
+    || fail "TERM pending at a \$() scan hit the trap parse error: $(cat "$dir/err")"
+  [ "$rc" -eq 143 ] || fail "TERM pending at a \$() scan did not exit 143 (rc=$rc): $(cat "$dir/err")"
+  [ "$(cat "$dir/exit-status" 2>/dev/null)" = 143 ] \
+    || fail "TERM pending at a \$() scan skipped the EXIT cleanup"
+  fm_trap_exit_rejects() {
+    bash -c '. "$1"; shift; fm_trap_exit "$@"' _ "$ROOT/bin/fm-wake-lib.sh" "$@" 2>/dev/null
+  }
+  ! fm_trap_exit_rejects 143 || fail "fm_trap_exit accepted a trap with no signal"
+  ! fm_trap_exit_rejects x TERM || fail "fm_trap_exit accepted a non-numeric exit status"
+  pass "fm_trap_exit exits on a signal pending at a \$() scan (bash $BASH_VERSION)"
+}
+
+# The drain's TERM trap must fire even when TERM arrives inside a command that
+# expands sibling $() words, here the acknowledgement's row count. A fake awk
+# signals the queue lock owner (the drain) from inside the first substitution,
+# only once the acknowledgement's scratch copy exists, so the earlier
+# one-substitution-per-command row count is not the one interrupted.
+# The interrupted acknowledgement must exit 143 with the queue untouched, and a
+# retry must then consume the row.
+test_drain_term_during_sibling_comsub_ack() {
+  local dir state fakebin real_awk rc sequence generation
+  dir=$(make_case drain-term-sibling-comsub)
+  state="$dir/state"
+  fakebin="$dir/fakebin"
+  real_awk=$(command -v awk) || fail "could not locate awk for the sibling-substitution fixture"
+  printf 'done: sibling substitution fixture\n' > "$state/task.status"
+  append_wake "$state" signal task.status "signal: task" || fail "sibling-substitution wake append failed"
+  FM_STATE_OVERRIDE="$state" "$DRAIN" > "$dir/initial.out" 2> "$dir/initial.err" \
+    || fail "initial sibling-substitution drain failed"
+  sequence=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through \([0-9][0-9]*\) --recovery-generation [A-Za-z0-9._-][A-Za-z0-9._-]*$/\1/p' "$dir/initial.err")
+  generation=$(sed -n 's/^WAKE_ACK_REQUIRED:.*--ack-through [0-9][0-9]* --recovery-generation \([A-Za-z0-9._-][A-Za-z0-9._-]*\)$/\1/p' "$dir/initial.err")
+  [ -n "$sequence" ] && [ -n "$generation" ] || fail "initial sibling-substitution drain omitted its acknowledgement command"
+  cp "$state/.wake-queue" "$dir/queue.before" || fail "could not snapshot the queue"
+  cat > "$fakebin/awk" <<'SH'
+#!/usr/bin/env bash
+ack_scratch=
+for path in "$FM_TEST_TERM_QUEUE".ack.*; do [ -e "$path" ] && ack_scratch=$path; done
+if [ "${1:-}" = 'END { print NR }' ] && [ "${2:-}" = "$FM_TEST_TERM_QUEUE" ] \
+  && [ -n "$ack_scratch" ] && [ ! -e "$FM_TEST_TERM_SENT" ]; then
+  owner=$(cat "$FM_TEST_TERM_QUEUE.lock/pid" 2>/dev/null || true)
+  case "$owner" in ''|*[!0-9]*) ;; *) kill -TERM "$owner" && : > "$FM_TEST_TERM_SENT" ;; esac
+fi
+exec "$FM_TEST_REAL_AWK" "$@"
+SH
+  chmod +x "$fakebin/awk"
+
+  set +e
+  PATH="$fakebin:$PATH" FM_TEST_REAL_AWK="$real_awk" FM_TEST_TERM_QUEUE="$state/.wake-queue" \
+    FM_TEST_TERM_SENT="$dir/term-sent" FM_STATE_OVERRIDE="$state" \
+    "$DRAIN" --ack-through "$sequence" --recovery-generation "$generation" \
+      > "$dir/ack.out" 2> "$dir/ack.err"
+  rc=$?
+  set -e
+  [ -e "$dir/term-sent" ] || fail "the sibling-substitution fixture never signalled the drain"
+  ! grep -F 'unexpected EOF' "$dir/ack.err" >/dev/null \
+    || fail "drain TERM inside sibling \$() hit the trap parse error: $(cat "$dir/ack.err")"
+  [ "$rc" -eq 143 ] || fail "drain TERM inside sibling \$() did not exit 143 (rc=$rc): $(cat "$dir/ack.err")"
+  cmp -s "$dir/queue.before" "$state/.wake-queue" \
+    || fail "an acknowledgement interrupted before commit changed the queue"
+  [ ! -e "$state/.wake-queue.lock" ] && [ ! -L "$state/.wake-queue.lock" ] \
+    || fail "an interrupted acknowledgement left the queue lock held"
+
+  FM_STATE_OVERRIDE="$state" "$DRAIN" --ack-through "$sequence" --recovery-generation "$generation" \
+    > "$dir/retry.out" 2> "$dir/retry.err" \
+    || fail "acknowledgement retry after TERM failed: $(cat "$dir/retry.err")"
+  [ ! -s "$state/.wake-queue" ] || fail "acknowledgement retry after TERM left its wake queued"
+  pass "wake drain: TERM inside sibling \$() substitutions still interrupts before commit"
+}
+
 # The guarded self-announced status append (fm_wake_status_append_self_announced)
 # and the seen-signature gate it shares with the watcher's signal scan. Both
 # directions of the dedup contract are pinned through the real library
@@ -3886,6 +3978,8 @@ test_stale_ack_that_consumes_nothing_names_the_current_wake
 test_branch_stale_ack_that_consumes_nothing_names_its_granted_wake
 test_recovery_ack_failure_is_reported
 test_interruption_before_and_after_raw_commit
+test_trap_exit_survives_pending_comsub_scan
+test_drain_term_during_sibling_comsub_ack
 test_wake_queue_prune_task
 test_drain_rotates_orphaned_scratch
 test_secondmate_liveness_tick_relaunches_dead_endpoint_once

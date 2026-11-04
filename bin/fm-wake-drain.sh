@@ -833,8 +833,8 @@ cleanup() {
 }
 
 trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
+fm_trap_exit 130 INT || exit 1
+fm_trap_exit 143 TERM || exit 1
 
 if [ -n "$ACK_THROUGH" ]; then
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
