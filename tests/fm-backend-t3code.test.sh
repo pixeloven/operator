@@ -2585,8 +2585,7 @@ test_claude_pr_tool_clause_version_boundary() {
 
 # A T3 secondmate whose thread reads missing (archived) re-proves the close
 # through the idempotent kill before any replacement thread is launched; when
-# the thread can no longer be read, relaunch's recheck of the endpoint refuses
-# before any kill, so the thread and its record stay and nothing is spawned.
+# that proof fails, the thread and its record stay and nothing is spawned.
 test_t3_secondmate_missing_thread_reproves_close_before_replacement() {
   local thread=mcp:0b1c2d3e-5f6a-4b7c-8d9e-789abcdef012 root state out
   t3_case secondmate-missing completed
@@ -2613,10 +2612,10 @@ fm_secondmate_liveness_relaunch "$1" smgone && echo relaunched=yes || echo "rela
   assert_grep "SPAWN smgone --secondmate" "$CASE_DIR/spawns" "the guarded secondmate spawn runs after the proven close"
   : > "$CASE_DIR/spawns"
   out=$(run_relaunch "$CASE_DIR/state-fail" 'w.failTools = { t3_thread_read: { code: "unavailable", message: "read unavailable" } }')
-  assert_contains "$out" "relaunched=no status=skipped reason=endpoint now reads unreadable rather than dead; left untouched" "an unproved close must stop recovery: $out"
+  assert_contains "$out" "relaunched=no status=skipped reason=could not prove the old t3code endpoint $thread closed" "an unproved close must stop recovery: $out"
   [ ! -s "$CASE_DIR/spawns" ] || fail "no replacement may be spawned after an unproved close, got $(cat "$CASE_DIR/spawns")"
   assert_grep "t3_thread_id=$thread" "$CASE_DIR/state-fail/smgone.meta" "the endpoint record is kept"
-  [ ! -s "$CASE_DIR/state-fail/.secondmate-relaunch-smgone" ] || fail "a refusal before the kill records no relaunch attempt, got $(cat "$CASE_DIR/state-fail/.secondmate-relaunch-smgone")"
+  assert_grep failed "$CASE_DIR/state-fail/.secondmate-relaunch-smgone" "the refused attempt is recorded in the relaunch ledger"
   pass "secondmate liveness backend=t3code: a missing thread re-proves its archive before replacement, and an unproved close spawns nothing"
 }
 

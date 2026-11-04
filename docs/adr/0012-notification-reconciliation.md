@@ -35,6 +35,10 @@ The core is one pending row per captured result at enqueue and sequence-aware pr
 The bounded-recovery retry in `tests/fm-backend-herdr-presentation-e2e.test.sh` absorbs upstream's refuse-by-default bounded session-lock acquire when two homes recover concurrently.
 The task-inbox lock and secondmate-reconcile hunks that accompanied this change were superseded upstream and returned to upstream bytes in the first stage of the `v0.3.0` synchronization.
 In the second stage, the handling skill and the `bin/fm-bootstrap.sh` post-lock record re-check returned to upstream bytes: the skill's bounded re-announcement wording stays true under this reconciliation, and upstream's non-recursive steal mutex removed the lock refusal the re-check absorbed.
+In `bin/fm-wake-lib.sh`, the recovery floor for a lost or malformed wake counter keeps only what upstream lacks: it refuses an append when a non-empty queue cannot be read, and it raises the floor past every sequence-bearing process-event presentation marker.
+It no longer scans the queue itself, because `fm_wake_append_locked` already raises every append past the queue's highest row with upstream's exact decimal-text pass from upstream #6467, under the same queue lock and over the same row filter.
+The removed scan compared awk numbers, so it was equivalent except next to the 64-bit limit, where it rounded a row up and overflowed bash's counter.
+`tests/fm-wake-queue.test.sh` covers a lost counter beside a row next to that limit, beside markers that outrank every row, and beside an unreadable queue.
 Every other upstream file remains outside this exception.
 Renames, broad rewrites, unrelated cleanup, and changes to preserved fleet state or historical evidence remain prohibited.
 

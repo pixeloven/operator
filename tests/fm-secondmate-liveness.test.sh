@@ -676,6 +676,40 @@ test_relaunch_rereads_the_endpoint_before_killing() {
   pass "relaunch: an endpoint that no longer reads dead under the spawn lock is never killed"
 }
 
+# ADR-0026's re-read defers only an endpoint it can still read. One that now
+# reads unreadable is left untouched as well, but it is a fault rather than a
+# deferral: the attempt is ledgered as failed and the skip is reported.
+test_relaunch_records_an_unreadable_reread_as_a_failed_attempt() {
+  local w fb tmuxfb log out ledger
+  w=$(new_world relaunch-reread-unreadable)
+  add_sm_home "$w" sm1 firstmate:fm-sm1
+  fb=$(make_toolchain "$w"); tmuxfb=$(make_liveness_tmux "$w")
+  log="$w/calls.log"; : > "$log"
+  ledger="$w/home/state/.secondmate-relaunch-sm1"
+
+  out=$(PATH="$tmuxfb:$fb:$BASE_PATH" FM_HOME="$w/home" FM_BACKEND=tmux \
+    FM_ROOT="$ROOT" FM_TEST_PANE_CMD=zsh FM_TMUX_CALL_LOG="$log" \
+    STATE="$w/home/state" bash -c '
+      . "$1/bin/fm-secondmate-liveness-lib.sh"
+      fm_secondmate_liveness_probe "$2" sm1 poll
+      export FM_TEST_PANE_CMD=unreadable
+      rc=0
+      fm_secondmate_liveness_relaunch "$2" sm1 5 || rc=$?
+      printf "probe=%s rc=%s status=%s deferred=%s reason=%s\n" \
+        "$FM_SM_LIVE_STATE" "$rc" "$FM_SM_LIVE_STATUS" "$FM_SM_LIVE_DEFERRED" "$FM_SM_LIVE_REASON"
+    ' _ "$ROOT" "$w/home/state/sm1.meta")
+
+  assert_contains "$out" "probe=dead rc=1 status=skipped deferred=0 reason=could not prove the old tmux endpoint" \
+    "an unreadable re-read must be reported, not deferred: $out"
+  assert_contains "$out" "it now reads unreadable, so it and its record are left in place, not replaced" \
+    "the reason must name the unreadable re-read: $out"
+  [ ! -s "$log" ] || fail "an unreadable endpoint was killed or respawned: $(cat "$log")"
+  assert_grep attempt "$ledger" "the refused relaunch is counted as an attempt"
+  assert_grep failed "$ledger" "the refused relaunch is recorded as failed in the relaunch ledger"
+  [ ! -e "$w/home/state/.spawn-sm1.lock" ] || fail "the refusal left the spawn lock held"
+  pass "relaunch: an endpoint that reads unreadable under the spawn lock is left untouched and ledgered as a failed attempt"
+}
+
 test_sweep_refuses_relaunch_on_ledger_errors() {
   local w fb tmuxfb log out mode ledger word
   if [ "$(id -u)" -eq 0 ]; then
@@ -1128,6 +1162,7 @@ test_relaunch_waits_for_other_mates_relaunch_lock
 test_sweep_refuses_relaunch_on_ledger_errors
 test_tick_during_in_flight_relaunch_leaves_real_endpoint_intact
 test_relaunch_rereads_the_endpoint_before_killing
+test_relaunch_records_an_unreadable_reread_as_a_failed_attempt
 test_remote_poll_probe_maps_states
 test_remote_poll_probe_unreachable_preserves_route
 test_remote_full_probe_rex_route
