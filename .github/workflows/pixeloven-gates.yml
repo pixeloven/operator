@@ -284,7 +284,7 @@ jobs:
           [ -z "$out" ] || { printf '%s\n' "$out"; bad "A9: a persona hunk changed a file mode"; }
           bin/po-theme.sh registry check-diff "$PIN" || bad "A9: an upstream-owned file differs beyond its registered theme hooks"
 
-          echo '== A10 - the theme canary: mirrored literals, commands, and hooks still match, and every bundled theme validates'
+          echo '== A10 - the theme canary: mirrored literals, commands, hooks, and person-facing producers still match, and every bundled theme validates'
           bin/po-theme.sh anchors || bad "A10: a nautical anchor drifted from upstream; update the themes in this PR"
           for t in .agents/skills/po-theme/themes/*.theme; do
             bin/po-theme.sh validate "$(basename "$t" .theme)" || bad "A10: bundled theme $(basename "$t" .theme) failed validation"

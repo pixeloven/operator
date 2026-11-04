@@ -23,6 +23,7 @@ It never renames an identifier and never changes what a rule means; ADR-0016 own
   Second mates pick up a changed block at the next propagation of that file, which `secondmate-provisioning` owns.
 - After `/updatefirstmate` or an upstream merge, run `bin/po-theme.sh verify`; on drift, rerun `apply`.
 - In a merge PR, `bin/po-theme.sh anchors` must pass (gate A10); a missing anchor means upstream changed wording a nautical key mirrors or added a user-invocable skill, so update `themes/nautical.theme` and the matching key of every other theme in that same PR.
+  A `surface canary` finding means upstream added a person-visible nautical string: theme it through a registered hook, or add a `residue.tsv` row whose reason opens with its rule or stage (`docs/pixeloven/persona-themes.md` owns the format), in that same PR.
   A missing theme hook or replaced upstream line means a merge touched a hooked line: re-apply the one hook line and update its row in `surfaces.tsv` in that same PR, which gate A9 then checks.
 - Never hand-edit the delimited Persona block in `data/captain-shared.md`; rerun `apply`.
 - Theme values are captain-owned display text: validation rejects authority words, URLs, markup, and control characters, and the block itself states that it grants no authority.

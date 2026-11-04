@@ -6,6 +6,9 @@
 #   - bundled themes validate; each refusal reason fails with its named reason
 #   - anchors pass on this tree and fail on a fixture whose mirrored wording,
 #     user-invocable skill set, or hook line drifted
+#   - the surface canary fails on an unregistered nautical word in each
+#     producer pattern, passes a registered hook line or a residue row, refuses
+#     a residue row without a rule or stage, and notes a stale one
 #   - nautical apply writes nothing; operator apply writes exactly one block,
 #     is idempotent, preserves the captain's prose, and rolls back byte-exact
 #   - the real fm-session-start.sh prints the Persona block in CONTEXT
@@ -192,6 +195,79 @@ test_anchors() {
   out=$(FM_HOME="$TMP_ROOT/anchors-hook" "$code/bin/po-theme.sh" anchors 2>&1) && fail "anchors passed without the AGENTS.md Persona line"
   assert_contains "$out" "the ADR-0016 Persona line in AGENTS.md" "anchors did not name the missing hook line"
   pass "anchors pass on this tree and fail on drifted wording, a new command, or a lost hook"
+}
+
+# tree_copy <name>: a throwaway git repository holding this tree's tracked and
+# untracked-but-not-ignored files, so `anchors` runs against the whole surface.
+tree_copy() {
+  local code="$TMP_ROOT/$1/code"
+  mkdir -p "$code"
+  git -C "$ROOT" ls-files -co --exclude-standard -z \
+    | ( cd "$ROOT" && xargs -0 sh -c 'for f; do [ -f "$f" ] && printf "%s\0" "$f"; done' _ ) \
+    | ( cd "$ROOT" && tar --null -T - -cf - ) | tar -C "$code" -xf -
+  git init -q -b main "$code"
+  git -C "$code" add -A
+  git -C "$code" commit -q -m seed
+  printf '%s\n' "$code"
+}
+
+# canary_run <code>: run the fixture's anchors; prints its output and returns its status.
+canary_run() {
+  FM_HOME="$TMP_ROOT/canary-home" "$1/bin/po-theme.sh" anchors 2>&1
+}
+
+test_surface_canary() {
+  local code out rc residue registry ext board
+  code=$(tree_copy canary)
+  residue="$code/.agents/skills/po-theme/residue.tsv"
+  registry="$code/.agents/skills/po-theme/surfaces.tsv"
+  ext="$code/.pi/extensions/fm-calm.ts"
+  board="$code/.agents/skills/bearings/assets/board-template.html"
+  out=$(canary_run "$code") || fail "anchors failed on the copied tree: $out"
+  assert_contains "$out" "anchors: ok" "anchors did not confirm the copied tree"
+  assert_not_contains "$out" "residue row matches no producer line" "a seeded residue row is already stale"
+
+  # An unregistered nautical word in a new producer call fails, naming it.
+  printf '%s\n' '  ctx.ui.notify("The fleet is ready for you.", "info");' >> "$ext"
+  out=$(canary_run "$code") && fail "anchors passed with an unregistered nautical notify call"
+  assert_contains "$out" 'surface canary: nautical "fleet" (notify call) at .pi/extensions/fm-calm.ts:' "the canary did not name the new notify call"
+
+  # A residue row covers it, and is refused without a rule or stage reason.
+  printf '.pi/extensions/fm-calm.ts\tThe fleet is ready for you.\tbecause\n' >> "$residue"
+  out=$(canary_run "$code") && fail "anchors passed with a residue row that gives no rule or stage"
+  assert_contains "$out" "surface canary: malformed residue row" "the canary did not refuse a reason-less residue row"
+  sed -i.bak '$d' "$residue" && rm -f "$residue.bak"
+  printf '.pi/extensions/fm-calm.ts\tThe fleet is ready for you.\tS3: test notice\n' >> "$residue"
+  out=$(canary_run "$code"); rc=$?
+  [ "$rc" -eq 0 ] || fail "anchors failed with the new call listed as residue: $out"
+  sed -i.bak '$d' "$residue" && rm -f "$residue.bak"
+
+  # A registered hook line passes as it stands.
+  printf 'str.test\tT\t.pi/extensions/fm-calm.ts\tupstream\tctx.ui.notify("The fleet is ready for you.", "info");\t\n' >> "$registry"
+  out=$(canary_run "$code"); rc=$?
+  [ "$rc" -eq 0 ] || fail "anchors failed on a registered hook line: $out"
+  sed -i.bak '$d' "$registry" && rm -f "$registry.bak"
+  sed -i.bak '$d' "$ext" && rm -f "$ext.bak"
+
+  # The other producer patterns: a message on the line after the call, a
+  # command-registration description, a notification title, and board text.
+  printf '%s\n' '  ctx?.ui?.notify?.(' '    `Ask the captain first.`,' '    "warning",' '  );' >> "$ext"
+  printf '%s\n' '  pi.registerCommand?.("probe", {' '    description:' '      "Hail the crew.",' '  });' >> "$ext"
+  printf '%s\n' "osascript -e 'display notification \"x\" with title \"Second mate alert\"'" >> "$code/bin/fm-usage-warner.sh"
+  printf '%s\n' '<p>All hands, ahoy</p>' '<!-- a comment that names the captain is not page text -->' >> "$board"
+  out=$(canary_run "$code") && fail "anchors passed with unregistered nautical producer lines"
+  assert_contains "$out" '"captain" (notify call) at .pi/extensions/fm-calm.ts:' "the canary missed a multi-line notify call"
+  assert_contains "$out" '"crew" (command description) at .pi/extensions/fm-calm.ts:' "the canary missed a command description"
+  assert_contains "$out" '"second mate" (notification title) at bin/fm-usage-warner.sh:' "the canary missed a notification title"
+  assert_contains "$out" '"ahoy" (board text) at .agents/skills/bearings/assets/board-template.html:' "the canary missed board text"
+  assert_not_contains "$out" "a comment that names the captain" "the canary scanned a page comment"
+
+  # A residue row that matches nothing is noted, not failed.
+  code=$(tree_copy canary-stale)
+  printf 'bin/fm-usage-warner.sh\tno such producer text\tR4: test\n' >> "$code/.agents/skills/po-theme/residue.tsv"
+  out=$(canary_run "$code") || fail "anchors failed on a stale residue row: $out"
+  assert_contains "$out" "note: residue row matches no producer line; remove it: bin/fm-usage-warner.sh" "the canary did not note a stale residue row"
+  pass "the surface canary fails on an unregistered nautical producer line and passes registered and residue ones"
 }
 
 test_nautical_apply_writes_nothing() {
@@ -503,6 +579,7 @@ test_terms_and_resolve() {
 test_bundled_themes_validate
 test_validation_refusals
 test_anchors
+test_surface_canary
 test_nautical_apply_writes_nothing
 test_operator_apply
 test_session_start_prints_persona
