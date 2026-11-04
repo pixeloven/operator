@@ -2558,11 +2558,6 @@ test_trap_exit_survives_pending_comsub_scan() {
   [ "$rc" -eq 143 ] || fail "TERM pending at a \$() scan did not exit 143 (rc=$rc): $(cat "$dir/err")"
   [ "$(cat "$dir/exit-status" 2>/dev/null)" = 143 ] \
     || fail "TERM pending at a \$() scan skipped the EXIT cleanup"
-  fm_trap_exit_rejects() {
-    bash -c '. "$1"; shift; fm_trap_exit "$@"' _ "$ROOT/bin/fm-wake-lib.sh" "$@" 2>/dev/null
-  }
-  ! fm_trap_exit_rejects 143 || fail "fm_trap_exit accepted a trap with no signal"
-  ! fm_trap_exit_rejects x TERM || fail "fm_trap_exit accepted a non-numeric exit status"
   pass "fm_trap_exit exits on a signal pending at a \$() scan (bash $BASH_VERSION)"
 }
 

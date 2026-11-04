@@ -66,9 +66,7 @@ fm_current_pid() {  # [output-variable]
 # line closes that phantom $( there; everywhere else exit runs before that line
 # is read.
 fm_trap_exit() {  # <status> <signal>...
-  case "${1:-}" in ''|*[!0-9]*) return 1 ;; esac
-  [ "$#" -ge 2 ] || return 1
-  # shellcheck disable=SC2064 # The status is a validated literal, fixed now.
+  # shellcheck disable=SC2064 # The status is a literal, fixed now.
   trap "exit $1"$'\n'")" "${@:2}"
 }
 

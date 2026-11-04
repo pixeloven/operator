@@ -24,7 +24,7 @@ Every fix lives in inherited files, and ADR-0001 otherwise prohibits editing the
 ADR-0001 remains the default, and the following inherited files may carry these bounded changes:
 
 - `bin/fm-wake-lib.sh`: `fm_trap_exit`, which traps signals to exit with a status through an action whose second line closes that phantom `$(` on Bash 5.2 and is never read elsewhere
-- `bin/fm-wake-drain.sh`: installing its INT and TERM traps through `fm_trap_exit`, and exiting if either cannot be installed
+- `bin/fm-wake-drain.sh`: installing its INT and TERM traps through `fm_trap_exit`
 - `tests/fm-wake-queue.test.sh`: the regression cases that hold TERM pending at a `$(` scan, both through `fm_trap_exit` directly and through a drain acknowledgement
 
 Every other trap in the repository is outside this exception.
