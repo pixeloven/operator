@@ -202,6 +202,7 @@ test_anchors() {
 tree_copy() {
   local code="$TMP_ROOT/$1/code"
   mkdir -p "$code"
+  # shellcheck disable=SC2016 # the single-quoted script expands in the child sh
   git -C "$ROOT" ls-files -co --exclude-standard -z \
     | ( cd "$ROOT" && xargs -0 sh -c 'for f; do [ -f "$f" ] && printf "%s\0" "$f"; done' _ ) \
     | ( cd "$ROOT" && tar --null -T - -cf - ) | tar -C "$code" -xf -
@@ -251,6 +252,7 @@ test_surface_canary() {
 
   # The other producer patterns: a message on the line after the call, a
   # command-registration description, a notification title, and board text.
+  # shellcheck disable=SC2016 # literal TypeScript fixture text, backticks included
   printf '%s\n' '  ctx?.ui?.notify?.(' '    `Ask the captain first.`,' '    "warning",' '  );' >> "$ext"
   printf '%s\n' '  pi.registerCommand?.("probe", {' '    description:' '      "Hail the crew.",' '  });' >> "$ext"
   printf '%s\n' "osascript -e 'display notification \"x\" with title \"Second mate alert\"'" >> "$code/bin/fm-usage-warner.sh"
