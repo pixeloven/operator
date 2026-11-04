@@ -1,0 +1,48 @@
+### S3a: new toast + an identical line in a second file; residue row only for fm-calm.ts
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+surface canary: nautical "fleet" (notify call) at .pi/extensions/fm-branch-supervision.ts:2468 is neither a registered hook nor residue: ctx.ui.notify("The fleet is ready.", "info");
+exit=1
+
+### S3b: register the second one as a hook line in surfaces.tsv
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+anchors: ok
+exit=0
+
+### S4: residue row with no R/S reason prefix is refused
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+surface canary: malformed residue row (want file, text, and a reason opening with R1-R5 or S1-S7 and a colon): .pi/extensions/fm-calm.ts	The fleet is ready.	because I said so
+exit=1
+
+### S4b: residue row with out-of-range stage S9 is refused
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+surface canary: malformed residue row (want file, text, and a reason opening with R1-R5 or S1-S7 and a colon): .pi/extensions/fm-calm.ts	The fleet is ready.	S9: no such stage
+exit=1
+
+### S5: stale residue row is noted (not failed)
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+note: residue row matches no producer line; remove it: bin/fm-usage-warner.sh	no such producer text
+anchors: ok
+exit=0
+
+### S6: tracked producer deleted from worktree but not staged
+ M .agents/skills/po-theme/residue.tsv
+ M .agents/skills/po-theme/surfaces.tsv
+ M .pi/extensions/fm-branch-supervision.ts
+ M .pi/extensions/fm-calm.ts
+ D bin/fm-usage-warner.sh
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+note: residue row matches no producer line; remove it: bin/fm-usage-warner.sh	with title "Firstmate: Claude usage"
+anchors: ok
+exit=0
+
+### S7: residue list itself missing
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+surface canary: no residue list at /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-canary-lab.6Kkybd/b/.agents/skills/po-theme/residue.tsv
+exit=1

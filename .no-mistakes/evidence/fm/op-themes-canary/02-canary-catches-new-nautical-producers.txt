@@ -1,0 +1,15 @@
+### S2: simulated upstream merge adds nautical person-facing producers (one per pattern)
+$ bin/po-theme.sh anchors
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+surface canary: nautical "captain" (board text) at .agents/skills/bearings/assets/board-template.html:750 is neither a registered hook nor residue: <h2>Ahoy, captain</h2>
+surface canary: nautical "captain" (notify call) at .omp/extensions/fm-primary-omp-watch.ts:1153 is neither a registered hook nor residue: $.ui.toast({ message: "Ask the captain" });
+surface canary: nautical "second mate" (notify call) at .omp/extensions/fm-primary-omp-watch.ts:1154 is neither a registered hook nor residue: $.ui.log("Second mate standing by");
+surface canary: nautical "fleet" (notify call) at .pi/extensions/fm-calm.ts:515 is neither a registered hook nor residue: ctx.ui.notify("All hands: the fleet is ready.", "info");
+surface canary: nautical "crew" (command description) at .pi/extensions/fm-calm.ts:517 is neither a registered hook nor residue: description: "Hail the crew.",
+surface canary: nautical "firstmate" (notification title) at bin/fm-usage-warner.sh:520 is neither a registered hook nor residue: osascript -e 'display notification "x" with title "Firstmate crew alert"'
+exit=1
+
+### Same mutated tree, base commit 5563185e po-theme.sh (no canary) for contrast
+note: upstream pin 78c69df2b0b231d5cbe849dbc87fce9ea74ba219 is not in this clone; replaced upstream lines not checked
+anchors: ok
+exit=0

@@ -1,0 +1,3 @@
+$ FM_HOME=<disposable> bin/po-theme.sh anchors   # on the change tree itself
+anchors: ok
+exit=0
