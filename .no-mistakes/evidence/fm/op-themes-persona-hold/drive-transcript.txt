@@ -1,0 +1,119 @@
+
+===== S3 nautical home: headline bytes and session-start head =====
+headline bytes: 0
+session-start rc=0
+SESSION START - /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK
+================================================================================
+
+LOCK
+PERSONA/drift lines in digest: 0
+
+===== S1 primary operator theme applied: full digest head =====
+alias: /flush -> /stow
+alias: /updateoperator -> /updatefirstmate
+values: operator labels and strings written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK/state/po-theme/values
+verify: ok (operator)
+session-start rc=0
+SESSION START - /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK
+================================================================================
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, all systems nominal.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+
+LOCK
+byte offset of PERSONA line in digest: 243 (harness inline preview ~2000)
+digest total bytes: 17482; byte offset of full "## Persona" block: 13203
+
+===== S2 primary operator theme: --reemit (post-compaction) head =====
+session-start rc=0
+SESSION START (CONTEXT RE-EMIT) - /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK
+================================================================================
+This session already took the helm at its own startup and has only lost its
+context. Lock ownership is re-verified and the durable records below are
+reprinted, but the sweeps startup already reconciled - project clone refresh,
+secondmate convergence and liveness, pending remote handoff
+retry, X-mode artifact writes, and stale Herdr child cleanup - are NOT repeated.
+Queued wakes ARE still drained: they arrived after startup and are this turn work.
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, all systems nominal.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+
+LOCK
+byte offset of PERSONA line: 1033
+
+===== S4 primary drift: hand-edited Persona block =====
+drift: the Persona block in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK/data/captain-shared.md is stale or hand-edited; run apply
+verify rc=1
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, ALL QUIET.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+persona drift: rerun apply in the primary home
+SESSION START (CONTEXT RE-EMIT) - /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK
+================================================================================
+This session already took the helm at its own startup and has only lost its
+context. Lock ownership is re-verified and the durable records below are
+reprinted, but the sweeps startup already reconciled - project clone refresh,
+secondmate convergence and liveness, pending remote handoff
+retry, X-mode artifact writes, and stale Herdr child cleanup - are NOT repeated.
+Queued wakes ARE still drained: they arrived after startup and are this turn work.
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, ALL QUIET.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+persona drift: rerun apply in the primary home
+
+LOCK
+
+===== S5 nautical selected but stale Persona block left (apply not rerun) =====
+persona drift: rerun apply in the primary home
+headline rc=0
+SESSION START (CONTEXT RE-EMIT) - /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.H4LIjK
+================================================================================
+This session already took the helm at its own startup and has only lost its
+context. Lock ownership is re-verified and the durable records below are
+reprinted, but the sweeps startup already reconciled - project clone refresh,
+secondmate convergence and liveness, pending remote handoff
+retry, X-mode artifact writes, and stale Herdr child cleanup - are NOT repeated.
+Queued wakes ARE still drained: they arrived after startup and are this turn work.
+persona drift: rerun apply in the primary home
+
+LOCK
+
+===== S5b after nautical apply: block removed, headline silent =====
+persona: nautical - block removed
+values: nautical - no cache
+headline bytes: 0
+
+===== S6 secondmate inheriting current bundled operator block: no drift =====
+verify: ok (operator, inherited)
+verify rc=0
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, all systems nominal.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.dfSLKc/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+
+===== S7 secondmate inheriting an older self-consistent block (differs from bundled) =====
+source=local -->
+persona drift: inherited block differs from the bundled operator theme; rerun apply in the primary home (or update this home if it is newer)
+verify rc=1
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, standing by.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.dfSLKc/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+persona drift: inherited block differs from the bundled operator theme; rerun apply in the primary home (or update this home if it is newer)
+SESSION START - /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.dfSLKc
+================================================================================
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, standing by.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.dfSLKc/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+persona drift: inherited block differs from the bundled operator theme; rerun apply in the primary home (or update this home if it is newer)
+
+LOCK
+
+===== S8 secondmate inheriting a local (source=local) primary-only override: comparison skipped =====
+verify: ok (operator, inherited)
+verify rc=0
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, standing by.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.dfSLKc/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+
+===== S9 secondmate inheriting a hand-edited block =====
+drift: the inherited Persona block does not match its own values line (hand-edited)
+verify rc=1
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, standing by.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.dfSLKc/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+persona drift: rerun apply in the primary home
+
+===== S10 AGENTS.md Persona line =====
+1
+Persona: when the session-start context carries a `## Persona` block (`bin/po-theme.sh`), it supplies the chat words for your self-name, the user's address, role nouns, seasoning, and the exact no-op reply; it changes no rule and no identifier; if a clear or compaction left no Persona block in your context, read it from `data/captain-shared.md` before your next reply.
+labs removed

@@ -1,0 +1,17 @@
+== nautical startup: base vs target
+126,129c126,130
+< completed off the startup path in 2s: GitHub authentication, dead-secondmate relaunch, secondmate convergence, pending handoff delivery, project clone refresh with its drift reporting, and inactive terminal-outcome reconciliation.
+< fatal: not a git repository (or any of the parent directories): .git
+< fatal: not a git repository (or any of the parent directories): .git
+< These ran AFTER the sections above were composed, so re-read any record a line here names.
+---
+> IN PROGRESS - the deferred network checks have not finished yet.
+> NOT yet confirmed: GitHub authentication, dead-secondmate relaunch, secondmate convergence, pending handoff delivery, project clone refresh with its drift reporting, and inactive terminal-outcome reconciliation.
+> Started 3s ago, bounded at 120s.
+> Only a FAILED or otherwise actionable result arrives as a `check: startup-network` wake; a clean success stays silent.
+> The durable result is readable on demand with <ROOT>/bin/fm-startup-network.sh report; until it finishes, treat none of it as confirmed.
+== nautical reemit: base vs target
+135c135
+< completed off the startup path in 1s: GitHub authentication.
+---
+> completed off the startup path in 2s: GitHub authentication.
