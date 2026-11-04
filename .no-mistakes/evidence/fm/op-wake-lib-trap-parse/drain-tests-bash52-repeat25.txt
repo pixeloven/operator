@@ -1,0 +1,1 @@
+bash 5.2.37 fixed tree, 25 iterations of 3 interruption tests: pass=25 fail=0

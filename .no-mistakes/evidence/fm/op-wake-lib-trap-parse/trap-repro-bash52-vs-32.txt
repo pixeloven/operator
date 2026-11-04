@@ -1,0 +1,4 @@
+bash 5.2.37(1)-release trap=plain rc=0 :: _: trap: line 2: unexpected EOF while looking for matching `)' _: -c: line 5: unexpected EOF while looking for matching `)' survived TERM EXIT=0 
+bash 5.2.37(1)-release trap=fixed rc=143 :: EXIT=143 
+bash 3.2.57(1)-release trap=plain rc=143 :: EXIT=143 
+bash 3.2.57(1)-release trap=fixed rc=143 :: EXIT=143 

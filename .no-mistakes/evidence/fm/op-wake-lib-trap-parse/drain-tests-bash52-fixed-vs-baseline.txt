@@ -1,0 +1,22 @@
+=== fixed / 5.2.37(1)-release ===
+ok - interruptions preserve durable rows until post-handling acknowledgement
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.37(1)-release)
+ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+exit=0
+=== fixed / 3.2.57(1)-release ===
+ok - interruptions preserve durable rows until post-handling acknowledgement
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 3.2.57(1)-release)
+ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+exit=0
+=== baseline / 5.2.37(1)-release ===
+ok - interruptions preserve durable rows until post-handling acknowledgement
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.37(1)-release)
+not ok - drain TERM inside sibling $() hit the trap parse error: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fmtrap.5pI3dF/baseline/bin/fm-wake-drain.sh: trap: line 2: unexpected EOF while looking for matching `)'
+/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fmtrap.5pI3dF/baseline/bin/fm-wake-drain.sh: line 937: unexpected EOF while looking for matching `)'
+WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 1 --recovery-generation 47838.1793824583.ZhiRj1
+exit=1
+=== baseline / 3.2.57(1)-release ===
+ok - interruptions preserve durable rows until post-handling acknowledgement
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 3.2.57(1)-release)
+ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+exit=0
