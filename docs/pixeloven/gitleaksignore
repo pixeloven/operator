@@ -6,7 +6,3 @@
 7647d6ba10ff33082f473576c241e15dcbf45cbe:tests/fm-dispatch-resolve.test.sh:generic-api-key:535
 # Upstream test fixture from kunchenguid/firstmate #7518: a fake inherited git-config value (fm-inherited-secret-7f3a), not a credential.
 3004ccb107f97fb619e1cafd1ea8591562dc23ef:tests/fm-backend-t3code.test.sh:generic-api-key:1927
-# Same fixture as the 7647d6ba entry (kc-effective-c07e5a12-never-on-argv), re-attributed to squash commit 5563185e (PR #49), not a credential.
-5563185e5f4631a237f63f19e28b80d44587a2dc:tests/fm-dispatch-resolve.test.sh:generic-api-key:535
-# Same fixture as the 3004ccb1 entry (fm-inherited-secret-7f3a), re-attributed to squash commit 5563185e (PR #49), not a credential.
-5563185e5f4631a237f63f19e28b80d44587a2dc:tests/fm-backend-t3code.test.sh:generic-api-key:1931
