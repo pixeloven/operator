@@ -2163,6 +2163,63 @@ test_large_sequences_stay_exact_decimal_identifiers() {
   pass "wake queue: large sequences advance and acknowledge as exact digit-only decimals"
 }
 
+# ADR-0012: a lost or malformed counter recovers past both the queue's highest
+# row and every sequence-bearing process-event presentation marker. The queue's
+# highest row comes from the append's exact decimal pass, so a row next to the
+# 64-bit limit is neither rounded nor overflowed; the markers come from the
+# recovery floor; and a non-empty queue that cannot be read refuses the append.
+test_lost_counter_recovers_past_queue_and_procevent_markers() {
+  local counter dir state large expected new_seq
+  large=9223372036854775805
+  for counter in missing malformed; do
+    # The queue's highest row outranks both markers.
+    dir=$(make_case "lost-counter-queue-max-$counter")
+    state="$dir/state"
+    printf '1700000000\t%s\tcheck\tinbox:large\tcheck: large row\n1700000001\t7\tcheck\tinbox:small\tcheck: small row\n' \
+      "$large" > "$state/.wake-queue"
+    : > "$state/.seen-procevent-row-12"
+    printf '40\tprocevent:source-a:1\n' > "$state/.seen-procevent-id-70726f636576656e743a736f757263652d613a31"
+    [ "$counter" = missing ] || printf 'not-a-sequence\n' > "$state/.wake-queue.seq"
+    append_wake "$state" check inbox:next 'check: appended after lost counter' \
+      || fail "append after a $counter counter beside row $large failed"
+    expected=9223372036854775806
+    new_seq=$(awk -F '\t' '$4 == "inbox:next" { print $2 }' "$state/.wake-queue")
+    [ "$new_seq" = "$expected" ] \
+      || fail "a $counter counter beside row $large advanced to '$new_seq', not $expected"
+    [ "$(cat "$state/.wake-queue.seq")" = "$expected" ] \
+      || fail "the $counter counter recovered to '$(cat "$state/.wake-queue.seq")', not $expected"
+
+    # A process-event marker outranks every queued row.
+    dir=$(make_case "lost-counter-marker-max-$counter")
+    state="$dir/state"
+    printf '1700000000\t3\tcheck\tinbox:small\tcheck: small row\n' > "$state/.wake-queue"
+    : > "$state/.seen-procevent-row-41"
+    printf '57\tprocevent:source-b:1\n' > "$state/.seen-procevent-id-70726f636576656e743a736f757263652d623a31"
+    [ "$counter" = missing ] || printf 'not-a-sequence\n' > "$state/.wake-queue.seq"
+    append_wake "$state" check inbox:next 'check: appended after lost counter' \
+      || fail "append after a $counter counter beside marker 57 failed"
+    new_seq=$(awk -F '\t' '$4 == "inbox:next" { print $2 }' "$state/.wake-queue")
+    [ "$new_seq" = 58 ] \
+      || fail "a $counter counter beside marker 57 advanced to '$new_seq', reusing a marked sequence"
+
+    # A non-empty queue that cannot be read refuses rather than guessing.
+    [ "$(id -u)" -eq 0 ] && continue
+    dir=$(make_case "lost-counter-unreadable-$counter")
+    state="$dir/state"
+    printf '1700000000\t%s\tcheck\tinbox:large\tcheck: large row\n' "$large" > "$state/.wake-queue"
+    [ "$counter" = missing ] || printf 'not-a-sequence\n' > "$state/.wake-queue.seq"
+    chmod 000 "$state/.wake-queue"
+    if append_wake "$state" check inbox:next 'check: must not append' 2>/dev/null; then
+      chmod 600 "$state/.wake-queue"
+      fail "a $counter counter beside an unreadable queue still appended"
+    fi
+    chmod 600 "$state/.wake-queue"
+    [ "$(awk 'END { print NR + 0 }' "$state/.wake-queue")" = 1 ] \
+      || fail "a refused append beside an unreadable queue still wrote a row"
+  done
+  pass "wake queue: a lost counter recovers past the exact queue maximum and process-event markers"
+}
+
 test_legacy_generationless_wake_is_adopted() {
   local dir state row sequence generation
   dir=$(make_case legacy-generationless-wake)
@@ -3879,6 +3936,7 @@ test_branch_repeat_ack_after_consumed_grant_names_the_consumed_grant
 test_wake_publish_requires_atomic_recovery_evidence
 test_recovery_mint_and_delivery_log_avoid_sibling_subst
 test_large_sequences_stay_exact_decimal_identifiers
+test_lost_counter_recovers_past_queue_and_procevent_markers
 test_legacy_generationless_wake_is_adopted
 test_handover_restore_undoes_only_its_own_stop
 test_stale_recovery_generation_cannot_touch_a_newer_episode
