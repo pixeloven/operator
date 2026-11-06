@@ -582,7 +582,7 @@ test_anchors_name_a_lost_hook() {
   code="$TMP_ROOT/anchors/code"
   mkdir -p "$code/bin/backends" "$code/.agents/skills" "$code/docs/pixeloven"
   cp "$PT" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$ROOT/bin/fm-afk-launch.sh" \
-    "$ROOT/bin/fm-herdr-groups.sh" "$ROOT/bin/fm-supervise-daemon.sh" "$code/bin/"
+    "$ROOT/bin/fm-herdr-groups.sh" "$ROOT/bin/fm-supervise-daemon.sh" "$ROOT/bin/fm-session-start.sh" "$code/bin/"
   cp "$ROOT/bin/backends/herdr.sh" "$ROOT/bin/backends/paseo.sh" "$code/bin/backends/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"

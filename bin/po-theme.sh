@@ -44,7 +44,14 @@
 #                                     a delimited block of .git/info/exclude
 #   po-theme.sh verify                exit 1 when the Persona block or aliases drifted
 #                                     from the selected theme (stale, hand-edited,
-#                                     missing, or unexpected)
+#                                     missing, or unexpected); in a secondmate home,
+#                                     when the inherited block is hand-edited or
+#                                     differs from the bundled theme of its name
+#   po-theme.sh headline              the session-start head lines: the applied
+#                                     block's address word, no-op reply, and role
+#                                     words, a pointer to the full block, and one
+#                                     "persona drift" line when verify fails
+#                                     (empty for nautical)
 #   po-theme.sh anchors               sync canary: every nautical value still matches
 #                                     the upstream text it mirrors, every
 #                                     user-invocable skill has an alias key, and the
@@ -231,23 +238,43 @@ shared_address() {
   printf '%s\n' "$v"
 }
 
-# resolve_active: sets ACTIVE_NAME, ACTIVE_SRC, ACTIVE_KV.
+# load_block <block-file> <out-kv>: the values line of a Persona block, role
+# words read in lowercase, safety-checked into a kv file; sets BLOCK_NAME.
+load_block() {
+  local n
+  values_to_theme "$1" > "$TMPD/block.raw" \
+    || die "the Persona block in $SHARED has no values line; rerun apply in the primary home"
+  awk -v roles="$ROLE_KEYS" '
+    BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
+    { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
+  ' "$TMPD/block.raw" > "$TMPD/block.theme"
+  parse "$TMPD/block.theme" > "$TMPD/block.kv" 2>/dev/null || die "the Persona values line in $SHARED is malformed"
+  n=$(get "$TMPD/block.kv" name 2>/dev/null || true)
+  valid_name "$n" || die "the Persona values line in $SHARED has no valid name"
+  load_file "$n" "$TMPD/block.theme" "$2"
+  BLOCK_NAME=$n
+}
+
+# src_of <theme-file>: "local" for a theme from config/po-themes, else empty.
+src_of() {
+  case "$1" in "$LOCAL_THEMES"/*) echo local ;; esac
+}
+
+# block_src <block-file>: "local" when the block's values line records a local theme.
+block_src() {
+  grep -F "$VALUES_PREFIX" "$1" 2>/dev/null | grep -qF ' source=local -->' && echo local
+  return 0
+}
+
+# resolve_active: sets ACTIVE_NAME, ACTIVE_SRC, ACTIVE_KV, ACTIVE_ORIGIN.
 resolve_active() {
   local n
   if is_secondmate_home; then
     block_of "$SHARED" > "$TMPD/inherited.block"
     if [ -s "$TMPD/inherited.block" ]; then
-      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.raw" \
-        || die "the inherited Persona block in $SHARED has no values line; rerun apply in the primary home"
-      awk -v roles="$ROLE_KEYS" '
-        BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
-        { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
-      ' "$TMPD/inherited.raw" > "$TMPD/inherited.theme"
-      parse "$TMPD/inherited.theme" > "$TMPD/inherited.kv" 2>/dev/null || die "the inherited Persona values line is malformed"
-      n=$(get "$TMPD/inherited.kv" name 2>/dev/null || true)
-      valid_name "$n" || die "the inherited Persona values line has no valid name"
-      load_file "$n" "$TMPD/inherited.theme" "$TMPD/active.kv"
-      ACTIVE_NAME=$n ACTIVE_SRC="inherited:$SHARED" ACTIVE_KV="$TMPD/active.kv"
+      load_block "$TMPD/inherited.block" "$TMPD/active.kv"
+      ACTIVE_NAME=$BLOCK_NAME ACTIVE_SRC="inherited:$SHARED" ACTIVE_KV="$TMPD/active.kv"
+      ACTIVE_ORIGIN=$(block_src "$TMPD/inherited.block")
       return 0
     fi
     n=nautical
@@ -260,6 +287,7 @@ resolve_active() {
   ACTIVE_NAME=$n
   ACTIVE_SRC=$(theme_file "$n")
   ACTIVE_KV=$(load_named "$n")
+  ACTIVE_ORIGIN=$(src_of "$ACTIVE_SRC")
 }
 
 # strs_of <kv>: "<key><TAB><string>" for every registered str.* key, using the
@@ -431,16 +459,17 @@ validate_named() {  # <name>
   return $rc
 }
 
-values_line() {  # <kv>
+values_line() {  # <kv> [local]
   local k v
   printf '%s' "$VALUES_PREFIX"
   while IFS="$TAB" read -r k v; do printf '%s="%s" ' "$k" "$v"; done < "$1"
+  [ "${2:-}" = local ] && printf 'source=local '
   printf -- '-->\n'
 }
 
 # shellcheck disable=SC2016  # backticks are literal Markdown code spans for the reading agent.
-persona() {  # <name> <kv>
-  local name=$1 kv=$2 k v seasoning
+persona() {  # <name> <kv> [local]
+  local name=$1 kv=$2 origin=${3:-} k v seasoning
   [ "$name" = nautical ] && return 0
   t() { get "$kv" "$1"; }
   seasoning=$(t seasoning | sed 's/, /", "/g')
@@ -477,7 +506,7 @@ persona() {  # <name> <kv>
   done < "$kv"
   printf ' in the primary home, treat each alias exactly as its target.\n'
   printf -- '- Workers receive this vocabulary through their launch role contract; scout reports and other prose a person reads use the words on the right.\n'
-  values_line "$kv"
+  values_line "$kv" "$origin"
   printf '%s\n' "$END_MARK"
 }
 
@@ -579,7 +608,7 @@ apply() {
     cat "$TMPD/findings" >&2
     die "theme $ACTIVE_NAME failed validation"
   fi
-  persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/block"
+  persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/block"
   if [ -s "$TMPD/block" ]; then
     mkdir -p "$DATA"
     replace_block "$SHARED" "$TMPD/block"
@@ -644,13 +673,22 @@ verify() {
   block_of "$SHARED" > "$TMPD/actual"
   if is_secondmate_home; then
     if [ -s "$TMPD/actual" ]; then
-      persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/expected"
+      persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/expected"
       cmp -s "$TMPD/expected" "$TMPD/actual" || { echo "drift: the inherited Persona block does not match its own values line (hand-edited)"; drift=1; }
+      # A block from a bundled theme should match this checkout's bundled theme
+      # of the same name; a custom theme of the primary home, whether it has no
+      # bundled file or a local one shadows it (source=local), is not compared.
+      if [ $drift -eq 0 ] && [ -z "$ACTIVE_ORIGIN" ] && [ -f "$BUNDLED/$ACTIVE_NAME.theme" ]; then
+        load_file "$ACTIVE_NAME" "$BUNDLED/$ACTIVE_NAME.theme" "$TMPD/bundled.kv"
+        persona "$ACTIVE_NAME" "$TMPD/bundled.kv" > "$TMPD/bundled"
+        cmp -s "$TMPD/bundled" "$TMPD/actual" \
+          || { echo "persona drift: inherited block differs from the bundled $ACTIVE_NAME theme; rerun apply in the primary home (or update this home if it is newer)"; drift=1; }
+      fi
     fi
     [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME, inherited)"
     return $drift
   fi
-  persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/expected"
+  persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/expected"
   if [ -s "$TMPD/expected" ] && [ ! -s "$TMPD/actual" ]; then
     echo "drift: theme $ACTIVE_NAME is selected but $SHARED has no Persona block; run apply"; drift=1
   elif [ ! -s "$TMPD/expected" ] && [ -s "$TMPD/actual" ]; then
@@ -674,6 +712,29 @@ verify() {
   fi
   [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME)"
   return $drift
+}
+
+# headline: the persona in force, in two lines for the head of the session-start
+# digest, which a harness that spills a large digest still shows inline; then
+# one drift line when verify finds drift. Prints nothing under nautical unless
+# a stale Persona block is left in $SHARED, where it prints only the drift line.
+# shellcheck disable=SC2016  # backticks are literal Markdown code spans for the reading agent.
+headline() {
+  local kv="$TMPD/headline.kv" nautical=0
+  if active_is_nautical; then
+    [ -f "$SHARED" ] && grep -qxF "$START_MARK" "$SHARED" || return 0
+    nautical=1
+  fi
+  block_of "$SHARED" > "$TMPD/headline.block"
+  if [ $nautical -eq 0 ] && [ -s "$TMPD/headline.block" ] && ( load_block "$TMPD/headline.block" "$kv" ) 2>/dev/null; then
+    t() { get "$kv" "$1"; }
+    printf 'PERSONA (%s theme, chat words only): address the user as "%s,"; the exact no-op reply is `%s`; say %s for captain, %s for first mate, %s for crewmate, %s for crew, %s for second mate, %s for fleet, %s for ship, %s for scout.\n' \
+      "$(t name)" "$(t user_address)" "$(t noop_reply)" "$(t user)" "$(t self)" "$(t worker)" "$(t crew)" \
+      "$(t submate)" "$(t fleet)" "$(t ship_task)" "$(t scout_task)"
+    printf 'The full Persona block is in %s, printed under CONTEXT below; if this output was cut off, read that file before your next reply.\n' "$SHARED"
+  fi
+  ( verify ) > "$TMPD/headline.verify" 2>/dev/null && return 0
+  grep -m 1 '^persona drift: ' "$TMPD/headline.verify" || echo "persona drift: rerun apply in the primary home"
 }
 
 anchors() {
@@ -924,7 +985,7 @@ case "$cmd" in
     validate_named "$n" || exit 1
     echo "validate: $n ok" ;;
   persona)
-    if [ $# -ge 1 ]; then persona "$1" "$(load_named "$1")"; else resolve_active; persona "$ACTIVE_NAME" "$ACTIVE_KV"; fi ;;
+    if [ $# -ge 1 ]; then persona "$1" "$(load_named "$1")" "$(src_of "$(theme_file "$1")")"; else resolve_active; persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN"; fi ;;
   apply) apply ;;
   refresh) refresh ;;
   label)
@@ -941,6 +1002,7 @@ case "$cmd" in
       *) die "usage: registry files | registry check-diff <ref>" ;;
     esac ;;
   verify) verify ;;
+  headline) headline ;;
   anchors) anchors ;;
   address-alt)
     shared_address && exit 0
