@@ -57,6 +57,19 @@ fm_current_pid() {  # [output-variable]
   fi
 }
 
+# fm_trap_exit <status> <signal>...
+# Trap each signal to exit with <status>, including on Bash 5.2. Bash 5.2 runs a
+# trap that falls due while it rescans a $(...) word at expansion time (even an
+# unexecuted ${var:-$(...)} alternative) inside that scan's half-open $( parser
+# state, so a plain action fails with "unexpected EOF while looking for matching
+# `)'" and the signal is lost (Bash 5.3 defers such traps). The action's second
+# line closes that phantom $( there; everywhere else exit runs before that line
+# is read.
+fm_trap_exit() {  # <status> <signal>...
+  # shellcheck disable=SC2064 # The status is a literal, fixed now.
+  trap "exit $1"$'\n'")" "${@:2}"
+}
+
 # Fork-free stand-in for `$(date +%s)` on the watcher, drain, and lock paths
 # that read the clock every cycle.
 # printf's %(...)T is a bash 4.2 builtin; stock macOS Bash 3.2 still forks date.
