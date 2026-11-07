@@ -8,7 +8,7 @@ This page owns the theme format, the validation rules, the boundary between them
 
 | Surface | How it is themed |
 |---|---|
-| Chat: self-name, the user's address word, role nouns, seasoning, the exact no-op reply | a Persona block in the primary home's `data/captain-shared.md`, which every session-start digest prints and every second mate inherits read-only |
+| Chat: self-name, the user's address word, role nouns, seasoning, the exact no-op reply | a Persona block in the primary home's `data/captain-shared.md`, which every session-start digest prints and every second mate inherits read-only, plus a two-line headline at the head of the digest |
 | Worker prose a person reads, such as scout reports | one vocabulary line in the worker launch role contract |
 | The intent-address guard for no-mistakes | also refuses the theme's vocative, so a theme never weakens it; the vocative comes from the applied Persona block, so a selection broken after `apply` does not switch the guard off |
 | Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude`; primary home only |
@@ -32,6 +32,16 @@ Second mates pick up the block when `data/captain-shared.md` next propagates to 
 `apply` refuses in a second mate home, and a selection file there is ignored, because the persona is primary-authoritative.
 After an update that changes a theme's words, such as the lowercase role words of ADR-0020, the primary home reruns `apply` so second mates inherit the new block; until then a second mate reads an inherited values line's role words in lowercase.
 After `/updatefirstmate` or an upstream merge, run `verify` and rerun `apply` if it reports drift.
+
+### Headline and drift at session start
+
+The Persona block prints near the end of the session-start digest, and a harness that spills a long digest to a file shows only its first part inline, which is how the persona was lost after a compaction.
+So every digest and every re-emit after a clear or compaction also prints `headline` right below its section header: one line with the address word, the exact no-op reply, and the role words from the applied block, and one line pointing to the full block in `data/captain-shared.md`.
+The `Persona: ` line in `AGENTS.md` tells the agent to read that file before its next reply whenever a clear or compaction left no Persona block in its context.
+`headline` also runs `verify` and, on any drift, adds the single line `persona drift: rerun apply in the primary home`.
+In a second mate home, `verify` also compares the inherited block with the bundled theme of the same name in that home's checkout and, when they differ, such as a block written before a theme gained new keys, reports `persona drift: inherited block differs from the bundled <name> theme; rerun apply in the primary home (or update this home if it is newer)`, which `headline` prints in place of the generic drift line.
+A custom primary-only theme skips that comparison: either it has no bundled file, or it is a local theme in the primary home's `config/po-themes/` that shadows a bundled one of the same name, which `apply` records by ending the values line with a bare `source=local` token (the line is otherwise unchanged, and a block from a bundled theme carries no token).
+Under nautical `headline` prints nothing, so a nautical digest is unchanged; only when `data/captain-shared.md` still holds a Persona block that a nautical `apply` has not yet removed does it print the drift line.
 
 ### Workspace labels
 
@@ -123,8 +133,21 @@ The agent still reads nautical text and speaks themed words, so occasional leaka
 ## Keeping themes in step with upstream
 
 Gate A10 runs `bin/po-theme.sh anchors` and validates every bundled theme on every pull request.
-`anchors` fails when upstream changes a literal the nautical theme mirrors, adds a user-invocable skill with no `alias.<skill>` key, or a merge drops one of ADR-0016's hook lines.
+`anchors` fails when upstream changes a literal the nautical theme mirrors, adds a user-invocable skill with no `alias.<skill>` key, adds a person-facing nautical string the surface canary below does not know, or a merge drops one of ADR-0016's hook lines.
 The fix belongs in the same merge PR: update `nautical.theme` and the matching key of every other bundled theme, which is exactly when a reviewer should notice that upstream changed its voice.
 Gate A9 keeps the three hook hunks exactly as ADR-0016 lists them and holds every other upstream-owned file to the hook lines `.agents/skills/po-theme/surfaces.tsv` registers, which `anchors` also checks against upstream at the pin.
 Gate A11 proves the routing names and generated brief text identical under every bundled theme.
+
+### The surface canary
+
+`anchors` also runs the surface canary from [ADR-0020](../adr/0020-themes-first-class.md) decision 9, so a new upstream string a person sees cannot arrive in the nautical voice unnoticed.
+It scans the tracked script, module, and page sources outside `tests/` and `docs/` for upstream's person-facing producer patterns: `ui.notify`, `$.ui.toast`, and `$.ui.log` calls (every line of the call), command-registration descriptions (`registerCommand` and `$.command.register`), notification titles (`display notification`, `herdr notification show`, `terminal-notifier`, `notify-send`), and board page text (`.html` files without their styles and comments).
+A line fails when it carries one of the nautical theme's words - its role terms, plurals, product, second-mate label, and seasoning, matched as whole words in any case - unless the line is a registered hook in `surfaces.tsv` or a residue row covers it.
+Backend label functions are not scanned: every themed label is a registered hook, and the rest are routing names under rule R2 that gate A11 holds identical.
+
+The canary's residue list is `.agents/skills/po-theme/residue.tsv`, beside the hook registry.
+Each tab-separated row names a file, a fixed substring of the producer line (it covers every line of that file containing it), and why the line stays nautical.
+The reason opens with the ADR-0020 rule that keeps the string canonical (`R1`-`R5`) or the stage that will theme it (`S1`-`S7`), then a colon, such as `S5: board page title; the board is themed by stage S5`; a row without one is a finding.
+When the canary fails in a merge PR, decide in that PR: theme the string through a registered hook, or add a residue row whose reason says why it stays nautical for now.
+A stage that themes a surface removes its rows, and `anchors` prints a note for any row that no longer matches a producer line so the list shrinks with the tree.
 [`identity.md`](identity.md#5-assertions--the-grep-evidence) documents the gates.

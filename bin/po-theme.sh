@@ -44,11 +44,21 @@
 #                                     a delimited block of .git/info/exclude
 #   po-theme.sh verify                exit 1 when the Persona block or aliases drifted
 #                                     from the selected theme (stale, hand-edited,
-#                                     missing, or unexpected)
+#                                     missing, or unexpected); in a secondmate home,
+#                                     when the inherited block is hand-edited or
+#                                     differs from the bundled theme of its name
+#   po-theme.sh headline              the session-start head lines: the applied
+#                                     block's address word, no-op reply, and role
+#                                     words, a pointer to the full block, and one
+#                                     "persona drift" line when verify fails
+#                                     (empty for nautical)
 #   po-theme.sh anchors               sync canary: every nautical value still matches
 #                                     the upstream text it mirrors, every
-#                                     user-invocable skill has an alias key, and the
-#                                     ADR-0016 hook hunks are present
+#                                     user-invocable skill has an alias key, the
+#                                     ADR-0016 hook hunks are present, and the
+#                                     surface canary finds no person-facing
+#                                     producer line with a nautical word that is
+#                                     neither a registered hook nor residue
 #   po-theme.sh address-alt           themed vocative for bin/fm-dod-lib.sh's
 #                                     intent-address check: the applied Persona
 #                                     block's, else the selection's (empty for nautical)
@@ -82,6 +92,8 @@
 # whitespace ignored), and the upstream line it replaces (empty for an added
 # line). `anchors` checks that every hook line is present and, when the upstream
 # pin is in this clone, that every replaced line still exists upstream at the pin.
+# The surface canary's residue list is .agents/skills/po-theme/residue.tsv; its
+# header owns the row format.
 #
 # Exit status: 0 on success; 1 on a validation, drift, or anchor finding, an
 # unknown theme, a malformed theme, or a usage error.
@@ -98,6 +110,7 @@ LOCAL_THEMES="$CONFIG/po-themes"
 SHARED="$DATA/captain-shared.md"
 STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 REGISTRY="$SKILLS/po-theme/surfaces.tsv"
+RESIDUE="$SKILLS/po-theme/residue.tsv"
 START_MARK='<!-- po-theme:persona:start -->'
 END_MARK='<!-- po-theme:persona:end -->'
 VALUES_PREFIX='<!-- po-theme:values '
@@ -231,23 +244,43 @@ shared_address() {
   printf '%s\n' "$v"
 }
 
-# resolve_active: sets ACTIVE_NAME, ACTIVE_SRC, ACTIVE_KV.
+# load_block <block-file> <out-kv>: the values line of a Persona block, role
+# words read in lowercase, safety-checked into a kv file; sets BLOCK_NAME.
+load_block() {
+  local n
+  values_to_theme "$1" > "$TMPD/block.raw" \
+    || die "the Persona block in $SHARED has no values line; rerun apply in the primary home"
+  awk -v roles="$ROLE_KEYS" '
+    BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
+    { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
+  ' "$TMPD/block.raw" > "$TMPD/block.theme"
+  parse "$TMPD/block.theme" > "$TMPD/block.kv" 2>/dev/null || die "the Persona values line in $SHARED is malformed"
+  n=$(get "$TMPD/block.kv" name 2>/dev/null || true)
+  valid_name "$n" || die "the Persona values line in $SHARED has no valid name"
+  load_file "$n" "$TMPD/block.theme" "$2"
+  BLOCK_NAME=$n
+}
+
+# src_of <theme-file>: "local" for a theme from config/po-themes, else empty.
+src_of() {
+  case "$1" in "$LOCAL_THEMES"/*) echo local ;; esac
+}
+
+# block_src <block-file>: "local" when the block's values line records a local theme.
+block_src() {
+  grep -F "$VALUES_PREFIX" "$1" 2>/dev/null | grep -qF ' source=local -->' && echo local
+  return 0
+}
+
+# resolve_active: sets ACTIVE_NAME, ACTIVE_SRC, ACTIVE_KV, ACTIVE_ORIGIN.
 resolve_active() {
   local n
   if is_secondmate_home; then
     block_of "$SHARED" > "$TMPD/inherited.block"
     if [ -s "$TMPD/inherited.block" ]; then
-      values_to_theme "$TMPD/inherited.block" > "$TMPD/inherited.raw" \
-        || die "the inherited Persona block in $SHARED has no values line; rerun apply in the primary home"
-      awk -v roles="$ROLE_KEYS" '
-        BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
-        { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
-      ' "$TMPD/inherited.raw" > "$TMPD/inherited.theme"
-      parse "$TMPD/inherited.theme" > "$TMPD/inherited.kv" 2>/dev/null || die "the inherited Persona values line is malformed"
-      n=$(get "$TMPD/inherited.kv" name 2>/dev/null || true)
-      valid_name "$n" || die "the inherited Persona values line has no valid name"
-      load_file "$n" "$TMPD/inherited.theme" "$TMPD/active.kv"
-      ACTIVE_NAME=$n ACTIVE_SRC="inherited:$SHARED" ACTIVE_KV="$TMPD/active.kv"
+      load_block "$TMPD/inherited.block" "$TMPD/active.kv"
+      ACTIVE_NAME=$BLOCK_NAME ACTIVE_SRC="inherited:$SHARED" ACTIVE_KV="$TMPD/active.kv"
+      ACTIVE_ORIGIN=$(block_src "$TMPD/inherited.block")
       return 0
     fi
     n=nautical
@@ -260,6 +293,7 @@ resolve_active() {
   ACTIVE_NAME=$n
   ACTIVE_SRC=$(theme_file "$n")
   ACTIVE_KV=$(load_named "$n")
+  ACTIVE_ORIGIN=$(src_of "$ACTIVE_SRC")
 }
 
 # strs_of <kv>: "<key><TAB><string>" for every registered str.* key, using the
@@ -431,16 +465,17 @@ validate_named() {  # <name>
   return $rc
 }
 
-values_line() {  # <kv>
+values_line() {  # <kv> [local]
   local k v
   printf '%s' "$VALUES_PREFIX"
   while IFS="$TAB" read -r k v; do printf '%s="%s" ' "$k" "$v"; done < "$1"
+  [ "${2:-}" = local ] && printf 'source=local '
   printf -- '-->\n'
 }
 
 # shellcheck disable=SC2016  # backticks are literal Markdown code spans for the reading agent.
-persona() {  # <name> <kv>
-  local name=$1 kv=$2 k v seasoning
+persona() {  # <name> <kv> [local]
+  local name=$1 kv=$2 origin=${3:-} k v seasoning
   [ "$name" = nautical ] && return 0
   t() { get "$kv" "$1"; }
   seasoning=$(t seasoning | sed 's/, /", "/g')
@@ -477,7 +512,7 @@ persona() {  # <name> <kv>
   done < "$kv"
   printf ' in the primary home, treat each alias exactly as its target.\n'
   printf -- '- Workers receive this vocabulary through their launch role contract; scout reports and other prose a person reads use the words on the right.\n'
-  values_line "$kv"
+  values_line "$kv" "$origin"
   printf '%s\n' "$END_MARK"
 }
 
@@ -579,7 +614,7 @@ apply() {
     cat "$TMPD/findings" >&2
     die "theme $ACTIVE_NAME failed validation"
   fi
-  persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/block"
+  persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/block"
   if [ -s "$TMPD/block" ]; then
     mkdir -p "$DATA"
     replace_block "$SHARED" "$TMPD/block"
@@ -644,13 +679,22 @@ verify() {
   block_of "$SHARED" > "$TMPD/actual"
   if is_secondmate_home; then
     if [ -s "$TMPD/actual" ]; then
-      persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/expected"
+      persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/expected"
       cmp -s "$TMPD/expected" "$TMPD/actual" || { echo "drift: the inherited Persona block does not match its own values line (hand-edited)"; drift=1; }
+      # A block from a bundled theme should match this checkout's bundled theme
+      # of the same name; a custom theme of the primary home, whether it has no
+      # bundled file or a local one shadows it (source=local), is not compared.
+      if [ $drift -eq 0 ] && [ -z "$ACTIVE_ORIGIN" ] && [ -f "$BUNDLED/$ACTIVE_NAME.theme" ]; then
+        load_file "$ACTIVE_NAME" "$BUNDLED/$ACTIVE_NAME.theme" "$TMPD/bundled.kv"
+        persona "$ACTIVE_NAME" "$TMPD/bundled.kv" > "$TMPD/bundled"
+        cmp -s "$TMPD/bundled" "$TMPD/actual" \
+          || { echo "persona drift: inherited block differs from the bundled $ACTIVE_NAME theme; rerun apply in the primary home (or update this home if it is newer)"; drift=1; }
+      fi
     fi
     [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME, inherited)"
     return $drift
   fi
-  persona "$ACTIVE_NAME" "$ACTIVE_KV" > "$TMPD/expected"
+  persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/expected"
   if [ -s "$TMPD/expected" ] && [ ! -s "$TMPD/actual" ]; then
     echo "drift: theme $ACTIVE_NAME is selected but $SHARED has no Persona block; run apply"; drift=1
   elif [ ! -s "$TMPD/expected" ] && [ -s "$TMPD/actual" ]; then
@@ -674,6 +718,29 @@ verify() {
   fi
   [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME)"
   return $drift
+}
+
+# headline: the persona in force, in two lines for the head of the session-start
+# digest, which a harness that spills a large digest still shows inline; then
+# one drift line when verify finds drift. Prints nothing under nautical unless
+# a stale Persona block is left in $SHARED, where it prints only the drift line.
+# shellcheck disable=SC2016  # backticks are literal Markdown code spans for the reading agent.
+headline() {
+  local kv="$TMPD/headline.kv" nautical=0
+  if active_is_nautical; then
+    [ -f "$SHARED" ] && grep -qxF "$START_MARK" "$SHARED" || return 0
+    nautical=1
+  fi
+  block_of "$SHARED" > "$TMPD/headline.block"
+  if [ $nautical -eq 0 ] && [ -s "$TMPD/headline.block" ] && ( load_block "$TMPD/headline.block" "$kv" ) 2>/dev/null; then
+    t() { get "$kv" "$1"; }
+    printf 'PERSONA (%s theme, chat words only): address the user as "%s,"; the exact no-op reply is `%s`; say %s for captain, %s for first mate, %s for crewmate, %s for crew, %s for second mate, %s for fleet, %s for ship, %s for scout.\n' \
+      "$(t name)" "$(t user_address)" "$(t noop_reply)" "$(t user)" "$(t self)" "$(t worker)" "$(t crew)" \
+      "$(t submate)" "$(t fleet)" "$(t ship_task)" "$(t scout_task)"
+    printf 'The full Persona block is in %s, printed under CONTEXT below; if this output was cut off, read that file before your next reply.\n' "$SHARED"
+  fi
+  ( verify ) > "$TMPD/headline.verify" 2>/dev/null && return 0
+  grep -m 1 '^persona drift: ' "$TMPD/headline.verify" || echo "persona drift: rerun apply in the primary home"
 }
 
 anchors() {
@@ -730,8 +797,110 @@ anchors() {
     git -C "$CODE_ROOT" show "$pin:$file" 2>/dev/null | trim | grep -qxF -- "$up" \
       || { printf 'anchor missing: upstream line for hook %s no longer in %s at the pin: %s\n' "$k" "$file" "$up"; miss=1; }
   done < <(registry_rows)
+  canary "$kv" || miss=1
   [ $miss -eq 0 ] && echo "anchors: ok"
   return $miss
+}
+
+# producer_files: the tracked files the surface canary scans - script, module,
+# and page sources outside tests and docs.
+producer_files() {
+  git -C "$CODE_ROOT" ls-files | grep -E '\.(sh|ts|tsx|js|mjs|cjs|html)$' \
+     | grep -vE '(^|/)(tests?|node_modules)/|\.test\.|^docs/' \
+     | while IFS= read -r f; do [ -f "$CODE_ROOT/$f" ] && printf '%s\n' "$f"; done | sort
+}
+
+# canary <nautical-kv>: ADR-0020's surface canary. Scans upstream's
+# person-facing producer patterns - ui.notify, $.ui.toast, and $.ui.log calls,
+# command-registration descriptions, notification titles, and board page text -
+# for the nautical theme's role, product, label, and seasoning words, and fails
+# on any match whose line is neither a registered hook line nor covered by a
+# residue row. Residue rows (RESIDUE) are tab-separated: file, a fixed substring
+# of the producer line, and why it stays nautical, opening with the ADR-0020
+# rule (R1-R5) or the stage that will theme it (S1-S7), then a colon.
+canary() {
+  local kv=$1 k v bad=0
+  : > "$TMPD/words"
+  while IFS="$TAB" read -r k v; do
+    case "$k" in
+      user|user_plural|self|self_plural|product|worker|worker_plural|crew|submate|submate_plural|fleet|ship_task|scout_task|label.submate)
+        lower "$v" >> "$TMPD/words"; printf '\n' >> "$TMPD/words" ;;
+      seasoning) printf '%s\n' "$v" | tr ',' '\n' | sed 's/^ *//; s/ *$//' >> "$TMPD/words" ;;
+    esac
+  done < "$1"
+  [ -f "$RESIDUE" ] || { echo "surface canary: no residue list at $RESIDUE"; return 1; }
+  awk -F '\t' '!/^#/ && NF > 0' "$RESIDUE" > "$TMPD/residue"
+  if awk -F '\t' 'NF != 3 || $1 == "" || $2 == "" || $3 !~ /^(R[1-5]|S[1-7]):/ { printf "surface canary: malformed residue row (want file, text, and a reason opening with R1-R5 or S1-S7 and a colon): %s\n", $0; bad = 1 } END { exit bad }' "$TMPD/residue"; then :; else
+    bad=1
+  fi
+  registry_rows | awk -F '\t' '{ print $3 "\t" $5 }' > "$TMPD/hooks"
+  producer_files > "$TMPD/producers"
+  [ -s "$TMPD/producers" ] || { echo "surface canary: no producer files under $CODE_ROOT"; return 1; }
+  # Pass 1: every producer line that carries a nautical word, as
+  # file<TAB>line<TAB>kind<TAB>word<TAB>trimmed text.
+  # shellcheck disable=SC2016  # awk program text: $0 and the $.ui pattern are awk's.
+  ( cd "$CODE_ROOT" && tr '\n' '\0' < "$TMPD/producers" | xargs -0 awk -v words="$TMPD/words" '
+    BEGIN { while ((getline w < words) > 0) if (w != "") nw[++n] = w }
+    function scan(line, kind,   l, i, t) {
+      l = tolower(line)
+      for (i = 1; i <= n; i++)
+        if (match(l, "(^|[^a-z0-9_])" nw[i] "s?([^a-z0-9_]|$)")) {
+          t = line; sub(/^[[:space:]]+/, "", t); sub(/[[:space:]]+$/, "", t)
+          printf "%s\t%d\t%s\t%s\t%s\n", FILENAME, FNR, kind, nw[i], t
+          return
+        }
+    }
+    FNR == 1 { depth = 0; desc = 0; descnext = 0; style = 0; cmt = 0; html = (FILENAME ~ /\.html$/); sh = (FILENAME ~ /\.sh$/) }
+    html {
+      line = $0
+      if (line ~ /<style[ >]/) style = 1
+      if (style) { if (line ~ /<\/style>/) style = 0; next }
+      gsub(/<!--([^-]|-[^-])*-->/, "", line); gsub(/\/\*([^*]|\*[^\/])*\*\//, "", line)
+      if (cmt) { if (line ~ /\*\/|-->/) { sub(/^.*(\*\/|-->)/, "", line); cmt = 0 } else next }
+      if (line ~ /\/\*|<!--/) { sub(/(\/\*|<!--).*$/, "", line); cmt = 1 }
+      sub(/(^|[[:space:]])\/\/.*$/, "", line)
+      scan(line, "board text"); next
+    }
+    /^[[:space:]]*(#|\/\/|\*)/ { next }
+    /display notification|notification show|terminal-notifier|notify-send/ { scan($0, "notification title"); next }
+    sh { next }
+    depth > 0 || /ui(\?)?\.notify(\?\.)?\(|\$\.ui(\?)?\.(toast|log)(\?\.)?\(/ {
+      if (depth == 0) lines = 0
+      scan($0, "notify call")
+      o = gsub(/\(/, "(", $0); c = gsub(/\)/, ")", $0); depth += o - c
+      if (++lines >= 8 || depth <= 0) depth = 0
+      next
+    }
+    /registerCommand(\?\.)?\(|command\.register(\?\.)?\(/ { desc = 6 }
+    desc > 0 {
+      desc--
+      if (descnext) { scan($0, "command description"); descnext = 0; desc = 0; next }
+      if ($0 ~ /description:/) {
+        if ($0 ~ /description:[[:space:]]*$/) descnext = 1
+        else { scan($0, "command description"); desc = 0 }
+      }
+    }
+  ' ) > "$TMPD/canary.hits" || { echo "surface canary: the producer scan failed"; return 1; }
+  # Pass 2: drop registered hook lines and residue; report the rest and note
+  # residue rows that no longer match anything.
+  awk -F '\t' -v hooks="$TMPD/hooks" -v residue="$TMPD/residue" '
+    BEGIN {
+      while ((getline l < hooks) > 0) { p = index(l, "\t"); hook[substr(l, 1, p - 1) SUBSEP substr(l, p + 1)] = 1 }
+      while ((getline l < residue) > 0) { split(l, f, "\t"); nr++; rf[nr] = f[1]; rt[nr] = f[2] }
+    }
+    {
+      if (($1 SUBSEP $5) in hook) next
+      for (i = 1; i <= nr; i++) if (rf[i] == $1 && index($5, rt[i])) { used[i] = 1; next_row = 1; break }
+      if (next_row) { next_row = 0; next }
+      printf "surface canary: nautical \"%s\" (%s) at %s:%d is neither a registered hook nor residue: %s\n", $4, $3, $1, $2, $5
+      bad = 1
+    }
+    END {
+      for (i = 1; i <= nr; i++) if (!used[i]) printf "note: residue row matches no producer line; remove it: %s\t%s\n", rf[i], rt[i]
+      exit bad
+    }
+  ' "$TMPD/canary.hits" || bad=1
+  return $bad
 }
 
 # herdr_cli <session> <args...>: the herdr adapter's own session-scoped CLI
@@ -924,7 +1093,7 @@ case "$cmd" in
     validate_named "$n" || exit 1
     echo "validate: $n ok" ;;
   persona)
-    if [ $# -ge 1 ]; then persona "$1" "$(load_named "$1")"; else resolve_active; persona "$ACTIVE_NAME" "$ACTIVE_KV"; fi ;;
+    if [ $# -ge 1 ]; then persona "$1" "$(load_named "$1")" "$(src_of "$(theme_file "$1")")"; else resolve_active; persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN"; fi ;;
   apply) apply ;;
   refresh) refresh ;;
   label)
@@ -941,6 +1110,7 @@ case "$cmd" in
       *) die "usage: registry files | registry check-diff <ref>" ;;
     esac ;;
   verify) verify ;;
+  headline) headline ;;
   anchors) anchors ;;
   address-alt)
     shared_address && exit 0

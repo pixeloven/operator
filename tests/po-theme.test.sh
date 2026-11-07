@@ -6,6 +6,9 @@
 #   - bundled themes validate; each refusal reason fails with its named reason
 #   - anchors pass on this tree and fail on a fixture whose mirrored wording,
 #     user-invocable skill set, or hook line drifted
+#   - the surface canary fails on an unregistered nautical word in each
+#     producer pattern, passes a registered hook line or a residue row, refuses
+#     a residue row without a rule or stage, and notes a stale one
 #   - nautical apply writes nothing; operator apply writes exactly one block,
 #     is idempotent, preserves the captain's prose, and rolls back byte-exact
 #   - the real fm-session-start.sh prints the Persona block in CONTEXT
@@ -21,7 +24,11 @@
 #   - generated alias skills keep `git status --porcelain` and the guarded
 #     self-update's dirty_status empty, and nautical apply removes them
 #   - verify reports a stale, hand-edited, missing, or unexpected block and
-#     alias drift
+#     alias drift, and in a secondmate home an inherited block older than the
+#     bundled theme of its name, skipping a custom primary-only theme
+#   - headline prints nothing under nautical, the applied persona in two lines
+#     under a theme, and one drift line when verify fails; the real
+#     fm-session-start.sh prints it before LOCK and nothing there under nautical
 #
 # Fixture code roots are throwaway git repositories: apply writes alias skills
 # and .git/info/exclude under the code root of the script it runs, so no case
@@ -194,6 +201,89 @@ test_anchors() {
   pass "anchors pass on this tree and fail on drifted wording, a new command, or a lost hook"
 }
 
+# tree_copy <name>: a throwaway git repository holding this tree's tracked and
+# untracked-but-not-ignored files, so `anchors` runs against the whole surface.
+tree_copy() {
+  local code="$TMP_ROOT/$1/code"
+  mkdir -p "$code"
+  # shellcheck disable=SC2016 # the single-quoted script expands in the child sh
+  git -C "$ROOT" ls-files -co --exclude-standard -z \
+    | ( cd "$ROOT" && xargs -0 sh -c 'for f; do [ -f "$f" ] && printf "%s\0" "$f"; done' _ ) \
+    | ( cd "$ROOT" && tar --null -T - -cf - ) | tar -C "$code" -xf -
+  git init -q -b main "$code"
+  git -C "$code" add -A
+  git -C "$code" commit -q -m seed
+  printf '%s\n' "$code"
+}
+
+# canary_run <code>: run the fixture's anchors; prints its output and returns its status.
+canary_run() {
+  FM_HOME="$TMP_ROOT/canary-home" "$1/bin/po-theme.sh" anchors 2>&1
+}
+
+test_surface_canary() {
+  local code out rc residue registry ext board
+  code=$(tree_copy canary)
+  residue="$code/.agents/skills/po-theme/residue.tsv"
+  registry="$code/.agents/skills/po-theme/surfaces.tsv"
+  ext="$code/.pi/extensions/fm-calm.ts"
+  board="$code/.agents/skills/bearings/assets/board-template.html"
+  out=$(canary_run "$code") || fail "anchors failed on the copied tree: $out"
+  assert_contains "$out" "anchors: ok" "anchors did not confirm the copied tree"
+  assert_not_contains "$out" "residue row matches no producer line" "a seeded residue row is already stale"
+
+  # An unregistered nautical word in a new producer call fails, naming it.
+  printf '%s\n' '  ctx.ui.notify("The fleet is ready for you.", "info");' >> "$ext"
+  out=$(canary_run "$code") && fail "anchors passed with an unregistered nautical notify call"
+  assert_contains "$out" 'surface canary: nautical "fleet" (notify call) at .pi/extensions/fm-calm.ts:' "the canary did not name the new notify call"
+
+  # A residue row covers it, and is refused without a rule or stage reason.
+  printf '.pi/extensions/fm-calm.ts\tThe fleet is ready for you.\tbecause\n' >> "$residue"
+  out=$(canary_run "$code") && fail "anchors passed with a residue row that gives no rule or stage"
+  assert_contains "$out" "surface canary: malformed residue row" "the canary did not refuse a reason-less residue row"
+  sed -i.bak '$d' "$residue" && rm -f "$residue.bak"
+  printf '.pi/extensions/fm-calm.ts\tThe fleet is ready for you.\tS3: test notice\n' >> "$residue"
+  out=$(canary_run "$code"); rc=$?
+  [ "$rc" -eq 0 ] || fail "anchors failed with the new call listed as residue: $out"
+  sed -i.bak '$d' "$residue" && rm -f "$residue.bak"
+
+  # A registered hook line passes as it stands.
+  printf 'str.test\tT\t.pi/extensions/fm-calm.ts\tupstream\tctx.ui.notify("The fleet is ready for you.", "info");\t\n' >> "$registry"
+  out=$(canary_run "$code"); rc=$?
+  [ "$rc" -eq 0 ] || fail "anchors failed on a registered hook line: $out"
+  sed -i.bak '$d' "$registry" && rm -f "$registry.bak"
+  sed -i.bak '$d' "$ext" && rm -f "$ext.bak"
+
+  # The other producer patterns: a message on the line after the call, a
+  # command-registration description, a notification title, and board text.
+  # shellcheck disable=SC2016 # literal TypeScript fixture text, backticks included
+  printf '%s\n' '  ctx?.ui?.notify?.(' '    `Ask the captain first.`,' '    "warning",' '  );' >> "$ext"
+  printf '%s\n' '  pi.registerCommand?.("probe", {' '    description:' '      "Hail the crew.",' '  });' >> "$ext"
+  printf '%s\n' "osascript -e 'display notification \"x\" with title \"Second mate alert\"'" >> "$code/bin/fm-usage-warner.sh"
+  printf '%s\n' '<p>All hands, ahoy</p>' '<!-- a comment that names the captain is not page text -->' >> "$board"
+  out=$(canary_run "$code") && fail "anchors passed with unregistered nautical producer lines"
+  assert_contains "$out" '"captain" (notify call) at .pi/extensions/fm-calm.ts:' "the canary missed a multi-line notify call"
+  assert_contains "$out" '"crew" (command description) at .pi/extensions/fm-calm.ts:' "the canary missed a command description"
+  assert_contains "$out" '"second mate" (notification title) at bin/fm-usage-warner.sh:' "the canary missed a notification title"
+  assert_contains "$out" '"ahoy" (board text) at .agents/skills/bearings/assets/board-template.html:' "the canary missed board text"
+  assert_not_contains "$out" "a comment that names the captain" "the canary scanned a page comment"
+
+  # A residue row that matches nothing is noted, not failed.
+  code=$(tree_copy canary-stale)
+  printf 'bin/fm-usage-warner.sh\tno such producer text\tR4: test\n' >> "$code/.agents/skills/po-theme/residue.tsv"
+  out=$(canary_run "$code") || fail "anchors failed on a stale residue row: $out"
+  assert_contains "$out" "note: residue row matches no producer line; remove it: bin/fm-usage-warner.sh" "the canary did not note a stale residue row"
+
+  # A tracked producer deleted from the work tree but not staged is skipped.
+  printf '%s\n' 'echo probe' > "$code/bin/fm-canary-probe.sh"
+  git -C "$code" add bin/fm-canary-probe.sh
+  git -C "$code" commit -q -m probe
+  rm "$code/bin/fm-canary-probe.sh"
+  out=$(canary_run "$code") || fail "anchors failed with a deleted, unstaged tracked producer: $out"
+  assert_not_contains "$out" "producer scan failed" "the canary scanned a deleted tracked producer"
+  pass "the surface canary fails on an unregistered nautical producer line and passes registered and residue ones"
+}
+
 test_nautical_apply_writes_nothing() {
   local code home before after exclude_before out
   code=$(new_code nautical)
@@ -256,7 +346,7 @@ test_operator_apply() {
 }
 
 test_session_start_prints_persona() {
-  local code home root out context
+  local code home root out context head
   code=$(new_code session)
   home=$(new_home session)
   root="$TMP_ROOT/session/root"
@@ -271,7 +361,56 @@ test_session_start_prints_persona() {
   context=$(printf '%s\n' "$out" | awk '/^CONTEXT$/ { on = 1 } on')
   assert_contains "$context" '## Persona: operator' "the session-start CONTEXT did not print the Persona block"
   assert_contains "$context" 'Operator, all systems nominal.' "the session-start CONTEXT did not carry the themed no-op reply"
-  pass "the real session-start digest prints the Persona block in CONTEXT"
+  head=$(printf '%s\n' "$out" | awk '/^SESSION START - / { on = 1 } on && /^LOCK$/ { exit } on')
+  assert_contains "$head" 'PERSONA (operator theme, chat words only): address the user as "Operator,"' "the session-start head did not carry the headline before LOCK"
+  out=$(env -u CLAUDECODE -u PI_CODING_AGENT -u FM_PI_HARNESS -u GROK_AGENT \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" "$ROOT/bin/fm-session-start.sh" --reemit 2>&1) \
+    || fail "fm-session-start.sh --reemit failed: $out"
+  head=$(printf '%s\n' "$out" | awk '/^SESSION START [(]CONTEXT RE-EMIT[)] - / { on = 1 } on && /^LOCK$/ { exit } on')
+  assert_contains "$head" 'PERSONA (operator theme' "the re-emit head did not carry the headline before LOCK"
+
+  printf 'nautical\n' > "$home/config/po-theme"
+  run_in "$code" "$home" apply >/dev/null 2>&1 || fail "nautical apply failed before session start"
+  out=$(env -u CLAUDECODE -u PI_CODING_AGENT -u FM_PI_HARNESS -u GROK_AGENT \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" "$ROOT/bin/fm-session-start.sh" 2>&1) \
+    || fail "nautical fm-session-start.sh failed: $out"
+  head=$(printf '%s\n' "$out" | awk '/^SESSION START - / { on = 1; next } on && /^LOCK$/ { exit } on')
+  assert_equals "$(printf '%s\n\n' "$(printf '%s\n' "$out" | awk '/^SESSION START - / { getline; print; exit }')")" "$head" \
+    "nautical session start printed something between its header and LOCK"
+  pass "the real session-start digest prints the headline before LOCK and the Persona block in CONTEXT"
+}
+
+# shellcheck disable=SC2016  # literal Markdown backticks.
+test_headline() {
+  local code home out
+  code=$(new_code headline)
+  home=$(new_home headline)
+  printf '# prefs\n' > "$home/data/captain-shared.md"
+  assert_equals "" "$(run_in "$code" "$home" headline)" "headline printed something under nautical"
+  printf 'operator\n' > "$home/config/po-theme"
+  assert_equals "persona drift: rerun apply in the primary home" "$(run_in "$code" "$home" headline)" \
+    "headline before apply did not print exactly the drift line"
+  run_in "$code" "$home" apply >/dev/null 2>&1 || fail "operator apply failed"
+  out=$(run_in "$code" "$home" headline) || fail "headline failed after apply: $out"
+  assert_equals 2 "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" "headline after apply is not exactly two lines: $out"
+  assert_contains "$out" 'address the user as "Operator,"' "headline did not carry the address word"
+  assert_contains "$out" 'the exact no-op reply is `Operator, all systems nominal.`' "headline did not carry the no-op reply"
+  assert_contains "$out" 'say operator for captain, spotter for first mate, specialist for crewmate' "headline did not carry the role words"
+  assert_contains "$out" "The full Persona block is in $home/data/captain-shared.md" "headline did not point at the full block"
+  assert_not_contains "$out" "persona drift" "headline reported drift right after apply"
+
+  sed -i.bak 's/all systems nominal/all good/' "$home/data/captain-shared.md"
+  out=$(run_in "$code" "$home" headline) || fail "headline failed on a hand-edited block: $out"
+  assert_equals 3 "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" "headline on drift is not exactly three lines: $out"
+  assert_equals "persona drift: rerun apply in the primary home" "$(printf '%s\n' "$out" | tail -n 1)" "headline did not end with the drift line"
+  mv "$home/data/captain-shared.md.bak" "$home/data/captain-shared.md"
+
+  printf 'nautical\n' > "$home/config/po-theme"
+  assert_equals "persona drift: rerun apply in the primary home" "$(run_in "$code" "$home" headline)" \
+    "headline under nautical with a stale Persona block did not print exactly the drift line"
+  run_in "$code" "$home" apply >/dev/null 2>&1 || fail "nautical apply failed"
+  assert_equals "" "$(run_in "$code" "$home" headline)" "headline printed something after nautical apply"
+  pass "headline is empty under nautical, prints the applied persona, and adds one drift line on drift"
 }
 
 test_intent_address_check() {
@@ -353,6 +492,7 @@ test_secondmate_home() {
   assert_contains "$(role_of "$ROOT/bin" "$mate")" 'the captain "boss", firstmate "sergeant"' "the secondmate's worker role contract is not themed"
   intent_refused "$ROOT/bin" "$mate" 'Boss, add a flag.' || fail "the secondmate home allowed the inherited vocative in an intent"
   out=$(run_in "$ROOT" "$mate" verify 2>&1) || fail "verify failed on an untouched inherited block: $out"
+  assert_not_contains "$(run_in "$ROOT" "$mate" headline)" "persona drift" "a custom primary-only theme was compared against a bundled theme"
   printf 'operator\n' > "$mate/config/po-theme"
   assert_equals "Boss" "$(run_in "$ROOT" "$mate" address-alt)" "a local selection overrode the primary-authoritative persona"
   out=$(run_in "$code" "$mate" apply 2>&1) && fail "apply ran in a secondmate home"
@@ -373,6 +513,7 @@ test_secondmate_home() {
   assert_contains "$(role_of "$ROOT/bin" "$mate")" 'firstmate "spotter"' "an inherited capitalized values line dropped the worker vocabulary line"
   rm "$mate/data/captain-shared.md"
   assert_equals "" "$(run_in "$ROOT" "$mate" address-alt)" "a secondmate home without an inherited block is not nautical"
+  assert_equals "" "$(run_in "$ROOT" "$mate" headline)" "a secondmate home without an inherited block printed a headline"
   pass "a secondmate home resolves an inherited custom theme, refuses apply, and rejects tampering"
 }
 
@@ -485,6 +626,58 @@ test_verify_reports_drift() {
   pass "verify reports stale, hand-edited, missing, and unexpected blocks and alias drift"
 }
 
+block_of_file() {  # <file>: its Persona block, markers included
+  awk '/^<!-- po-theme:persona:start -->$/ { on = 1 } on { print } /^<!-- po-theme:persona:end -->$/ { on = 0 }' "$1"
+}
+
+# shellcheck disable=SC2016  # literal Markdown backticks.
+test_secondmate_older_block() {
+  local code primary mate out
+  code=$(new_code older)
+  primary=$(new_home older-primary)
+  mate="$TMP_ROOT/older/mate"
+  mkdir -p "$mate/data" "$mate/config"
+  printf 'fmtest-sm\n' > "$mate/.fm-secondmate-home"
+  run_in "$code" "$primary" persona operator > "$mate/data/captain-shared.md" || fail "persona operator failed"
+  out=$(run_in "$ROOT" "$mate" verify 2>&1) || fail "verify failed on a current inherited bundled block: $out"
+  assert_not_contains "$(run_in "$ROOT" "$mate" headline)" "persona drift" "headline reported drift on a current inherited block"
+
+  # An older block: written before the str.* keys existed, so its values line
+  # lacks them while still matching its own text.
+  run_in "$code" "$primary" persona operator \
+    | sed '/^<!-- po-theme:values /s/ str\.[a-z_.]*="[^"]*"//g' > "$mate/data/captain-shared.md"
+  grep -q 'str\.' "$mate/data/captain-shared.md" && fail "the fixture block still carries str.* keys"
+  out=$(run_in "$ROOT" "$mate" verify 2>&1) && fail "verify passed on an inherited block older than the bundled theme"
+  assert_contains "$out" "persona drift: inherited block differs from the bundled operator theme; rerun apply in the primary home (or update this home if it is newer)" \
+    "verify did not report the older inherited block"
+  assert_not_contains "$out" "hand-edited" "verify called a self-consistent older block hand-edited"
+  out=$(run_in "$ROOT" "$mate" headline) || fail "headline failed on an older inherited block: $out"
+  assert_contains "$out" 'address the user as "Operator,"' "headline dropped the inherited persona on drift"
+  assert_equals "persona drift: inherited block differs from the bundled operator theme; rerun apply in the primary home (or update this home if it is newer)" \
+    "$(printf '%s\n' "$out" | tail -n 1)" "headline in a secondmate home did not report the older block"
+
+  # A local theme in the primary home that shadows the bundled operator theme
+  # is a custom primary-only theme: apply marks it and the secondmate skips the
+  # bundled comparison, while a hand-edit is still caught.
+  derive "$primary" operator 's/^noop_reply = .*/noop_reply = "Operator, all clear."/'
+  printf 'operator\n' > "$primary/config/po-theme"
+  printf '# prefs\n' > "$primary/data/captain-shared.md"
+  run_in "$code" "$primary" apply >/dev/null 2>&1 || fail "apply of a local operator theme failed"
+  out=$(run_in "$code" "$primary" verify 2>&1) || fail "verify failed right after applying a local theme: $out"
+  grep -q '^<!-- po-theme:values .* source=local -->$' "$primary/data/captain-shared.md" \
+    || fail "apply of a local theme did not record source=local in the values line"
+  block_of_file "$primary/data/captain-shared.md" > "$mate/data/captain-shared.md"
+  out=$(run_in "$ROOT" "$mate" verify 2>&1) || fail "verify compared a local primary theme against the bundled one: $out"
+  out=$(run_in "$ROOT" "$mate" headline) || fail "headline failed on an inherited local theme: $out"
+  assert_contains "$out" 'the exact no-op reply is `Operator, all clear.`' "headline did not carry the local theme's no-op reply"
+  assert_not_contains "$out" "persona drift" "headline reported drift for an inherited local theme"
+  sed -i.bak 's/^- Wherever AGENTS.md requires the exact reply .*/- hand-edited/' "$mate/data/captain-shared.md"
+  out=$(run_in "$ROOT" "$mate" verify 2>&1) && fail "verify passed a hand-edited inherited local block"
+  assert_contains "$out" "hand-edited" "verify did not report a hand-edited inherited local block"
+  rm "$mate/data/captain-shared.md.bak"
+  pass "a secondmate home reports an older bundled block and skips the comparison for a local primary theme"
+}
+
 test_terms_and_resolve() {
   local home
   home=$(new_home terms)
@@ -503,9 +696,11 @@ test_terms_and_resolve() {
 test_bundled_themes_validate
 test_validation_refusals
 test_anchors
+test_surface_canary
 test_nautical_apply_writes_nothing
 test_operator_apply
 test_session_start_prints_persona
+test_headline
 test_intent_address_check
 test_worker_role_contract
 test_secondmate_home
@@ -513,6 +708,7 @@ test_address_guard_survives_broken_selection
 test_persona_aliases_primary_only
 test_aliases_keep_tree_clean
 test_verify_reports_drift
+test_secondmate_older_block
 test_terms_and_resolve
 
 echo "all po-theme tests passed"
