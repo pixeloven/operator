@@ -1,0 +1,5 @@
+== AFTER fix (acbc8d48), GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.21(1)-release)
+ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+focused run done
+exit=0

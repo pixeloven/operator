@@ -1,0 +1,13 @@
+== INT pending at a $() scan, bash 
+EXIT-ran:130
+fixed traps -> rc=130
+_: interrupt trap: line 2: unexpected EOF while looking for matching `)'
+_: -c: line 3: unexpected EOF while looking for matching `)'
+EXIT-ran:1
+plain traps -> rc=1
+== merge shape
+acbc8d48 parents=d53bd53a 9b737e02 Merge remote-tracking branch 'origin/main' into fm/op-pr53-refresh
+merge commits on branch since base: 1
+PR-side commits:
+d53bd53a no-mistakes(review): Drop fm_trap_exit argument guards and their test assertions
+72797805 fix(wake): keep the drain's INT/TERM traps from being dropped on Bash 5.2

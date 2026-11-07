@@ -1,0 +1,5 @@
+== BEFORE fix, drain only (plain INT/TERM traps in fm-wake-drain.sh)
+not ok - drain TERM inside sibling $() hit the trap parse error: /home/brian/.no-mistakes/worktrees/5c0ae910fa8a/01M6W2W8BA6TZZPX64G9GHH5ZT/bin/fm-wake-drain.sh: trap: line 2: unexpected EOF while looking for matching `)'
+/home/brian/.no-mistakes/worktrees/5c0ae910fa8a/01M6W2W8BA6TZZPX64G9GHH5ZT/bin/fm-wake-drain.sh: line 937: unexpected EOF while looking for matching `)'
+WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 1 --recovery-generation 2193859.1794091480.vvXNjw
+exit=1

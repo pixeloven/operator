@@ -1,0 +1,5 @@
+== BEFORE fix (plain traps restored), GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)
+not ok - TERM pending at a $() scan hit the trap parse error: _: trap: line 2: unexpected EOF while looking for matching `)'
+_: -c: line 8: unexpected EOF while looking for matching `)'
+survived TERM: 
+exit=1

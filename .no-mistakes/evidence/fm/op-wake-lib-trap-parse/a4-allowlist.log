@@ -1,0 +1,9 @@
+workflow regex count: 1; identity regex count: 1
+IDENTICAL: workflow and identity.md A4 allowlist regexes match byte-for-byte
+contains fm-wake-drain: 1  contains fm-backend-t3code: 0
+PIN=78c69df2b0b231d5cbe849dbc87fce9ea74ba219
+pin available
+== A4 replay: upstream-surface paths changed vs PIN not covered by registry or allowlist:
+(none) -> A4 PASS
+== Same replay with fm-wake-drain removed from the allowlist (adversarial):
+bin/fm-wake-drain.sh
