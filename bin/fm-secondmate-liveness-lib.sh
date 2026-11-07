@@ -312,13 +312,16 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
 # the bound fired. Returns the spawn exit status; combined spawn output is in
 # FM_SM_LIVE_OUT and the status in FM_SM_LIVE_RC. When the lock wait expires,
 # the ledger cannot be read, a kill is due while a spawn of <id> holds its spawn
-# lock or the endpoint no longer reads dead, or the attempt row cannot be
-# appended, nothing is killed or spawned and no attempt is recorded: the
-# verdict becomes FM_SM_LIVE_STATUS=skipped with FM_SM_LIVE_REASON set and this
-# returns 1.
+# lock or the endpoint now reads something other than dead or unreadable, or
+# the attempt row cannot be appended, nothing is killed or spawned and no
+# attempt is recorded: the verdict becomes FM_SM_LIVE_STATUS=skipped with
+# FM_SM_LIVE_REASON set and this returns 1. A kill due on an endpoint that now
+# reads unreadable likewise kills and spawns nothing, but records the attempt
+# as failed and is reported rather than deferred.
 # FM_SM_LIVE_DEFERRED=1 marks the two skips that are not faults - a spawn in
-# flight, or an endpoint that no longer reads dead - so a poller can log them
-# and re-probe on its next tick instead of reporting an error.
+# flight, or an endpoint that now reads something other than dead or
+# unreadable - so a poller can log them and re-probe on its next tick instead
+# of reporting an error.
 # Caller holds the liveness lock and owns reporting.
 fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
   local meta=$1 id=$2 timeout=${3:-} relaunch_lock wait_seconds rc=0
@@ -360,8 +363,10 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
     # endpoint the record names now, still reading dead, may be killed.
     # A T3 thread the probe read as missing is still killed, because its
     # idempotent kill re-proves the archive close before a replacement.
+    # An endpoint that cannot be read at all is not a deferral: it is left
+    # untouched below, but recorded as a failed attempt and reported.
     current_state=$(fm_backend_agent_state "$backend" "$target" 2>/dev/null) || current_state=unreadable
-    if [ "$current_state" != dead ] && ! { [ "$backend" = t3code ] && [ "$current_state" = missing ]; }; then
+    if [ "$current_state" != dead ] && [ "$current_state" != unreadable ] && ! { [ "$backend" = t3code ] && [ "$current_state" = missing ]; }; then
       fm_lock_release "$spawn_lock" || true
       fm_lock_release "$relaunch_lock" || true
       FM_SM_LIVE_STATUS=skipped
@@ -379,7 +384,15 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
     return 1
   fi
   if [ "$FM_SM_LIVE_KILL" = 1 ]; then
-    if [ "$backend" != t3code ]; then
+    if [ "$current_state" = unreadable ]; then
+      fm_secondmate_liveness_ledger_add "$id" failed || true
+      FM_SM_LIVE_STATUS=skipped
+      fm_lock_release "$spawn_lock" || true
+      fm_lock_release "$relaunch_lock" || true
+      FM_SM_LIVE_REASON="could not prove the old $backend endpoint $target closed: it now reads unreadable, so it and its record are left in place, not replaced"
+      FM_SM_LIVE_RC=1
+      return 1
+    elif [ "$backend" != t3code ]; then
       if [ -n "$target" ]; then
         if [ "$backend" = rex ]; then
           local home

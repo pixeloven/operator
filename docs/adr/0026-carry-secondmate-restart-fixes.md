@@ -20,7 +20,7 @@ ADR-0001 remains the default, and the following inherited files may carry these 
 
 - `bin/fm-control.sh`: holding the secondmate's per-task liveness lock across a secondmate relaunch, bounded by `FM_CONTROL_LIVENESS_WAIT`, and refusing `exit` and `relaunch` on a Claude agent that `claude agents --json` lists as a background session in the task's directory
 - `bin/fm-remote-secondmate-relaunch.sh`: holding the primary's own per-task liveness lock for the whole remote relaunch, released on every exit path
-- `bin/fm-secondmate-liveness-lib.sh`: `fm_secondmate_liveness_lock_wait`, and the relaunch never killing an endpoint while a spawn of that task holds its spawn lock or once the endpoint no longer reads dead
+- `bin/fm-secondmate-liveness-lib.sh`: `fm_secondmate_liveness_lock_wait`, and the relaunch never killing an endpoint while a spawn of that task holds its spawn lock or once the endpoint no longer reads dead; a re-read that still reads the endpoint defers to the next probe, while one that cannot read it records a failed attempt in the relaunch ledger and is reported, never silently deferred
 - `bin/fm-watch.sh`: logging such a deferred liveness relaunch to the triage log instead of raising it
 - `bin/fm-secondmate-restart.sh`: reporting the real error line, and reporting at once, without a persist request, a local mate whose endpoint is not found or holds no running agent
 - `bin/fm-spawn.sh`: `"disableAgentView": true` in every Firstmate-launched Claude agent's `--settings`
@@ -28,9 +28,11 @@ ADR-0001 remains the default, and the following inherited files may carry these 
 - `docs/agent-control.md`, `docs/configuration.md`, `docs/remote-secondmates.md`, and `docs/verification/runtime-backends.md`: the sentences and verification record describing these behaviors
 - `tests/fm-control.test.sh`, `tests/fm-control-relaunch.test.sh`, `tests/fm-remote-secondmate-relaunch.test.sh`, `tests/fm-secondmate-liveness.test.sh`, `tests/fm-secondmate-restart.test.sh`, `tests/fm-wake-queue.test.sh`, and the new `tests/fm-claude-agent-view-live-e2e.test.sh`: the regression cases for these behaviors, including the lab reproduction
 - `tests/fm-backend-orca.test.sh`, `tests/fm-secondmate-harness.test.sh`, and `tests/fm-spawn-dispatch-profile.test.sh`: the expected Claude launch settings carrying `disableAgentView`
-- `tests/fm-backend-t3code.test.sh`: the expected refusal when a T3 thread can no longer be read, which the relaunch's dead-endpoint recheck now gives before any kill
 
 The user's own Claude settings, every other verb, and every other runtime are outside this exception.
+
+Upstream's T3 Code kill step must prove a thread's close, and records an unproved close as a failed attempt.
+The re-read keeps that outcome for a thread it cannot read: it does not archive the thread, because a republished live thread may now sit at that record, but it gives the same failed-attempt record and refusal, so upstream's `tests/fm-backend-t3code.test.sh` runs unmodified.
 
 The change is kept minimal so it can be offered upstream.
 That offer is drafted later; nothing is published upstream now.
