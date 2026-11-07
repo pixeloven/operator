@@ -47,8 +47,11 @@
 #                                     missing, or unexpected)
 #   po-theme.sh anchors               sync canary: every nautical value still matches
 #                                     the upstream text it mirrors, every
-#                                     user-invocable skill has an alias key, and the
-#                                     ADR-0016 hook hunks are present
+#                                     user-invocable skill has an alias key, the
+#                                     ADR-0016 hook hunks are present, and the
+#                                     surface canary finds no person-facing
+#                                     producer line with a nautical word that is
+#                                     neither a registered hook nor residue
 #   po-theme.sh address-alt           themed vocative for bin/fm-dod-lib.sh's
 #                                     intent-address check: the applied Persona
 #                                     block's, else the selection's (empty for nautical)
@@ -82,6 +85,8 @@
 # whitespace ignored), and the upstream line it replaces (empty for an added
 # line). `anchors` checks that every hook line is present and, when the upstream
 # pin is in this clone, that every replaced line still exists upstream at the pin.
+# The surface canary's residue list is .agents/skills/po-theme/residue.tsv; its
+# header owns the row format.
 #
 # Exit status: 0 on success; 1 on a validation, drift, or anchor finding, an
 # unknown theme, a malformed theme, or a usage error.
@@ -98,6 +103,7 @@ LOCAL_THEMES="$CONFIG/po-themes"
 SHARED="$DATA/captain-shared.md"
 STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 REGISTRY="$SKILLS/po-theme/surfaces.tsv"
+RESIDUE="$SKILLS/po-theme/residue.tsv"
 START_MARK='<!-- po-theme:persona:start -->'
 END_MARK='<!-- po-theme:persona:end -->'
 VALUES_PREFIX='<!-- po-theme:values '
@@ -730,8 +736,110 @@ anchors() {
     git -C "$CODE_ROOT" show "$pin:$file" 2>/dev/null | trim | grep -qxF -- "$up" \
       || { printf 'anchor missing: upstream line for hook %s no longer in %s at the pin: %s\n' "$k" "$file" "$up"; miss=1; }
   done < <(registry_rows)
+  canary "$kv" || miss=1
   [ $miss -eq 0 ] && echo "anchors: ok"
   return $miss
+}
+
+# producer_files: the tracked files the surface canary scans - script, module,
+# and page sources outside tests and docs.
+producer_files() {
+  git -C "$CODE_ROOT" ls-files | grep -E '\.(sh|ts|tsx|js|mjs|cjs|html)$' \
+     | grep -vE '(^|/)(tests?|node_modules)/|\.test\.|^docs/' \
+     | while IFS= read -r f; do [ -f "$CODE_ROOT/$f" ] && printf '%s\n' "$f"; done | sort
+}
+
+# canary <nautical-kv>: ADR-0020's surface canary. Scans upstream's
+# person-facing producer patterns - ui.notify, $.ui.toast, and $.ui.log calls,
+# command-registration descriptions, notification titles, and board page text -
+# for the nautical theme's role, product, label, and seasoning words, and fails
+# on any match whose line is neither a registered hook line nor covered by a
+# residue row. Residue rows (RESIDUE) are tab-separated: file, a fixed substring
+# of the producer line, and why it stays nautical, opening with the ADR-0020
+# rule (R1-R5) or the stage that will theme it (S1-S7), then a colon.
+canary() {
+  local kv=$1 k v bad=0
+  : > "$TMPD/words"
+  while IFS="$TAB" read -r k v; do
+    case "$k" in
+      user|user_plural|self|self_plural|product|worker|worker_plural|crew|submate|submate_plural|fleet|ship_task|scout_task|label.submate)
+        lower "$v" >> "$TMPD/words"; printf '\n' >> "$TMPD/words" ;;
+      seasoning) printf '%s\n' "$v" | tr ',' '\n' | sed 's/^ *//; s/ *$//' >> "$TMPD/words" ;;
+    esac
+  done < "$1"
+  [ -f "$RESIDUE" ] || { echo "surface canary: no residue list at $RESIDUE"; return 1; }
+  awk -F '\t' '!/^#/ && NF > 0' "$RESIDUE" > "$TMPD/residue"
+  if awk -F '\t' 'NF != 3 || $1 == "" || $2 == "" || $3 !~ /^(R[1-5]|S[1-7]):/ { printf "surface canary: malformed residue row (want file, text, and a reason opening with R1-R5 or S1-S7 and a colon): %s\n", $0; bad = 1 } END { exit bad }' "$TMPD/residue"; then :; else
+    bad=1
+  fi
+  registry_rows | awk -F '\t' '{ print $3 "\t" $5 }' > "$TMPD/hooks"
+  producer_files > "$TMPD/producers"
+  [ -s "$TMPD/producers" ] || { echo "surface canary: no producer files under $CODE_ROOT"; return 1; }
+  # Pass 1: every producer line that carries a nautical word, as
+  # file<TAB>line<TAB>kind<TAB>word<TAB>trimmed text.
+  # shellcheck disable=SC2016  # awk program text: $0 and the $.ui pattern are awk's.
+  ( cd "$CODE_ROOT" && tr '\n' '\0' < "$TMPD/producers" | xargs -0 awk -v words="$TMPD/words" '
+    BEGIN { while ((getline w < words) > 0) if (w != "") nw[++n] = w }
+    function scan(line, kind,   l, i, t) {
+      l = tolower(line)
+      for (i = 1; i <= n; i++)
+        if (match(l, "(^|[^a-z0-9_])" nw[i] "s?([^a-z0-9_]|$)")) {
+          t = line; sub(/^[[:space:]]+/, "", t); sub(/[[:space:]]+$/, "", t)
+          printf "%s\t%d\t%s\t%s\t%s\n", FILENAME, FNR, kind, nw[i], t
+          return
+        }
+    }
+    FNR == 1 { depth = 0; desc = 0; descnext = 0; style = 0; cmt = 0; html = (FILENAME ~ /\.html$/); sh = (FILENAME ~ /\.sh$/) }
+    html {
+      line = $0
+      if (line ~ /<style[ >]/) style = 1
+      if (style) { if (line ~ /<\/style>/) style = 0; next }
+      gsub(/<!--([^-]|-[^-])*-->/, "", line); gsub(/\/\*([^*]|\*[^\/])*\*\//, "", line)
+      if (cmt) { if (line ~ /\*\/|-->/) { sub(/^.*(\*\/|-->)/, "", line); cmt = 0 } else next }
+      if (line ~ /\/\*|<!--/) { sub(/(\/\*|<!--).*$/, "", line); cmt = 1 }
+      sub(/(^|[[:space:]])\/\/.*$/, "", line)
+      scan(line, "board text"); next
+    }
+    /^[[:space:]]*(#|\/\/|\*)/ { next }
+    /display notification|notification show|terminal-notifier|notify-send/ { scan($0, "notification title"); next }
+    sh { next }
+    depth > 0 || /ui(\?)?\.notify(\?\.)?\(|\$\.ui(\?)?\.(toast|log)(\?\.)?\(/ {
+      if (depth == 0) lines = 0
+      scan($0, "notify call")
+      o = gsub(/\(/, "(", $0); c = gsub(/\)/, ")", $0); depth += o - c
+      if (++lines >= 8 || depth <= 0) depth = 0
+      next
+    }
+    /registerCommand(\?\.)?\(|command\.register(\?\.)?\(/ { desc = 6 }
+    desc > 0 {
+      desc--
+      if (descnext) { scan($0, "command description"); descnext = 0; desc = 0; next }
+      if ($0 ~ /description:/) {
+        if ($0 ~ /description:[[:space:]]*$/) descnext = 1
+        else { scan($0, "command description"); desc = 0 }
+      }
+    }
+  ' ) > "$TMPD/canary.hits" || { echo "surface canary: the producer scan failed"; return 1; }
+  # Pass 2: drop registered hook lines and residue; report the rest and note
+  # residue rows that no longer match anything.
+  awk -F '\t' -v hooks="$TMPD/hooks" -v residue="$TMPD/residue" '
+    BEGIN {
+      while ((getline l < hooks) > 0) { p = index(l, "\t"); hook[substr(l, 1, p - 1) SUBSEP substr(l, p + 1)] = 1 }
+      while ((getline l < residue) > 0) { split(l, f, "\t"); nr++; rf[nr] = f[1]; rt[nr] = f[2] }
+    }
+    {
+      if (($1 SUBSEP $5) in hook) next
+      for (i = 1; i <= nr; i++) if (rf[i] == $1 && index($5, rt[i])) { used[i] = 1; next_row = 1; break }
+      if (next_row) { next_row = 0; next }
+      printf "surface canary: nautical \"%s\" (%s) at %s:%d is neither a registered hook nor residue: %s\n", $4, $3, $1, $2, $5
+      bad = 1
+    }
+    END {
+      for (i = 1; i <= nr; i++) if (!used[i]) printf "note: residue row matches no producer line; remove it: %s\t%s\n", rf[i], rt[i]
+      exit bad
+    }
+  ' "$TMPD/canary.hits" || bad=1
+  return $bad
 }
 
 # herdr_cli <session> <args...>: the herdr adapter's own session-scoped CLI

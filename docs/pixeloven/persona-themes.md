@@ -123,8 +123,21 @@ The agent still reads nautical text and speaks themed words, so occasional leaka
 ## Keeping themes in step with upstream
 
 Gate A10 runs `bin/po-theme.sh anchors` and validates every bundled theme on every pull request.
-`anchors` fails when upstream changes a literal the nautical theme mirrors, adds a user-invocable skill with no `alias.<skill>` key, or a merge drops one of ADR-0016's hook lines.
+`anchors` fails when upstream changes a literal the nautical theme mirrors, adds a user-invocable skill with no `alias.<skill>` key, adds a person-facing nautical string the surface canary below does not know, or a merge drops one of ADR-0016's hook lines.
 The fix belongs in the same merge PR: update `nautical.theme` and the matching key of every other bundled theme, which is exactly when a reviewer should notice that upstream changed its voice.
 Gate A9 keeps the three hook hunks exactly as ADR-0016 lists them and holds every other upstream-owned file to the hook lines `.agents/skills/po-theme/surfaces.tsv` registers, which `anchors` also checks against upstream at the pin.
 Gate A11 proves the routing names and generated brief text identical under every bundled theme.
+
+### The surface canary
+
+`anchors` also runs the surface canary from [ADR-0020](../adr/0020-themes-first-class.md) decision 9, so a new upstream string a person sees cannot arrive in the nautical voice unnoticed.
+It scans the tracked script, module, and page sources outside `tests/` and `docs/` for upstream's person-facing producer patterns: `ui.notify`, `$.ui.toast`, and `$.ui.log` calls (every line of the call), command-registration descriptions (`registerCommand` and `$.command.register`), notification titles (`display notification`, `herdr notification show`, `terminal-notifier`, `notify-send`), and board page text (`.html` files without their styles and comments).
+A line fails when it carries one of the nautical theme's words - its role terms, plurals, product, second-mate label, and seasoning, matched as whole words in any case - unless the line is a registered hook in `surfaces.tsv` or a residue row covers it.
+Backend label functions are not scanned: every themed label is a registered hook, and the rest are routing names under rule R2 that gate A11 holds identical.
+
+The canary's residue list is `.agents/skills/po-theme/residue.tsv`, beside the hook registry.
+Each tab-separated row names a file, a fixed substring of the producer line (it covers every line of that file containing it), and why the line stays nautical.
+The reason opens with the ADR-0020 rule that keeps the string canonical (`R1`-`R5`) or the stage that will theme it (`S1`-`S7`), then a colon, such as `S5: board page title; the board is themed by stage S5`; a row without one is a finding.
+When the canary fails in a merge PR, decide in that PR: theme the string through a registered hook, or add a residue row whose reason says why it stays nautical for now.
+A stage that themes a surface removes its rows, and `anchors` prints a note for any row that no longer matches a producer line so the list shrinks with the tree.
 [`identity.md`](identity.md#5-assertions--the-grep-evidence) documents the gates.

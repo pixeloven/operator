@@ -268,7 +268,7 @@ bin/po-theme.sh registry check-diff "$PIN"
 ```
 
 **A10 - the theme canary** ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md)).
-`anchors` fails when upstream changes a literal the `nautical` theme mirrors, adds a user-invocable skill with no alias key, a merge drops a hook line or a registered theme hook, or upstream at the pin no longer has a line a registered hook replaces; `validate` re-checks every bundled theme against the current upstream text.
+`anchors` fails when upstream changes a literal the `nautical` theme mirrors, adds a user-invocable skill with no alias key, adds a person-facing producer line with a nautical word that is neither a registered hook nor residue (the [surface canary](persona-themes.md#the-surface-canary)), a merge drops a hook line or a registered theme hook, or upstream at the pin no longer has a line a registered hook replaces; `validate` re-checks every bundled theme against the current upstream text.
 Both report affirmatively, with notes and warnings, and fail only on a finding:
 
 ```sh
