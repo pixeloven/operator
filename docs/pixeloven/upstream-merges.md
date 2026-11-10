@@ -433,7 +433,46 @@ ADR-0025's `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` hunk returned to u
 ADR-0021's composer fix (upstream #6695) and ADR-0026's restart fixes have no upstream equivalent yet and stay carried.
 Upstream #7706, which splits `tests/fm-supervision-host.test.sh` so the portable serial shards fit their 30-minute cap, was still open upstream and is not included.
 
-## 9. Merge log
+## 9. Sixth synchronization - 2026-11-09
+
+The sixth synchronization merged upstream `913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208` into PixelOven `5b7c0def3a2a`, 56 upstream commits past the previous pin `78c69df2b0b2`.
+Upstream's own changes in that range touch 229 files with 26,440 insertions and 1,454 deletions.
+
+| | |
+|---|---|
+| **Conflicts** | **4 files, 7 hunks** |
+| **Merge wall-clock** | **0.29 s** |
+
+Resolutions:
+
+- `bin/fm-pr-merge.sh` took upstream's `--expected-head` and `--update-branch` header, usage, and argument checks, and kept ADR-0023's repeatable `--allow-red` wording and usage.
+  Upstream's new settled-failure classifier for branch updates, which auto-merged, read only the first waived name, so it now checks every waived name and ADR-0023 keeps holding.
+- `bin/fm-test-run.sh` and `docs/configuration.md` union both sides: upstream's Claude account quota timing row beside ADR-0026's agent-view row, and upstream's branch prompt include section beside ADR-0022's credential-helper section.
+- `tests/fm-spawn-dispatch-profile.test.sh` took upstream's unframed launch reading and `FM_HOME` export, and kept ADR-0026's `disableAgentView` setting.
+
+Upstream #6695 arrived in this range, so every path ADR-0021 carried returned to upstream bytes, ADR-0021 retired, and the A4 allowlist drops those paths.
+ADR-0023, ADR-0025, ADR-0026, and ADR-0028 have no upstream equivalent yet and stay carried.
+Upstream added the user-invocable `lavish-url` skill, so both bundled themes gained an `alias.lavish-url` key that keeps the skill's own name.
+
+### Theme-hook merge cost
+
+This measurement replaces the op-themes-plan-r2 replay of the 50 days before the 2026-11-02 pin as the current cost of the ADR-0020 theme hooks.
+The hooked surface is 33 registered hook rows in six upstream-owned files plus ADR-0016's `AGENTS.md` Persona line and three `bin/fm-dod-lib.sh` hunks.
+Upstream changed three of those eight files in this window: `bin/backends/herdr.sh` (4 commits), `bin/fm-supervise-daemon.sh` (2), and `AGENTS.md` (3).
+
+| | r2 (50 days before the 2026-11-02 pin) | This window (2026-11-02 to 2026-11-09) |
+|---|---|---|
+| Upstream commits | 477 | 56 |
+| Conflicted hook hunks in the real merge | not applicable | **0** |
+| Hook lines needing touch-up | not applicable | **0** |
+| Conflicted hook hunks in the replay | 3 across 14 weekly replays | **0** across 8 daily replays and the whole window |
+| Nearest upstream hunk to a hook hunk | not measured | 8 lines (`herdr.sh`), 27 (`fm-supervise-daemon.sh`), 83 (`AGENTS.md`) |
+
+The replay merged each day's last upstream first-parent commit into the hooked PixelOven tree with `git merge-tree`, which reports conflicts without a worktree, and counted conflicted files among the hooked ones.
+`bin/po-theme.sh registry check-diff`, `verify`, and `anchors` pass on the merged tree.
+The only theme touch-up was data rather than a hook: the two new `alias.lavish-url` lines.
+
+## 10. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
@@ -443,3 +482,4 @@ Upstream #7706, which splits `tests/fm-supervision-host.test.sh` so the portable
 | 2026-10-21 | `355f46fe5528` | `8fd5575b1179` | 50 | **6 files** | 0.14 s | Fourth synchronization, stage 1 of 2. Took upstream for the superseded inbox, reconcile, and serial-timeout hunks; stock macOS now runs on every PR. |
 | 2026-10-21 | `8fd5575b1179` | `0e82f3eebd21` | 427 | **18 files** | 0.29 s | Fourth synchronization, stage 2 of 2. Re-ported the ADR-0012 and ADR-0013 cores onto upstream's rewrites, withdrew ADR-0014, dropped the superseded bootstrap and pr-check hunks, and added the delivery lane to the launch-env floor. |
 | 2026-11-02 | `0e82f3eebd21` | `78c69df2b0b2` | 145 | **11 files** | 0.34 s | Fifth synchronization. Took upstream's `ubuntu-24.04` runner pin under ADR-0027, kept ADR-0013 ahead of upstream's archive reader, re-wove ADR-0026 around upstream's Rex and T3 Code kill step, and retired ADR-0025's e2e leg. |
+| 2026-11-09 | `78c69df2b0b2` | `913bb7a7b6e6` | 56 | **4 files** | 0.29 s | Sixth synchronization. Kept ADR-0023's repeatable waiver across upstream's expected-head and branch-update merge flags, kept ADR-0026's `disableAgentView` beside upstream's `FM_HOME` export, retired ADR-0021, and measured zero theme-hook conflicts (R13). |

@@ -32,7 +32,7 @@ Use [`_template.md`](_template.md).
 | [0018](0018-security-policy-file.md) | PixelOven claims `.github/SECURITY.md` for its security policy | Accepted | Go-public review decision D5 |
 | [0019](0019-crew-machine-level-delivery.md) | `crew` reaches workers through the machine-level install that dotfiles maintains | Accepted | Crew-everywhere investigation; closes the parked crew delivery decisions |
 | [0020](0020-themes-first-class.md) | Themes are a first-class feature | Accepted | operator decisions on persona completion; amends ADR-0016 |
-| [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Accepted | Herdr send-failure investigation; self-retiring upstream carry |
+| [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Retired by the sixth synchronization | Herdr send-failure investigation; self-retiring upstream carry |
 | [0022](0022-delivery-lane-github-credential-helper.md) | The delivery lane may carry an operator-configured GitHub credential helper | Accepted | Worker GitHub credentials from a non-personal source |
 | [0023](0023-repeatable-allow-red-waiver.md) | The merge script accepts several named red-check waivers | Accepted | Two-check waived merge stopped on the single-waiver limit |
 | [0024](0024-worker-connector-deny-list.md) | Claude workers honor config/crew-exclude-tools | Proposed | Worker tooling investigation; operator review chose one local list |

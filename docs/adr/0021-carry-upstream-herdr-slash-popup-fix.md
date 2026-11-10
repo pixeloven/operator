@@ -1,6 +1,6 @@
 # ADR-0021: Carry upstream's Herdr slash-popup composer fix until a sync brings it
 
-- **Status:** Accepted
+- **Status:** Retired 2026-11-09 by the sixth upstream synchronization, which brought upstream #6695; every path returned to upstream bytes
 - **Date:** 2026-10-26
 - **Deciders:** The operator
 - **Source:** Herdr send-failure investigation; option B, carry the upstream fix now
