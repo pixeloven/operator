@@ -1,0 +1,10 @@
+$ bin/fm-pixeloven-upstream-check.sh
+upstream lineage: operator 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208 is an ancestor of https://github.com/kunchenguid/firstmate.git refs/heads/main
+upstream lineage checks passed
+exit=0
+
+$ git merge-base --is-ancestor checks; parents of merge 413fd91c
+78c69df2 is ancestor of HEAD
+913bb7a7 is ancestor of HEAD
+413fd91c3d8c92782fea94c664c1394a191cbeb8 parents=5b7c0def3a2a1983b645f7a42edf85a81d4e8dad 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208
+upstream-pin: 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208

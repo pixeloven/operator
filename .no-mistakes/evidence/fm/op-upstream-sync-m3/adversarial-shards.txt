@@ -1,0 +1,62 @@
+## Adversarial: stale 11-shard lane name against the 12-shard runner
+$ bin/fm-test-run.sh --list --lane portable-serial-1of11
+fm-test-run: lane 'portable-serial-1of11' asks for 11 portable serial shards but this runner is configured for 12 (see --list-lanes)
+exit=2
+
+## Counterfactual: same merged tree with PORTABLE_SERIAL_SHARDS reverted to 11 (temp copy)
+fm-test-run: coverage guard: largest portable serial shard packs 1200355ms above the 1200000ms target
+fm-test-run: refresh CI hints and rebalance or add shards; do not raise the job timeout: docs/fm-test-portable-shards.md
+exit=1
+## Counterfactual: merged tree without the five ADR-0029 PixelOven hint rows (temp copy)
+fm-test-run: coverage guard: 49 of 302 portable serial scripts have no measured duration hint (max 15%)
+fm-test-run: refresh the hints from a green run's timing artifacts: docs/fm-test-portable-shards.md
+tests/fm-assertions.test.sh
+tests/fm-backend-hc-appdetect-smoke.test.sh
+tests/fm-backend-rex-composer-live-e2e.test.sh
+tests/fm-backend-rex-eventwait-smoke.test.sh
+tests/fm-backend-rex-smoke.test.sh
+tests/fm-backend-rex.test.sh
+tests/fm-capacity.test.sh
+tests/fm-fleet-snapshot-contribution-input.test.sh
+tests/fm-git-push-guard.test.sh
+tests/fm-hc-lab.test.sh
+tests/fm-hermes-gateway-coexistence-live-e2e.test.sh
+tests/fm-hermes-harness.test.sh
+tests/fm-hermes-profile-safety-live-e2e.test.sh
+tests/fm-hermes-signals-live-e2e.test.sh
+tests/fm-kiro-harness.test.sh
+tests/fm-kiro-signals-live-e2e.test.sh
+tests/fm-merge-local.test.sh
+tests/fm-opencode-abs-cwd-rail-live-e2e.test.sh
+tests/fm-parent-channel-scan-exclusion.test.sh
+tests/fm-pi-worker-stream-live-e2e.test.sh
+tests/fm-pipeline-spend.test.sh
+tests/fm-pixeloven-upstream-check.test.sh
+tests/fm-pr-health.test.sh
+tests/fm-procevent-extension-errors.test.sh
+tests/fm-project-capacity.test.sh
+tests/fm-project-mode.test.sh
+tests/fm-record-export-remote-home.test.sh
+tests/fm-record-export.test.sh
+tests/fm-remote-delta-read.test.sh
+tests/fm-remote-inherit-generation.test.sh
+tests/fm-remote-job-claim-reap.test.sh
+tests/fm-remote-job-claim-retention.test.sh
+tests/fm-remote-job-launchagent.test.sh
+tests/fm-remote-secondmate-omp.test.sh
+tests/fm-review-check.test.sh
+tests/fm-self-repo-role.test.sh
+tests/fm-send-kiro-confirm.test.sh
+tests/fm-session-lock-windows-consumers.test.sh
+tests/fm-spawn-external-review.test.sh
+tests/fm-spawn-herdr-lease.test.sh
+tests/fm-spawn-manual-pr-text.test.sh
+tests/fm-startup-growth-check.test.sh
+tests/fm-supervision-host-herdr-live-e2e.test.sh
+tests/fm-usage-warner.test.sh
+tests/fm-watch-open-decisions.test.sh
+tests/po-crew.test.sh
+tests/po-delivery-lane-credential.test.sh
+tests/po-theme-labels.test.sh
+tests/po-theme.test.sh
+exit=1

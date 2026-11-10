@@ -1,0 +1,4 @@
+$ (isolated) tests/fm-pr-merge.test.sh :: test_github_behind_updates_and_rechecks_before_merge  [includes new ADR-0023 github-behind-pending-beside-second-waived-red case]
+ok - fm-pr-merge reads a plan-gated 403 on branch rules as no merge queue, not unreadable
+ok - fm-pr-merge updates a green behind branch and merges only after the new head is green
+exit=0

@@ -1,0 +1,152 @@
+FM_TEST_BEGIN 2026-11-10T03:07:49Z tests/fm-ci-workflow.test.sh family=unclassified expected_gate_skip=none
+ok - CI matrices cover every executable serial lane and canonical lint root exactly once
+ok - a newer push to one PR supersedes that PR's in-flight CI
+ok - distinct PRs get distinct concurrency groups
+ok - close main pushes keep only the newest run, apart from every PR group
+ok - only the full-ci label joins and supersedes the PR's group; other labels cancel nothing
+ok - an unlabelled outside PR runs only the quick checks and a failing Full suite naming full-ci
+ok - the full-ci label and later pushes run every job, and the verdict follows the lanes
+ok - main pushes, own branches and write-access authors still run every job and pass the verdict
+ok - an unrelated label runs no job on a waiting, labelled or owner PR
+ok - a late-finishing unrelated label run leaves a full-ci pass visible
+ok - an unrelated label after a failed or waiting suite leaves every earlier check as it was
+ok - the fork skip variables change nothing unless set, and each skips only its own run or job
+ok - the timing aggregate still runs after a failed lane unless the push run is skipped
+ok - every ci.yml job carries a finite timeout
+ok - every ci.yml job belongs to one of the three timeout tiers
+ok - fast tier jobs share one 5 minute tripwire
+ok - normal tier jobs share one 30 minute budget
+ok - each heavy lane keeps a 20 minute step tripwire under a 75 minute job backstop
+FM_TEST_END 2026-11-10T03:08:09Z tests/fm-ci-workflow.test.sh exit=0 duration_ms=20152 gate_skip=false
+FM_TEST_BEGIN 2026-11-10T03:08:09Z tests/po-theme.test.sh family=unclassified expected_gate_skip=none
+ok - every bundled theme validates, and the operator theme covers its real-word collisions
+ok - validation refuses every unsafe, malformed, or colliding theme with its named reason
+ok - anchors pass on this tree and fail on drifted wording, a new command, or a lost hook
+ok - the surface canary fails on an unregistered nautical producer line and passes registered and residue ones
+ok - nautical writes nothing: no block, no aliases, no exclude entries
+ok - operator apply writes one idempotent block, keeps prose and mode, and rolls back byte-exact
+ok - the real session-start digest prints the headline before LOCK and the Persona block in CONTEXT
+ok - headline is empty under nautical, prints the applied persona, and adds one drift line on drift
+ok - the intent check refuses the themed vocative and matches upstream under nautical
+ok - the worker role contract is upstream under nautical and gains exactly one line under a theme
+ok - a secondmate home resolves an inherited custom theme, refuses apply, and rejects tampering
+ok - the intent check keeps the applied vocative when the selection breaks after apply
+ok - the Persona block advertises the aliases as primary-home commands only
+ok - aliases are generated clean and nautical apply removes them and their exclude entries
+ok - verify reports stale, hand-edited, missing, and unexpected blocks and alias drift
+ok - a secondmate home reports an older bundled block and skips the comparison for a local primary theme
+ok - resolve and term read the selection and refuse unknown or path-shaped names
+all po-theme tests passed
+FM_TEST_END 2026-11-10T03:09:48Z tests/po-theme.test.sh exit=0 duration_ms=99221 gate_skip=false
+FM_TEST_BEGIN 2026-11-10T03:09:48Z tests/po-theme-labels.test.sh family=unclassified expected_gate_skip=none
+ok - nautical labels and every herdr and Paseo matcher answer exactly as upstream's adapters do
+ok - operator gives spotter and spotter-afk-daemon, and an inheriting secondmate names itself navigator-gfm
+ok - the accept-set adopts a live 2ndmate-gfm and keeps legacy children grouped under a renamed parent
+ok - the accept-set resolves a projection parent that still carries its canonical or relabeled label
+ok - switching themes and back adopts the live workspace and never mints a duplicate
+ok - the validator refuses bad, overlapping, colliding, and misplaced labels
+ok - nautical keeps needs-captain and the firstmate wedge title; operator gives needs-operator and the operator title as macOS argv item 2
+ok - absent strings derive from the role words, and the validator refuses bad or misplaced strings
+ok - the registry check refuses an unregistered added or removed line
+ok - anchors fail when a registered hook line is lost in a merge
+ok - A11: routing names, session names, and the worker role contract are identical under every bundled theme
+ok - relabel renames only recorded workspaces and keeps history labels any listed container uses
+ok - relabel renames a primary home's secondmate workspaces to their own labels and skips a foreign or unpropagated one
+ok - relabel renames only recorded workspaces in a named lab session and retires unused history
+all po-theme-labels tests passed
+FM_TEST_END 2026-11-10T03:10:34Z tests/po-theme-labels.test.sh exit=0 duration_ms=45378 gate_skip=false
+FM_TEST_BEGIN 2026-11-10T03:10:34Z tests/fm-pixeloven-upstream-check.test.sh family=unclassified expected_gate_skip=none
+ok - a real canonical ancestor passes
+ok - a locally present but non-upstream commit fails real lineage validation
+ok - ambient repository objects and replacements cannot satisfy canonical ancestry
+ok - missing canonical upstream evidence fails clearly
+ok - malformed pin data is rejected before network access
+ok - fixture inputs are unavailable through the production command interface
+FM_TEST_END 2026-11-10T03:10:36Z tests/fm-pixeloven-upstream-check.test.sh exit=0 duration_ms=2671 gate_skip=false
+FM_TEST_BEGIN 2026-11-10T03:10:36Z tests/fm-pr-merge.test.sh family=pr-forge expected_gate_skip=none
+observation: visibility=updated blocker=draft waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=draft waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=closed waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=closed waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=conflict waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=conflict waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=required-source waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=updated blocker=required-source waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=draft waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=draft waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=closed waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=closed waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=conflict waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=conflict waiting=missing preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=required-source waiting=pending preflight_reads=2 retry_advice=false
+observation: visibility=delayed blocker=required-source waiting=missing preflight_reads=2 retry_advice=false
+ok - fm-pr-merge immediately refuses draft, closed, conflicting, or unreadable updated heads despite pending or missing checks
+ok - fm-pr-merge refuses a concurrent source-head change before updating, with or without --expected-head
+ok - fm-pr-merge reports exact queue retry flags after a zero-exit false success
+ok - fm-pr-merge omits merge-queue retry guidance for a closed GitHub PR
+ok - fm-pr-merge aggregates agreeing merge-queue rules
+ok - fm-pr-merge reports ambiguity for conflicting merge-queue rules
+ok - fm-pr-merge records pr= and pr_head= for a verified GitHub merge
+ok - fm-pr-merge records pr= before the forge call can land the merge
+ok - fm-pr-merge propagates a real merge failure without silently succeeding
+ok - fm-pr-merge refuses a GitHub merge call that leaves the PR open and unqueued
+ok - fm-pr-merge retries a bounded number of times when mergeable is UNKNOWN and merges once it resolves
+ok - fm-pr-merge reports mergeability still pending after its bounded UNKNOWN retry is spent
+ok - fm-pr-merge refuses on the UNKNOWN re-check when a check turned red between reads
+ok - fm-pr-merge refuses a genuine mergeable conflict immediately, without retrying
+ok - fm-pr-merge keeps PR bookkeeping when it cannot read a successful merge call's outcome
+ok - fm-pr-merge refuses with the forge's own output quoted apart from its verdict
+ok - fm-pr-merge quotes the forge output when it cannot read the outcome either
+ok - fm-pr-merge does not echo back queue flags the caller already used
+ok - fm-pr-merge still names retry flags when the caller used a different method
+ok - fm-pr-merge names the queue requirement even when its method is unrecognised
+ok - fm-pr-merge distinguishes unreadable branch rules from a base with no merge queue
+ok - fm-pr-merge reads a plan-gated 403 on branch rules as no merge queue, not unreadable
+ok - fm-pr-merge says nothing about a merge queue when the base branch has no queue rule
+ok - fm-pr-merge accepts only a proved merge from the gh-axi fallback
+ok - fm-pr-merge explains an armed auto-merge that landed nothing on a queue-less base
+ok - fm-pr-merge never reports auto-merge as armed when the merge command failed
+ok - fm-pr-merge claims no acceptance for a failed merge command carrying queue flags
+ok - fm-pr-merge falls back to the gh-axi view when gh's read fails
+ok - fm-pr-merge names a landed state hiding behind a failed GitHub merge command
+ok - fm-pr-merge refuses a GitHub merge when gh is missing, before recording
+ok - fm-pr-merge refuses a GitHub merge when gh is missing rather than merging blind
+ok - fm-pr-merge verifies a genuinely merged GitHub pull request
+ok - fm-pr-merge refuses to claim a merge when poll recording fails
+ok - fm-pr-merge accepts and accurately reports a GitHub merge-queue entry
+ok - fm-pr-merge explains how to retry with the required GitHub merge queue method
+ok - fm-pr-merge refuses branch deletion unless --attended-override is passed
+ok - fm-pr-merge refuses before merging when task meta is missing
+ok - fm-pr-merge refuses malformed PR URLs before calling gh-axi
+ok - fm-pr-merge --help and -h print the header usage and exit 0
+ok - fm-pr-merge refuses unsafe PR URL segments before recording state
+ok - fm-pr-merge refuses repo override args before recording state
+ok - fm-pr-merge refuses a bundled short-option repo override and refuses -d unless attended
+ok - fm-pr-merge does not add default --squash when the caller passes an explicit merge method
+ok - fm-pr-merge respects --method=<value> as an explicit merge method
+ok - fm-pr-merge parses a GitHub PR URL into gh-axi number and --repo arguments
+ok - fm-pr-merge refuses a caller --sha on GitHub because the head comes from the live read
+ok - fm-pr-merge merges a GitLab merge request through glab instead of refusing it
+ok - fm-pr-merge takes the GitLab instance from the URL rather than assuming one
+ok - fm-pr-merge imposes no merge method on GitLab, leaving the project's own one
+ok - fm-pr-merge refuses GitLab source-branch deletion unless --attended-override is passed
+ok - fm-pr-merge propagates a real glab merge failure without silently succeeding
+ok - fm-pr-merge refuses on each GitLab pre-merge condition independently
+ok - fm-pr-merge reports every failing GitLab condition, not only the first
+ok - fm-pr-merge reports a stale recorded head and verifies the live one
+ok - fm-pr-merge refuses an unreadable GitLab merge request state rather than merging blind
+ok - fm-pr-merge refuses a GitLab head commit it cannot validate
+ok - fm-pr-merge refuses before recording anything when glab or jq is absent
+not ok - forgejo-merges: a well-formed pull request URL should merge, not error: expected exit 0, got 1
+FM_TEST_END 2026-11-10T03:18:15Z tests/fm-pr-merge.test.sh exit=1 duration_ms=458857 gate_skip=false
+FM_TEST_SUMMARY total=5 failed=1 skipped_gate=0 duration_ms=626714
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=458857 failed=1
+FM_TEST_SUMMARY_FAMILY family=unclassified count=4 duration_ms=167422 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-merge.test.sh duration_ms=458857
+FM_TEST_SLOWEST rank=2 script=tests/po-theme.test.sh duration_ms=99221
+FM_TEST_SLOWEST rank=3 script=tests/po-theme-labels.test.sh duration_ms=45378
+FM_TEST_SLOWEST rank=4 script=tests/fm-ci-workflow.test.sh duration_ms=20152
+FM_TEST_SLOWEST rank=5 script=tests/fm-pixeloven-upstream-check.test.sh duration_ms=2671
+
+## Pre-existing failure: forgejo-merges reproduced on base 5b7c0def, upstream 913bb7a7 and HEAD alike (isolated case)
+stderr: refusing to merge https://forgejo.example/fixture/fixture-repo/pulls/9 - the combined commit status is "unreadable", not success
