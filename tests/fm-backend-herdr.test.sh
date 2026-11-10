@@ -607,6 +607,55 @@ test_registered_agent_with_a_live_foreground_process_stays_alive() {
   pass "herdr stale registration: a registered agent with a live Pi foreground process still reads alive"
 }
 
+# --- the foreground-occupant session proof ----------------------------------
+#
+# fm_backend_herdr_pane_owns_session is the herdr equivalent of the tmux
+# pane_pid ancestor + tpgid proof the hand-back retry makes before delivery:
+# the pane's own process-info must name a shell pid that is an ancestor-or-self
+# of the pinned pid AND that pid's process group must be the pane's foreground
+# group. The canned `pane process-info` body is paired with a real child
+# process so the ancestry walk and pgid read run against the real process
+# table, and every foreign, malformed, or unreadable half refuses.
+
+owns_session_process_info() {  # <shell-pid> <fg-pgid>
+  printf '{"result":{"type":"pane_process_info","process_info":{"pane_id":"w1:p2","shell_pid":%s,"foreground_process_group_id":%s,"foreground_processes":[]}}}' "$1" "$2"
+}
+
+owns_session_case() {  # <process-info-body|-> <pid> [process-info-exit]
+  local dir resp log fb
+  dir=$(mktemp -d "$TMP_ROOT/owns-session.XXXXXX")
+  mkdir -p "$dir/responses"; resp="$dir/responses"; log="$dir/log"; : > "$log"
+  [ "$1" = - ] || printf '%s\n' "$1" > "$resp/1.out"
+  [ -z "${3:-}" ] || printf '%s\n' "$3" > "$resp/1.exit"
+  fb=$(make_herdr_fakebin "$dir")
+  PATH="$fb:$PATH" FM_HERDR_LOG="$log" FM_HERDR_RESPONSES="$resp" \
+    bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_pane_owns_session fmtest w1:p2 "$1"' "$ROOT" "$2"
+}
+
+test_pane_owns_session_proves_the_foreground_occupant() {
+  local sleep_bin pid pgid
+  sleep_bin=$(command -v sleep) || fail "sleep not found"
+  "$sleep_bin" 300 &
+  pid=$!
+  pgid=$(ps -o pgid= -p "$pid" | tr -d ' ')
+  # shell_pid = the suite's own pid $$ - a real ancestor of the child.
+  owns_session_case "$(owns_session_process_info "$$" "$pgid")" "$pid" \
+    || { kill "$pid" 2>/dev/null; fail "a real ancestor shell pid plus a matching foreground group must prove ownership"; }
+  # shell_pid = the pinned pid itself - the pane's top process IS the session.
+  owns_session_case "$(owns_session_process_info "$pid" "$pgid")" "$pid" \
+    || { kill "$pid" 2>/dev/null; fail "a pane whose top process is the session must prove ownership"; }
+  if owns_session_case "$(owns_session_process_info 999999 "$pgid")" "$pid" \
+    || owns_session_case "$(owns_session_process_info "$$" 999999)" "$pid" \
+    || owns_session_case - "$pid" 1 \
+    || owns_session_case "$(owns_session_process_info 1 "$pgid")" "$pid" \
+    || owns_session_case "$(owns_session_process_info "$$" "$pgid")" not-a-pid; then
+    kill "$pid" 2>/dev/null
+    fail "a foreign shell pid, foreign foreground group, unreadable read, invalid shell pid, or invalid pid must all refuse"
+  fi
+  kill "$pid" 2>/dev/null || true
+  pass "herdr pane owns session: the foreground-occupant proof accepts only the real ancestry plus foreground group"
+}
+
 # --- the bound agent session reference (relaunch session continuity) --------
 #
 # Herdr applies only reports carrying the session identity it bound to a pane,
@@ -942,6 +991,41 @@ test_projection_reclaim_rollback_refuses_a_stale_registration() {
   pass "herdr stale registration: presentation reclaim never closes a stale-registration pane"
 }
 
+test_projection_cleanup_exact_succeeds_only_when_the_task_pane_closed() {
+  local closed refused absent restore_failed_after_close restore_failed_after_failed_close
+  closed=$(bash -c '. "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_projection_close_pane_focus_preserving() { printf "CLOSED %s;" "$2"; }
+    fm_backend_herdr_projection_cleanup_exact fmtest w1:p2 w1:p1; printf "rc=%s" "$?"' "$ROOT" 2>&1)
+  refused=$(bash -c '. "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_projection_close_pane_focus_preserving() { [ "$2" != w1:p2 ] || return 1; printf "CLOSED %s;" "$2"; }
+    fm_backend_herdr_cli() { [ "$2 $3 $4" = "pane get w1:p2" ] && printf "{\"result\":{\"pane\":{\"pane_id\":\"w1:p2\"}}}"; }
+    fm_backend_herdr_projection_cleanup_exact fmtest w1:p2 w1:p1; printf "rc=%s" "$?"' "$ROOT" 2>&1)
+  absent=$(bash -c '. "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_projection_close_pane_focus_preserving() { printf "CLOSED %s;" "$2"; }
+    fm_backend_herdr_projection_cleanup_exact fmtest "" w1:p1; printf "rc=%s" "$?"' "$ROOT" 2>&1)
+  # The close call fails with 2 when focus restoration fails, whether or not
+  # the pane closed; only an exact presence check can tell the two apart.
+  restore_failed_after_close=$(bash -c '. "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_projection_close_pane_focus_preserving() { [ "$2" != w1:p2 ] || return 2; printf "CLOSED %s;" "$2"; }
+    fm_backend_herdr_cli() { [ "$2 $3 $4" = "pane get w1:p2" ] && printf "{\"error\":{\"code\":\"pane_not_found\"}}"; }
+    fm_backend_herdr_projection_cleanup_exact fmtest w1:p2 w1:p1; printf "rc=%s" "$?"' "$ROOT" 2>&1)
+  restore_failed_after_failed_close=$(bash -c '. "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_projection_close_pane_focus_preserving() { [ "$2" != w1:p2 ] || return 2; printf "CLOSED %s;" "$2"; }
+    fm_backend_herdr_cli() { [ "$2 $3 $4" = "pane get w1:p2" ] && printf "{\"result\":{\"pane\":{\"pane_id\":\"w1:p2\"}}}"; }
+    fm_backend_herdr_projection_cleanup_exact fmtest w1:p2 w1:p1; printf "rc=%s" "$?"' "$ROOT" 2>&1)
+  [ "$closed" = "CLOSED w1:p2;CLOSED w1:p1;rc=0" ] \
+    || fail "a closed task pane must report success after closing both panes, got '$closed'"
+  [ "$refused" = "CLOSED w1:p1;rc=1" ] \
+    || fail "a task pane left open must report failure and still close the seeded pane, got '$refused'"
+  [ "$absent" = "CLOSED w1:p1;rc=1" ] \
+    || fail "no task pane must never report a closed endpoint, got '$absent'"
+  [ "$restore_failed_after_close" = "CLOSED w1:p1;rc=0" ] \
+    || fail "a task pane confirmed gone must report success even when focus restoration failed, got '$restore_failed_after_close'"
+  [ "$restore_failed_after_failed_close" = "CLOSED w1:p1;rc=1" ] \
+    || fail "a failed close with failed focus restoration must report failure while the pane is present, got '$restore_failed_after_failed_close'"
+  pass "herdr projection abort cleanup reports success only when the task pane closed"
+}
+
 test_busy_state_never_reports_a_shell_only_pane_busy() {
   local sleep_bin shell_pid dir resp log fb out
   sleep_bin=$(command -v sleep) || fail "sleep not found"
@@ -1229,6 +1313,7 @@ test_launcher_identity_refuses_an_unreadable_pane() {
   local dir log resp fb out status
   dir="$TMP_ROOT/launcher-stale"; mkdir -p "$dir/responses"; log="$dir/log"; resp="$dir/responses"; : > "$log"
   printf '{"sessions":[{"name":"fmtest","running":true,"socket_path":"/tmp/fm-herdr-unit/fmtest.sock"}]}\n' > "$resp/1.out"
+  # A destroyed pane: herdr 0.9.3 answers `pane get` with pane_not_found, rc=1.
   printf '1\n' > "$resp/2.exit"
   fb=$(make_herdr_fakebin "$dir")
   out=$( PATH="$fb:$PATH" FM_HERDR_LOG="$log" FM_HERDR_RESPONSES="$resp" \
@@ -1236,8 +1321,38 @@ test_launcher_identity_refuses_an_unreadable_pane() {
     bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_launcher_identity fmtest' "$ROOT" 2>&1 )
   status=$?
   expect_code 1 "$status" "a launcher pane that no longer reads must refuse, not fall back to a label search"
-  assert_contains "$out" "w7:p3" "the stale-pane refusal did not name the pane it could not resolve"
-  pass "fm_backend_herdr_launcher_identity: refuses when the launcher's own pane no longer resolves"
+  assert_contains "$out" "w7:p3" "the unreadable-pane refusal did not name the pane it could not resolve"
+  assert_contains "$out" "could not be read" "the unreadable-pane refusal did not say the pane could not be read"
+  pass "fm_backend_herdr_launcher_identity: refuses as unreadable when the launcher's own pane was destroyed"
+}
+
+test_launcher_identity_refuses_a_stale_pane_id() {
+  local dir log resp fb out status shape
+  for shape in other-pane empty-tab; do
+    dir="$TMP_ROOT/launcher-stale-$shape"; mkdir -p "$dir/responses"; log="$dir/log"; resp="$dir/responses"; : > "$log"
+    printf '{"sessions":[{"name":"fmtest","running":true,"socket_path":"/tmp/fm-herdr-unit/fmtest.sock"}]}\n' > "$resp/1.out"
+    case "$shape" in
+      # An id herdr resolves to a different pane (a legacy id form such as
+      # `1-1` answers as `w1:p1`), so the exact-id filter keeps nothing.
+      other-pane) printf '{"result":{"pane":{"pane_id":"w7:p9","tab_id":"w7:t9","workspace_id":"w7"}}}\n' > "$resp/2.out" ;;
+      # A pane record that names no tab at all.
+      empty-tab) printf '{"result":{"pane":{"pane_id":"w7:p3","tab_id":"","workspace_id":"w7"}}}\n' > "$resp/2.out" ;;
+    esac
+    fb=$(make_herdr_fakebin "$dir")
+    out=$( PATH="$fb:$PATH" FM_HERDR_LOG="$log" FM_HERDR_RESPONSES="$resp" \
+      HERDR_ENV=1 HERDR_PANE_ID=w7:p3 HERDR_SESSION=fmtest HERDR_SOCKET_PATH=/tmp/fm-herdr-unit/fmtest.sock \
+      bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_launcher_identity fmtest' "$ROOT" 2>&1 )
+    status=$?
+    expect_code 1 "$status" "a stale launcher pane id must refuse, not fall back to a label search"
+    assert_contains "$out" "w7:p3" "the stale-pane refusal did not name the stale pane id"
+    assert_contains "$out" "no longer exists" "the stale-pane refusal did not say the pane id no longer names a pane"
+    assert_contains "$out" "HERDR_PANE_ID" "the stale-pane refusal did not name HERDR_PANE_ID as a value to refresh"
+    assert_contains "$out" "HERDR_TAB_ID" "the stale-pane refusal did not name HERDR_TAB_ID as a value to refresh"
+    assert_contains "$out" "HERDR_WORKSPACE_ID" "the stale-pane refusal did not name HERDR_WORKSPACE_ID as a value to refresh"
+    assert_not_contains "$out" "ambiguous tab or workspace" "the stale-pane refusal still blamed an ambiguity that does not exist"
+    assert_not_contains "$(cat "$log")" $'\x1f''workspace'$'\x1f''create' "a stale launcher pane must not mint or pick a workspace"
+  done
+  pass "fm_backend_herdr_launcher_identity: names a launcher pane id that resolves elsewhere or names no tab as stale and names the values to refresh"
 }
 
 test_launcher_identity_refuses_a_pane_and_tab_that_disagree() {
@@ -6359,6 +6474,64 @@ test_wait_transition_clean_timeout_returns_1() {
 
 # shellcheck source=bin/fm-backend.sh
 . "$ROOT/bin/fm-backend.sh"
+# fm_backend_herdr_canonical_socket_path folds a Windows drive-letter spelling
+# into the POSIX spelling of the same socket, so the launcher's claimed socket
+# and the session list's socket_path compare equal on native Windows. `cygpath`
+# ships only with Git for Windows, so these cases stub it and therefore run
+# everywhere; the guard in the adapter matches only `[A-Za-z]:[\/]*`, a shape
+# that cannot occur on Linux or macOS.
+# make_cygpath_fakebin <dir> <map|fail|empty> [mapped-path] -> echoes fakebin dir
+make_cygpath_fakebin() {
+  local dir=$1 mode=$2 mapped=${3-} fb="$1/cygpath-fakebin"
+  mkdir -p "$fb"
+  case "$mode" in
+    map)   printf '#!/usr/bin/env bash\nprintf %%s %s\n' "$(printf '%q' "$mapped")" > "$fb/cygpath" ;;
+    fail)  printf '#!/usr/bin/env bash\nexit 1\n' > "$fb/cygpath" ;;
+    empty) printf '#!/usr/bin/env bash\nprintf ""\n' > "$fb/cygpath" ;;
+  esac
+  chmod +x "$fb/cygpath"
+  printf '%s' "$fb"
+}
+
+canonical_socket_path_via() {  # <fakebin-dir-or-empty> <path> -> stdout, status
+  local fb=$1 path=$2
+  if [ -n "$fb" ]; then
+    PATH="$fb:$PATH" bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_canonical_socket_path "$1"' "$ROOT" "$path"
+  else
+    bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_canonical_socket_path "$1"' "$ROOT" "$path"
+  fi
+}
+
+test_canonical_socket_path_folds_a_windows_drive_letter_spelling() {
+  local dir sock fb posix_id win_id
+  dir="$TMP_ROOT/cygpath-map"; mkdir -p "$dir"
+  sock="$dir/herdr.sock"; : > "$sock"
+  fb=$(make_cygpath_fakebin "$dir" map "$sock")
+  posix_id=$(canonical_socket_path_via '' "$sock")
+  [ -n "$posix_id" ] || fail "the POSIX spelling must canonicalize to a non-empty identity"
+  win_id=$(canonical_socket_path_via "$fb" 'C:\fake\herdr.sock')
+  [ "$win_id" = "$posix_id" ] || \
+    fail "a drive-letter spelling must normalize to the same identity as its POSIX spelling (got '$win_id', want '$posix_id')"
+}
+
+test_canonical_socket_path_refuses_a_failed_cygpath() {
+  local dir fb status
+  dir="$TMP_ROOT/cygpath-fail"; mkdir -p "$dir"
+  fb=$(make_cygpath_fakebin "$dir" fail)
+  status=0
+  canonical_socket_path_via "$fb" 'C:\fake\herdr.sock' >/dev/null || status=$?
+  expect_code 1 "$status" "a drive-letter path whose cygpath conversion fails must be refused, not compared half-converted"
+}
+
+test_canonical_socket_path_refuses_empty_cygpath_output() {
+  local dir fb status
+  dir="$TMP_ROOT/cygpath-empty"; mkdir -p "$dir"
+  fb=$(make_cygpath_fakebin "$dir" empty)
+  status=0
+  canonical_socket_path_via "$fb" 'C:\fake\herdr.sock' >/dev/null || status=$?
+  expect_code 1 "$status" "a drive-letter path whose cygpath output is empty must be refused"
+}
+
 
 test_version_check_accepts_current_protocol
 test_version_check_refuses_old_protocol
@@ -6376,6 +6549,7 @@ test_stale_registration_ignores_status_and_reads_the_process
 test_pane_agent_session_ref_reports_a_resumable_reference_with_its_agent
 test_pane_agent_session_ref_degrades_to_nothing_when_not_resumable
 test_registered_agent_with_a_live_foreground_process_stays_alive
+test_pane_owns_session_proves_the_foreground_occupant
 test_registered_agent_with_a_non_shell_foreground_process_stays_alive
 test_transient_prompt_helper_settles_into_stale_agent
 test_exhausted_settle_window_keeps_a_non_shell_foreground_live
@@ -6388,6 +6562,7 @@ test_process_state_tolerates_missing_and_malformed_process_fields
 test_process_state_shell_verdict_survives_several_shell_processes
 test_process_state_jq_calls_do_not_grow_with_foreground_processes
 test_projection_reclaim_rollback_refuses_a_stale_registration
+test_projection_cleanup_exact_succeeds_only_when_the_task_pane_closed
 test_busy_state_never_reports_a_shell_only_pane_busy
 test_cli_caches_the_selected_client_within_a_process
 test_cli_scopes_the_selected_client_to_its_session
@@ -6401,6 +6576,7 @@ test_launcher_identity_refuses_a_pane_from_another_session_name
 test_launcher_identity_refuses_a_missing_server_socket
 test_launcher_identity_refuses_a_pane_from_another_server_socket
 test_launcher_identity_refuses_an_unreadable_pane
+test_launcher_identity_refuses_a_stale_pane_id
 test_launcher_identity_refuses_a_pane_and_tab_that_disagree
 test_launcher_identity_refuses_a_workspace_missing_from_the_session
 test_workspace_ensure_prefers_the_launcher_over_the_first_label_match
@@ -6609,3 +6785,6 @@ test_wait_transition_stream_absorb_clears_then_timeout
 test_wait_transition_reader_failure_returns_2
 test_wait_transition_bad_ack_returns_2_and_cleans_up
 test_wait_transition_clean_timeout_returns_1
+test_canonical_socket_path_folds_a_windows_drive_letter_spelling
+test_canonical_socket_path_refuses_a_failed_cygpath
+test_canonical_socket_path_refuses_empty_cygpath_output
