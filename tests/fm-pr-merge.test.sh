@@ -4036,6 +4036,25 @@ test_github_behind_updates_and_rechecks_before_merge() {
     || fail "github-behind-unknown-after-waived-red: UNKNOWN beside a waived failure should be awaited: $(cat "$case_dir/stderr")"
   assert_logged_gh_merge "$case_dir" 6186 example/repo --squash
 
+  # ADR-0023: a settled failure waived by a later --allow-red is not a known
+  # failure, so a still-pending check is awaited rather than refused at once.
+  case_dir=$(make_case github-behind-pending-beside-second-waived-red)
+  add_gh_mocks "$case_dir" "$old_head"
+  jq '.mergeStateStatus = "BEHIND"' "$case_dir/github-view.json" > "$case_dir/github-view-after-update.json"
+  mv "$case_dir/github-view-after-update.json" "$case_dir/github-view.json"
+  jq --arg head "$new_head" '.mergeStateStatus = "CLEAN" | .headRefOid = $head |
+    .statusCheckRollup = [{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"FAILURE"},
+      {"__typename":"CheckRun","name":"slow","status":"IN_PROGRESS","conclusion":null}]' \
+    "$case_dir/github-view.json" > "$case_dir/github-view-after-update.json"
+  jq '.statusCheckRollup[1].status = "COMPLETED" | .statusCheckRollup[1].conclusion = "SUCCESS"' \
+    "$case_dir/github-view-after-update.json" > "$case_dir/github-view-after-update-final.json"
+  printf '%s\n' "$new_head" > "$case_dir/github-head-after-update"
+  FM_PR_GITHUB_MERGEABLE_RETRY_DELAY=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/6191 --update-branch --allow-red lint --allow-red ci -- --squash \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "github-behind-pending-beside-second-waived-red: a pending check beside a failure waived by a later --allow-red should be awaited: $(cat "$case_dir/stderr")"
+  assert_logged_gh_merge "$case_dir" 6191 example/repo --squash
+
   case_dir=$(make_case github-behind-unreadable-after-update)
   add_gh_mocks "$case_dir" "$old_head"
   jq '.mergeStateStatus = "BEHIND"' "$case_dir/github-view.json" > "$case_dir/github-view-after-update.json"

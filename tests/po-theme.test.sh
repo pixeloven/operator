@@ -46,7 +46,7 @@ FM_TEST_CLEANUP_DIRS+=("$TMP_ROOT")
 trap fm_test_cleanup EXIT
 fm_git_identity fmtest fmtest@example.invalid
 
-USER_SKILLS='afk ahoy bearings quiet stow updatefirstmate'
+USER_SKILLS='afk ahoy bearings lavish-url quiet stow updatefirstmate'
 
 # new_code <name>: a throwaway code root carrying this tree's po-theme script,
 # themes, mirrored upstream text, and stub user-invocable skills. Echoes its path.
