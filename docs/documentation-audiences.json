@@ -234,6 +234,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/harness-adapters/references/harness/hermes.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/harness-adapters/references/harness/kiro.md",
       "audience": "agent-runtime"
     },
@@ -439,6 +443,10 @@
     },
     {
       "path": "docs/adr/0028-carry-wake-drain-signal-trap-fix.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0029-pixeloven-test-duration-hints.md",
       "audience": "maintainer-architecture"
     },
     {
@@ -750,6 +758,10 @@
       "audience": "maintainer-verification"
     },
     {
+      "path": "docs/verification/hermes.md",
+      "audience": "maintainer-verification"
+    },
+    {
       "path": "docs/verification/kiro.md",
       "audience": "maintainer-verification"
     },
@@ -831,6 +843,10 @@
     },
     {
       "path": ".agents/skills/away-quiet-supervision/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/lavish-url/SKILL.md",
       "audience": "agent-runtime"
     },
     {

@@ -586,7 +586,7 @@ test_anchors_name_a_lost_hook() {
   cp "$ROOT/bin/backends/herdr.sh" "$ROOT/bin/backends/paseo.sh" "$code/bin/backends/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"
-  for s in afk ahoy bearings quiet stow updatefirstmate; do
+  for s in afk ahoy bearings lavish-url quiet stow updatefirstmate; do
     mkdir -p "$code/.agents/skills/$s"
     printf -- '---\nname: %s\nuser-invocable: true\n---\n' "$s" > "$code/.agents/skills/$s/SKILL.md"
   done

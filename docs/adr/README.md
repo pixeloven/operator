@@ -32,7 +32,7 @@ Use [`_template.md`](_template.md).
 | [0018](0018-security-policy-file.md) | PixelOven claims `.github/SECURITY.md` for its security policy | Accepted | Go-public review decision D5 |
 | [0019](0019-crew-machine-level-delivery.md) | `crew` reaches workers through the machine-level install that dotfiles maintains | Accepted | Crew-everywhere investigation; closes the parked crew delivery decisions |
 | [0020](0020-themes-first-class.md) | Themes are a first-class feature | Accepted | operator decisions on persona completion; amends ADR-0016 |
-| [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Accepted | Herdr send-failure investigation; self-retiring upstream carry |
+| [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Retired by the sixth synchronization | Herdr send-failure investigation; self-retiring upstream carry |
 | [0022](0022-delivery-lane-github-credential-helper.md) | The delivery lane may carry an operator-configured GitHub credential helper | Accepted | Worker GitHub credentials from a non-personal source |
 | [0023](0023-repeatable-allow-red-waiver.md) | The merge script accepts several named red-check waivers | Accepted | Two-check waived merge stopped on the single-waiver limit |
 | [0024](0024-worker-connector-deny-list.md) | Claude workers honor config/crew-exclude-tools | Proposed | Worker tooling investigation; operator review chose one local list |
@@ -40,6 +40,7 @@ Use [`_template.md`](_template.md).
 | [0026](0026-carry-secondmate-restart-fixes.md) | Carry the secondmate restart fixes until a sync brings them | Accepted | Navigator restart diagnosis report; self-retiring local carry |
 | [0027](0027-pinned-github-hosted-runner-images.md) | Linux CI may pin a standard GitHub-hosted runner image version | Accepted | Fifth upstream synchronization; amends ADR-0011 |
 | [0028](0028-carry-wake-drain-signal-trap-fix.md) | Carry the wake drain signal-trap fix until a sync brings it | Accepted | "Behavior portable serial 6" drain survived TERM on Bash 5.2; self-retiring local carry |
+| [0029](0029-pixeloven-test-duration-hints.md) | The test runner may carry duration hints for PixelOven-owned tests and a twelfth serial shard | Accepted | Sixth upstream synchronization tripped the unmeasured-script and shard-packing bounds |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).
