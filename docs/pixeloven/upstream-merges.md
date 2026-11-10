@@ -452,6 +452,8 @@ Resolutions:
 
 Upstream #6695 arrived in this range, so every path ADR-0021 carried returned to upstream bytes, ADR-0021 retired, and the A4 allowlist drops those paths.
 ADR-0023, ADR-0025, ADR-0026, and ADR-0028 have no upstream equivalent yet and stay carried.
+Upstream's test runner left its portable serial lane at 44 of 296 unmeasured scripts and its largest shard at 1,195,718 of 1,200,000 ms, so the five unmeasured PixelOven test scripts pushed the merged tree past both coverage bounds.
+The operator accepted [ADR-0029](../adr/0029-pixeloven-test-duration-hints.md), which adds operator-CI-measured hint rows for those scripts and a twelfth serial shard, bringing the tree to 44 of 302 unmeasured and a largest shard of 1,100,330 ms.
 Upstream added the user-invocable `lavish-url` skill, so both bundled themes gained an `alias.lavish-url` key that keeps the skill's own name.
 
 ### Theme-hook merge cost
@@ -482,4 +484,4 @@ The only theme touch-up was data rather than a hook: the two new `alias.lavish-u
 | 2026-10-21 | `355f46fe5528` | `8fd5575b1179` | 50 | **6 files** | 0.14 s | Fourth synchronization, stage 1 of 2. Took upstream for the superseded inbox, reconcile, and serial-timeout hunks; stock macOS now runs on every PR. |
 | 2026-10-21 | `8fd5575b1179` | `0e82f3eebd21` | 427 | **18 files** | 0.29 s | Fourth synchronization, stage 2 of 2. Re-ported the ADR-0012 and ADR-0013 cores onto upstream's rewrites, withdrew ADR-0014, dropped the superseded bootstrap and pr-check hunks, and added the delivery lane to the launch-env floor. |
 | 2026-11-02 | `0e82f3eebd21` | `78c69df2b0b2` | 145 | **11 files** | 0.34 s | Fifth synchronization. Took upstream's `ubuntu-24.04` runner pin under ADR-0027, kept ADR-0013 ahead of upstream's archive reader, re-wove ADR-0026 around upstream's Rex and T3 Code kill step, and retired ADR-0025's e2e leg. |
-| 2026-11-09 | `78c69df2b0b2` | `913bb7a7b6e6` | 56 | **4 files** | 0.29 s | Sixth synchronization. Kept ADR-0023's repeatable waiver across upstream's expected-head and branch-update merge flags, kept ADR-0026's `disableAgentView` beside upstream's `FM_HOME` export, retired ADR-0021, and measured zero theme-hook conflicts (R13). |
+| 2026-11-09 | `78c69df2b0b2` | `913bb7a7b6e6` | 56 | **4 files** | 0.29 s | Sixth synchronization. Kept ADR-0023's repeatable waiver across upstream's expected-head and branch-update merge flags, kept ADR-0026's `disableAgentView` beside upstream's `FM_HOME` export, retired ADR-0021, added ADR-0029's test hints and twelfth serial shard, and measured zero theme-hook conflicts (R13). |

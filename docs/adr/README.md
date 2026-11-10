@@ -40,6 +40,7 @@ Use [`_template.md`](_template.md).
 | [0026](0026-carry-secondmate-restart-fixes.md) | Carry the secondmate restart fixes until a sync brings them | Accepted | Navigator restart diagnosis report; self-retiring local carry |
 | [0027](0027-pinned-github-hosted-runner-images.md) | Linux CI may pin a standard GitHub-hosted runner image version | Accepted | Fifth upstream synchronization; amends ADR-0011 |
 | [0028](0028-carry-wake-drain-signal-trap-fix.md) | Carry the wake drain signal-trap fix until a sync brings it | Accepted | "Behavior portable serial 6" drain survived TERM on Bash 5.2; self-retiring local carry |
+| [0029](0029-pixeloven-test-duration-hints.md) | The test runner may carry duration hints for PixelOven-owned tests and a twelfth serial shard | Accepted | Sixth upstream synchronization tripped the unmeasured-script and shard-packing bounds |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).

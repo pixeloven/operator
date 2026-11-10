@@ -54,7 +54,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, and 0028 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028, and 0029 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -79,6 +79,7 @@ ADR-0024 carries Claude support for `config/crew-exclude-tools` in `bin/fm-exclu
 ADR-0025 carries a timing deflake in `tests/fm-remote-job.test.sh` until an upstream synchronization brings an equivalent change; its `tests/fm-remote-secondmate-lifecycle-e2e.test.sh` hunk retired when the fifth synchronization brought upstream's equal fix.
 ADR-0026 carries the secondmate restart reliability fixes and `disableAgentView` on Firstmate-launched Claude agents in the control, liveness, restart, watch, and spawn scripts, their documentation, and their tests, until an upstream synchronization brings an equivalent change.
 ADR-0028 carries the wake drain's Bash 5.2-safe INT and TERM traps in `bin/fm-wake-lib.sh`, `bin/fm-wake-drain.sh`, and their wake-queue tests, until an upstream synchronization brings an equivalent change.
+ADR-0029 lets `bin/fm-test-run.sh` carry one measured duration-hint row per PixelOven-owned test script in its portable-serial hint table, and a twelfth portable serial shard in that file and `.github/workflows/ci.yml` until upstream's own count reaches twelve.
 
 ## Taking upstream changes
 
