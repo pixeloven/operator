@@ -71,6 +71,25 @@ FM_SM_LIVE_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 . "$FM_SM_LIVE_LIB_DIR/fm-remote-readiness-lib.sh"
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$FM_SM_LIVE_LIB_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-control-lib.sh
+. "$FM_SM_LIVE_LIB_DIR/fm-control-lib.sh"
+
+# An hc `missing` read only proves absence on the core the record names, so it
+# is settled by fm_control_endpoint_absence_verdict: gone stays missing, dead
+# and alive become those states, and anything else reads unproven with its
+# reason in FM_SM_LIVE_ABSENCE_REASON. Other backends keep the raw state. The
+# settled state is left in FM_SM_LIVE_SETTLED.
+fm_sm_live_settle_state() {  # <backend> <target> <meta> <raw-state>
+  local verdict
+  FM_SM_LIVE_SETTLED=$4 FM_SM_LIVE_ABSENCE_REASON=''
+  [ "$1" = hc ] && [ "$4" = missing ] || return 0
+  verdict=$(fm_control_endpoint_absence_verdict "$1" "$2" "$3")
+  case "${verdict%%$'\t'*}" in
+    gone) ;;
+    dead | alive) FM_SM_LIVE_SETTLED=${verdict%%$'\t'*} ;;
+    *) FM_SM_LIVE_SETTLED=unproven FM_SM_LIVE_ABSENCE_REASON=${verdict#*$'\t'} ;;
+  esac
+}
 
 # Per-task probe+kill+relaunch serialization. A busy lock means another
 # supervisor (the other sweep, or a racing tick) is mid-episode on this mate;
@@ -251,6 +270,8 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
   target=$(fm_backend_target_of_meta "$meta")
   [ -n "$target" ] || target="$window"
   agent_state=$(fm_backend_agent_state "$backend" "$target" 2>/dev/null) || agent_state=unreadable
+  fm_sm_live_settle_state "$backend" "$target" "$meta" "$agent_state"
+  agent_state=$FM_SM_LIVE_SETTLED
   case "$harness" in
     claude|codex|opencode|pi|pi-signed|grok|kimi|omp) ;;
     *)
@@ -285,6 +306,9 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
       ;;
     unreadable)
       FM_SM_LIVE_REASON="endpoint probe unreadable (backend=$backend)"
+      ;;
+    unproven)
+      FM_SM_LIVE_REASON="endpoint absence unproven (backend=$backend): ${FM_SM_LIVE_ABSENCE_REASON:-no reason given}"
       ;;
     unverified-harness)
       FM_SM_LIVE_REASON="recorded harness '$harness' is unverified for recovery (backend=$backend)"
@@ -366,6 +390,8 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
     # An endpoint that cannot be read at all is not a deferral: it is left
     # untouched below, but recorded as a failed attempt and reported.
     current_state=$(fm_backend_agent_state "$backend" "$target" 2>/dev/null) || current_state=unreadable
+    fm_sm_live_settle_state "$backend" "$target" "$meta" "$current_state"
+    current_state=$FM_SM_LIVE_SETTLED
     if [ "$current_state" != dead ] && [ "$current_state" != unreadable ] && ! { [ "$backend" = t3code ] && [ "$current_state" = missing ]; }; then
       fm_lock_release "$spawn_lock" || true
       fm_lock_release "$relaunch_lock" || true

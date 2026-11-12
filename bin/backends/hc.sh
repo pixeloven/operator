@@ -69,7 +69,7 @@
 
 # The verified floor: the oldest herdr-core release every adapter surface
 # (including `send --wait` and the `hello` handshake) was exercised against.
-FM_BACKEND_HC_MIN_VERSION=0.1.14
+FM_BACKEND_HC_MIN_VERSION=0.1.20
 
 # The one protocol generation this adapter speaks.
 FM_BACKEND_HC_GENERATION=1

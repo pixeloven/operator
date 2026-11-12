@@ -10,17 +10,17 @@
 # Usage:
 #   fm-install-hc.sh <destination-directory>
 #
-# Pins herdr-core 0.1.14 (protocol generation 1), the suite-verified release.
+# Pins herdr-core 0.1.20 (protocol generation 1), the suite-verified release.
 # Selects the official releases.herdr.dev tarball for the host OS/arch,
 # downloads with a bounded max size, verifies SHA-256 before install, extracts
 # the `herdr-core` binary, then refuses to finish unless the installed binary
-# reports `hc 0.1.14` exactly. The adapter (bin/backends/hc.sh) resolves
+# reports `hc 0.1.20` exactly. The adapter (bin/backends/hc.sh) resolves
 # `herdr-core` before the `hc` alias, so the asset name is what gets installed.
 set -eu
 
-FM_HC_PIN_VERSION=0.1.14
-# Bounded download ceiling (bytes). The largest official 0.1.14 tarball is
-# under 3 MiB.
+FM_HC_PIN_VERSION=0.1.20
+# Bounded download ceiling (bytes). The largest official 0.1.20 tarball is
+# under 6 MiB.
 FM_HC_MAX_BYTES=25000000
 FM_HC_RELEASES=https://releases.herdr.dev/core
 
@@ -36,19 +36,19 @@ arch=$(uname -m)
 case "${os}-${arch}" in
   Linux-x86_64)
     TARGET=linux-x86_64
-    SHA256=e9dbabdead0ce0ce3de51b6f54cc9549efedbb41b2f8448b6932ab0d1442343e
+    SHA256=ac6b86890c451a37584620aaa438b71bc0d0bd430a2e7c1d7e095f052c414e74
     ;;
   Linux-aarch64|Linux-arm64)
     TARGET=linux-aarch64
-    SHA256=19cef6a2e52f14c22c4b6f3fdaf1a462d2dafc78e8b03fabbfad5b063477a370
+    SHA256=5f3037379d15cc76cfc72d2fd1a4262ea1c5b24df278bf7cfd8adcff7b914862
     ;;
   Darwin-arm64)
     TARGET=macos-aarch64
-    SHA256=ca524329d2e0630219550055dcc71f42aafd85fba356e0d543d6f51244487970
+    SHA256=e58985d3fef6e909f33d3c5a4426e4898c81564a557d4636591cec9e3a06af26
     ;;
   Darwin-x86_64)
     TARGET=macos-x86_64
-    SHA256=8e16ec43a17656f80e7d7f98292bf710c60c4aeff52941cca98fb24f37f35028
+    SHA256=36c0331c3ffea0ffaada195b89a3c7496f7f3fc5bf35e4605c19c84e5c205a56
     ;;
   *)
     die "unsupported platform ${os}-${arch}; official herdr-core assets are linux/macos x86_64 and aarch64"

@@ -31,7 +31,7 @@ cmd=${1:-}
 last=""
 for a in "$@"; do last=$a; done
 case "$cmd" in
-  --version) printf 'hc %s\n' "${FAKE_HC_VERSION:-0.1.14}" ;;
+  --version) printf 'hc %s\n' "${FAKE_HC_VERSION:-0.1.20}" ;;
   server) printf '{"live":0}\n' ;;
   connect)
     IFS= read -r _req || true
@@ -284,7 +284,7 @@ test_container_ensure_gates_binary_version_and_generation() {
   out=$(hc_shell 'fm_backend_hc_container_ensure')
   assert_equals "$out" fmtest "container_ensure prints the session after every gate passes"
   : > "$D/log"
-  FAKE_HC_VERSION=0.1.9 expect_refused hc_shell 'fm_backend_hc_container_ensure'
+  FAKE_HC_VERSION=0.1.19 expect_refused hc_shell 'fm_backend_hc_container_ensure'
   FAKE_HC_VERSION=bogus expect_refused hc_shell 'fm_backend_hc_container_ensure'
   FAKE_HC_GENERATION=2 expect_refused hc_shell 'fm_backend_hc_container_ensure'
   FAKE_HC_GENERATION=1 hc_shell 'fm_backend_hc_container_ensure' >/dev/null \
@@ -765,6 +765,32 @@ test_secondmate_liveness_recovers_a_finished_hc_navigator() {
   pass "hc: the secondmate liveness path respawns a finished navigator on hc"
 }
 
+test_secondmate_liveness_refuses_an_absence_read_from_another_core() {
+  local out
+  life_case sm-foreign-core
+  hc_life_mate nav5 t3 "" ""
+  rm -f "$D/term/t3.json"
+  # The recorded session name now reaches a different core, whose not_found
+  # says nothing about the live navigator on the core the record names.
+  printf 'core-b' > "$D/core-id"
+  # shellcheck disable=SC2016 # positional params expand in the child shell.
+  out=$(life_env env FM_ROOT="$FM_TEST_ROOT" STATE="$HOMEDIR/state" bash -c '
+    . "$1/bin/fm-secondmate-liveness-lib.sh"
+    fm_secondmate_liveness_probe "$2" nav5 poll
+    echo "probe=$FM_SM_LIVE_STATUS/$FM_SM_LIVE_STATE"
+    echo "reason=$FM_SM_LIVE_REASON"
+    if [ "$FM_SM_LIVE_STATUS" = relaunchable ]; then
+      fm_secondmate_liveness_relaunch "$2" nav5 || true
+    fi
+  ' _ "$FM_TEST_ROOT" "$HOMEDIR/state/nav5.meta")
+  assert_contains "$out" "probe=skipped/unproven" "a not_found from another core must not read relaunchable"$'\n'"$out"
+  assert_contains "$out" "a core other than the one the task was created on" "the refusal must name the core identity mismatch"
+  assert_absent "$D/created" "no replacement navigator may be created on an unproven absence"
+  assert_equals "fmtest:t3" "$(meta_of nav5 window)" "the navigator record must be left untouched"
+  assert_equals core-a "$(meta_of nav5 hc_core)" "the navigator record must keep its core identity"
+  pass "hc: the secondmate liveness path refuses an absence read from a core other than the recorded one"
+}
+
 # Retiring a navigator closes its crew too. Those workers were spawned from
 # inside the navigator's own home, so their terminals carry that home's tag.
 test_forced_secondmate_teardown_closes_hc_children_with_the_child_home_tag() {
@@ -805,6 +831,7 @@ fm_test_run \
   test_relaunch_rebinds_a_finished_terminal_on_the_recorded_core \
   test_secondmate_restart_persists_then_relaunches_on_hc \
   test_secondmate_liveness_recovers_a_finished_hc_navigator \
+  test_secondmate_liveness_refuses_an_absence_read_from_another_core \
   test_forced_secondmate_teardown_closes_hc_children_with_the_child_home_tag \
   test_hc_is_spawn_capable_and_needs_app_signals \
   test_required_tool_check_uses_the_adapter_resolver \
