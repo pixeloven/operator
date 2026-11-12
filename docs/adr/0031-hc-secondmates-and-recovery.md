@@ -1,4 +1,4 @@
-# ADR-0030: Run secondmates on hc with recovery-grade exit and relaunch
+# ADR-0031: Run secondmates on hc with recovery-grade exit and relaunch
 
 - **Status:** Proposed
 - **Date:** 2026-11-12

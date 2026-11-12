@@ -450,7 +450,11 @@
       "audience": "maintainer-architecture"
     },
     {
-      "path": "docs/adr/0030-hc-secondmates-and-recovery.md",
+      "path": "docs/adr/0030-carry-upstream-pi-calm-fake-host-field.md",
+      "audience": "maintainer-architecture"
+    },
+    {
+      "path": "docs/adr/0031-hc-secondmates-and-recovery.md",
       "audience": "maintainer-architecture"
     },
     {
