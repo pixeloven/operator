@@ -1,0 +1,23 @@
+$ echo operator > $FM_HOME/config/po-theme; po-theme.sh apply
+persona: operator block written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.Zv2wfe/data/captain-shared.md
+alias: /debrief -> /ahoy
+alias: /sitrep -> /bearings
+alias: /flush -> /stow
+alias: /updateoperator -> /updatefirstmate
+values: operator labels and strings written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.Zv2wfe/state/po-theme/values
+[exit 0]
+$ grep "/bearings section" $FM_HOME/data/captain-shared.md
+18:| Captain's Call (the /bearings section) | Operator's Call |
+$ po-theme.sh verify
+verify: ok (operator)
+[exit 0]
+$ po-theme.sh headline
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, all systems nominal.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.Zv2wfe/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+
+--- rollback: echo nautical > config/po-theme; apply
+persona: nautical - block removed
+values: nautical - no cache
+[exit 0]
+$ grep -c "/bearings section" captain-shared.md
+0 (file: )

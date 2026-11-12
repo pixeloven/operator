@@ -1,0 +1,15 @@
+--- (case-insensitive duplicate of derived call) str.digest.charted = "CHIEF'S CALL"
+error: str.digest.charted and str.digest.call share the section name 'CHIEF'S CALL'
+[validate exit: 1]
+--- exit codes for each refused theme
+badcolon exit=1
+badtoolong exit=1
+baddupe exit=1
+badverb exit=1
+badmarkdown exit=1
+badtrailing exit=1
+badfmtoken exit=1
+--- persona/apply refuse an invalid selection?
+error: str.digest.call: 'Ops: Call' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit
+po-theme: theme badcolon failed validation
+[apply exit ]

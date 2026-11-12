@@ -1,0 +1,98 @@
+=== theme "chief": user_address=Chief, no str.digest.call (derived), underway="Live Ops", landed="Recently Landed" (same as nautical), charted absent
+$ po-theme.sh validate chief
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 642 times upstream; avoid.operator covers it
+warn: submate 'navigator' already appears 2 times upstream; consider avoid.navigator
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 46 times upstream; avoid.deploy covers it
+validate: chief ok
+[exit 0]
+$ po-theme.sh persona chief | grep -A12 "| In instructions"
+| In instructions | Say in chat |
+|---|---|
+| captain (the user) | operator |
+| addressing the captain | "Chief," |
+| first mate, firstmate (you) | spotter |
+| crewmate, crewmates (a worker) | specialist, specialists |
+| crew | squad |
+| second mate, secondmate | navigator, navigators |
+| fleet | task force |
+| scout (a report task) | recon |
+| ship (a change task) | deploy |
+| Captain's Call (the /bearings section) | Chief's Call |
+| Underway (the /bearings section) | Live Ops |
+
+=== theme "allfour": every digest name given
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 642 times upstream; avoid.operator covers it
+warn: submate 'navigator' already appears 2 times upstream; consider avoid.navigator
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 46 times upstream; avoid.deploy covers it
+validate: allfour ok
+[validate exit 0]
+| Captain's Call (the /bearings section) | Chief's Desk |
+| Underway (the /bearings section) | In Flight |
+| Recently Landed (the /bearings section) | Just Landed |
+| Charted Next (the /bearings section) | On Deck |
+
+=== adversarial: validator refusals
+--- str.digest.call = "Ops: Call"
+error: str.digest.call: 'Ops: Call' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit
+[exit ]
+--- str.digest.charted = "Charted Next and Everything After"
+error: str.digest.charted: 'Charted Next and Everything After' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit
+[exit ]
+--- str.digest.landed = "underway"
+error: str.digest.landed and str.digest.underway share the section name 'underway'
+[exit ]
+--- str.digest.landed = "Recently done"
+error: str.digest.landed: 'Recently done' contains the status verb done
+[exit ]
+--- str.digest.call = "**Ops Call**"
+error: str.digest.call: '**Ops Call**' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit
+[exit ]
+--- str.digest.underway = "Live "
+error: str.digest.underway: 'Live ' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit
+[exit ]
+--- str.digest.underway = "fm-live"
+error: str.digest.underway: 'fm-live' contains an architectural token
+[exit ]
+--- str.digest.charted = "CHIEF'S CALL"
+error: schema must be "po-theme/1" or "po-theme/2"
+error: name must equal the theme name (baddupe_case)
+error: missing key: description
+error: missing key: user
+error: missing key: user_plural
+error: missing key: user_address
+error: missing key: self
+error: missing key: self_plural
+error: missing key: product
+error: missing key: worker
+error: missing key: worker_plural
+error: missing key: crew
+error: missing key: submate
+error: missing key: submate_plural
+error: missing key: fleet
+error: missing key: ship_task
+error: missing key: scout_task
+error: missing key: seasoning
+error: missing key: noop_reply
+error: missing key: bad_news_example
+error: missing key: alias.afk
+error: missing key: alias.ahoy
+error: missing key: alias.bearings
+error: missing key: alias.lavish-url
+error: missing key: alias.quiet
+error: missing key: alias.stow
+error: missing key: alias.updatefirstmate
+error: label.primary: '' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit
+error: label.submate: '' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit
+error: label.afk: '-afk-daemon' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit
+error: label.primary equals label.submate ('')
+error: label.primary '' and the canonical secondmate label '2ndmate' overlap as prefixes
+error: label.submate '' and the canonical primary label 'firstmate' overlap as prefixes
+error: label.afk: '-afk-daemon' would read as a secondmate label
+error: self and submate share the term ''
+error: str.sidebar.needs: 'needs-' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit
+error: str.digest.call: ''s Call' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit
+[exit ]

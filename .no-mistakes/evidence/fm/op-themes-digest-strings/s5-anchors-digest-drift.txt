@@ -1,0 +1,8 @@
+$ po-theme.sh anchors   # unmodified tree
+anchors: ok
+[exit ]
+
+--- rename **Underway** -> **In Progress** in .agents/skills/bearings/SKILL.md (upstream drift)
+$ po-theme.sh anchors
+anchor missing: **Underway** not found in .agents/skills/bearings/SKILL.md
+[exit 1]

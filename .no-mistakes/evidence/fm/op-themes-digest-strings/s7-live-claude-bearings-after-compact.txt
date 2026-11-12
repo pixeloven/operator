@@ -1,0 +1,84 @@
+ ▐▛███▛█   Claude Code v2.1.322
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M78298QM3K2E7FACAVGZS4AQ/.r5-lab-clone
+
+  ⎿  SessionStart:startup says: dotfiles: 8 changes not codified - run /codify
+
+❯ /sitrep
+
+⏺ Skill(bearings)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(echo "FM_HOME=$FM_HOME"; snapshot=$(bin/fm-bearings-snapshot.sh --json); echo "rc=$?"; echo "$snapshot")
+  ⎿  FM_HOME=/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.Zv2wfe
+     rc=0
+     {
+ ▐▛███▛█   Claude Code v2.1.322
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M78298QM3K2E7FACAVGZS4AQ/.r5-lab-clone
+
+
+✻ Conversation compacted (ctrl+o for the summary)
+ ▐▛███▛█   Claude Code v2.1.322
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M78298QM3K2E7FACAVGZS4AQ/.r5-lab-clone
+
+
+✻ Conversation compacted (ctrl+o for the summary)
+  Earlier messages are saved in ~/.claude/projects/-Users-brian--no-mistakes-worktrees-1d049b31b4fb-01M78298QM3K2E7FACAVGZS4AQ--r5-lab-clone/52891bf9-be1b-4d11-8659-4b5fb14754c1.jsonl
+
+
+⏺ Operator's Call
+  - Operator, no decision is recorded for you, but I can't confirm the board is clear: 0 of 0 known contributions were checked, and 1 contribution record couldn't be read.
+
+  Recently Landed
+  - No recent completions are in the current baseline.
+
+  Underway
+  - Nothing is underway: no specialists or navigators are active.
+
+  Charted Next
+  - Nothing is queued.
+
+  Live PR status wasn't fetched. Run /sitrep include PRs if you want it.
+
+✻ Cooked for 21s · done 6:40 AM
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file AGENTS.md
+  ⎿  Read ../CLAUDE.md (3 lines)
+  ⎿  Skills restored (bearings, sitrep)
+  ⎿  SessionStart:compact says: dotfiles: 8 changes not codified - run /codify
+
+❯ /bearings
+
+⏺ Bash(bin/fm-bearings-snapshot.sh --json)
+  ⎿  {
+       "schema": "fm-bearings.v1",
+       "home": "/fm-lab.Zv2wfe",
+     … +57 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Operator's Call
+  - Operator, no decisions are recorded for you, but I can't confirm the board is clear. 0 of 0 known contributions have been checked, and 1 contribution record couldn't be read.
+
+  Recently Landed
+  - No recent completions are in the current baseline.
+
+  Underway
+  - Nothing is underway. No specialists or navigators are active.
+
+  Charted Next
+  - Nothing is queued.
+
+  This doesn't include live PR status. Run /sitrep include PRs to add it.
+
+✻ Brewed for 8s · done 6:41 AM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ /sitrep include PRs
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)
+
+
