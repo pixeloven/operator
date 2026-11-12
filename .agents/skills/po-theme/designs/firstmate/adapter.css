@@ -1,0 +1,109 @@
+/* Firstmate Default design system: the Bearings board's own tokens
+   (.agents/skills/bearings/assets/board-template.html) supplied under the
+   po-design role names, plus a dark mode for generated pages.
+   Light values are the board's as shipped, except the two text-safe inks:
+   --status-warn-ink and --status-info-ink carry chip and label text, while
+   upstream's --status-warn and --status-info stay as fills and borders. */
+@import url("https://fonts.googleapis.com/css2?family=Chango&family=Jost:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+:root {
+  color-scheme: light;
+  --bg-page: #f6ecd3;
+  --surface-card: #fffdf7;
+  --surface-card-warm: #fbf4e2;
+  --text-strong: #241c14;
+  --text-body: #3f3224;
+  --text-muted: #6f5e46;
+  --border-default: #ddc89c;
+  --border-soft: #e7d6ae;
+  --focus-ring: 0 0 0 3px #f0d38c;
+  --accent: #a93a1f;
+  --accent-ink: #fffdf7;
+  --status-online: #2f6b4f;
+  --status-online-soft: #e9f2ec;
+  --status-online-ink: #2f6b4f;
+  --status-warn: #b5791c;
+  --status-warn-soft: #f8ecc9;
+  --status-warn-ink: #8a5a12;
+  --status-danger: #a93a1f;
+  --status-danger-soft: #fbece3;
+  --status-danger-ink: #a93a1f;
+  --status-info: #3c7ea6;
+  --status-info-soft: #e8f1f5;
+  --status-info-ink: #2f6688;
+  --font-display: "Chango", "Cooper Black", Rockwell, Georgia, serif;
+  --font-sans: "Jost", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display-weight: 400;
+  --display-tracking: 0;
+  --radius-card: 12px;
+  --radius-chip: 999px;
+  --radius-control: 9px;
+  --card-shadow: 4px 4px 0 #241c14;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+}
+
+/* Dark mode: follows the OS unless the page sets data-theme="light". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg-page: #141a2c;
+    --surface-card: #1d2540;
+    --surface-card-warm: #222c49;
+    --text-strong: #fbf4e2;
+    --text-body: #e6dcc4;
+    --text-muted: #aab2c8;
+    --border-default: #34406a;
+    --border-soft: #2a3656;
+    --focus-ring: 0 0 0 3px #b5791c;
+    --accent: #e08365;
+    --accent-ink: #141a2c;
+    --status-online: #2f6b4f;
+    --status-online-soft: #1c3a30;
+    --status-online-ink: #8fc9a8;
+    --status-warn: #b5791c;
+    --status-warn-soft: #3a3018;
+    --status-warn-ink: #f0d38c;
+    --status-danger: #c0452a;
+    --status-danger-soft: #40221c;
+    --status-danger-ink: #f0a58c;
+    --status-info: #3c7ea6;
+    --status-info-soft: #1c3346;
+    --status-info-ink: #9cc9e0;
+    --card-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* An explicit page toggle wins in both directions. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-page: #141a2c;
+  --surface-card: #1d2540;
+  --surface-card-warm: #222c49;
+  --text-strong: #fbf4e2;
+  --text-body: #e6dcc4;
+  --text-muted: #aab2c8;
+  --border-default: #34406a;
+  --border-soft: #2a3656;
+  --focus-ring: 0 0 0 3px #b5791c;
+  --accent: #e08365;
+  --accent-ink: #141a2c;
+  --status-online: #2f6b4f;
+  --status-online-soft: #1c3a30;
+  --status-online-ink: #8fc9a8;
+  --status-warn: #b5791c;
+  --status-warn-soft: #3a3018;
+  --status-warn-ink: #f0d38c;
+  --status-danger: #c0452a;
+  --status-danger-soft: #40221c;
+  --status-danger-ink: #f0a58c;
+  --status-info: #3c7ea6;
+  --status-info-soft: #1c3346;
+  --status-info-ink: #9cc9e0;
+  --card-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
+}

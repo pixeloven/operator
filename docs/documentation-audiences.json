@@ -454,6 +454,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0031-design-systems-independent-of-themes.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
@@ -603,6 +607,10 @@
     },
     {
       "path": "docs/pixeloven/crew.md",
+      "audience": "operator-current"
+    },
+    {
+      "path": "docs/pixeloven/design-systems.md",
       "audience": "operator-current"
     },
     {

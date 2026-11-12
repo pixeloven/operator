@@ -3,6 +3,7 @@
 A persona theme changes the words the agents speak and the commands a person types, and [ADR-0020](../adr/0020-themes-first-class.md) extends it, stage by stage, to everything a person sees or hears.
 [ADR-0016](../adr/0016-persona-themed-at-the-edge.md) owns the original edge decision and [ADR-0020](../adr/0020-themes-first-class.md) owns its amendment, the boundary rules, and the bounded upstream hooks; `bin/po-theme.sh --help` owns the exact commands; the agent-only `po-theme` skill owns when the agent runs them.
 This page owns the theme format, the validation rules, the boundary between themed and architectural text, and the list of person-visible strings that stay canonical.
+The look of generated pages is a separate, independent choice, which [design systems](design-systems.md) owns.
 
 ## What a theme changes
 

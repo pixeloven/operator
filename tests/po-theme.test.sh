@@ -53,7 +53,7 @@ USER_SKILLS='afk ahoy bearings lavish-url quiet stow updatefirstmate'
 new_code() {
   local code="$TMP_ROOT/$1/code" s
   mkdir -p "$code/bin" "$code/.agents/skills" "$code/docs/pixeloven"
-  cp "$PT" "$ROOT/bin/fm-dod-lib.sh" "$code/bin/"
+  cp "$PT" "$ROOT/bin/po-design-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$code/bin/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"
   for s in $USER_SKILLS; do

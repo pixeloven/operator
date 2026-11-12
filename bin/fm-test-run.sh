@@ -982,6 +982,7 @@ tests/fm-worker-account-live-e2e.test.sh 3179
 tests/fm-worker-account.test.sh 37445
 tests/po-crew.test.sh 6601
 tests/po-delivery-lane-credential.test.sh 3194
+tests/po-design.test.sh 19933
 tests/po-theme-labels.test.sh 13679
 tests/po-theme.test.sh 27327
 EOF
