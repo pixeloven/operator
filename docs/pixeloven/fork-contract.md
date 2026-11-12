@@ -82,6 +82,7 @@ ADR-0028 carries the wake drain's Bash 5.2-safe INT and TERM traps in `bin/fm-wa
 ADR-0029 lets `bin/fm-test-run.sh` carry one measured duration-hint row per PixelOven-owned test script in its portable-serial hint table, and a twelfth portable serial shard in that file and `.github/workflows/ci.yml` until upstream's own count reaches twelve.
 ADR-0030 carries upstream's one-line `pendingBashComponents` fake-host field in `tests/fm-calm-pi-extension.test.sh` until an upstream synchronization brings it.
 ADR-0031 carries hc secondmate spawns and recovery-grade hc `exit` and `relaunch` in the spawn, control, liveness, teardown, and herdr-core install scripts, the herdr-core pin assertion in `.github/workflows/ci.yml`, their documentation, and `tests/fm-backend-hc.test.sh`, until an upstream synchronization brings an equivalent change.
+ADR-0031 moves `fm_trap_exit` to `bin/fm-trap-lib.sh` and carries the remaining Bash 5.2-safe signal traps, including the lock-handoff helper's, in the scripts, test fixtures, and inventory row it lists, until an upstream synchronization brings an equivalent change.
 ADR-0035 carries `--partition KofN` support in `bin/fm-lint.sh`, its partition regression in `tests/fm-lint.test.sh`, and a third lint partition in the `.github/workflows/ci.yml` matrix, until an upstream synchronization brings partition-count support or a third partition of its own.
 
 ## Taking upstream changes

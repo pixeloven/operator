@@ -88,7 +88,7 @@ review_check_cleanup() {
   fi
 }
 trap review_check_cleanup EXIT
-trap 'exit 1' HUP INT TERM
+fm_trap_exit 1 HUP INT TERM
 
 META_LOCK=$(fm_meta_lock_path "$META") || exit 1
 fm_lock_acquire_wait "$META_LOCK"

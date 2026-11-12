@@ -3398,7 +3398,7 @@ fm_active_check_stop() {
 # its trap because bash ignores a direct SIGINT while a child runs.
 watcher_stop_signals() {
   trap - HUP TERM
-  trap 'exit 1' INT
+  fm_trap_exit 1 INT
 }
 
 run_check_capture() {

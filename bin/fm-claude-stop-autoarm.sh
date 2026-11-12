@@ -538,9 +538,9 @@ handle_autoarm_signal() {
   autoarm_exit_suppressed "firstmate watcher auto-arm interrupted by $signal - the failure episode notice was already consumed" "$SESSION_IDENTITY"
 }
 
-trap 'handle_autoarm_signal HUP' HUP
-trap 'handle_autoarm_signal TERM' TERM
-trap 'handle_autoarm_signal INT' INT
+fm_trap_exit --run 'handle_autoarm_signal HUP' 129 HUP
+fm_trap_exit --run 'handle_autoarm_signal TERM' 143 TERM
+fm_trap_exit --run 'handle_autoarm_signal INT' 130 INT
 
 # X mode cadence: source the generated config so an X instance polls at its
 # 30s cadence (fm-bootstrap.sh x_mode_setup contract).

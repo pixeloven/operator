@@ -76,6 +76,8 @@ FM_ROOT=${FM_ROOT_OVERRIDE:-$(CDPATH='' cd "$SCRIPT_DIR/.." && pwd -P)}
 
 # shellcheck source=bin/fm-remote-job-lib.sh
 . "$SCRIPT_DIR/fm-remote-job-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 
 WORKER_LOCK=
 WORKER_LOCK_HELD=0
@@ -115,7 +117,7 @@ worker_write_heartbeat() { # <owner-pid>
 worker_heartbeat_loop() { # <account-home> <owner-pid>
   local account_home=$1 owner=$2 ready owner_state
   ready=$(fm_remote_job_worker_ready_path)
-  trap 'exit 0' HUP INT TERM
+  fm_trap_exit 0 HUP INT TERM
   while kill -0 "$owner" 2>/dev/null &&
     owner_state=$(/bin/ps -p "$owner" -o state= 2>/dev/null) &&
     [ -n "$owner_state" ] && [[ "$owner_state" != *Z* ]] &&
@@ -1294,7 +1296,7 @@ worker_supervise_linux() {
   FM_ROOT=$(fm_remote_job_canonical_existing_dir "$FM_ROOT") || { worker_error "configured FM_ROOT is unsafe"; return 1; }
   [ -f "$FM_ROOT/AGENTS.md" ] && [ ! -L "$FM_ROOT/AGENTS.md" ] || { worker_error "FM_ROOT is not a Firstmate checkout"; return 1; }
   fm_remote_job_prepare_state "$account_home" || { worker_error "$FM_REMOTE_JOB_ERROR"; return 1; }
-  trap worker_supervisor_shutdown HUP INT TERM
+  fm_trap_exit --run worker_supervisor_shutdown 0 HUP INT TERM
   while :; do
     if worker_code_root_abandoned; then
       worker_error "configured FM_ROOT $FM_ROOT no longer exists; stopping the abandoned worker supervisor"

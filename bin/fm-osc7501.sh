@@ -123,6 +123,8 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 
 FM_OSC7501_MSG_MAX=${FM_OSC7501_MSG_MAX:-120}
 FM_OSC7501_TITLE_MAX=${FM_OSC7501_TITLE_MAX:-64}
@@ -428,7 +430,7 @@ osc_watch() { # --task --kind --state --harness [--backend] [--target] [--owned 
   [ "$WATCH_OWNED" = 1 ] && last=$(osc_seq idle '' "$WATCH_TITLE" '')
   exec 3>>"$dev" 2>/dev/null || exit 0
   osc_load_libs || exit 0
-  trap 'osc_final; exit 0' TERM INT HUP
+  fm_trap_exit --run osc_final 0 TERM INT HUP
   [ "${FM_OSC7501_INTERVAL:-1}" -ge 1 ] 2>/dev/null || FM_OSC7501_INTERVAL=1
   hb_ticks=$((FM_OSC7501_HEARTBEAT / FM_OSC7501_INTERVAL))
   [ "$hb_ticks" -ge 1 ] || hb_ticks=1

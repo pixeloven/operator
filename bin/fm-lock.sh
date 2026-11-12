@@ -153,7 +153,7 @@ on_lock_exit() {
   release_claim_lock
 }
 trap on_lock_exit EXIT
-trap 'exit 1' HUP INT TERM
+fm_trap_exit 1 HUP INT TERM
 
 remember_lock_session() {
   [ "$LOCK_SESSION_PHASE" -eq 0 ] || return 0

@@ -243,7 +243,7 @@ if ! fm_lock_try_acquire "$CLAIM"; then
 fi
 OWNED=1
 trap cleanup EXIT
-trap 'record interrupted; exit 0' HUP INT TERM
+fm_trap_exit --run 'record interrupted' 0 HUP INT TERM
 ANCHOR=$(cat "$STATE/.lock")
 IDENTITY=$(fm_pid_identity "$$") || exit 1
 previous=$(jq -r '.outcome // empty' "$RECORD" 2>/dev/null || true)

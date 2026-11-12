@@ -177,6 +177,8 @@ export FM_HOME FM_STATE_OVERRIDE="$STATE"
 . "$SCRIPT_DIR/fm-timeout-lib.sh"
 # shellcheck source=bin/fm-path-lib.sh
 . "$SCRIPT_DIR/fm-path-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 
 fail() { printf 'fm-contributions: %s\n' "$*" >&2; exit 1; }
 usage() { sed -n '2,/^set -eu$/s/^# \{0,1\}//p' "$0"; }
@@ -214,7 +216,7 @@ cleanup() {
   rm -rf -- "$TMP"
 }
 trap cleanup EXIT
-trap 'exit 1' HUP INT TERM
+fm_trap_exit 1 HUP INT TERM
 
 jq_lib() { # jq options/program via final argument
   local program=${!#}

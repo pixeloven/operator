@@ -458,6 +458,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0031-carry-remaining-signal-trap-fixes.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/0035-carry-three-lint-partitions.md",
       "audience": "maintainer-architecture"
     },

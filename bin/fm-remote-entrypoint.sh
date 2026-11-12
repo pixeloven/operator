@@ -39,6 +39,8 @@ SCRIPT_DIR=$(CDPATH='' cd "$(dirname "$REAL_SOURCE")" && pwd -P)
 
 # shellcheck source=bin/fm-remote-job-lib.sh
 . "$SCRIPT_DIR/fm-remote-job-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 
 die() { printf 'error: %s\n' "$1" >&2; exit "${2:-64}"; }
 
@@ -109,10 +111,10 @@ entrypoint_cleanup() {
   fi
 }
 trap entrypoint_cleanup EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 141' PIPE
-trap 'exit 143' TERM
+fm_trap_exit 129 HUP
+fm_trap_exit 130 INT
+fm_trap_exit 141 PIPE
+fm_trap_exit 143 TERM
 
 decode_text "remote root" "$2" "$TMP/root"
 decode_text "remote home" "$3" "$TMP/home"

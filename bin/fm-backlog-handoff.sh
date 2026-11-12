@@ -114,7 +114,7 @@ release_remote_locks() {
   fi
 }
 trap release_remote_locks EXIT
-trap 'exit 1' HUP INT TERM
+fm_trap_exit 1 HUP INT TERM
 
 sha256_file() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi

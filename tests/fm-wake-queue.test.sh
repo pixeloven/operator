@@ -70,7 +70,7 @@ test_branch_grant_requires_lock_acquisition() {
   dir=$(make_case grant-lock-failure)
   fixture="$dir/bin"
   mkdir -p "$fixture"
-  cp "$GRANT" "$ROOT/bin/fm-wake-lib.sh" "$ROOT/bin/fm-path-lib.sh" "$fixture/"
+  cp "$GRANT" "$ROOT/bin/fm-wake-lib.sh" "$ROOT/bin/fm-path-lib.sh" "$ROOT/bin/fm-trap-lib.sh" "$fixture/"
   # Inject only the acquire result in this disposable copy. Keep real owner
   # validation, grant mutations, and pid-guarded lock release in use.
   cat >> "$fixture/fm-wake-lib.sh" <<'SH'
@@ -2662,6 +2662,95 @@ test_trap_exit_survives_pending_comsub_scan() {
   pass "fm_trap_exit exits on a signal pending at a \$() scan (bash $BASH_VERSION)"
 }
 
+# A trap that must do more than exit (release a lock, remove a file) runs its
+# action before the exit through fm_trap_exit --run. The action must still run,
+# and the signal must still end the shell, when TERM is pending at a $() scan.
+test_trap_exit_run_survives_pending_comsub_scan() {
+  local dir rc
+  dir=$(make_case trap-exit-run-comsub-scan)
+  set +e
+  bash -c '
+    # shellcheck disable=SC1090,SC1091
+    . "$1"
+    marker=$2
+    on_exit() { local status=$?; printf "%s\n" "$status" > "$marker.exit"; }
+    record_run() { printf "%s\n" "$1" > "$marker.run"; }
+    trap on_exit EXIT
+    fm_trap_exit --run "record_run \"\$marker\"" 143 TERM || exit 90
+    probe=$(kill -TERM "$$")${BASHPID:-$(printf unreachable)}
+    printf "survived TERM: %s\n" "$probe" >&2
+    exit 0
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$dir/trap" > "$dir/out" 2> "$dir/err"
+  rc=$?
+  set -e
+  ! grep -F 'unexpected EOF' "$dir/err" >/dev/null \
+    || fail "TERM pending at a \$() scan hit the --run trap parse error: $(cat "$dir/err")"
+  [ "$rc" -eq 143 ] || fail "TERM pending at a \$() scan did not exit 143 through --run (rc=$rc): $(cat "$dir/err")"
+  [ "$(cat "$dir/trap.run" 2>/dev/null)" = "$dir/trap" ] \
+    || fail "TERM pending at a \$() scan skipped the --run action"
+  [ "$(cat "$dir/trap.exit" 2>/dev/null)" = 143 ] \
+    || fail "TERM pending at a \$() scan skipped the EXIT cleanup after --run"
+  pass "fm_trap_exit --run runs its action and exits on a signal pending at a \$() scan (bash $BASH_VERSION)"
+}
+
+# Outside a $() scan the closing line of the trap action is never read: the
+# action runs, the shell exits with the status, and nothing reports a syntax
+# error.
+test_trap_exit_run_outside_comsub_scan() {
+  local dir rc
+  dir=$(make_case trap-exit-run-plain)
+  set +e
+  bash -c '
+    # shellcheck disable=SC1090,SC1091
+    . "$1"
+    marker=$2
+    record_run() { printf "%s\n" "$1" > "$marker.run"; }
+    fm_trap_exit --run "record_run \"\$marker\"" 129 HUP TERM || exit 90
+    kill -TERM "$$"
+    printf "survived TERM\n" >&2
+    exit 0
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$dir/trap" > "$dir/out" 2> "$dir/err"
+  rc=$?
+  set -e
+  [ "$rc" -eq 129 ] || fail "plain TERM did not exit 129 through --run (rc=$rc): $(cat "$dir/err")"
+  [ "$(cat "$dir/trap.run" 2>/dev/null)" = "$dir/trap" ] || fail "plain TERM skipped the --run action"
+  [ ! -s "$dir/err" ] || fail "plain TERM through --run wrote diagnostics: $(cat "$dir/err")"
+  pass "fm_trap_exit --run runs its action and exits on a plain signal (bash $BASH_VERSION)"
+}
+
+# The lock-handoff helper behind fm_lock_acquire_wait_bounded releases the lock
+# it took and exits 143 on TERM. That must hold when TERM is pending at a $()
+# scan right after the acquire, where Bash 5.2 used to drop the trap action and
+# the helper went on to hand the lock to its caller. The wait is replaced here
+# by one that takes the lock and then raises TERM inside such a scan.
+test_lock_handoff_term_pending_comsub_scan() {
+  local dir lock rc
+  dir=$(make_case lock-handoff-trap-comsub-scan)
+  lock="$dir/handoff.lock"
+  set +e
+  FM_STATE_OVERRIDE="$dir/state" bash -c '
+    # shellcheck disable=SC1090,SC1091
+    . "$1"
+    fm_lock_acquire_wait() {
+      local probe
+      fm_lock_try_acquire "$1" || return 1
+      probe=$(kill -TERM "$$")${BASHPID:-$(printf unreachable)}
+      printf "survived TERM: %s\n" "$probe" >&2
+    }
+    _fm_lock_acquire_wait_handoff "$2" "$3"
+    printf "handoff returned %s after TERM\n" "$?" >&2
+    exit 0
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$lock" "$$" > "$dir/out" 2> "$dir/err"
+  rc=$?
+  set -e
+  ! grep -F 'unexpected EOF' "$dir/err" >/dev/null \
+    || fail "lock handoff TERM at a \$() scan hit the trap parse error: $(cat "$dir/err")"
+  [ "$rc" -eq 143 ] || fail "lock handoff TERM at a \$() scan did not exit 143 (rc=$rc): $(cat "$dir/err")"
+  [ ! -e "$lock" ] && [ ! -L "$lock" ] \
+    || fail "lock handoff TERM at a \$() scan left the lock held by pid $(cat "$lock/pid" 2>/dev/null)"
+  pass "lock handoff releases and exits on TERM pending at a \$() scan (bash $BASH_VERSION)"
+}
+
 # The drain's TERM trap must fire even when TERM arrives inside a command that
 # expands sibling $() words, here the acknowledgement's row count. A fake awk
 # signals the queue lock owner (the drain) from inside the first substitution,
@@ -4078,6 +4167,9 @@ test_branch_stale_ack_that_consumes_nothing_names_its_granted_wake
 test_recovery_ack_failure_is_reported
 test_interruption_before_and_after_raw_commit
 test_trap_exit_survives_pending_comsub_scan
+test_trap_exit_run_survives_pending_comsub_scan
+test_trap_exit_run_outside_comsub_scan
+test_lock_handoff_term_pending_comsub_scan
 test_drain_term_during_sibling_comsub_ack
 test_wake_queue_prune_task
 test_drain_rotates_orphaned_scratch

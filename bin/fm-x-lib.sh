@@ -60,6 +60,8 @@ fi
 # fmx_env_get lives in bin/fm-env-lib.sh, the single owner of .env parsing.
 # shellcheck source=bin/fm-env-lib.sh
 . "$_FM_X_LIB_DIR/fm-env-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$_FM_X_LIB_DIR/fm-trap-lib.sh"
 
 fmx_poll_shim_content() {
   local home=$1 root=$2
@@ -858,7 +860,8 @@ fmx_post_json() (
   [ -r "$payload_file" ] || return 2
   auth_header_file=$(fmx_auth_header_file) || return 3
   trap 'rm -f "$auth_header_file"' EXIT
-  trap 'rm -f "$auth_header_file"; exit 143' HUP INT TERM
+  # shellcheck disable=SC2016 # Expanded when the trap fires.
+  fm_trap_exit --run 'rm -f "$auth_header_file"' 143 HUP INT TERM
   code=$(curl -m 10 -s -o "$body_file" -w '%{http_code}' \
     -X POST \
     -H "@$auth_header_file" \
