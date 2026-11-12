@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runCommandAsync } from "./fm-async-exec.ts";
 
 // Shared wake-dispatch handshake between the Pi watcher extension (the
@@ -81,7 +82,8 @@ export const MAIN_DIALOG_MIRROR_HEADER =
 export function branchWakePrompt(message: string, reportSurface: string, postureTail: string, mirror = ""): string {
   const feed = mirror.replace(/\n+$/, "");
   const head = feed ? `${MAIN_DIALOG_MIRROR_HEADER}\n${feed}\n\n` : "";
-  return `${head}FIRSTMATE SUPERVISION WAKE: ${message}\n\nHandle this per your operating procedure and finish with ${reportSurface}.${postureTail}`;
+  const vocabulary = (() => { try { const line = execFileSync(fileURLToPath(new URL("../../../bin/po-theme.sh", import.meta.url)), ["wake-line"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim(); return line ? `\n\n${line}` : ""; } catch { return ""; } })();
+  return `${head}FIRSTMATE SUPERVISION WAKE: ${message}\n\nHandle this per your operating procedure and finish with ${reportSurface}.${vocabulary}${postureTail}`;
 }
 
 export type UnreadWakeScopeStatus = "safe" | "empty" | "unsafe";
