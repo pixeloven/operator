@@ -130,6 +130,22 @@ if [ -r "$SELF_DIR/fm-timeout-lib.sh" ]; then
   # shellcheck source=bin/fm-timeout-lib.sh
   . "$SELF_DIR/fm-timeout-lib.sh"
 fi
+# The sibling trap library keeps the signal traps below from being dropped on
+# Bash 5.2. A lone copy installs the same actions as plain traps instead.
+if [ -r "$SELF_DIR/fm-trap-lib.sh" ]; then
+  # shellcheck source=bin/fm-trap-lib.sh
+  . "$SELF_DIR/fm-trap-lib.sh"
+else
+  fm_trap_exit() {  # [--run <action>] <status> <signal>...
+    local fm_trap_run=
+    if [ "$1" = --run ]; then
+      fm_trap_run="$2; "
+      shift 2
+    fi
+    # shellcheck disable=SC2064 # The action and status are fixed now.
+    trap "${fm_trap_run}exit $1" "${@:2}"
+  }
+fi
 
 FM_LINT_WORKER_RUN_PID=
 FM_LINT_WORKER_ARGS=()
@@ -362,9 +378,9 @@ fm_lint_worker() {  # <manifest> <output-dir> <shard-index>
   done < "$manifest"
   output="$output_dir/shard.$shard_index"
   if [ "${#root_entries[@]}" -gt 0 ]; then
-    trap 'fm_lint_worker_stop; exit 129' HUP
-    trap 'fm_lint_worker_stop; exit 130' INT
-    trap 'fm_lint_worker_stop; exit 143' TERM
+    fm_trap_exit --run fm_lint_worker_stop 129 HUP
+    fm_trap_exit --run fm_lint_worker_stop 130 INT
+    fm_trap_exit --run fm_lint_worker_stop 143 TERM
     FM_LINT_WORKER_ARGS=(--norc)
     if [ "${FM_LINT_INTERNAL_FOLLOW_SOURCES:-1}" -eq 1 ]; then
       FM_LINT_WORKER_ARGS+=(--external-sources)
@@ -1051,9 +1067,9 @@ fm_lint_cleanup() {
   rm -rf "$TMP_ROOT"
 }
 trap fm_lint_cleanup EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
+fm_trap_exit 129 HUP
+fm_trap_exit 130 INT
+fm_trap_exit 143 TERM
 
 WEIGHTS="$TMP_ROOT/weights"
 OUTPUT_DIR="$TMP_ROOT/output"

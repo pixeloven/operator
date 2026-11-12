@@ -59,6 +59,8 @@ MAX_LINE=240
 
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 # shellcheck source=bin/fm-pr-lib.sh
 . "$SCRIPT_DIR/fm-pr-lib.sh"
 # shellcheck source=bin/fm-line-cap-lib.sh
@@ -361,7 +363,7 @@ action_arm() {
   fi
   # The shim exists unbound from the rename until the register returns, so a
   # signal in that window rolls back the same way a failure does.
-  trap arm_interrupted HUP INT TERM
+  fm_trap_exit --run arm_interrupted 1 HUP INT TERM
   if ! shim_write "$want"; then
     trap - HUP INT TERM
     arm_rollback

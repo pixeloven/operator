@@ -27,6 +27,10 @@
 # that contract.
 set -eu
 
+FM_REMOTE_DELTA_DIR=${BASH_SOURCE[0]%/*}
+[ "$FM_REMOTE_DELTA_DIR" != "${BASH_SOURCE[0]}" ] || FM_REMOTE_DELTA_DIR=.
+# shellcheck source=bin/fm-trap-lib.sh
+. "$FM_REMOTE_DELTA_DIR/fm-trap-lib.sh"
 FM_HOME=${FM_HOME:?FM_HOME is required}
 MAX_BYTES=${FM_REMOTE_DELTA_MAX_BYTES:-65536}
 POLL_SECONDS=${FM_REMOTE_DELTA_POLL_SECONDS:-0.5}
@@ -160,7 +164,7 @@ case "$MAX_BYTES" in ''|*[!0-9]*|0) die "FM_REMOTE_DELTA_MAX_BYTES must be a pos
 LOG=$(resolve_log "$REL")
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-remote-delta.XXXXXX") || die "cannot create delta staging directory"
 trap 'rm -rf -- "$TMP"' EXIT
-trap 'exit 75' TERM
+fm_trap_exit 75 TERM
 : > "$TMP/empty"
 EMPTY_HASH=$(sha256_file "$TMP/empty")
 if stat -c '%s' / >/dev/null 2>&1; then DELTA_KEY_GNU_STAT=1; else DELTA_KEY_GNU_STAT=0; fi

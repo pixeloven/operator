@@ -19,8 +19,8 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
+fm_trap_exit 130 INT
+fm_trap_exit 143 TERM
 
 # fm-wake-lib.sh owns both the grant row-list shape and the owner-record read.
 rows_valid() { fm_wake_grant_rows_valid "$1"; }

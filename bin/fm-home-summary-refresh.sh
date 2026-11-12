@@ -51,6 +51,8 @@ HOME_SUMMARY_LOCK_HELD=0
 # shellcheck source=bin/fm-timeout-lib.sh
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 
 usage() {
   sed -n '2,${/^#/!q;p;}' "$0" | sed 's/^# \{0,1\}//'
@@ -106,9 +108,9 @@ home_summary_refresh_once() {
     return 1
   fi
   trap home_summary_cleanup EXIT
-  trap 'exit 129' HUP
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
+  fm_trap_exit 129 HUP
+  fm_trap_exit 130 INT
+  fm_trap_exit 143 TERM
   if [ "$HOME_SUMMARY_IF_IDLE" -eq 1 ]; then
     fm_lock_try_acquire "$REFRESH_LOCK" || return 0
   else

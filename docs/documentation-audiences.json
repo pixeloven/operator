@@ -454,6 +454,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0032-carry-remaining-signal-trap-fixes.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

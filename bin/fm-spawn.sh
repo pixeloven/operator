@@ -8070,9 +8070,9 @@ else
     # Bash runs the EXIT trap for an untrapped fatal signal with status 0, which
     # abort cleanup reads as success, so exit with the signal's status instead
     # until the pane has consumed the published launch file.
-    trap 'exit 129' HUP
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
+    fm_trap_exit 129 HUP
+    fm_trap_exit 130 INT
+    fm_trap_exit 143 TERM
   fi
   sleep 0.3
   spawn_orca_launch_send_fail() {

@@ -118,7 +118,7 @@ release_active_locks() {
   ACTIVE_REQUEST_LOCK=
 }
 trap release_active_locks EXIT
-trap 'release_active_locks; exit 130' INT TERM
+fm_trap_exit --run release_active_locks 130 INT TERM
 
 usage() {
   cat <<'EOF'
