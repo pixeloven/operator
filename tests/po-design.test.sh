@@ -236,6 +236,12 @@ test_local_design_refusals() {
   edit ':root { --accent: calc(1px + 2px); }'; refused "$home" mine "value has a function"
   edit ':root { --accent: </style><script>; }'; refused "$home" mine "markup characters are not allowed"
   edit '@import url("https://example.invalid/x.css");'; refused "$home" mine "@import must come before every rule"
+  edit ':root { --font-display: "a/*"; }
+body { background: url(https://example.invalid/x); }
+:root { --font-sans: "*/b"; }'; refused "$home" mine "selector is not allowed: body"
+  edit ":root { --font-display: 'a/*'; }
+input[value^=a] { --accent: #000000; }
+:root { --font-sans: '*/b'; }"; refused "$home" mine "selector is not allowed: input"
   { printf '@import url("https://example.invalid/x.css");\n'; cat "$DESIGNS/firstmate/adapter.css"; } > "$dir/adapter.css"
   refused "$home" mine "@import is not a Google Fonts css2 stylesheet"
   grep -v -- '--status-warn-ink:' "$DESIGNS/firstmate/adapter.css" > "$dir/adapter.css"
@@ -296,6 +302,16 @@ test_selection_and_apply() {
   assert_equals 0 "$(grep -c 'po-theme:persona' "$shared")" "nautical apply left the Persona block"
   assert_equals 1 "$(grep -c '^<!-- po-design: ' "$shared")" "the theme switch removed the design marker"
   assert_equals "" "$(run_in "$code" "$home" headline)" "headline printed something under nautical with a current design"
+
+  dir=$(local_design "$home" broken)
+  printf 'body { --accent: #000000; }\n' >> "$dir/adapter.css"
+  cp "$shared" "$TMP_ROOT/shared.before"
+  printf 'broken\n' > "$home/config/po-design"
+  printf 'operator\n' > "$home/config/po-theme"
+  run_in "$code" "$home" apply >/dev/null 2>&1 && fail "apply accepted a design system that fails validation"
+  assert_equals "$(cat "$TMP_ROOT/shared.before")" "$(cat "$shared")" "a failed design validation still rewrote captain-shared.md"
+  printf 'nautical\n' > "$home/config/po-theme"
+  rm -rf "$dir"
 
   printf 'firstmate\n' > "$home/config/po-design"
   out=$(run_in "$code" "$home" headline)
