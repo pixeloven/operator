@@ -1,0 +1,27 @@
+provisioned fm-lab-r11relabel-47021-6778
+### live labels before
+w1 firstmate
+w2 2ndmate-other
+
+### Relabel step 1: relabel --session fm-lab-r11relabel-47021-6778 --dry-run
+relabel: w1 'firstmate' -> 'spotter'
+relabel: w2 is labeled '2ndmate-other', not one of this home's labels; skipped
+exit=0
+### labels after dry-run (unchanged)
+w1 firstmate
+w2 2ndmate-other
+
+### Relabel step 3 (captain agreed): relabel --session fm-lab-r11relabel-47021-6778
+relabel: w1 'firstmate' -> 'spotter'
+relabel: w2 is labeled '2ndmate-other', not one of this home's labels; skipped
+exit=0
+### labels after relabel
+w1 spotter
+w2 2ndmate-other
+
+### new workspace label for primary under theme
+spotter
+
+### guard: relabel without --session refuses
+po-theme: relabel needs --session <herdr session>; it never guesses one
+exit=1

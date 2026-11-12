@@ -1,0 +1,6 @@
+parsed: True
+name: po-theme
+user-invocable: False
+description chars: 774
+Agent-only owner of the PixelOven persona theme layer: switching, adding, editing, applying, verifying, and relabeling themes. Load when the captain asks to change how the agents address them, name themselves, name workers, or season replies, or to switch, add, or edit a theme; when renaming live workspaces to a changed theme's labels; after `/updatefirstmate`, an upstream merge, or any fast-forward of this repository in a home with a non-nautical theme; while preparing or fixing an upstream-merge PR, including a failing anchors or hook-registry gate; when a clear or compaction left no Persona block in context; and when `bin/po-theme.sh validate`, `verify`, `anchors`, or the session-start headline reports a finding, or the Persona block looks hand-edited or stale.
+ADR refs in skill: []
