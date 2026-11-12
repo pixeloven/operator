@@ -54,7 +54,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, and 0028 through 0031 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0030, and 0032 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -81,7 +81,7 @@ ADR-0026 carries the secondmate restart reliability fixes and `disableAgentView`
 ADR-0028 carries the wake drain's Bash 5.2-safe INT and TERM traps in `bin/fm-wake-lib.sh`, `bin/fm-wake-drain.sh`, and their wake-queue tests, until an upstream synchronization brings an equivalent change.
 ADR-0029 lets `bin/fm-test-run.sh` carry one measured duration-hint row per PixelOven-owned test script in its portable-serial hint table, and a twelfth portable serial shard in that file and `.github/workflows/ci.yml` until upstream's own count reaches twelve.
 ADR-0030 carries upstream's one-line `pendingBashComponents` fake-host field in `tests/fm-calm-pi-extension.test.sh` until an upstream synchronization brings it.
-ADR-0031 moves `fm_trap_exit` to `bin/fm-trap-lib.sh` and carries the remaining Bash 5.2-safe signal traps, including the lock-handoff helper's, in the scripts, test fixtures, and inventory row it lists, until an upstream synchronization brings an equivalent change.
+ADR-0032 moves `fm_trap_exit` to `bin/fm-trap-lib.sh` and carries the remaining Bash 5.2-safe signal traps, including the lock-handoff helper's, in the scripts, test fixtures, and inventory row it lists, until an upstream synchronization brings an equivalent change.
 
 ## Taking upstream changes
 
