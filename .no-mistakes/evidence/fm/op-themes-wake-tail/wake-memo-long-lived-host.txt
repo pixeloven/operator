@@ -1,0 +1,7 @@
+nautical #1                1.0 ms  captain=- (no vocabulary)
+nautical #2                0.4 ms  captain=- (no vocabulary)
+operator #1 (spawn)      732.4 ms  captain=operator
+operator #2 (memo)         0.4 ms  captain=operator
+operator #3 (memo)         0.3 ms  captain=operator
+back to nautical           0.2 ms  captain=- (no vocabulary)
+operator again           522.5 ms  captain=operator
