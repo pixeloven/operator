@@ -1,0 +1,3 @@
+job=tests-portable-parallel-1 step="Install the Pi package for the Pi extension tests" spec=@earendil-works/pi-coding-agent@1.5.2
+job=tests-portable-serial step="Install the Pi package for the Pi extension tests" spec=@earendil-works/pi-coding-agent@1.5.2
+npm resolves @1.5.2 -> 1.5.2
