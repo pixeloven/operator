@@ -1,0 +1,65 @@
+/* PixelOven design system adapter: the po-design role names supplied by
+   reference to the vendored @pixeloven/tokens stylesheet (tokens.css).
+   pixeloven/design's usage rule is that a consumer never defines its own
+   color, radius, type, or shadow value, so every such role here is a
+   var(--pxo-*) reference. The package deliberately has no spacing scale and
+   its consumers use a 4px grid, so the spacing roles are that grid; the focus
+   ring's offsets are geometry around referenced colors.
+   The tokens switch light and dark themselves, so one :root block serves
+   both schemes; only color-scheme follows them here. */
+
+:root {
+  color-scheme: dark;
+  --bg-page: var(--pxo-surface-bg);
+  --surface-card: var(--pxo-surface);
+  --surface-card-warm: var(--pxo-surface-hover);
+  --text-strong: var(--pxo-text-bright);
+  --text-body: var(--pxo-text);
+  --text-muted: var(--pxo-text-secondary);
+  --border-default: var(--pxo-border);
+  --border-soft: var(--pxo-border-muted);
+  --focus-ring: 0 0 0 2px var(--pxo-surface-bg), 0 0 0 4px var(--pxo-interaction-focus);
+  --accent: var(--pxo-accent);
+  --accent-ink: var(--pxo-text-on-accent);
+  --status-online: var(--pxo-status-success);
+  --status-online-soft: var(--pxo-status-surface-success);
+  --status-online-ink: var(--pxo-status-success);
+  --status-warn: var(--pxo-status-warning);
+  --status-warn-soft: var(--pxo-status-surface-warning);
+  --status-warn-ink: var(--pxo-status-warning);
+  --status-danger: var(--pxo-status-danger);
+  --status-danger-soft: var(--pxo-status-surface-danger);
+  --status-danger-ink: var(--pxo-status-danger);
+  --status-info: var(--pxo-accent-soft);
+  --status-info-soft: var(--pxo-status-surface-accent);
+  --status-info-ink: var(--pxo-accent-soft);
+  --font-display: var(--pxo-font-sans);
+  --font-sans: var(--pxo-font-sans);
+  --font-mono: var(--pxo-font-mono);
+  --display-weight: var(--pxo-type-display-weight);
+  --display-tracking: var(--pxo-type-display-letter-spacing);
+  --radius-card: var(--pxo-radius);
+  --radius-chip: var(--pxo-radius-xs);
+  --radius-control: var(--pxo-radius-sm);
+  --card-shadow: var(--pxo-shadow-soft);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

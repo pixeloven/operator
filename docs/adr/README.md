@@ -44,6 +44,7 @@ Use [`_template.md`](_template.md).
 | [0030](0030-carry-upstream-pi-calm-fake-host-field.md) | Carry upstream's Pi Calm fake-host field until a sync brings it | Accepted | "Behavior portable serial 11" Pi Calm fake host broke on Pi 1.5.1; self-retiring upstream carry |
 | [0031](0031-hc-secondmates-and-recovery.md) | Run secondmates on hc with recovery-grade exit and relaunch | Accepted | Navigators invisible in the Herdr desktop app; self-retiring local carry |
 | [0032](0032-carry-remaining-signal-trap-fixes.md) | Carry the remaining Bash 5.2-safe signal traps until a sync brings them | Accepted | ADR-0028's follow-up for the lock-handoff helper and other plain traps; self-retiring local carry |
+| [0034](0034-design-systems-independent-of-themes.md) | Design systems are chosen independently of themes | Accepted | Design-system rows DS1-DS5 and DS7-DS9 of the op-themes-review-ds investigation |
 | [0035](0035-carry-three-lint-partitions.md) | Carry a third CI lint partition until a sync brings one | Accepted | "Lint 1" cancelled at the 30-minute job timeout on main and open pull requests; self-retiring local carry |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in

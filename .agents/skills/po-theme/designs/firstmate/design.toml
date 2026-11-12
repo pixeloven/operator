@@ -1,0 +1,4 @@
+# po-design/1 - the Firstmate Default design system (the default selection).
+schema = "po-design/1"
+name = "firstmate"
+description = "Firstmate Default: the Bearings board's tokens, plus a dark mode"
