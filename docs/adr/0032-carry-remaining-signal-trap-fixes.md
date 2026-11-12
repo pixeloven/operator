@@ -1,4 +1,4 @@
-# ADR-0031: Carry the remaining Bash 5.2-safe signal traps until a sync brings them
+# ADR-0032: Carry the remaining Bash 5.2-safe signal traps until a sync brings them
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
@@ -29,7 +29,7 @@ ADR-0001 remains the default, and inherited files may carry these bounded change
 - `bin/fm-teardown.sh`: `fm-trap-lib.sh` in its list of sources it requires before sourcing them.
 - `docs/scripts.md`: the inventory row for `bin/fm-trap-lib.sh`.
 - `tests/fm-wake-queue.test.sh`: regression cases that hold TERM pending at a `$(` scan through `fm_trap_exit --run` and through the lock-handoff helper, and one that delivers TERM outside a scan through `fm_trap_exit --run`.
-- Test fixtures that copy `bin/fm-wake-lib.sh` or a script above into a scratch root: `fm-trap-lib.sh` added to the copied files, in `tests/fm-afk-return.test.sh`, `tests/fm-agy-primary.test.sh`, `tests/fm-claude-stop-autoarm.test.sh`, `tests/fm-codex-hook-layer-live-e2e.test.sh`, `tests/fm-cursor-primary.test.sh`, `tests/fm-extension-binding.test.sh`, `tests/fm-gotmp.test.sh`, `tests/fm-mail-check.test.sh`, `tests/fm-pi-branch-extension.test.sh`, `tests/fm-remote-backlog-handoff.test.sh`, `tests/fm-remote-entrypoint.test.sh`, `tests/fm-remote-job-claim-reap.test.sh`, `tests/fm-remote-job-launchagent.test.sh`, `tests/fm-remote-job-process-start.test.sh`, `tests/fm-remote-transport-lanes.test.sh`, `tests/fm-session-lock-ancestry.test.sh`, `tests/fm-turnend-guard.test.sh`, and `tests/fm-wake-queue.test.sh`.
+- Test fixtures that copy `bin/fm-wake-lib.sh` or a script above into a scratch root: `fm-trap-lib.sh` added to the copied files, in `tests/fm-afk-return.test.sh`, `tests/fm-agy-primary.test.sh`, `tests/fm-claude-stop-autoarm.test.sh`, `tests/fm-codex-hook-layer-live-e2e.test.sh`, `tests/fm-cursor-primary.test.sh`, `tests/fm-extension-binding.test.sh`, `tests/fm-gotmp.test.sh`, `tests/fm-mail-check.test.sh`, `tests/fm-on.test.sh`, `tests/fm-pi-branch-extension.test.sh`, `tests/fm-remote-backlog-handoff.test.sh`, `tests/fm-remote-entrypoint.test.sh`, `tests/fm-remote-job-claim-reap.test.sh`, `tests/fm-remote-job-launchagent.test.sh`, `tests/fm-remote-job-orphan-reap.test.sh`, `tests/fm-remote-job-process-start.test.sh`, `tests/fm-remote-transport-lanes.test.sh`, `tests/fm-session-lock-ancestry.test.sh`, `tests/fm-startup-growth-check.test.sh`, `tests/fm-turnend-guard.test.sh`, and `tests/fm-wake-queue.test.sh`.
 
 A signal trap whose action can return instead of ending the shell stays a plain trap, because the line that closes the phantom `$(` is a syntax error when it is read.
 That leaves the flag-setting and signal-forwarding traps in `bin/fm-spawn.sh`, `bin/fm-timeout-lib.sh`, and `bin/fm-watch.sh`, `worker_shutdown` in `bin/fm-remote-job-worker.sh`, and the cleanup-only HUP, INT, and TERM traps in `bin/fm-check-register.sh`, `bin/fm-pr-reviewers.sh`, `bin/fm-pr-state.sh`, and `bin/fm-record-export.sh` exposed on Bash 5.2.
