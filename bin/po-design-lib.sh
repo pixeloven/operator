@@ -137,7 +137,8 @@ pd_css_check() {
       s = s line "\n"
     }
     END {
-      # strip comments
+      # strip comments; a "/*" inside a quoted string opens no comment in a
+      # browser, so skip strings, or the checks below would miss what it hides
       out = ""
       while (match(s, "[\"/" sq "]")) {
         c = substr(s, RSTART, 1)
