@@ -1,8 +1,8 @@
 ---
 name: po-theme
 description: >-
-  Agent-only owner of the PixelOven persona theme layer (ADR-0016).
-  Load when the captain asks to change how the agents address them, name themselves, name workers, or season replies, or to switch, add, or edit a theme; after `/updatefirstmate` or any upstream merge in a home with a non-nautical theme; and when `bin/po-theme.sh validate`, `verify`, or `anchors` reports a finding or the session-start Persona block looks hand-edited or stale.
+  Agent-only owner of the PixelOven persona theme layer: switching, adding, editing, applying, verifying, and relabeling themes.
+  Load when the captain asks to change how the agents address them, name themselves, name workers, or season replies, or to switch, add, or edit a theme; when renaming live workspaces to a changed theme's labels; after `/updatefirstmate`, an upstream merge, or any fast-forward of this repository in a home with a non-nautical theme; while preparing or fixing an upstream-merge PR, including a failing anchors or hook-registry gate; when a clear or compaction left no Persona block in context; and when `bin/po-theme.sh validate`, `verify`, `anchors`, or the session-start headline reports a finding, or the Persona block looks hand-edited or stale.
 user-invocable: false
 metadata:
   internal: true
@@ -10,20 +10,49 @@ metadata:
 
 # po-theme
 
-A theme changes only display words: what the supervising agent calls itself, the user, and the other roles in chat, its seasoning, its exact no-op reply, the vocabulary workers use in prose a person reads, and slash-command aliases.
-It never renames an identifier and never changes what a rule means; ADR-0016 owns that boundary and `docs/pixeloven/persona-themes.md` owns the theme format, validation rules, and the surfaces that deliberately stay nautical.
-`bin/po-theme.sh --help` owns the exact commands.
+A theme changes only display words: what the supervising agent calls itself, the user, and the other roles in chat, its seasoning, its exact no-op reply, the vocabulary workers use in prose a person reads, workspace labels, and slash-command aliases.
+It never renames an identifier (script, path, environment variable, skill directory, status verb, or a brief heading code parses) and never changes what a rule means; a theme grants no authority.
+`docs/pixeloven/persona-themes.md` owns the theme format, validation rules, and the surfaces that deliberately stay nautical; `bin/po-theme.sh --help` owns the exact commands.
+
+## Selection
 
 - The selection is the first line of `config/po-theme` in the primary home; absent means `nautical`, which writes nothing and is byte-for-byte upstream behavior.
-- Bundled themes live in `themes/` beside this file; a home may add its own as `config/po-themes/<name>.theme`.
-- To switch: run `bin/po-theme.sh validate <name>`, write the name to `config/po-theme`, then run `bin/po-theme.sh apply` in the primary home and `bin/po-theme.sh verify`.
-  The new words take effect in chat from the next session start, when the digest prints the Persona block; workers launched after `apply` get the new vocabulary line at once.
-- Workspace labels follow the theme for new herdr and Paseo workspaces, while existing ones keep matching; to rename this home's live herdr workspaces (from the primary home, each second mate's own workspace too), run `bin/po-theme.sh relabel --session <session> --dry-run`, report the planned renames to the captain, and run it without `--dry-run` once the captain agrees.
-- `apply` refuses in a secondmate home: the Persona block, with a machine-readable values line, arrives there read-only through `data/captain-shared.md`, so the secondmate's own scripts resolve the same theme, including a custom one.
-  Second mates pick up a changed block at the next propagation of that file, which `secondmate-provisioning` owns.
-- After `/updatefirstmate` or an upstream merge, run `bin/po-theme.sh verify`; on drift, rerun `apply`.
-- In a merge PR, `bin/po-theme.sh anchors` must pass (gate A10); a missing anchor means upstream changed wording a nautical key mirrors or added a user-invocable skill, so update `themes/nautical.theme` and the matching key of every other theme in that same PR.
-  A `surface canary` finding means upstream added a person-visible nautical string: theme it through a registered hook, or add a `residue.tsv` row whose reason opens with its rule or stage (`docs/pixeloven/persona-themes.md` owns the format), in that same PR.
-  A missing theme hook or replaced upstream line means a merge touched a hooked line: re-apply the one hook line and update its row in `surfaces.tsv` in that same PR, which gate A9 then checks.
-- Never hand-edit the delimited Persona block in `data/captain-shared.md`; rerun `apply`.
-- Theme values are captain-owned display text: validation rejects authority words, URLs, markup, and control characters, and the block itself states that it grants no authority.
+- Bundled themes live in `themes/` beside this file; a home may add its own as `config/po-themes/<name>.theme`, copied from a bundled theme and edited, since the bundled nautical theme is the key schema.
+
+## Switch, add, or edit a theme
+
+1. Run `bin/po-theme.sh validate <name>` and fix every error it reports before going further.
+2. Write the name to `config/po-theme` in the primary home.
+3. Run `bin/po-theme.sh apply` in the primary home, then `bin/po-theme.sh verify`, which must exit 0.
+4. Tell the captain that the new words take effect in chat from the next session start, when the digest prints the Persona block; workers launched after `apply` get the new vocabulary line at once, and second mates pick up the changed block at the next propagation of `data/captain-shared.md`, which `secondmate-provisioning` owns.
+
+`apply` refuses in a secondmate home: the Persona block, with a machine-readable values line, arrives there read-only through `data/captain-shared.md`, so the secondmate's own scripts resolve the same theme, including a custom one.
+Never hand-edit the delimited Persona block in `data/captain-shared.md`; rerun `apply`.
+Theme values are captain-owned display text: validation rejects authority words, URLs, markup, and control characters.
+
+## Relabel live workspaces
+
+Workspace labels follow the theme for new herdr and Paseo workspaces, while existing ones keep matching.
+To rename this home's live herdr workspaces (from the primary home, each second mate's own workspace too):
+
+1. Run `bin/po-theme.sh relabel --session <session> --dry-run`.
+2. Report the planned renames to the captain.
+3. Run it without `--dry-run` once the captain agrees.
+
+## Persona lost after a clear or compaction
+
+When a clear or compaction left no Persona block in context, read the block from `data/captain-shared.md` before the next reply and use its words; the session-start headline points to the same file.
+
+## Verify and drift
+
+- After `/updatefirstmate`, an upstream merge, or any fast-forward of this repository, run `bin/po-theme.sh verify`.
+- On drift (a `persona drift` headline line or a nonzero `verify`), rerun `bin/po-theme.sh apply` in the primary home, then `verify` again.
+- In a second mate home, a drift line saying the inherited block differs from the bundled theme means the primary home must rerun `apply` and propagate, or this home's checkout must be updated if it is the newer one; report it to the parent rather than editing the block.
+
+## Upstream-merge PR anchors
+
+In a PR that merges upstream firstmate, `bin/po-theme.sh anchors` must pass (gate A10) and `bin/po-theme.sh registry check-diff <upstream-ref>` must pass (gate A9). Fix each finding in that same PR:
+
+- A missing anchor means upstream changed wording a nautical key mirrors or added a user-invocable skill: update `themes/nautical.theme` and the matching key of every other theme.
+- A `surface canary` finding means upstream added a person-visible nautical string: theme it through a registered hook, or add a `residue.tsv` row whose reason opens with its rule or stage.
+- A missing theme hook or replaced upstream line means the merge touched a hooked line: re-apply the one hook line and update its row in `surfaces.tsv`.
