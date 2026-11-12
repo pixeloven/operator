@@ -74,18 +74,18 @@ FM_SM_LIVE_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=bin/fm-control-lib.sh
 . "$FM_SM_LIVE_LIB_DIR/fm-control-lib.sh"
 
-# An hc `missing` read only proves absence on the core the record names, so it
-# is settled by fm_control_endpoint_absence_verdict: gone stays missing, dead
-# and alive become those states, and anything else reads unproven with its
-# reason in FM_SM_LIVE_ABSENCE_REASON. Other backends keep the raw state. The
-# settled state is left in FM_SM_LIVE_SETTLED.
+# An hc reading only counts on the core the record names, so every one is
+# settled by fm_control_endpoint_absence_verdict: gone reads missing, dead and
+# alive stay those states, and anything else reads unproven with its reason in
+# FM_SM_LIVE_ABSENCE_REASON. Other backends keep the raw state. The settled
+# state is left in FM_SM_LIVE_SETTLED.
 fm_sm_live_settle_state() {  # <backend> <target> <meta> <raw-state>
   local verdict
   FM_SM_LIVE_SETTLED=$4 FM_SM_LIVE_ABSENCE_REASON=''
-  [ "$1" = hc ] && [ "$4" = missing ] || return 0
+  [ "$1" = hc ] || return 0
   verdict=$(fm_control_endpoint_absence_verdict "$1" "$2" "$3")
   case "${verdict%%$'\t'*}" in
-    gone) ;;
+    gone) FM_SM_LIVE_SETTLED=missing ;;
     dead | alive) FM_SM_LIVE_SETTLED=${verdict%%$'\t'*} ;;
     *) FM_SM_LIVE_SETTLED=unproven FM_SM_LIVE_ABSENCE_REASON=${verdict#*$'\t'} ;;
   esac
@@ -325,7 +325,7 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
 # Acts on a `relaunchable` probe verdict for <id>: takes the per-home relaunch
 # lock, records the attempt, kills a confirmed-dead local endpoint if required
 # (FM_SM_LIVE_KILL), runs the guarded spawn, then records its outcome.
-# On t3code a close that cannot be proven stops there: the thread and its
+# On t3code and hc a close that cannot be proven stops there: the thread and its
 # metadata stay as recorded, the verdict becomes skipped, and nothing is
 # spawned, because a second thread beside a live one is the duplicate
 # supervisor recovery must never create. Other backends keep their existing
@@ -418,7 +418,7 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
       FM_SM_LIVE_REASON="could not prove the old $backend endpoint $target closed: it now reads unreadable, so it and its record are left in place, not replaced"
       FM_SM_LIVE_RC=1
       return 1
-    elif [ "$backend" != t3code ]; then
+    elif [ "$backend" != t3code ] && [ "$backend" != hc ]; then
       if [ -n "$target" ]; then
         if [ "$backend" = rex ]; then
           local home

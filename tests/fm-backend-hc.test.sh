@@ -791,6 +791,48 @@ test_secondmate_liveness_refuses_an_absence_read_from_another_core() {
   pass "hc: the secondmate liveness path refuses an absence read from a core other than the recorded one"
 }
 
+# hc addresses count per core, so another core reached under the recorded
+# session name can hold its own unrelated shell at the recorded address. That
+# shell reads dead, which says nothing about the navigator on the recorded core.
+test_secondmate_liveness_ignores_a_dead_reading_from_another_core() {
+  local out
+  life_case sm-foreign-shell
+  hc_life_mate nav6 t3 "" ""
+  put_terminal t3 live fm-unrelated other-home zsh /bin/zsh "$D"
+  printf 'core-b' > "$D/core-id"
+  # shellcheck disable=SC2016 # positional params expand in the child shell.
+  out=$(life_env env FM_ROOT="$FM_TEST_ROOT" STATE="$HOMEDIR/state" bash -c '
+    . "$1/bin/fm-secondmate-liveness-lib.sh"
+    fm_secondmate_liveness_probe "$2" nav6 poll
+    echo "probe=$FM_SM_LIVE_STATUS/$FM_SM_LIVE_STATE"
+    echo "reason=$FM_SM_LIVE_REASON"
+    if [ "$FM_SM_LIVE_STATUS" = relaunchable ]; then
+      fm_secondmate_liveness_relaunch "$2" nav6 || true
+    fi
+  ' _ "$FM_TEST_ROOT" "$HOMEDIR/state/nav6.meta")
+  assert_contains "$out" "probe=skipped/unproven" "a dead reading from another core must not read relaunchable"$'\n'"$out"
+  assert_contains "$out" "a core other than the one the task was created on" "the refusal must name the core identity mismatch"
+  assert_equals live "$(jq -r .state "$D/term/t3.json")" "the other core's terminal must not be killed"
+  assert_absent "$D/created" "no replacement navigator may be created from another core's reading"
+  assert_equals core-a "$(meta_of nav6 hc_core)" "the navigator record must keep its core identity"
+  pass "hc: the secondmate liveness path ignores a dead reading from a core other than the recorded one"
+}
+
+test_control_exit_refuses_a_dead_reading_from_another_core() {
+  local out rc=0
+  life_case exit-foreign-shell
+  hc_life_ship hx7 t6 "" ""
+  put_terminal t6 live fm-unrelated other-home zsh /bin/zsh "$D"
+  printf 'core-b' > "$D/core-id"
+  out=$(life_env "$FM_TEST_ROOT/bin/fm-control.sh" hx7 exit) || rc=$?
+  [ "$rc" -ne 0 ] || fail "exit must refuse a dead reading from a core other than the recorded one"$'\n'"$out"
+  assert_not_contains "$out" "already-stopped" "exit must not claim the agent stopped from another core's reading"
+  assert_contains "$out" "a core other than the one the task was created on" "the refusal must name the core identity mismatch"
+  assert_absent "$D/sent.t6" "exit must send nothing into another core's terminal"
+  assert_equals live "$(jq -r .state "$D/term/t6.json")" "exit must leave the other core's terminal alone"
+  pass "hc: fm-control exit refuses a dead reading from a core other than the recorded one"
+}
+
 # Retiring a navigator closes its crew too. Those workers were spawned from
 # inside the navigator's own home, so their terminals carry that home's tag.
 test_forced_secondmate_teardown_closes_hc_children_with_the_child_home_tag() {
@@ -832,6 +874,8 @@ fm_test_run \
   test_secondmate_restart_persists_then_relaunches_on_hc \
   test_secondmate_liveness_recovers_a_finished_hc_navigator \
   test_secondmate_liveness_refuses_an_absence_read_from_another_core \
+  test_secondmate_liveness_ignores_a_dead_reading_from_another_core \
+  test_control_exit_refuses_a_dead_reading_from_another_core \
   test_forced_secondmate_teardown_closes_hc_children_with_the_child_home_tag \
   test_hc_is_spawn_capable_and_needs_app_signals \
   test_required_tool_check_uses_the_adapter_resolver \

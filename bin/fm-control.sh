@@ -788,49 +788,52 @@ do_exit() {
   fm_control_backend_exit_supported "$BACKEND" \
     || die "task $ID runs on the $BACKEND backend, whose T3 Orchestrator V2 tools have no session stop, so 'exit' cannot stop its agent; 'interrupt' ends the running turn and teardown archives the thread"
   state=$(agent_state)
-  case "$state" in
-    dead)
-      printf 'already-stopped'
-      return 0
-      ;;
-    alive) ;;
-    *)
-      fm_control_absence_recheck_applies "$BACKEND" "$state" \
-        || die "task $ID's endpoint reads '$state' rather than a positively classified state; refusing to send a lifecycle command into an unattributed endpoint"
-      # `missing` on its own is not a finding about the endpoint: it conflates
-      # "destroyed" with "unreachable from this seat". Route it through the
-      # control plane's one absence proof - the same one the relaunch gate uses
-      # - and report what that proof actually established, never more.
-      absence=$(fm_control_endpoint_absence_verdict "$BACKEND" "$T" "$META")
-      case "${absence%%$'\t'*}" in
-        gone)
-          # Proven gone, so the agent that lived in it went with it: exit's
-          # postcondition already holds and there is nothing to send. Its own
-          # outcome rather than `already-stopped`, because the endpoint this
-          # verb normally preserves did not survive. The worktree and every
-          # uncommitted change are untouched, and `relaunch` re-creates the
-          # endpoint from here.
-          printf 'endpoint-gone'
-          return 0
-          ;;
-        dead)
-          # The endpoint was only unreachable and is there after all, holding
-          # no agent - a herdr pane whose session server was merely stopped is
-          # the common case. Nothing is gone, so this is the ordinary
-          # already-stopped outcome.
-          printf 'already-stopped'
-          return 0
-          ;;
-        alive)
-          # The agent came back with its endpoint. Fall through to the ordinary
-          # alive path: interrupt if busy, then the harness's exit command.
-          ;;
-        *)
-          die "task $ID's endpoint $T reads '$state', but ${absence#*$'\t'}; exit will not claim an agent stopped at an address it cannot trust, nor send lifecycle input to one"
-          ;;
-      esac
-      ;;
-  esac
+  if ! fm_control_absence_recheck_applies "$BACKEND" "$state"; then
+    case "$state" in
+      dead)
+        printf 'already-stopped'
+        return 0
+        ;;
+      alive) ;;
+      *)
+        die "task $ID's endpoint reads '$state' rather than a positively classified state; refusing to send a lifecycle command into an unattributed endpoint"
+        ;;
+    esac
+  else
+    # `missing` on its own is not a finding about the endpoint: it conflates
+    # "destroyed" with "unreachable from this seat", and any hc reading may
+    # come from a core other than the recorded one. Route it through the
+    # control plane's one absence proof - the same one the relaunch gate uses
+    # - and report what that proof actually established, never more.
+    absence=$(fm_control_endpoint_absence_verdict "$BACKEND" "$T" "$META")
+    case "${absence%%$'\t'*}" in
+      gone)
+        # Proven gone, so the agent that lived in it went with it: exit's
+        # postcondition already holds and there is nothing to send. Its own
+        # outcome rather than `already-stopped`, because the endpoint this
+        # verb normally preserves did not survive. The worktree and every
+        # uncommitted change are untouched, and `relaunch` re-creates the
+        # endpoint from here.
+        printf 'endpoint-gone'
+        return 0
+        ;;
+      dead)
+        # The endpoint was only unreachable and is there after all, holding
+        # no agent - a herdr pane whose session server was merely stopped is
+        # the common case. Nothing is gone, so this is the ordinary
+        # already-stopped outcome.
+        printf 'already-stopped'
+        return 0
+        ;;
+      alive)
+        # The agent came back with its endpoint. Fall through to the ordinary
+        # alive path: interrupt if busy, then the harness's exit command.
+        ;;
+      *)
+        die "task $ID's endpoint $T reads '$state', but ${absence#*$'\t'}; exit will not claim an agent stopped at an address it cannot trust, nor send lifecycle input to one"
+        ;;
+    esac
+  fi
   refuse_claude_background_session
   # A busy agent is interrupted first before the exit command is submitted.
   case "$(busy_verdict)" in

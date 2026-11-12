@@ -402,8 +402,12 @@ fm_control_backend_relaunch_supported() {  # <backend>
 # passive reads never start a server, so a stopped server - which ends every
 # session on it - reads as unreachable rather than not-found, and only the
 # recheck (which may start the personal server) can turn that into a proof.
+# Every hc reading does: hc addresses are per core, so a session name that now
+# reaches another core can answer dead or alive about an unrelated terminal at
+# the recorded address, and only the recheck ties the answer to hc_core.
 # Passive readers keep the raw state.
 fm_control_absence_recheck_applies() {  # <backend> <raw-state>
+  [ "${1-}" != hc ] || return 0
   case "${2-}" in
     missing) return 0 ;;
     unreadable) [ "${1-}" = rex ] ;;
