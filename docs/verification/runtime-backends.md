@@ -3664,6 +3664,20 @@ The default socket path under the scratchpad temp directory exceeded the 103-byt
 | `server stop` on a lab session (0.1.14, 2026-10-30) | Closes the API listener only; the session's `serve` and `hold` daemons stay by design and take ~30-60s to finish exiting after TERM/KILL. `bin/fm-hc-lab.sh` sweeps them by their exact `HC_SESSION=<name>` env token. |
 | `hc get` of a terminal running the user's `claude` wrapper | `foreground` was `{"name":"hats","argv":["/Users/fran/.cargo/bin/hats","run","--"]}`; the Claude process was another member of that process group. |
 
+### Core identity and the absence proof
+
+Measured on 2026-11-11 with `hc 0.1.20` on Linux (Fedora, kernel 7.3.3), inside a `bin/fm-hc-lab.sh` session whose own scratch `XDG_STATE_HOME`, `XDG_CONFIG_HOME`, and `XDG_DATA_HOME` and pinned `HC_SESSION`/`HC_SOCKET` reached only the lab core; the lab's fleet-state tripwire verified the real-core metadata unchanged at teardown.
+These facts back `hc_core=` and `fm_backend_hc_endpoint_absence_recheck` ([`hc-backend.md`](../hc-backend.md#recovery)).
+
+| Probe | Result |
+| --- | --- |
+| `hc server status --json` | `{"core":{"id":"e52e4566ee8b59ce8f07d1c403666abb","name":"bazzite"},"finished":0,"holder":null,"holders":[],"installed_by":null,"live":0,"pid":...,"uptime_ms":...,"version":"0.1.20"}`. |
+| `hc run --bg --json --no-parent --outlive-parent --no-notify --cwd <dir> -- /usr/bin/sleep 300`, then `bin/fm-hc-lab.sh stop`, then `hc get --json t1` | The `get` started a fresh core (`hc: the core stops when your last login ends; ...` on stderr) and answered `{"state":"finished","reason":"server_stop",...}` for `t1`: the record survived the core stop. |
+| `hc server status --json` after that stop and again after `hc server restart --json` | `core.id` stayed `e52e4566ee8b59ce8f07d1c403666abb` both times. |
+| `hc rm --json t1`, then `hc get --json t1` | `{"removed":"t1"}`; the `get` then exits 3 with `not_found`. |
+| `hc run ...` after that removal | Printed address `t2`: the removed `t1` was not reused. |
+| A second lab session, same commands | Reported a different `core.id`. |
+
 ### Adapter lifecycle
 
 `tests/fm-backend-hc-smoke.test.sh` passed inside a `bin/fm-hc-lab.sh` session (hc 0.1.14, 2026-10-30): an `fm-hclab-*` core with scratch XDG roots, a pinned `FM_HC_SOCKET`, and a fleet-state tripwire that verified the recorded real-core file metadata inventory unchanged afterward.

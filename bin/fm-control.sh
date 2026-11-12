@@ -45,7 +45,8 @@
 #              is merely unreachable from this seat. Herdr proves absence by
 #              reading the session the record names; REX proves it because its
 #              never-reused ids answer a structured not-found from the server
-#              the record names.
+#              the record names; hc proves it the same way from the core
+#              identity the record names (hc_core).
 #              Proven gone reports `endpoint-gone` rather than
 #              `already-stopped`, because the endpoint this verb normally
 #              preserves did not survive; a pane that turns out to be there and
@@ -67,10 +68,11 @@
 #              session gone with its server - the launch owner re-creates one in
 #              that worktree, in the herdr session the record names (Rex: the
 #              recorded session while it survives, otherwise the ordinary Rex
-#              placement), and the task's record rebinds to it; that is how a task
+#              placement; hc: the recorded session, on the recorded core), and
+#              the task's record rebinds to it; that is how a task
 #              whose terminal was destroyed is reclaimed by the home that owns
 #              it, rather than being stranded with a parked approval nobody can
-#              answer. Reclaim is HERDR- and REX-ONLY for the reason `exit` gives above:
+#              answer. Reclaim is HERDR-, REX-, and HC-ONLY for the reason `exit` gives above:
 #              a tmux `missing` cannot be proven absent from a task record, so
 #              it refuses.
 #              An explicit `default` model or effort clears that
@@ -139,7 +141,7 @@
 #   - A backend that cannot deliver the harness's interrupt key is refused
 #     (Orca's terminal API has no Escape).
 #   - `exit` and `relaunch` require a backend with a recovery-grade agent-state
-#     classifier (tmux, herdr, rex, or t3code), because without one the "the
+#     classifier (tmux, herdr, rex, t3code, or hc), because without one the "the
 #     agent stopped" postcondition cannot be proven. Relaunch also requires
 #     replacement support, which t3code lacks. zellij, orca, cmux, paseo, and tern are
 #     refused rather than reported as successful blind.

@@ -32,7 +32,19 @@
 # herdr.space=<id> and herdr.tab=<id> labels, and an unknown id becomes a new
 # space or tab. create_task sets herdr.space=FM_HC_SPACE (default
 # fm-<hometag>) and herdr.tab=<scoped label>, so a home's tasks group in one
-# space with one tab each. Naming the space needs the app window and is not done.
+# space with one tab each. A --secondmate launch passes the mate's OWN home
+# space instead, the space that home's own crew lands in, so a navigator and
+# its workers group together; its identity labels stay the launching home's,
+# because that home's record owns the endpoint. Naming the space needs the app
+# window and is not done.
+#
+# Core identity: `hc server status` reports core.id, which survives a core stop
+# and restart (measured on hc 0.1.20) and differs between cores, while hc never
+# reuses a terminal address. A spawn records it as hc_core=, so a structured
+# not_found or a finished terminal read from that SAME core proves the
+# endpoint gone (fm_backend_hc_endpoint_absence_recheck), the way Rex's
+# recorded server does. A session name alone cannot: another state root starts
+# a different core under the same name, and that core knows nothing of the task.
 #
 # Measured limits on hc 0.1.13 and 0.1.14 (docs/hc-backend.md "Limits"):
 #   - `hc send` always presses Enter after pasting. There is no paste without
@@ -248,6 +260,16 @@ fm_backend_hc_hello() {  # <session>
   printf '%s' "$gen"
 }
 
+# fm_backend_hc_core_id: the identity `hc server status` reports for
+# <session>'s core, or failure. hc starts a stopped core on contact, so this is
+# only called where the adapter already reaches that core.
+fm_backend_hc_core_id() {  # <session>
+  local id
+  id=$(fm_backend_hc_cli "$1" server status --json 2>/dev/null | jq -r '.core.id // empty' 2>/dev/null) || return 1
+  fm_backend_hc_atom_valid "$id" || return 1
+  printf '%s' "$id"
+}
+
 # fm_backend_hc_container_ensure: prove the binary is herdr-core at the
 # verified floor, make sure the session's core answers (hc starts its own
 # core on first use) and speaks protocol generation 1, then print the
@@ -276,21 +298,31 @@ fm_backend_hc_container_ensure() {
 # <window-label>, refusing a live duplicate in this home. Prints the address.
 # --no-parent and --outlive-parent keep the terminal independent of whichever
 # hc terminal firstmate itself runs in; --no-notify keeps hc from typing notes
-# into any parent.
-fm_backend_hc_create_task() {  # <session> <window-label> <cwd>
-  local session=$1 label=$2 cwd=$3 home scoped dup out address
+# into any parent. [space] is the herdr.space for a launch into another home's
+# space (a --secondmate launch); FM_HC_SPACE, else fm-<hometag>, otherwise.
+# A finished terminal carrying this exact task and home label can never host
+# an agent again, so it is removed first: a respawn or rebind then leaves one
+# terminal for the task rather than a dead tab beside the new one.
+fm_backend_hc_create_task() {  # <session> <window-label> <cwd> [space]
+  local session=$1 label=$2 cwd=$3 space=${4:-} home scoped dup out address stale
   home=$(fm_backend_hometag)
   scoped=$(fm_backend_hc_scoped_label "$label")
-  dup=$(fm_backend_hc_cli "$session" ls --json --label "firstmate.task=$label" --label "firstmate.home=$home" 2>/dev/null) \
+  [ -n "$space" ] || space=${FM_HC_SPACE:-fm-$home}
+  dup=$(fm_backend_hc_cli "$session" ls --json --all --label "firstmate.task=$label" --label "firstmate.home=$home" 2>/dev/null) \
     || { echo "error: 'hc ls' failed for session '$session'; cannot create $label" >&2; return 1; }
-  if [ -n "$(printf '%s' "$dup" | jq -r '.terminals[]?.address' 2>/dev/null)" ]; then
+  if [ -n "$(printf '%s' "$dup" | jq -r '.terminals[]? | select(.state != "finished") | .address' 2>/dev/null)" ]; then
     echo "error: hc terminal for $label already exists in session '$session'" >&2
     return 1
   fi
+  for stale in $(printf '%s' "$dup" | jq -r '.terminals[]? | select(.state == "finished") | .address' 2>/dev/null); do
+    fm_backend_hc_address_valid "$stale" || continue
+    fm_backend_hc_kill "$session:$stale" "" "$label" \
+      || { echo "error: could not remove the finished hc terminal $session:$stale left by $label" >&2; return 1; }
+  done
   out=$(fm_backend_hc_cli "$session" run --bg --json --no-parent --outlive-parent --no-notify \
     --cwd "$cwd" \
     --label "firstmate.task=$label" --label "firstmate.home=$home" \
-    --label "herdr.space=${FM_HC_SPACE:-fm-$home}" --label "herdr.tab=$scoped" 2>&1) \
+    --label "herdr.space=$space" --label "herdr.tab=$scoped" 2>&1) \
     || { echo "error: hc run failed for $label: $out" >&2; return 1; }
   address=$(printf '%s' "$out" | jq -r '.address // empty' 2>/dev/null)
   fm_backend_hc_address_valid "$address" || { echo "error: hc run did not return a terminal address for $label (got: $out)" >&2; return 1; }
@@ -497,4 +529,22 @@ fm_backend_hc_group_has_agent() {  # <pid>
 $(LC_ALL=C ps -A -o pid=,pgid=,comm= 2>/dev/null)
 EOF
   return 1
+}
+
+# fm_backend_hc_endpoint_absence_recheck: the hc half of the control plane's
+# absence proof (bin/fm-control-lib.sh fm_control_endpoint_absence_verdict).
+# Re-reads <target> through its recorded session - hc starts that session's
+# core if it is stopped, and a core keeps its terminal records across a
+# restart - then requires the core that answered to be <recorded-core>.
+# Prints one of: missing (not_found or finished on the recorded core), dead,
+# alive, ambiguous, unreadable, or other-core (the session reached a different
+# core, whose answer proves nothing about this endpoint).
+fm_backend_hc_endpoint_absence_recheck() {  # <target> <recorded-core>
+  local target=${1:-} recorded=${2:-} state core
+  fm_backend_hc_parse_target "$target" || { printf 'unreadable'; return 0; }
+  fm_backend_hc_atom_valid "$recorded" || { printf 'unreadable'; return 0; }
+  state=$(fm_backend_hc_agent_state "$target")
+  core=$(fm_backend_hc_core_id "$FM_BACKEND_HC_SESSION") || { printf 'unreadable'; return 0; }
+  [ "$core" = "$recorded" ] || { printf 'other-core'; return 0; }
+  printf '%s' "$state"
 }

@@ -1535,7 +1535,9 @@ fm_backend_target_exists() {  # <backend> <target> [expected-label]
 # bin/fm-control-lib.sh's fm_control_backend_state_verified does not list it, so
 # no control-plane verb treats a Tern verdict as proof that an agent stopped.
 # hc classifies the one foreground process `hc get` reports through the same
-# classifier and is likewise absent from fm_control_backend_state_verified.
+# classifier, reads a structured not_found or a finished terminal as `missing`,
+# and is listed in fm_control_backend_state_verified, whose absence proof
+# compares the answering core against the recorded hc_core.
 fm_backend_agent_state() {  # <backend> <target>
   local backend=$1 target=$2
   fm_backend_source "$backend" || { printf 'unverified'; return 0; }
