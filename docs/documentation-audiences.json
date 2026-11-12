@@ -450,6 +450,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0030-carry-upstream-pi-calm-fake-host-field.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
