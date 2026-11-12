@@ -5,7 +5,8 @@
 # Coverage:
 #   - bundled themes validate; each refusal reason fails with its named reason
 #   - anchors pass on this tree and fail on a fixture whose mirrored wording,
-#     user-invocable skill set, or hook line drifted
+#     /bearings digest section name, user-invocable skill set, or hook line
+#     drifted
 #   - the surface canary fails on an unregistered nautical word in each
 #     producer pattern, passes a registered hook line or a residue row, refuses
 #     a residue row without a rule or stage, and notes a stale one
@@ -16,6 +17,8 @@
 #     applied vocative when the selection breaks after apply, and under nautical
 #     matches the unpatched upstream detector on a sample corpus
 #   - the Persona block scopes the command aliases to the primary home
+#   - the Persona block maps each /bearings digest section name a theme
+#     changes, given or derived from the address word, and only those
 #   - the worker role contract is byte-identical to upstream under nautical and
 #     gains exactly one vocabulary line under a theme
 #   - a secondmate home resolves a custom theme from the inherited values line,
@@ -60,6 +63,7 @@ new_code() {
     mkdir -p "$code/.agents/skills/$s"
     printf -- '---\nname: %s\nuser-invocable: true\n---\n' "$s" > "$code/.agents/skills/$s/SKILL.md"
   done
+  cp "$ROOT/.agents/skills/bearings/SKILL.md" "$code/.agents/skills/bearings/SKILL.md"
   git init -q -b main "$code"
   git -C "$code" add -A
   git -C "$code" commit -q -m seed
@@ -198,7 +202,12 @@ test_anchors() {
   grep -v '^Persona: ' "$ROOT/AGENTS.md" > "$code/AGENTS.md"
   out=$(FM_HOME="$TMP_ROOT/anchors-hook" "$code/bin/po-theme.sh" anchors 2>&1) && fail "anchors passed without the AGENTS.md Persona line"
   assert_contains "$out" "the ADR-0016 Persona line in AGENTS.md" "anchors did not name the missing hook line"
-  pass "anchors pass on this tree and fail on drifted wording, a new command, or a lost hook"
+
+  code=$(new_code anchors-digest)
+  sed "s/\\*\\*Captain's Call\\*\\*/**Captain's Desk**/g" "$ROOT/.agents/skills/bearings/SKILL.md" > "$code/.agents/skills/bearings/SKILL.md"
+  out=$(FM_HOME="$TMP_ROOT/anchors-digest" "$code/bin/po-theme.sh" anchors 2>&1) && fail "anchors passed with a renamed digest section"
+  assert_contains "$out" "anchor missing: **Captain's Call** not found in .agents/skills/bearings/SKILL.md" "anchors did not name the renamed digest section"
+  pass "anchors pass on this tree and fail on drifted wording, a renamed digest section, a new command, or a lost hook"
 }
 
 # tree_copy <name>: a throwaway git repository holding this tree's tracked and
@@ -330,6 +339,7 @@ test_operator_apply() {
   assert_contains "$first" '| first mate, firstmate (you) | spotter |' "the block does not map the first mate"
   assert_contains "$first" 'grant no authority and change no rule' "the block does not disclaim authority"
   assert_contains "$first" '/sitrep = /bearings' "the block does not list the aliases"
+  assert_contains "$first" "| Captain's Call (the /bearings section) | Operator's Call |" "the block does not map the call section"
   assert_equals "-rw-r-----" "$(ls -l "$home/data/captain-shared.md" | cut -c1-10)" "apply changed the shared file's mode"
   printf 'nautical\n' > "$home/config/po-theme"
   out=$(run_in "$code" "$home" apply 2>&1) || fail "nautical rollback failed: $out"
@@ -678,6 +688,28 @@ test_secondmate_older_block() {
   pass "a secondmate home reports an older bundled block and skips the comparison for a local primary theme"
 }
 
+test_digest_section_rows() {
+  local home out
+  home=$(new_home digest)
+  out=$(FM_HOME="$home" "$PT" persona operator) || fail "persona operator failed"
+  assert_contains "$out" "| ship (a change task) | deploy |
+| Captain's Call (the /bearings section) | Operator's Call |
+
+" "the call row does not close the role table"
+  assert_not_contains "$out" "Underway (the /bearings section)" "the block maps an unchanged section name"
+  derive "$home" digest '/^user_address = /s/.*/user_address = "Chief"/; s/^noop_reply = .*/noop_reply = "Chief, all systems nominal."/; s/^bad_news_example = .*/bad_news_example = "Chief, the build broke - ..."/'
+  printf '%s\n' 'str.digest.underway = "Live Ops"' 'str.digest.landed = "Recently Landed"' >> "$home/config/po-themes/digest.theme"
+  out=$(FM_HOME="$home" "$PT" persona digest) || fail "persona digest failed: $out"
+  assert_contains "$out" "| Captain's Call (the /bearings section) | Chief's Call |
+| Underway (the /bearings section) | Live Ops |
+
+" "the block does not map a derived call and a given section name in order"
+  assert_not_contains "$out" "Recently Landed (the /bearings section)" "the block maps a section name set to its nautical value"
+  assert_not_contains "$out" "Charted Next (the /bearings section)" "the block maps an absent section name"
+  assert_equals "" "$(FM_HOME="$home" "$PT" persona nautical)" "nautical printed a persona block"
+  pass "the Persona block maps each changed digest section name, given or derived, and only those"
+}
+
 test_terms_and_resolve() {
   local home
   home=$(new_home terms)
@@ -709,6 +741,7 @@ test_persona_aliases_primary_only
 test_aliases_keep_tree_clean
 test_verify_reports_drift
 test_secondmate_older_block
+test_digest_section_rows
 test_terms_and_resolve
 
 echo "all po-theme tests passed"

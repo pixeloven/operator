@@ -8,7 +8,7 @@ This page owns the theme format, the validation rules, the boundary between them
 
 | Surface | How it is themed |
 |---|---|
-| Chat: self-name, the user's address word, role nouns, seasoning, the exact no-op reply | a Persona block in the primary home's `data/captain-shared.md`, which every session-start digest prints and every second mate inherits read-only, plus a two-line headline at the head of the digest |
+| Chat: self-name, the user's address word, role nouns, seasoning, the exact no-op reply, and the `/bearings` digest section names | a Persona block in the primary home's `data/captain-shared.md`, which every session-start digest prints and every second mate inherits read-only, plus a two-line headline at the head of the digest |
 | Worker prose a person reads, such as scout reports | one vocabulary line in the worker launch role contract |
 | The intent-address guard for no-mistakes | also refuses the theme's vocative, so a theme never weakens it; the vocative comes from the applied Persona block, so a selection broken after `apply` does not switch the guard off |
 | Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude`; primary home only |
@@ -56,7 +56,13 @@ With Herdr project groups on, a task waiting on the user shows the theme's `str.
 The away-mode wedge alarm's macOS and herdr notifications carry the theme's `str.alert.wedge_title`, `operator: away-mode escalations WEDGED` under the operator theme.
 Nothing matches either string, so a switch needs no relabel.
 
-A themed home spends about 1,150 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.
+### Digest section names
+
+The `str.digest.*` strings name the four `/bearings` digest sections the agent copies into chat: `Captain's Call`, `Underway`, `Recently Landed`, and `Charted Next` under nautical.
+The Persona block adds one table row for each name the theme changes, such as `Captain's Call (the /bearings section)` mapped to `Operator's Call` under the operator theme, so a themed chat heading survives a compaction.
+The skill text and the board payload keys, such as `captains_call`, stay canonical.
+
+A themed home spends about 1,290 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.
 
 ## Theme format
 
@@ -79,6 +85,7 @@ The `label.*` and `str.*` keys are the exception: they are optional, allowed onl
 | `avoid.<word>` | for a theme word upstream already uses with another meaning, the plain words to use in chat for that other meaning |
 | `label.primary`, `label.submate`, `label.afk` | the primary home's workspace label, the prefix of a second mate's `<label>-<id>`, and the away-mode daemon workspace; the defaults are `self` and `submate` lowercased with spaces as hyphens, and `<label.primary>-afk-daemon` |
 | `str.sidebar.needs`, `str.alert.wedge_title` | the herdr group state of a task waiting on the user, and the away-mode wedge-alarm notification title; the defaults are `needs-` and `user` lowercased with spaces as hyphens, and `<product>: away-mode escalations WEDGED` |
+| `str.digest.call`, `str.digest.underway`, `str.digest.landed`, `str.digest.charted` | the `/bearings` digest section names; the defaults are `<user_address>'s Call`, `Underway`, `Recently Landed`, and `Charted Next` |
 
 ## Validation
 
@@ -92,7 +99,7 @@ The `label.*` and `str.*` keys are the exception: they are optional, allowed onl
 - two roles sharing a term, a role taking another role's nautical word, or a role named after a status verb, harness, or Relay;
 - an alias that names no upstream skill, shadows an existing skill, or repeats;
 - a label, given or derived, that is not 2-24 lowercase letters, digits, or hyphens starting and ending with a letter or digit, starts with `fm-`, makes the primary and second-mate labels equal or prefix each other or the other role's nautical label, or makes the away-daemon label equal a home label, read as a second-mate label, or prefix a home label;
-- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, or a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`).
+- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`), or a digest section name that is not a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes starting with a letter or digit, or repeats another section name.
 
 `validate` also counts each role word's existing uses in the upstream text.
 A user or self word that already appears with another meaning is an error until the theme declares `avoid.<word>`; any other role word is a warning.

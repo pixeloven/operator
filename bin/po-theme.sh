@@ -6,11 +6,11 @@
 # words: what the agents call themselves and the user in chat, their seasoning,
 # the fixed no-op reply, the vocabulary workers use in prose a person reads, the
 # slash commands a person types, the herdr and Paseo workspace labels, and the
-# registered display strings (the herdr sidebar state and the wedge-alarm
-# title). It
-# never renames an identifier (script, path, environment variable, skill
-# directory, status verb, or a brief heading that code parses) and never changes
-# what a rule means.
+# registered display strings (the herdr sidebar state, the wedge-alarm title,
+# and the /bearings digest section names the Persona block maps). It never
+# renames an identifier (script, path, environment variable, skill directory,
+# status verb, board payload key, or a brief heading that code parses) and never
+# changes what a rule means.
 #
 # Theme files are a strict TOML subset: one `key = "value"` per line, `#`
 # comments, no tables, no escapes, so they parse with awk under Bash 3.2.
@@ -298,24 +298,30 @@ resolve_active() {
 
 # strs_of <kv>: "<key><TAB><string>" for every registered str.* key, using the
 # derived default for an absent key: the needs state is "needs-" and the user
-# word lowercased with spaces as hyphens, and the wedge title opens with the
-# product word.
+# word lowercased with spaces as hyphens, the wedge title opens with the
+# product word, the digest's call section is the address word's "<Address>'s
+# Call", and the other digest sections keep their nautical names.
 strs_of() {
   awk -F '\t' '
+    function d(k, def) { return (k in v) ? v[k] : def }
     { v[$1] = $2 }
     END {
       u = tolower(v["user"]); gsub(/ /, "-", u)
-      sn = ("str.sidebar.needs" in v) ? v["str.sidebar.needs"] : "needs-" u
-      wt = ("str.alert.wedge_title" in v) ? v["str.alert.wedge_title"] : v["product"] ": away-mode escalations WEDGED"
-      printf "str.sidebar.needs\t%s\nstr.alert.wedge_title\t%s\n", sn, wt
+      printf "str.sidebar.needs\t%s\n", d("str.sidebar.needs", "needs-" u)
+      printf "str.alert.wedge_title\t%s\n", d("str.alert.wedge_title", v["product"] ": away-mode escalations WEDGED")
+      printf "str.digest.call\t%s\n", d("str.digest.call", v["user_address"] "\047s Call")
+      printf "str.digest.underway\t%s\n", d("str.digest.underway", "Underway")
+      printf "str.digest.landed\t%s\n", d("str.digest.landed", "Recently Landed")
+      printf "str.digest.charted\t%s\n", d("str.digest.charted", "Charted Next")
     }
   ' "$1"
 }
 
 # check_strs <kv>: ADR-0020 decision 8 for every str.* string, given or
 # derived: at most 80 characters, no architectural token (a status verb,
-# FIRSTMATE_OP, a brief heading, or an fm- prefix), and a sidebar state that is
-# a herdr token value distinct from the other group states.
+# FIRSTMATE_OP, a brief heading, or an fm- prefix), a sidebar state that is
+# a herdr token value distinct from the other group states, and digest section
+# names that are short headings, distinct from each other.
 check_strs() {
   strs_of "$1" | LC_ALL=C awk -F '\t' -v tokens="$STATUS_TOKENS" '
     function bad(m) { print "error: " m; failed = 1 }
@@ -329,6 +335,12 @@ check_strs() {
       if (k == "str.sidebar.needs") {
         if (v !~ /^[a-z0-9][a-z0-9-]*[a-z0-9]$/ || length(v) > 24) bad(k ": '"'"'" v "'"'"' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit")
         else if (v == "running" || v == "problem" || v == "done") bad(k ": '"'"'" v "'"'"' equals another herdr group state")
+      }
+      if (k ~ /^str\.digest\./) {
+        if (v !~ /^[A-Za-z0-9]/ || v ~ /[^A-Za-z0-9 '"'"'-]/ || v ~ /[ ]$/ || length(v) > 32) bad(k ": '"'"'" v "'"'"' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit")
+        lv = tolower(v)
+        if (lv in digest) bad(k " and " digest[lv] " share the section name '"'"'" v "'"'"'")
+        else digest[lv] = k
       }
     }
     END { exit failed }
@@ -478,6 +490,8 @@ persona() {  # <name> <kv> [local]
   local name=$1 kv=$2 origin=${3:-} k v seasoning
   [ "$name" = nautical ] && return 0
   t() { get "$kv" "$1"; }
+  parse "$BUNDLED/nautical.theme" > "$TMPD/persona-canon.kv" || die "bundled nautical theme is malformed"
+  strs_of "$kv" > "$TMPD/persona-strs"
   seasoning=$(t seasoning | sed 's/, /", "/g')
   printf '%s\n' "$START_MARK"
   printf '## Persona: %s\n\n' "$name"
@@ -492,7 +506,14 @@ persona() {  # <name> <kv> [local]
   printf '| second mate, secondmate | %s, %s |\n' "$(t submate)" "$(t submate_plural)"
   printf '| fleet | %s |\n' "$(t fleet)"
   printf '| scout (a report task) | %s |\n' "$(t scout_task)"
-  printf '| ship (a change task) | %s |\n\n' "$(t ship_task)"
+  printf '| ship (a change task) | %s |\n' "$(t ship_task)"
+  # Digest section names the agent copies into chat (/bearings), one row per
+  # name the theme changes.
+  for k in str.digest.call str.digest.underway str.digest.landed str.digest.charted; do
+    v=$(get "$TMPD/persona-strs" "$k")
+    [ "$v" = "$(get "$TMPD/persona-canon.kv" "$k")" ] || printf '| %s (the /bearings section) | %s |\n' "$(get "$TMPD/persona-canon.kv" "$k")" "$v"
+  done
+  printf '\n'
   printf -- '- Wherever AGENTS.md or a skill requires or models addressing the captain, including example replies that open with "Captain,", address the user as "%s," instead, capitalized at the start of a chat line; every limit on that address, including chat only and never in commits, PRs, briefs, code, or comments, applies unchanged.\n' "$(t user_address)"
   printf -- '- Role words are common nouns: write them lowercase except where a sentence starts; only the address word is capitalized, at the start of a chat line.\n'
   printf -- '- The optional seasoning words are "%s", under the same fit-only, never-for-bad-news limits as the nautical ones they replace.\n' "$seasoning"
@@ -754,6 +775,7 @@ anchors() {
   while IFS="$TAB" read -r k v; do
     case "$k" in
       schema|name|description|*_plural|avoid.*|label.*) ;;
+      str.digest.*) chk .agents/skills/bearings/SKILL.md "**$v**" ;;
       str.*)
         registry_rows | awk -F '\t' -v k="$k" -v v="$v" '$1 == k && index($6, v) { found = 1 } END { exit !found }' \
           || { printf 'anchor missing: nautical %s is not in the upstream line of any registered %s hook\n' "$k" "$k"; miss=1; } ;;
