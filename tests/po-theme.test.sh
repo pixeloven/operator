@@ -34,6 +34,8 @@
 #     unresolvable selection, gains exactly one vocabulary paragraph before the
 #     away tail under a theme, and the branch system prompt
 #     (bin/fm-branch-prompt.sh) stays byte-identical across themes
+#   - one long-lived host runs po-theme.sh wake-line once per theme selection,
+#     never under nautical, and again only when the selection changes
 #
 # Fixture code roots are throwaway git repositories: apply writes alias skills
 # and .git/info/exclude under the code root of the script it runs, so no case
@@ -541,6 +543,46 @@ test_wake_prompt_tail() {
   pass "the branch wake prompt is upstream under nautical, gains one vocabulary paragraph under a theme, and the system prompt stays byte-identical"
 }
 
+# One long-lived host (the Pi branch) builds many wake prompts: wake-line runs
+# once per theme selection, never under nautical, and again only when the
+# selection or its theme file changes.
+test_wake_vocabulary_memo() {
+  local home code log out
+  command -v node >/dev/null 2>&1 || { echo "skip: node absent (wake vocabulary memo)"; return 0; }
+  home=$(new_home wake-memo)
+  code="$TMP_ROOT/wake-memo/code"
+  log="$TMP_ROOT/wake-memo/spawns"
+  mkdir -p "$code/bin" "$code/.pi/extensions"
+  cp -R "$ROOT/.pi/extensions/lib" "$code/.pi/extensions/"
+  cp -R "$ROOT/.agents" "$code/"
+  printf '#!/usr/bin/env bash\necho "$*" >> %q\nexec %q "$@"\n' "$log" "$ROOT/bin/po-theme.sh" > "$code/bin/po-theme.sh"
+  chmod +x "$code/bin/po-theme.sh"
+  : > "$log"
+  # shellcheck disable=SC2016  # the template literals belong to the node script.
+  out=$(FM_HOME="$home" SPAWNS="$log" node --input-type=module -e '
+    const { readFileSync, writeFileSync, copyFileSync, rmSync } = await import("node:fs");
+    const [module, home, operator] = process.argv.slice(1);
+    const dispatch = await import(module);
+    const spawns = () => readFileSync(process.env.SPAWNS, "utf8").split("\n").filter(Boolean).length;
+    const step = (label) => { const prompt = dispatch.branchWakePrompt("signal: fm-task-1 done", "fm_branch_report", ""); const words = /captain "([^"]*)"/.exec(prompt); console.log(`${label} spawns=${spawns()} captain=${words ? words[1] : "-"}`); };
+    step("nautical"); step("nautical-again");
+    writeFileSync(`${home}/config/po-theme`, "operator\n");
+    step("operator"); step("operator-again");
+    writeFileSync(`${home}/config/po-themes/operator.theme`, readFileSync(operator, "utf8").replace(/^user = .*$/m, "user = \"skipper\""));
+    step("shadowed"); step("shadowed-again");
+    rmSync(`${home}/config/po-themes/operator.theme`); writeFileSync(`${home}/config/po-theme`, "nautical\n");
+    step("back-to-nautical");
+  ' "file://$code/.pi/extensions/lib/fm-branch-dispatch.ts" "$home" "$ROOT/.agents/skills/po-theme/themes/operator.theme") \
+    || fail "the wake vocabulary memo script failed"
+  assert_equals "$(printf '%s\n' \
+    'nautical spawns=0 captain=-' 'nautical-again spawns=0 captain=-' \
+    'operator spawns=1 captain=operator' 'operator-again spawns=1 captain=operator' \
+    'shadowed spawns=2 captain=skipper' 'shadowed-again spawns=2 captain=skipper' \
+    'back-to-nautical spawns=2 captain=-')" "$out" "wake-line did not run exactly once per theme selection"
+  assert_equals "wake-line" "$(sort -u "$log")" "the memo ran a po-theme command other than wake-line"
+  pass "wake-line runs once per theme selection, never under nautical, and again when the selection changes"
+}
+
 test_secondmate_home() {
   local code primary mate out
   code=$(new_code secondmate)
@@ -771,6 +813,7 @@ test_headline
 test_intent_address_check
 test_worker_role_contract
 test_wake_prompt_tail
+test_wake_vocabulary_memo
 test_secondmate_home
 test_address_guard_survives_broken_selection
 test_persona_aliases_primary_only
