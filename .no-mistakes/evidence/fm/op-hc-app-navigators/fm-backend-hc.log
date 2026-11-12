@@ -28,4 +28,4 @@ ok - hc: container_ensure refuses a misnamed, old, or wrong-generation binary
 ok - hc: send_text_submit proves the turn through send --wait and never forces a blocked terminal
 ok - hc: send text is -- delimited, and FM_HC_BIN/FM_HC_SOCKET pin the call
 FM_TEST_COMPLETE
-exit=0
+EXIT=0

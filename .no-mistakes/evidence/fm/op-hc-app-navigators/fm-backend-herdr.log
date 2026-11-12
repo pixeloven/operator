@@ -114,9 +114,9 @@ ok - herdr presentation cleanup: an ambiguous workspace layout falls back to the
 ok - herdr presentation cleanup: a failed repositioning move falls back to the plain close with a warning
 ok - herdr presentation cleanup: a pane with a live foreground process falls back to the plain close
 ok - herdr presentation cleanup: a transient prompt helper settles into the pane-death path instead of the plain close
-tests/fm-backend-herdr.test.sh: line 3078: 2627148 Killed                  bash -c 'trap "" HUP; sleep 300'
+tests/fm-backend-herdr.test.sh: line 3078: 661948 Killed                  bash -c 'trap "" HUP; sleep 300'
 ok - herdr presentation cleanup: a SIGHUP-surviving shell is escalated to SIGKILL before giving up
-tests/fm-backend-herdr.test.sh: line 3116: 2628098 Killed                  bash -c 'trap "" HUP; sleep 300'
+tests/fm-backend-herdr.test.sh: line 3116: 663041 Killed                  bash -c 'trap "" HUP; sleep 300'
 ok - herdr presentation cleanup: a failed pane-death close falls back to the plain close
 ok - herdr presentation cleanup: the exact-tab restore remains the backstop behind the pane-death close
 ok - herdr presentation cleanup: SIGKILL never reaches a pid the exact pane no longer owns
@@ -257,4 +257,4 @@ ok - fm_backend_herdr_wait_transition: streamed working clears the marker, idle/
 ok - fm_backend_herdr_wait_transition: a reader/subscribe failure falls back to polling (rc 2)
 ok - fm_backend_herdr_wait_transition: Bash 3.2-safe bad-ack path closes fd 9 and removes its FIFO
 ok - fm_backend_herdr_wait_transition: stock macOS Bash clean timeout closes fd 9 and returns 1
-exit=0
+EXIT=0

@@ -62,4 +62,4 @@ ok - fm_backend_zellij_send_text_submit: reports 'send-failed' when the target p
 ok - fm-peek/fm-send: explicit metadata-matched targets use the recorded zellij backend
 ok - fm-peek: fm-id zellij targets verify the owning tab label before capture
 ok - fm-send: fm-id zellij targets reject pane ids whose tab label no longer matches
-exit=0
+EXIT=0

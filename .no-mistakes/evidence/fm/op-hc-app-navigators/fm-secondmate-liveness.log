@@ -30,4 +30,4 @@ ok - full probe: remote backend drift is reported, never migrated
 ok - full probe: rex readiness gaps and unreachable hosts stay explicit
 ok - full probe: a record without remote_backend stays a herdr route
 # all fm-secondmate-liveness tests passed
-exit=0
+EXIT=0
