@@ -347,7 +347,7 @@ pr_check_cleanup() {
   fi
 }
 trap pr_check_cleanup EXIT
-trap 'exit 1' HUP INT TERM
+fm_trap_exit 1 HUP INT TERM
 fm_pr_poll_prepare "$STATE" "$ID" "$PROVIDER" "$URL" "$HOST" "$PROJECT_PATH" "$NUMBER" "$SCRIPT_DIR/fm-pr-poll.sh" \
   || { echo "error: could not prepare PR poll" >&2; exit 1; }
 

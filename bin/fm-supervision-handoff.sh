@@ -91,7 +91,7 @@ cleanup() {
   [ "$(cut -f1 "$OWNER" 2>/dev/null)" != "$$" ] || rm -f "$OWNER"
 }
 trap cleanup EXIT
-trap 'exit 0' TERM INT
+fm_trap_exit 0 TERM INT
 
 session_owned() {
   [ "$(cat "$STATE/.lock" 2>/dev/null)" = "$SESSION" ] \
