@@ -81,8 +81,8 @@ function wakeVocabularyTail(): string {
   const selection = (() => { try { return readFileSync(join(config, "po-theme"), "utf8"); } catch { return ""; } })(), name = selection.split("\n")[0].replace(/\s/g, "");
   const shared = join(env.FM_DATA_OVERRIDE || join(home, "data"), "captain-shared.md"), mate = stamp(join(home, ".fm-secondmate-home")) !== "-";
   const key = mate ? ["mate", home, shared, stamp(shared)].join("\0") : name === "" || name === "nautical" ? "" : [config, selection, stamp(join(config, "po-theme")), stamp(join(config, "po-themes", `${name}.theme`)), stamp(join(root, ".agents", "skills", "po-theme", "themes", `${name}.theme`))].join("\0");
-  if (key && key !== wakeVocabulary.key) { try { const line = execFileSync(join(root, "bin", "po-theme.sh"), ["wake-line"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim(); wakeVocabulary = { key, tail: line ? `\n\n${line}` : "" }; } catch { wakeVocabulary = { key, tail: "" }; } }
-  return key ? wakeVocabulary.tail : "";
+  if (key && key !== wakeVocabulary.key) { try { const line = execFileSync(join(root, "bin", "po-theme.sh"), ["wake-line"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim(); wakeVocabulary = { key, tail: line ? `\n\n${line}` : "" }; } catch (error) { if (typeof (error as { status?: unknown }).status === "number" && !(error as { signal?: unknown }).signal) wakeVocabulary = { key, tail: "" }; } }
+  return key && key === wakeVocabulary.key ? wakeVocabulary.tail : "";
 }
 
 // `reportSurface` names how this host's branch records an outcome: the

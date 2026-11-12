@@ -35,7 +35,8 @@
 #     away tail under a theme, and the branch system prompt
 #     (bin/fm-branch-prompt.sh) stays byte-identical across themes
 #   - one long-lived host runs po-theme.sh wake-line once per theme selection,
-#     never under nautical, and again only when the selection changes
+#     never under nautical, and again only when the selection changes or the
+#     last run was killed rather than exiting
 #
 # Fixture code roots are throwaway git repositories: apply writes alias skills
 # and .git/info/exclude under the code root of the script it runs, so no case
@@ -547,19 +548,20 @@ test_wake_prompt_tail() {
 # once per theme selection, never under nautical, and again only when the
 # selection or its theme file changes.
 test_wake_vocabulary_memo() {
-  local home code log out
+  local home code log kill out
   command -v node >/dev/null 2>&1 || { echo "skip: node absent (wake vocabulary memo)"; return 0; }
   home=$(new_home wake-memo)
   code="$TMP_ROOT/wake-memo/code"
   log="$TMP_ROOT/wake-memo/spawns"
+  kill="$TMP_ROOT/wake-memo/kill-next"
   mkdir -p "$code/bin" "$code/.pi/extensions"
   cp -R "$ROOT/.pi/extensions/lib" "$code/.pi/extensions/"
   cp -R "$ROOT/.agents" "$code/"
-  printf '#!/usr/bin/env bash\necho "$*" >> %q\nexec %q "$@"\n' "$log" "$ROOT/bin/po-theme.sh" > "$code/bin/po-theme.sh"
+  printf '#!/usr/bin/env bash\necho "$*" >> %q\n[ ! -e %q ] || { rm -f %q; kill -TERM $$; }\nexec %q "$@"\n' "$log" "$kill" "$kill" "$ROOT/bin/po-theme.sh" > "$code/bin/po-theme.sh"
   chmod +x "$code/bin/po-theme.sh"
   : > "$log"
   # shellcheck disable=SC2016  # the template literals belong to the node script.
-  out=$(FM_HOME="$home" SPAWNS="$log" node --input-type=module -e '
+  out=$(FM_HOME="$home" SPAWNS="$log" KILL_NEXT="$kill" node --input-type=module -e '
     const { readFileSync, writeFileSync, copyFileSync, rmSync } = await import("node:fs");
     const [module, home, operator] = process.argv.slice(1);
     const dispatch = await import(module);
@@ -570,7 +572,11 @@ test_wake_vocabulary_memo() {
     step("operator"); step("operator-again");
     writeFileSync(`${home}/config/po-themes/operator.theme`, readFileSync(operator, "utf8").replace(/^user = .*$/m, "user = \"skipper\""));
     step("shadowed"); step("shadowed-again");
-    rmSync(`${home}/config/po-themes/operator.theme`); writeFileSync(`${home}/config/po-theme`, "nautical\n");
+    rmSync(`${home}/config/po-themes/operator.theme`); writeFileSync(process.env.KILL_NEXT, "");
+    step("killed"); step("retried"); step("retried-again");
+    writeFileSync(`${home}/config/po-theme`, "no-such-theme\n");
+    step("unresolvable"); step("unresolvable-again");
+    writeFileSync(`${home}/config/po-theme`, "nautical\n");
     step("back-to-nautical");
   ' "file://$code/.pi/extensions/lib/fm-branch-dispatch.ts" "$home" "$ROOT/.agents/skills/po-theme/themes/operator.theme") \
     || fail "the wake vocabulary memo script failed"
@@ -578,9 +584,11 @@ test_wake_vocabulary_memo() {
     'nautical spawns=0 captain=-' 'nautical-again spawns=0 captain=-' \
     'operator spawns=1 captain=operator' 'operator-again spawns=1 captain=operator' \
     'shadowed spawns=2 captain=skipper' 'shadowed-again spawns=2 captain=skipper' \
-    'back-to-nautical spawns=2 captain=-')" "$out" "wake-line did not run exactly once per theme selection"
+    'killed spawns=3 captain=-' 'retried spawns=4 captain=operator' 'retried-again spawns=4 captain=operator' \
+    'unresolvable spawns=5 captain=-' 'unresolvable-again spawns=5 captain=-' \
+    'back-to-nautical spawns=5 captain=-')" "$out" "wake-line did not run exactly once per theme selection, or a killed run was remembered"
   assert_equals "wake-line" "$(sort -u "$log")" "the memo ran a po-theme command other than wake-line"
-  pass "wake-line runs once per theme selection, never under nautical, and again when the selection changes"
+  pass "wake-line runs once per theme selection, never under nautical, again when the selection changes, and again after a killed run"
 }
 
 test_secondmate_home() {
