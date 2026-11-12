@@ -630,6 +630,7 @@ apply() {
     cat "$TMPD/findings" >&2
     die "theme $ACTIVE_NAME failed validation"
   fi
+  pd_resolve_fresh "$(pd_selected)" "$TMPD/pd.apply.css"
   persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/block"
   if [ -s "$TMPD/block" ]; then
     mkdir -p "$DATA"

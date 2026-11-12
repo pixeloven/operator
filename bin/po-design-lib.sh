@@ -139,10 +139,20 @@ pd_css_check() {
     END {
       # strip comments
       out = ""
-      while ((i = index(s, "/*")) > 0) {
-        out = out substr(s, 1, i - 1); s = substr(s, i + 2)
-        j = index(s, "*/"); if (j == 0) { err("unterminated comment"); s = ""; break }
-        s = substr(s, j + 2)
+      while (match(s, "[\"/" sq "]")) {
+        c = substr(s, RSTART, 1)
+        if (c == "/" && substr(s, RSTART + 1, 1) == "*") {
+          out = out substr(s, 1, RSTART - 1); s = substr(s, RSTART + 2)
+          j = index(s, "*/"); if (j == 0) { err("unterminated comment"); s = ""; break }
+          s = substr(s, j + 2)
+          continue
+        }
+        out = out substr(s, 1, RSTART); s = substr(s, RSTART + 1)
+        if (c == "/") continue
+        j = index(s, c); nl = index(s, "\n")
+        if (j == 0 || (nl > 0 && nl < j)) j = nl
+        if (j == 0) j = length(s)
+        out = out substr(s, 1, j); s = substr(s, j + 1)
       }
       s = out s
       if (s ~ /[\200-\377]/) err("non-ASCII text outside comments")
@@ -341,11 +351,11 @@ pd_write_marker() {
   fi
 }
 
-# pd_apply: the design-system half of `apply` (primary home only).
+# pd_apply: the design-system half of `apply` (primary home only); apply has
+# already resolved the selection into $TMPD/pd.apply.css before any write.
 pd_apply() {
   local name sha
   name=$(pd_selected)
-  pd_resolve_fresh "$name" "$TMPD/pd.css"
   if [ "$name" = "$PD_DEFAULT" ]; then
     : > "$TMPD/pd.line"
     pd_write_marker "$TMPD/pd.line"
@@ -353,9 +363,9 @@ pd_apply() {
     echo "design: $PD_DEFAULT - nothing to write"
     return 0
   fi
-  sha=$(pd_sha256 "$TMPD/pd.css")
+  sha=$(pd_sha256 "$TMPD/pd.apply.css")
   mkdir -p "$PD_STATE"
-  cp "$TMPD/pd.css" "$PD_STATE/po-ds.css.$$"
+  cp "$TMPD/pd.apply.css" "$PD_STATE/po-ds.css.$$"
   mv "$PD_STATE/po-ds.css.$$" "$PD_STATE/po-ds.css"
   printf 'name\t%s\nsource\t%s\nsha256\t%s\n' "$name" "$PD_SOURCE" "$sha" > "$PD_STATE/meta.$$"
   mv "$PD_STATE/meta.$$" "$PD_STATE/meta"
