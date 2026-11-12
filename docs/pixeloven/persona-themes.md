@@ -59,7 +59,7 @@ Nothing matches either string, so a switch needs no relabel.
 ### Digest section names
 
 The `str.digest.*` strings name the four `/bearings` digest sections the agent copies into chat: `Captain's Call`, `Underway`, `Recently Landed`, and `Charted Next` under nautical.
-The Persona block adds one table row for each name the theme changes, such as `Captain's Call (the /bearings section)` mapped to `Operator's Call` under the operator theme, so a themed chat heading survives a compaction.
+The Persona block adds one table row for each name the theme changes, such as `Captain's Call (the /bearings section)` mapped to the theme's `{User}'s Call` heading built from its user word, so a themed chat heading survives a compaction.
 The skill text and the board payload keys, such as `captains_call`, stay canonical.
 
 A themed home spends about 1,290 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.
