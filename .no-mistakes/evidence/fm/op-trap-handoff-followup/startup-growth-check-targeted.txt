@@ -1,0 +1,6 @@
+### bash 3.2.57(1)-release
+ok - fm-startup-growth-check
+rc=
+### bash 5.2.0(1)-release
+ok - fm-startup-growth-check
+rc=

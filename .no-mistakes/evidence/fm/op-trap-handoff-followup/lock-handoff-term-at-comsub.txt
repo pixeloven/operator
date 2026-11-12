@@ -1,0 +1,15 @@
+=== BASE 2bab0802 / bash 3.2.57(1)-release ===
+exit=143
+lock: released
+=== BASE 2bab0802 / bash 5.2.0(1)-release ===
+environment: trap: line 2: unexpected EOF while looking for matching `)'
+environment: -c: line 6: unexpected EOF while looking for matching `)'
+handoff returned 1 after TERM
+exit=0
+lock: STILL HELD
+=== CHANGE 0a519848 / bash 3.2.57(1)-release ===
+exit=143
+lock: released
+=== CHANGE 0a519848 / bash 5.2.0(1)-release ===
+exit=143
+lock: released

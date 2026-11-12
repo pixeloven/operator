@@ -1,0 +1,5 @@
+ALL TESTS PASSED
+rc=0
+ok - the reaper stops an abandoned worker's whole tree
+ok - the reaper is idempotent
+rc=0

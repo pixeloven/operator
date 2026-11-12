@@ -1,0 +1,4 @@
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.0(1)-release)
+ok - fm_trap_exit --run runs its action and exits on a signal pending at a $() scan (bash 5.2.0(1)-release)
+ok - fm_trap_exit --run runs its action and exits on a plain signal (bash 5.2.0(1)-release)
+ok - lock handoff releases and exits on TERM pending at a $() scan (bash 5.2.0(1)-release)
