@@ -1,0 +1,7 @@
+design: pixeloven stylesheet written to $PRI/state/po-design/po-ds.css; marker written to $PRI/data/captain-shared.md
+$ (secondmate, local selection=firstmate) ds-resolve
+pixeloven inherited
+secondmate ds-css identical to primary's (pixeloven)
+$ verify
+verify: ok (nautical, inherited)
+design: ok (pixeloven, inherited)
