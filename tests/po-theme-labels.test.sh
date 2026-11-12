@@ -580,10 +580,11 @@ test_registry_gates() {
 test_anchors_name_a_lost_hook() {
   local code out s
   code="$TMP_ROOT/anchors/code"
-  mkdir -p "$code/bin/backends" "$code/.agents/skills" "$code/docs/pixeloven"
+  mkdir -p "$code/bin/backends" "$code/.agents/skills" "$code/docs/pixeloven" "$code/.pi/extensions/lib"
   cp "$PT" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$ROOT/bin/fm-afk-launch.sh" \
     "$ROOT/bin/fm-herdr-groups.sh" "$ROOT/bin/fm-supervise-daemon.sh" "$ROOT/bin/fm-session-start.sh" "$code/bin/"
   cp "$ROOT/bin/backends/herdr.sh" "$ROOT/bin/backends/paseo.sh" "$code/bin/backends/"
+  cp "$ROOT/.pi/extensions/lib/fm-branch-dispatch.ts" "$code/.pi/extensions/lib/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"
   for s in afk ahoy bearings lavish-url quiet stow updatefirstmate; do
