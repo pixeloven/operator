@@ -1,0 +1,9 @@
+ok - both bundled design systems validate and compose imports, tokens, adapter, and components in order
+ok - the Firstmate Default keeps the board's values and fills, and its text and status inks reach 4.5:1 in light and dark
+ok - the PixelOven adapter supplies every color, radius, type, and shadow role by --pxo-* reference
+ok - a home's own design system is validated as data, with a pinned vendored copy, and cannot shadow firstmate
+ok - default writes nothing; a selection writes the stylesheet and one marker beside the Persona block, independent of the theme
+ok - verify reports a hand-edited copy, a hand-edited marker, and a changed source; ds-css and apply refuse
+ok - a secondmate resolves the inherited design system, ignores a local selection, and reports a missing custom one
+ok - status-chip labels follow the theme's words and only the theme's
+all po-design tests passed

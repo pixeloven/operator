@@ -1,0 +1,32 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>DS firstmate light</title>
+<link rel="stylesheet" href="po-ds.css"></head>
+<body class="po-page" style="padding:24px;width:760px">
+<h1>Design system: firstmate (light)</h1>
+<div class="po-card" style="margin-bottom:16px"><h3>Status chips (labels from ds-labels)</h3><p><span class="po-chip" data-status="working">working</span> <span class="po-chip" data-status="needs-decision">captain's call</span> <span class="po-chip" data-status="blocked">blocked</span> <span class="po-chip" data-status="paused">paused</span> <span class="po-chip" data-status="done">done</span> <span class="po-chip" data-status="failed">failed</span> </p>
+<p><span class="po-chip" data-kind="recommended">recommended</span> <span class="po-chip" data-kind="risk">risk: low</span></p></div>
+<div class="po-card" style="margin-bottom:16px">
+ <div class="po-title"><span class="po-chip" data-status="needs-decision">captain's call</span><h3>Retry policy for flaky pushes</h3></div>
+ <dl class="po-rows"><dt>about</dt><dd>Push gate fails intermittently on runner timeouts.</dd><dt>decide</dt><dd>How many automatic retries before paging.</dd></dl>
+ <fieldset class="po-options">
+  <label class="po-option"><input type="radio" name="q1" checked><b>Two retries</b> <span class="po-chip" data-kind="recommended">recommended</span><small>Covers observed variance without masking real failures.</small></label>
+  <label class="po-option"><input type="radio" name="q1"><b>No retries</b><small>Every flake pages.</small></label>
+ </fieldset>
+ <div class="po-foot"><button class="po-button" data-lavish-question="q1">Queue answer</button><span class="po-note">Queued once.</span></div>
+</div>
+<div class="po-card" style="margin-bottom:16px"><h3>Checklist</h3><ul class="po-checklist">
+ <li data-state="done"><span class="po-mark">&#10003;</span><code>DS1</code><span>Role contract <a href="#">evidence</a></span></li>
+ <li data-state="pending"><span class="po-mark">&#8226;</span><code>DS6</code><span>Board injection (S5)</span></li>
+ <li data-state="blocked"><span class="po-mark">!</span><code>X1</code><span>Blocked example</span></li></ul></div>
+<div class="po-card"><h3>Review</h3><div class="po-review">
+ <div class="po-review-row"><code>R1</code><div><b>Vendor tokens 0.6.0</b><p>Pinned by checksum.</p><div class="po-meta"><span class="po-chip" data-kind="risk">risk: low</span><span class="po-chip" data-kind="recommended">approve</span>
+  <span class="po-choice"><label><input type="radio" name="r1" value="approve" checked>approve</label><label><input type="radio" name="r1" value="decline">decline</label></span></div></div></div>
+ <div class="po-review-row"><code>R2</code><div><b>Drop dark mode</b><p>Example decline.</p><div class="po-meta"><span class="po-chip" data-kind="risk">risk: high</span>
+  <span class="po-choice"><label><input type="radio" name="r2" value="approve">approve</label><label><input type="radio" name="r2" value="decline" checked>decline</label></span></div></div></div>
+</div></div>
+<pre id="contrast" style="font-size:11px"></pre>
+<script>
+function lum(c){const m=c.match(/[\d.]+/g).map(Number);const [r,g,b]=m.slice(0,3).map(v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)});return 0.2126*r+0.7152*g+0.0722*b}
+function bgOf(el){while(el){const b=getComputedStyle(el).backgroundColor;if(b&&!/rgba\(0, 0, 0, 0\)|transparent/.test(b))return b;el=el.parentElement}return 'rgb(255,255,255)'}
+let out=[];document.querySelectorAll('.po-card:first-of-type .po-chip, .po-rows dt, .po-option small, .po-button').forEach(el=>{const f=getComputedStyle(el).color,b=bgOf(el);const L1=lum(f),L2=lum(b);const r=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);out.push((r>=4.5?'PASS ':'FAIL ')+r.toFixed(2)+'  '+(el.dataset.status||el.dataset.kind||el.className||el.tagName)+'  '+f+' on '+b)});
+document.getElementById('contrast').textContent='computed contrast (text vs ground):\n'+out.join('\n');
+</script></body></html>

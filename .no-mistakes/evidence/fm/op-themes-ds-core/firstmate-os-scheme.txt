@@ -1,0 +1,2 @@
+--blink-settings=preferredColorScheme=1 -> body bg (no data-theme): rgb(246, 236, 211)
+--blink-settings=preferredColorScheme=0 -> body bg (no data-theme): rgb(20, 26, 44)

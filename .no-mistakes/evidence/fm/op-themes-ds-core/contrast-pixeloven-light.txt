@@ -1,0 +1,14 @@
+<pre id="contrast" style="font-size:11px">computed contrast (text vs ground):
+FAIL 4.31  working  rgb(115, 92, 193) on rgb(237, 231, 248)
+PASS 4.71  needs-decision  rgb(145, 100, 0) on rgb(248, 243, 231)
+FAIL 4.37  blocked  rgb(218, 0, 54) on rgb(248, 231, 235)
+PASS 7.05  paused  rgb(71, 75, 87) on rgb(230, 231, 235)
+PASS 4.78  done  rgb(0, 122, 110) on rgb(231, 248, 246)
+FAIL 4.37  failed  rgb(218, 0, 54) on rgb(248, 231, 235)
+PASS 5.32  recommended  rgb(255, 255, 255) on rgb(124, 60, 255)
+PASS 7.52  risk  rgb(71, 75, 87) on rgb(238, 238, 241)
+PASS 7.52  DT  rgb(71, 75, 87) on rgb(238, 238, 241)
+PASS 7.52  DT  rgb(71, 75, 87) on rgb(238, 238, 241)
+PASS 7.05  SMALL  rgb(71, 75, 87) on rgb(230, 231, 235)
+PASS 7.52  SMALL  rgb(71, 75, 87) on rgb(238, 238, 241)
+PASS 5.32  po-button  rgb(255, 255, 255) on rgb(124, 60, 255)</pre>

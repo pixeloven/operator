@@ -1,0 +1,5 @@
+export size:    44879
+<link rel=stylesheet> left: 0
+inline <style> blocks: 1
+contains vendored pxo tokens inline: 4
+contains po-design header: po-design: pixeloven (bundled)
