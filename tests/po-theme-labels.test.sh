@@ -548,7 +548,7 @@ fixture_repo() {
   local repo="$TMP_ROOT/$1" f
   mkdir -p "$repo/bin/backends" "$repo/.agents/skills" "$repo/docs/pixeloven"
   cp -R "$ROOT/.agents/skills/po-theme" "$repo/.agents/skills/"
-  cp "$PT" "$ROOT/bin/po-theme-lib.sh" "$repo/bin/"
+  cp "$PT" "$ROOT/bin/po-design-lib.sh" "$ROOT/bin/po-theme-lib.sh" "$repo/bin/"
   printf '%s\n' "$PIN" > "$repo/docs/pixeloven/upstream-pin"
   git init -q -b main "$repo"
   for f in $("$PT" registry files); do git -C "$ROOT" show "$PIN:$f" > "$repo/$f"; done
@@ -581,7 +581,7 @@ test_anchors_name_a_lost_hook() {
   local code out s
   code="$TMP_ROOT/anchors/code"
   mkdir -p "$code/bin/backends" "$code/.agents/skills" "$code/docs/pixeloven"
-  cp "$PT" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$ROOT/bin/fm-afk-launch.sh" \
+  cp "$PT" "$ROOT/bin/po-design-lib.sh" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$ROOT/bin/fm-afk-launch.sh" \
     "$ROOT/bin/fm-herdr-groups.sh" "$ROOT/bin/fm-supervise-daemon.sh" "$ROOT/bin/fm-session-start.sh" "$code/bin/"
   cp "$ROOT/bin/backends/herdr.sh" "$ROOT/bin/backends/paseo.sh" "$code/bin/backends/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"

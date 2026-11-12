@@ -85,6 +85,19 @@
 #   po-theme.sh registry check-diff <ref>
 #                                     gate A9: every line a registered upstream-owned
 #                                     file changes against <ref> is its registered hook
+#   po-theme.sh ds-resolve            print "<name> <origin>" for the design system in
+#                                     force (applied, inherited, or default)
+#   po-theme.sh ds-validate [D]       data checks for a design system (default: the
+#                                     selection); exit 1 on any error
+#   po-theme.sh ds-css [D]            print the resolved page stylesheet of the design
+#                                     system in force, or of D
+#   po-theme.sh ds-labels             "<status><TAB><label>" status-chip labels in the
+#                                     active theme's words
+#
+# The design-system layer (ADR-0031) is bin/po-design-lib.sh, whose header owns
+# its format and selection: config/po-design picks the look independently of
+# config/po-theme, `apply` resolves it into state/po-design/ and a marker line in
+# data/captain-shared.md, and `verify` and `headline` report its drift.
 #
 # The hook registry is .agents/skills/po-theme/surfaces.tsv: one tab-separated
 # row per hook line - key, class (T themed, D dual, - plumbing), file, owner
@@ -129,6 +142,9 @@ DENY_WORDS='merge approve approval override ignore instruction instructions forc
 ROLE_DENY_WORDS='merge approve approval override ignore instruction instructions discard delete yolo authority permission rule rules must never always sudo token secret password'
 
 die() { printf 'po-theme: %s\n' "$*" >&2; exit 1; }
+
+# shellcheck source=bin/po-design-lib.sh
+. "$SCRIPT_DIR/po-design-lib.sh"
 
 TMPD=$(mktemp -d "${TMPDIR:-/tmp}/po-theme.XXXXXX")
 trap 'rm -rf "$TMPD"' EXIT
@@ -614,6 +630,7 @@ apply() {
     cat "$TMPD/findings" >&2
     die "theme $ACTIVE_NAME failed validation"
   fi
+  pd_resolve_fresh "$(pd_selected)" "$TMPD/pd.apply.css"
   persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/block"
   if [ -s "$TMPD/block" ]; then
     mkdir -p "$DATA"
@@ -627,6 +644,7 @@ apply() {
   fi
   write_aliases "$ACTIVE_NAME" "$ACTIVE_KV"
   refresh
+  pd_apply
 }
 
 # labels_of <kv>: "<role><TAB><label>" for primary, submate, and afk, using the
@@ -692,6 +710,7 @@ verify() {
       fi
     fi
     [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME, inherited)"
+    pd_verify || drift=1
     return $drift
   fi
   persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/expected"
@@ -717,6 +736,7 @@ verify() {
     done < "$TMPD/want"
   fi
   [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME)"
+  pd_verify || drift=1
   return $drift
 }
 
@@ -728,7 +748,7 @@ verify() {
 headline() {
   local kv="$TMPD/headline.kv" nautical=0
   if active_is_nautical; then
-    [ -f "$SHARED" ] && grep -qxF "$START_MARK" "$SHARED" || return 0
+    { [ -f "$SHARED" ] && grep -qxF "$START_MARK" "$SHARED"; } || pd_active || return 0
     nautical=1
   fi
   block_of "$SHARED" > "$TMPD/headline.block"
@@ -740,7 +760,10 @@ headline() {
     printf 'The full Persona block is in %s, printed under CONTEXT below; if this output was cut off, read that file before your next reply.\n' "$SHARED"
   fi
   ( verify ) > "$TMPD/headline.verify" 2>/dev/null && return 0
-  grep -m 1 '^persona drift: ' "$TMPD/headline.verify" || echo "persona drift: rerun apply in the primary home"
+  if grep -v '^design ' "$TMPD/headline.verify" | grep -q 'drift'; then
+    grep -m 1 '^persona drift: ' "$TMPD/headline.verify" || echo "persona drift: rerun apply in the primary home"
+  fi
+  grep -m 1 '^design drift: ' "$TMPD/headline.verify" || true
 }
 
 anchors() {
@@ -1125,6 +1148,18 @@ case "$cmd" in
     printf 'Vocabulary for prose a person reads (reports, summaries): this home calls the captain "%s", firstmate "%s", crewmates "%s", the crew "%s", second mates "%s", the fleet "%s", ship tasks "%s", and scout tasks "%s"; identifiers and brief headings stay as written.\n' \
       "$(get "$kv" user)" "$(get "$kv" self)" "$(get "$kv" worker_plural)" "$(get "$kv" crew)" \
       "$(get "$kv" submate_plural)" "$(get "$kv" fleet)" "$(get "$kv" ship_task)" "$(get "$kv" scout_task)" ;;
+  ds-resolve)
+    pd_in_force
+    printf '%s %s\n' "$PD_NAME" "$PD_ORIGIN" ;;
+  ds-validate)
+    if [ $# -ge 1 ]; then n=$1; else n=$(pd_selected); fi
+    pd_validate "$n" || exit 1
+    echo "ds-validate: $n ok" ;;
+  ds-css)
+    if [ $# -ge 1 ]; then pd_css "$1"; else pd_css; fi ;;
+  ds-labels)
+    resolve_active
+    pd_labels ;;
   -h|--help|help|'') sed -n '2,/^set -eu$/p' "$0" | sed '$d; s/^# \{0,1\}//' ;;
   *) die "unknown command: $cmd" ;;
 esac
