@@ -22,6 +22,8 @@ This page owns the role contract's meaning, the format of a design system, its v
   The package has no spacing scale and its consumers use a 4px grid, so the adapter's spacing roles are that grid.
   It is dark by default and follows the operating system's light scheme unless the page's root sets `data-theme`.
   A version bump is a reviewed re-vendor: rebuild `tokens.css` from the release tag, replace it, and update every `vendored.*` key in the same change.
+  Known gap, to be fixed in the `pixeloven/design` tokens: in PixelOven's light scheme, `--status-info-ink` (`--pxo-accent-soft`) measures 4.31:1 on its soft ground, so the working chip is under 4.5:1, and `--status-danger-ink` (`--pxo-status-danger`) measures 4.37:1, so the blocked and failed chips are under 4.5:1.
+  No accent or status token in 0.6.0 reaches 4.5:1 on those grounds in both schemes, and the adapter may not define its own values, so the mapping stays until a token release closes the gap. PixelOven's dark scheme reaches 4.5:1 on every pair.
 
 ## Selecting a design system
 
@@ -58,7 +60,7 @@ Write every word on the page, including chip labels, in the active theme's words
 They are the Bearings board's own semantic names, so the board can later change look by having a design system re-supply its own names with no template change, plus these additions:
 
 - `--accent` and `--accent-ink`: an emphasis fill and the text that sits on it.
-- `--status-online|warn|danger|info-ink`: status text that reaches 4.5:1 on the card and on the status's soft ground, beside the fill (`--status-*`) and the soft ground (`--status-*-soft`).
+- `--status-online|warn|danger|info-ink`: status text, beside the fill (`--status-*`) and the soft ground (`--status-*-soft`). In the Firstmate Default every ink reaches 4.5:1 on the card and on its soft ground, in light and dark. PixelOven's light scheme falls short on the info and danger inks, a known gap listed under bundled design systems.
 - Shape roles: `--radius-card`, `--radius-chip`, `--radius-control`, `--card-shadow`, `--display-weight`, `--display-tracking`.
 - `--space-1` through `--space-6`: the spacing steps, 4px to 32px in both bundled design systems.
 
