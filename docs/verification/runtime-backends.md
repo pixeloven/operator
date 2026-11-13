@@ -3741,6 +3741,33 @@ ok - hc liveness: grok grok 1.0.41 (4220f3b224a6) [stable] classifies alive in h
 
 Teardown swept the session's serve/hold daemons plus the harness processes they held, and the fleet-state tripwire confirmed the recorded real-core file metadata inventory unchanged.
 
+### Hierarchy, wrapped shells, and space names
+
+Measured on 2026-11-13 with `hc 0.1.21` and `herdr-app 0.1.15` on Linux (Fedora Atomic host, kernel 7.3.3), with Firstmate inside a `distrobox` container whose app terminals run `distrobox enter <box>` as their program.
+Core writes ran only inside `bin/fm-hc-lab.sh` sessions; the person's own core and window were only read (`hc ls`, `hc get`, `herdr-app ls`, `herdr-app status`, `herdr-app commands`).
+These facts back the parent linkage, the folder probe, the identity folder comparison, and the space renames in [`hc-backend.md`](../hc-backend.md).
+
+| Probe | Result |
+| --- | --- |
+| `hc run --help` | Lists `--parent <PARENT>` (default: the terminal it is started from), `--no-parent`, `--no-notify`, and `--outlive-parent`. |
+| `hc get --json` of an app terminal running `distrobox enter <box>`, with a Firstmate agent inside | `argv` `["distrobox","enter","<box>"]`, launch `cwd` `/home/<user>/...`, and `foreground` `{"name":"distrobox","argv":["/usr/bin/sh","/usr/bin/distrobox","enter","<box>"],"cwd":"/var/home/<user>/..."}` while the agent inside worked elsewhere: the foreground is the host-side wrapper for good. |
+| Inside the container, `stat -c '%d:%i' /home/<user> /var/home/<user>` and `cd <each> && pwd -P` | One device and inode, but `pwd -P` printed each spelling as given, so a resolved-path string comparison calls them two directories. |
+| `tests/fm-backend-hc-appdetect-smoke.test.sh` from inside the container, before the identity comparison | The real spawn leased its copy and then refused: `worker started in '/var/home/<user>/.treehouse/<pool>/1/scratch-project', not its recorded worktree '/home/<user>/.treehouse/<pool>/1/scratch-project'`: the lab core reports folders in the host's spelling. |
+| `herdr-app ls` | Each space carries `id` (a terminal's `herdr.space` label value for a labeled terminal), `name`, `folder`, `machine`, `active`, and `tabs`, but no `named` flag; `herdr-app commands` describes `space.rename` as asking the person when no name is given and an empty name restoring the automatic name. |
+| `hc run` with no argv in a lab provisioned with the container's `SHELL=/usr/bin/zsh` | `spawn_failed`: `cannot start "/usr/bin/zsh"`; provisioning the lab with `SHELL=/bin/bash`, a shell the host also has, started the login shell. |
+
+`SHELL=/bin/bash tests/fm-backend-hc-appdetect-smoke.test.sh` then passed, with the worker's `parent` read back from the lab core:
+
+```text
+ok - app-terminal: spawn env claiming a herdr.space-labeled terminal auto-selects hc, notices, records backend_detect=app-terminal, labels the worker, and parents it to the launching terminal
+ok - app-window is not a signal: a live herdr-app.sock over a running spawn core keeps the default backend silently and records nothing
+ok - app-window is not a signal: a live window beside a session with no running core keeps the default silently and starts nothing
+ok - explicit: config/backend=hc wins over the app signals and records no detection provenance
+FM_TEST_COMPLETE
+```
+
+Not exercised: the Agents panel's visual nesting with live agents and a space rename in a running window, because both need the person's own window and core.
+
 ### Runtime auto-detection (Herdr app signals)
 
 Measured on 2026-11-01 inside a `bin/fm-hc-lab.sh` session (`fm-hclab-s3det-*`, hc 0.1.14) and against herdr-app 0.1.11 source plus its release binary, never against a running user app or core:

@@ -60,7 +60,12 @@ Away-mode supervisor discovery and hc refusal are owned by [Away-mode supervisor
 
 ## Task shape and metadata
 
-Each task is one hc terminal running the user's login shell in the project directory, started with `--no-parent --outlive-parent --no-notify` so it is independent of whichever hc terminal Firstmate itself runs in.
+Each task is one hc terminal running the user's login shell in the project directory, started with `--outlive-parent --no-notify` so it keeps running when its parent's program ends and hc never types notes into that parent.
+Its parent is the hc terminal the launching supervisor itself runs in, which is what the Herdr app's Agents panel nests sub-agents by: a navigator under the primary, and a worker under the home that spawned it.
+That terminal must be live on the same core as the new task, reached through a live `HC_TERMINAL_SOCKET` that is the session's own socket; otherwise the task starts with `--no-parent`.
+Its own space and tab labels keep it in its own pane rather than folded into the parent's tab.
+A crewmate or scout leases its Treehouse copy durably, as on Herdr, and the terminal's shell is then moved into it.
+The copy is never read off the terminal, because a terminal whose program wraps the real shell, such as `distrobox enter`, reports that host-side wrapper as its foreground for good, and the wrapper's folder never follows the shell inside.
 The terminal carries these labels:
 
 | Label | Value | Purpose |
@@ -92,17 +97,18 @@ An input, capture, or close that carries the task label refuses a terminal whose
 | Operation | hc command |
 | --- | --- |
 | Container ensure | `hc server status` plus the `hello` generation handshake over `hc connect` |
-| Create task | `hc run --bg --no-parent --outlive-parent --no-notify --cwd <project> --label ...` |
+| Create task | `hc run --bg --parent <supervisor terminal> --outlive-parent --no-notify --cwd <project> --label ...`, or `--no-parent` with no supervisor terminal on that core |
 | Capture | `hc read --lines <n>` |
 | Visible capture | `hc read --lines 0` |
 | Send a line and submit | `hc send` |
 | Submit with confirmation | `hc send --wait`; see submit safety under Limits |
 | Named key | `hc keys` |
-| Current path | `hc get`, the foreground process's `cwd` |
+| Current path | `hc get`, the foreground process's `cwd` when it is a shell or a harness; otherwise one marker-delimited `pwd` sent with `hc send` and read back with `hc read` |
 | Busy state | `hc get`, native `status.state` (`working` is busy) |
 | Agent state | `hc get`, the foreground process and its process group, through the shared classifier |
 | Close | `hc kill`, then `hc rm`, then `hc get` must answer not found |
 | Core identity | `hc server status`, `core.id` |
+| Name a space | `herdr-app ls`, then `herdr-app do space.rename`, only while the app window is open |
 
 ## Secondmates
 
@@ -110,6 +116,15 @@ A `--secondmate` spawn on hc opens the mate's terminal in its own home with the 
 Its `herdr.space` is the mate's own home space, `fm-<the mate's home tag>`, which is the space that mate's own crew lands in, so a navigator and its workers group together in the Herdr app; an explicit `FM_HC_SPACE` still wins.
 A mate's crew spawned from inside that terminal auto-detects hc through the `app-terminal` signal above, because the terminal carries a `herdr.space` label.
 Those workers carry the mate's own home tag, so a forced retirement of the mate closes them as that home.
+
+## Space names
+
+The Herdr app names a space nobody named after where its first terminal is, so every Firstmate space used to read as the repository name.
+After a fresh hc spawn, [`bin/po-theme.sh`](../bin/po-theme.sh) `hc-spaces` names the spaces that spawn touched after the home's labels: the task's space under the launching home's label (a `--secondmate` launch's space under that secondmate's label), and the space the launching supervisor's own terminal shows in under the launching home's label.
+The labels are the persona theme's workspace labels ([`pixeloven/persona-themes.md`](pixeloven/persona-themes.md)), `firstmate` and `2ndmate-<id>` when no theme is selected.
+A space is renamed only while it carries the app's automatic name or one of its label's accept-set words, so a name a person chose is never replaced.
+`bin/po-theme.sh relabel --hc` renames the same spaces for every hc record of the home after a theme switch.
+Both only run `herdr-app ls` and `herdr-app do`, never a bare `herdr-app`, which would open the window; a closed window leaves the names alone and never fails a spawn.
 
 ## Recovery
 
@@ -121,7 +136,7 @@ A relaunch whose terminal is proven gone creates one fresh terminal in the recor
 Creating a task terminal first removes a `finished` terminal carrying the same task and home labels, so a rebind or a secondmate respawn leaves one terminal per task.
 
 Moving an existing task from another backend onto hc is not supported: a relaunch keeps the backend its record names, so a task reaches hc only through a new dispatch.
-A Herdr task's durable worktree lease, presentation journal, and project-group placement have no hc-side owner, which is what a guarded in-place move would need first.
+A Herdr task's presentation journal and project-group placement have no hc-side owner, which is what a guarded in-place move would need first.
 
 ## Limits
 
@@ -133,17 +148,21 @@ A Herdr task's durable worktree lease, presentation journal, and project-group p
 - hc reports one foreground process per terminal.
   When that process is a launcher, the adapter also reads the rest of its process group from `ps`, which works only for terminals on the local machine.
 - Right after a terminal starts, `hc get` can report no foreground process yet, and agent state reads `unreadable` until the shell is up.
+- A terminal whose program wraps the real shell, such as `distrobox enter`, reports the wrapper as its foreground for good.
+  The current path then types one probe into the terminal, which is why only `bin/fm-spawn.sh` reads it, and only before a launch or on a relaunch's agent-free terminal.
+  Agent state cannot see a harness inside such a wrapper and reads `ambiguous`, so `exit` and `relaunch` refuse those tasks.
+- A core outside a container reports folders in the host's spelling, such as `/var/home/u` where distrobox shows `/home/u`; the spawn compares folders by identity as well as by resolved path.
 - A worker inherits `HC_SESSION`, `HC_TERMINAL_ID`, `HC_TERMINAL_SOCKET`, and `HC_SCOPE` from its terminal, and the `config/launch-env-allowlist` floor keeps them; whether a real harness then reports native status under Firstmate's launch is not verified.
-- Naming a Herdr.app space needs the app window and is not done.
+- Naming a Herdr.app space needs the open app window; see [Space names](#space-names).
   The `herdr.space`/`herdr.tab` label contract above is the app's documented bridge (its window projects labeled terminals as spaces/tabs and keeps unlabeled ones hidden), verified against a real window: [`verification/runtime-backends.md`](verification/runtime-backends.md#hc) records the live exercise.
 - hc has no event stream this adapter consumes; supervision polls like tmux.
 
 ## Tests
 
-`tests/fm-backend-hc.test.sh` pins the adapter against a fake `hc`, and drives the real secondmate spawn, `exit`, `relaunch`, secondmate restart, and secondmate liveness recovery against a lifecycle-modelling fake core.
+`tests/fm-backend-hc.test.sh` pins the adapter against a fake `hc`, and drives the real secondmate and wrapped-shell crewmate spawns, parent linkage, space naming, `exit`, `relaunch`, secondmate restart, and secondmate liveness recovery against a lifecycle-modelling fake core and fake `treehouse` and `herdr-app`.
 `tests/fm-backend-hc-liveness-live-e2e.test.sh` is the default-on live guard: it launches every installed harness bare in a private core and requires `alive`.
 `tests/fm-backend-hc-smoke.test.sh` drives the real binary in an isolated lab; [`bin/fm-hc-lab.sh`](../bin/fm-hc-lab.sh) owns the isolation and metadata-tripwire contract, and [`tests/hc-test-safety.sh`](../tests/hc-test-safety.sh) owns guarded test teardown.
-`tests/fm-backend-hc-appdetect-smoke.test.sh` runs a real `bin/fm-spawn.sh` spawn in the same kind of lab for the app-terminal and explicit cases, and checks that a live app window never selects hc for a marker-less process and starts nothing for a session with no running core.
+`tests/fm-backend-hc-appdetect-smoke.test.sh` runs a real `bin/fm-spawn.sh` spawn in the same kind of lab for the app-terminal and explicit cases, checks that the worker's hc parent is the launching terminal and that cleanup leaves that terminal live, and checks that a live app window never selects hc for a marker-less process and starts nothing for a session with no running core.
 The smokes skip when no resolved Core binary or `jq` is available; provisioning and teardown failures fail the test.
 For CI coverage, see [`configuration.md`](configuration.md#runtime-backend-configbackend--fm_backend); the workflow requires `jq` and rejects the `hc not found` skip.
 [`bin/fm-hc-ci-cleanup.sh`](../bin/fm-hc-ci-cleanup.sh) owns job-end cleanup mechanics.

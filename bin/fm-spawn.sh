@@ -142,7 +142,10 @@
 #   every descendant process). An app-detected hc also records its signal in
 #   meta's backend_detect= line.
 #   Herdr leases its slot durably (treehouse get --lease) and moves the pane's
-#   top-level shell into it, because a restart restores that shell's cwd.
+#   top-level shell into it, because a restart restores that shell's cwd. hc
+#   leases the same way, because its foreground cwd cannot see past a wrapper
+#   such as `distrobox enter`; an hc task terminal's parent is the launching
+#   supervisor's own terminal (bin/backends/hc.sh owns the hierarchy).
 #   codex-app is not a known backend yet; docs/codex-app-backend.md owns that
 #   blocked backend contract. Default tmux spawns do not write backend= to meta;
 #   absent backend= means tmux. Orca, cmux, paseo, and tern do not support
@@ -1976,7 +1979,7 @@ spawn_abort_cleanup() {
       fi
     fi
   fi
-  # A durable Herdr lease outlives the pane, unlike the process lease the
+  # A durable Herdr or hc lease outlives the pane, unlike the process lease the
   # interactive command used to take, so an abort that leaves no record returns
   # it, whether or not the launch was sent. Only a pane Herdr reports gone and a
   # copy with no uncommitted work prove nothing is left to inspect there; any
@@ -1986,7 +1989,7 @@ spawn_abort_cleanup() {
     [ ! -e "$STATE/$ID.meta" ] && [ ! -L "$STATE/$ID.meta" ]; then
     HERDR_LEASED=0
     local herdr_slot_status
-    if [ "$SPAWN_ENDPOINT_CLOSED" = 1 ] && fm_backend_herdr_endpoint_confirmed_gone "${T:-}" &&
+    if [ "$SPAWN_ENDPOINT_CLOSED" = 1 ] && spawn_leased_endpoint_confirmed_gone "${T:-}" &&
       herdr_slot_status=$(git -C "$WT" status --porcelain --untracked-files=all 2>/dev/null) &&
       [ -z "$herdr_slot_status" ] &&
       (cd "$PROJ_ABS" && treehouse return --force "$WT") >/dev/null 2>&1; then
@@ -4602,6 +4605,15 @@ real_path_or_raw() { # <path>
   fi
 }
 
+# spawn_same_dir <seen> <expected-real>: an endpoint's reported folder is the
+# expected one. A terminal core outside a container reports the host's
+# spelling of a folder the container sees under another mount (distrobox's
+# /var/home/u beside /home/u), whose `pwd -P` differs, so identity counts too.
+spawn_same_dir() { # <seen> <expected-real>
+  [ -n "$1" ] || return 1
+  [ "$(real_path_or_raw "$1")" = "$2" ] || [ "$1" -ef "$2" ]
+}
+
 # Session-provider container-ensure + task creation. tmux stays exactly as P1
 # left it (same session-name / new-window sequence, see bin/backends/tmux.sh);
 # a herdr spawn goes through the version-gated, workspace-per-HOME,
@@ -4657,7 +4669,11 @@ spawn_worktree_isolated() { # <path>
     SPAWN_WT_REASON="it is a subdirectory of worktree root '$wt_top_real', not a worktree root"
     return 1
   fi
-  if [ "$wt_real" = "$PROJ_ABS_REAL" ]; then
+  # Identity, not spelling: inside a container two paths can name one
+  # directory (distrobox shows the host's /var/home/u as a separate /home/u
+  # mount whose `pwd -P` differs), and the string compare alone let such an
+  # alias of the project, or of its git dir, through as an isolated copy.
+  if [ "$wt_real" = "$PROJ_ABS_REAL" ] || [ "$wt_real" -ef "$PROJ_ABS_REAL" ]; then
     SPAWN_WT_REASON="it is the spawning project itself"
     return 1
   fi
@@ -4672,7 +4688,7 @@ spawn_worktree_isolated() { # <path>
     SPAWN_WT_REASON="its git directory could not be resolved"
     return 1
   fi
-  if [ "$wt_git_dir" = "$proj_common" ]; then
+  if [ "$wt_git_dir" = "$proj_common" ] || [ "$wt_git_dir" -ef "$proj_common" ]; then
     SPAWN_WT_REASON="it is the repository's primary checkout (its git dir is the spawning project's common git dir)"
     return 1
   fi
@@ -5595,7 +5611,10 @@ spawn_send_key() { # <target> <key>
 # the primary clone. A durable lease needs no subshell, which lets the cd in
 # spawn_enter_recorded_worktree move the top-level shell itself. A lease
 # outlives its pane, so an aborted spawn returns it (spawn_abort_cleanup) and
-# bin/fm-teardown.sh returns it for a finished task.
+# bin/fm-teardown.sh returns it for a finished task. hc takes the same lease:
+# a terminal whose program wraps the real shell (`distrobox enter`) reports
+# the host-side wrapper's cwd for good, so the discovery poll below would
+# adopt the folder the terminal started in, never the slot the shell entered.
 spawn_lease_herdr_slot() {
   WT=$(cd "$PROJ_ABS" && treehouse get --lease --lease-holder "$ID") || {
     echo "error: treehouse get --lease failed to lease a worktree for $ID from $PROJ_ABS; $(spawn_endpoint_hint)" >&2
@@ -5604,6 +5623,16 @@ spawn_lease_herdr_slot() {
   [ -n "$WT" ] || { echo "error: treehouse get --lease did not report a worktree for $ID" >&2; exit 1; }
   HERDR_LEASED=1
   validate_spawn_worktree "treehouse get --lease" "$WT (leased to $ID; once inspected, release it with 'treehouse return --force $WT' from $PROJ_ABS)"
+}
+
+# spawn_leased_endpoint_confirmed_gone: the endpoint holding a durable lease is
+# proven gone, the one reading that lets an aborted spawn return the lease.
+spawn_leased_endpoint_confirmed_gone() {  # <target>
+  case "$BACKEND" in
+    herdr) fm_backend_herdr_endpoint_confirmed_gone "$1" ;;
+    hc) [ "$(fm_backend_hc_endpoint_state "$1")" = absent ] ;;
+    *) return 1 ;;
+  esac
 }
 
 # Enter the exact copy recorded for this task immediately before trust setup and
@@ -5637,7 +5666,7 @@ spawn_assert_agent_worktree() {
   for i in $(seq 0 "$last_poll"); do
     [ "$i" -eq 0 ] || sleep 0.5
     seen=$(spawn_current_path "$WT_TARGET" || true)
-    if [ -n "$seen" ] && [ "$(real_path_or_raw "$seen")" = "$expected" ]; then
+    if spawn_same_dir "$seen" "$expected"; then
       return 0
     fi
     if [ "$BACKEND" = herdr ] && [ "$i" -eq 20 ]; then
@@ -6111,10 +6140,10 @@ elif [ "$RELAUNCH" -eq 1 ]; then
   relaunch_seen=
   for _ in $(seq 1 10); do
     relaunch_seen=$(spawn_current_path "$WT_TARGET" || true)
-    [ -z "$relaunch_seen" ] || [ "$(real_path_or_raw "$relaunch_seen")" != "$relaunch_wt_real" ] || break
+    [ -z "$relaunch_seen" ] || ! spawn_same_dir "$relaunch_seen" "$relaunch_wt_real" || break
     sleep 0.5
   done
-  if [ -z "$relaunch_seen" ] || [ "$(real_path_or_raw "$relaunch_seen")" != "$relaunch_wt_real" ]; then
+  if ! spawn_same_dir "$relaunch_seen" "$relaunch_wt_real"; then
     if [ "$BACKEND" != herdr ] && [ "$BACKEND" != rex ]; then
       echo "error: task $ID's endpoint is in '${relaunch_seen:-unknown}', not its recorded worktree '$WT'; refusing to relaunch an agent outside the copy holding its work" >&2
       exit 1
@@ -6126,10 +6155,10 @@ elif [ "$RELAUNCH" -eq 1 ]; then
     }
     for _ in $(seq 1 10); do
       relaunch_seen=$(spawn_current_path "$WT_TARGET" || true)
-      [ -z "$relaunch_seen" ] || [ "$(real_path_or_raw "$relaunch_seen")" != "$relaunch_wt_real" ] || break
+      [ -z "$relaunch_seen" ] || ! spawn_same_dir "$relaunch_seen" "$relaunch_wt_real" || break
       sleep 0.5
     done
-    if [ -z "$relaunch_seen" ] || [ "$(real_path_or_raw "$relaunch_seen")" != "$relaunch_wt_real" ]; then
+    if ! spawn_same_dir "$relaunch_seen" "$relaunch_wt_real"; then
       echo "error: task $ID's endpoint is in '${relaunch_seen:-unknown}' and did not return to its recorded worktree '$WT' when told to; refusing to relaunch an agent outside the copy holding its work" >&2
       exit 1
     fi
@@ -6139,7 +6168,7 @@ elif [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
   # A t3code slot was leased and validated in its target branch above.
   if [ "$BACKEND" = t3code ]; then
     :
-  elif [ "$BACKEND" = herdr ]; then
+  elif [ "$BACKEND" = herdr ] || [ "$BACKEND" = hc ]; then
     spawn_lease_herdr_slot
   else
     spawn_send_text_line "$WT_TARGET" 'treehouse get'
@@ -6208,7 +6237,7 @@ elif [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
     fi
   fi
 
-  # Claim the pool slot for this task. Except on Herdr, whose slot
+  # Claim the pool slot for this task. Except on Herdr and hc, whose slot
   # spawn_lease_herdr_slot leased durably, the interactive `treehouse get` sent
   # to the pane above records only a process lease, so Treehouse cannot say
   # which task a slot belongs to once that task's worker exits - and that is
@@ -8370,4 +8399,7 @@ SPAWN_ACCOUNT=
 # Opt-in Herdr project groups (docs/herdr-backend.md "Project groups") tag the
 # new endpoint now rather than at the next watcher poll; off costs one file test.
 [ ! -e "$CONFIG/herdr-project-groups" ] || [ "$BACKEND" != herdr ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE FM_CONFIG_OVERRIDE=$CONFIG "$SCRIPT_DIR/fm-herdr-groups.sh" sync "$ID" || true
+# Name the Herdr app spaces this spawn touched after the home's labels
+# (bin/po-theme.sh hc-spaces owns which and how); a closed window skips it.
+[ "$BACKEND" != hc ] || [ "$RELAUNCH" -eq 1 ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE FM_CONFIG_OVERRIDE=$CONFIG FM_DATA_OVERRIDE=$DATA "$SCRIPT_DIR/po-theme.sh" hc-spaces "$ID" >/dev/null 2>&1 || true
 echo "spawned $ID harness=$HARNESS kind=$KIND$SPAWN_DELIVERY window=$META_WINDOW worktree=$WT$SPAWN_ACCOUNT"
