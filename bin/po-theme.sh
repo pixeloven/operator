@@ -991,7 +991,7 @@ hc_home_canonical() {
 # hc_space_plan [task-id]: "<space-id><TAB><canonical-label>" lines for the
 # Herdr app spaces this home's hc records show in, or [task-id]'s record only.
 # The launching supervisor's own terminal comes first, under the home's label,
-# then each record's terminal that still carries this home's labels: a primary
+# then each record's terminal that still carries this home's label for it: a primary
 # home's kind=secondmate record under
 # that secondmate's label, any other under the home's. A space keeps the first
 # label it gets, so the supervisor living in a space names it.
@@ -1009,7 +1009,7 @@ hc_space_plan() {
     [ -n "$session" ] && [ -n "$term" ] || continue
     sessions="$sessions$session
 "
-    case "$(hc_backend fm_backend_hc_endpoint_state "$session:$term" '*')" in
+    case "$(hc_backend fm_backend_hc_endpoint_state "$session:$term" "fm-$id")" in
       ready | finished) ;;
       *) continue ;;
     esac
