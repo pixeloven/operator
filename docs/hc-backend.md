@@ -124,6 +124,7 @@ After a fresh hc spawn, [`bin/po-theme.sh`](../bin/po-theme.sh) `hc-spaces` name
 The labels are the persona theme's workspace labels ([`pixeloven/persona-themes.md`](pixeloven/persona-themes.md)), `firstmate` and `2ndmate-<id>` when no theme is selected.
 A space is renamed only while it carries the app's automatic name or one of its label's accept-set words, so a name a person chose is never replaced.
 `bin/po-theme.sh relabel --hc` renames the same spaces for every hc record of the home after a theme switch.
+Both skip a record whose recorded terminal no longer carries this home's label and that record's own task label, so a stale address the core reused for another terminal never names that terminal's space.
 Both only run `herdr-app ls` and `herdr-app do`, never a bare `herdr-app`, which would open the window; a closed window leaves the names alone and never fails a spawn.
 
 ## Recovery
