@@ -43,6 +43,7 @@ Use [`_template.md`](_template.md).
 | [0029](0029-pixeloven-test-duration-hints.md) | The test runner may carry duration hints for PixelOven-owned tests and a twelfth serial shard | Accepted | Sixth upstream synchronization tripped the unmeasured-script and shard-packing bounds |
 | [0030](0030-carry-upstream-pi-calm-fake-host-field.md) | Carry upstream's Pi Calm fake-host field until a sync brings it | Accepted | "Behavior portable serial 11" Pi Calm fake host broke on Pi 1.5.1; self-retiring upstream carry |
 | [0031](0031-hc-secondmates-and-recovery.md) | Run secondmates on hc with recovery-grade exit and relaunch | Accepted | Navigators invisible in the Herdr desktop app; self-retiring local carry |
+| [0032](0032-hc-agent-hierarchy-and-themed-spaces.md) | Nest hc tasks under their supervisor, lease their copies, and name app spaces from the theme | Proposed | Flat Agents panel and repository-named spaces in the Herdr desktop app; a wrapped hc worker recorded the primary clone |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).
