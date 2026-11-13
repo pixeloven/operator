@@ -1,0 +1,36 @@
+lab core session fm-hclab-hier-4050370-17984 ready (server pid 4050445)
+primary=t1 parent=none
+ok - no caller terminal -> --no-parent
+nav=t2 parent=t1
+worker=t3 parent=t2
+--- hc ls (tree) ---
+{"hidden_finished":0,"terminals":[{"address":"t1","agent":"bash","cwd":"/tmp/fm-hc-hier.xg6EhN/work","state":"live","turn":0},{"address":"t2","agent":"bash","cwd":"/tmp/fm-hc-hier.xg6EhN/work","parent":"t1","state":"live","turn":0},{"address":"t3","agent":"bash","cwd":"/tmp/fm-hc-hier.xg6EhN/work","parent":"t2","state":"live","turn":0}]}
+ok - navigator parented to primary, worker parented to navigator, each keeps its own space/tab labels
+ok - adversarial: HC_TERMINAL_ID with a dead/foreign socket falls back to --no-parent
+after killing nav: worker state=ready primary state=ready
+ok - worker outlives its navigator and is still addressed (send/capture) by its unchanged label+address
+--- screen after wrapper ---
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work$ echo Worker-Alive-99
+Worker-Alive-99
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work$ exec python3 -c "import pty; pty.spawn('/bin/bash')"
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work$ cd /tmp/fm-hc-hier.xg6EhN/work/inner
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work/inner$
+{"state":"live","foreground":{"argv":["python3","-c","import pty; pty.spawn('/bin/bash')"],"cwd":"/tmp/fm-hc-hier.xg6EhN/work","name":"python3","pid":4050743},"cwd":"/tmp/fm-hc-hier.xg6EhN/work"}
+foreground per hc: {"name":"python3","cwd":"/tmp/fm-hc-hier.xg6EhN/work"}
+pre-change reading (.foreground.cwd)=/tmp/fm-hc-hier.xg6EhN/work
+current_path=/tmp/fm-hc-hier.xg6EhN/work/inner
+ok - wrapped shell: foreground is the wrapper at the start folder, current_path reports the inner shell's folder
+--- screen ---
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work$ echo Worker-Alive-99
+Worker-Alive-99
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work$ exec python3 -c "import pty; pty.spawn('/bin/bash')"
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work$ cd /tmp/fm-hc-hier.xg6EhN/work/inner
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work/inner$ printf '__FM_%s_CWD__\n' B4050320275328771; pwd; printf '__FM_%s_CWD__\n' E4050320275328771
+__FM_B4050320275328771_CWD__
+/tmp/fm-hc-hier.xg6EhN/work/inner
+__FM_E4050320275328771_CWD__
+⬢ brian@bazzite:/tmp/fm-hc-hier.xg6EhN/work/inner$
+ok - cleanup closes each terminal by its recorded address
+FM_TEST_COMPLETE
+teardown rc=0
+exit=0

@@ -1,0 +1,15 @@
+lab core session fm-hclab-appdetect-4056350-3562 ready (server pid 4056525)
+EVIDENCE spawn stdout: diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-appdets1/gitconfig signing=disabled
+spawned appdets1 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-appdetect-4056350-3562:t2 worktree=~/.treehouse/scratch-project-07c972/1/scratch-project
+EVIDENCE project: /tmp/fm-backend-hc-appdetect.ZxwT3k/scratch-project
+EVIDENCE meta worktree: ~/.treehouse/scratch-project-07c972/1/scratch-project
+EVIDENCE worker terminal hc get: {"address":"t2","parent":"t1","cwd":"/tmp/fm-backend-hc-appdetect.ZxwT3k/scratch-project","labels":{"firstmate.home":"firstmate-ad124072","firstmate.task":"fm-appdets1","herdr.space":"fm-firstmate-ad124072","herdr.tab":"firstmate-ad124072-fm-appdets1"}}
+EVIDENCE treehouse: base  master  (repository default)
+EVIDENCE treehouse: 1     leased       ~/.treehouse/scratch-project-07c972/1/scratch-project  (detached)  (held by appdets1)
+ok - app-terminal: spawn env claiming a herdr.space-labeled terminal auto-selects hc, notices, records backend_detect=app-terminal, labels the worker, and parents it to the launching terminal
+ok - app-window is not a signal: a live herdr-app.sock over a running spawn core keeps the default backend silently and records nothing
+ok - app-window is not a signal: a live window beside a session with no running core keeps the default silently and starts nothing
+ok - explicit: config/backend=hc wins over the app signals and records no detection provenance
+FM_TEST_COMPLETE
+exit=0
