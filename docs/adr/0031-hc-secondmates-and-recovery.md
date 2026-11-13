@@ -1,6 +1,6 @@
 # ADR-0031: Run secondmates on hc with recovery-grade exit and relaunch
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
 - **Deciders:** The operator
 - **Source:** Navigators invisible in the Herdr desktop app; pull request #59
