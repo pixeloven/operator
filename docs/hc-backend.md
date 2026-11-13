@@ -11,7 +11,7 @@ This page owns operator setup and supported limits; the adapter header in `bin/b
 
 Prerequisites:
 
-- Herdr Core at version 0.1.14 or later, self-identifying as `hc x.y.z`, and a core speaking protocol generation 1.
+- Herdr Core at version 0.1.20 or later, self-identifying as `hc x.y.z`, and a core speaking protocol generation 1.
   Binary resolution uses an executable `FM_HC_BIN` override first, then `herdr-core` on `PATH`, then the `hc` alias.
   `hc` starts its own core on first use.
   [`bin/fm-install-hc.sh`](../bin/fm-install-hc.sh) owns installation usage and the checksum-verified release pin; updates remain operator-run.
@@ -55,10 +55,8 @@ Auto-detected hc spawns carry the same `herdr.space`/`herdr.tab` labels an expli
 The app is local GUI presentation only; detection reads the terminal's core-side label without requiring a live app window, so a surviving labeled terminal can still select hc after the GUI closes.
 Nothing here changes the remote `herdr` path.
 
-Two limits apply to auto-detection specifically:
-
-- A `--secondmate` spawn under an auto-detected hc fails the existing refusal rather than silently choosing another backend; set `config/backend` explicitly for a home that spawns secondmates.
-- Away-mode supervisor discovery and hc refusal are owned by [Away-mode supervisor backend](configuration.md#away-mode-supervisor-backend-fm_supervisor_backend--fm_supervisor_target).
+A `--secondmate` spawn under an auto-detected hc launches on hc like any other kind; see [Secondmates](#secondmates).
+Away-mode supervisor discovery and hc refusal are owned by [Away-mode supervisor backend](configuration.md#away-mode-supervisor-backend-fm_supervisor_backend--fm_supervisor_target).
 
 ## Task shape and metadata
 
@@ -69,7 +67,7 @@ The terminal carries these labels:
 | --- | --- | --- |
 | `firstmate.task` | `fm-<id>` | Task identity checked before input or close. |
 | `firstmate.home` | `<hometag>` from `bin/fm-backend-hometag-lib.sh` | Keeps two homes with the same task id apart. |
-| `herdr.space` | `FM_HC_SPACE`, default `fm-<hometag>` | Groups a home's tasks in one Herdr.app space. |
+| `herdr.space` | `FM_HC_SPACE`, default `fm-<hometag>`; a secondmate's own home tag for a `--secondmate` launch | Groups a home's tasks in one Herdr.app space. |
 | `herdr.tab` | `<hometag>-fm-<id>` | One Herdr.app tab per task. |
 
 ```text
@@ -78,9 +76,11 @@ backend_detect=app-terminal
 window=<session>:<address>
 hc_session=<session>
 hc_terminal=<address>
+hc_core=<core id>
 ```
 
 `backend_detect=` is `app-terminal` only when that signal automatically selected hc; an explicitly selected hc writes no `backend_detect=` line.
+`hc_core=` is the `core.id` that `hc server status` reported for the session's core at spawn; a core that reports none leaves it out, and [Recovery](#recovery) then refuses to call that task's endpoint gone.
 
 `<address>` is hc's terminal address such as `t7`.
 Every adapter call sets exactly the recorded `HC_SESSION` and drops any inherited `HC_SOCKET`, which hc would otherwise prefer, so a task keeps reaching its own core even when the caller's environment names another one.
@@ -102,6 +102,26 @@ An input, capture, or close that carries the task label refuses a terminal whose
 | Busy state | `hc get`, native `status.state` (`working` is busy) |
 | Agent state | `hc get`, the foreground process and its process group, through the shared classifier |
 | Close | `hc kill`, then `hc rm`, then `hc get` must answer not found |
+| Core identity | `hc server status`, `core.id` |
+
+## Secondmates
+
+A `--secondmate` spawn on hc opens the mate's terminal in its own home with the ordinary task labels, so the launching home's record owns it and that home's control, teardown, and liveness calls address it unchanged.
+Its `herdr.space` is the mate's own home space, `fm-<the mate's home tag>`, which is the space that mate's own crew lands in, so a navigator and its workers group together in the Herdr app; an explicit `FM_HC_SPACE` still wins.
+A mate's crew spawned from inside that terminal auto-detects hc through the `app-terminal` signal above, because the terminal carries a `herdr.space` label.
+Those workers carry the mate's own home tag, so a forced retirement of the mate closes them as that home.
+
+## Recovery
+
+hc has a recovery-grade agent-state classifier, so [`bin/fm-control.sh`](../bin/fm-control.sh) `exit` and `relaunch` run on hc tasks, and [`bin/fm-secondmate-restart.sh`](../bin/fm-secondmate-restart.sh) restarts hc secondmates through that relaunch; [`agent-control.md`](agent-control.md) owns the verbs.
+A terminal whose program ended reads `finished` and classifies `missing`, as does a structured not found.
+hc can prove such an endpoint gone, because a core keeps its terminal records across a core stop and restart (a terminal the stopped core ended reads `finished`), never reuses a terminal address, and reports a `core.id` that survives that restart.
+The proof re-reads the terminal through its recorded session, which starts that session's core when it is stopped, and requires the answering core's `core.id` to equal the recorded `hc_core=`; another core under the same session name (another state root, say) proves nothing, and a record without `hc_core=` refuses.
+A relaunch whose terminal is proven gone creates one fresh terminal in the recorded session, in the recorded worktree, only while that session still reaches the recorded core.
+Creating a task terminal first removes a `finished` terminal carrying the same task and home labels, so a rebind or a secondmate respawn leaves one terminal per task.
+
+Moving an existing task from another backend onto hc is not supported: a relaunch keeps the backend its record names, so a task reaches hc only through a new dispatch.
+A Herdr task's durable worktree lease, presentation journal, and project-group placement have no hc-side owner, which is what a guarded in-place move would need first.
 
 ## Limits
 
@@ -113,7 +133,6 @@ An input, capture, or close that carries the task label refuses a terminal whose
 - hc reports one foreground process per terminal.
   When that process is a launcher, the adapter also reads the rest of its process group from `ps`, which works only for terminals on the local machine.
 - Right after a terminal starts, `hc get` can report no foreground process yet, and agent state reads `unreadable` until the shell is up.
-- `--secondmate` spawns are refused.
 - A worker inherits `HC_SESSION`, `HC_TERMINAL_ID`, `HC_TERMINAL_SOCKET`, and `HC_SCOPE` from its terminal, and the `config/launch-env-allowlist` floor keeps them; whether a real harness then reports native status under Firstmate's launch is not verified.
 - Naming a Herdr.app space needs the app window and is not done.
   The `herdr.space`/`herdr.tab` label contract above is the app's documented bridge (its window projects labeled terminals as spaces/tabs and keeps unlabeled ones hidden), verified against a real window: [`verification/runtime-backends.md`](verification/runtime-backends.md#hc) records the live exercise.
@@ -121,7 +140,7 @@ An input, capture, or close that carries the task label refuses a terminal whose
 
 ## Tests
 
-`tests/fm-backend-hc.test.sh` pins the adapter against a fake `hc`.
+`tests/fm-backend-hc.test.sh` pins the adapter against a fake `hc`, and drives the real secondmate spawn, `exit`, `relaunch`, secondmate restart, and secondmate liveness recovery against a lifecycle-modelling fake core.
 `tests/fm-backend-hc-liveness-live-e2e.test.sh` is the default-on live guard: it launches every installed harness bare in a private core and requires `alive`.
 `tests/fm-backend-hc-smoke.test.sh` drives the real binary in an isolated lab; [`bin/fm-hc-lab.sh`](../bin/fm-hc-lab.sh) owns the isolation and metadata-tripwire contract, and [`tests/hc-test-safety.sh`](../tests/hc-test-safety.sh) owns guarded test teardown.
 `tests/fm-backend-hc-appdetect-smoke.test.sh` runs a real `bin/fm-spawn.sh` spawn in the same kind of lab for the app-terminal and explicit cases, and checks that a live app window never selects hc for a marker-less process and starts nothing for a session with no running core.

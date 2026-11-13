@@ -6,8 +6,8 @@
 # library so classification handling and the guarded relaunch path stay
 # single-sourced here.
 #
-# A secondmate's recorded endpoint is the tmux window, herdr pane, T3 thread,
-# or remote peer it runs in. Probing classifies that endpoint through the owning
+# A secondmate's recorded endpoint is the tmux window, herdr pane, hc terminal,
+# T3 thread, or remote peer it runs in. Probing classifies that endpoint through the owning
 # backend adapter's fm_backend_agent_state (local) or the remote control script's
 # state verb (remote), which returns one of:
 #
@@ -71,6 +71,25 @@ FM_SM_LIVE_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 . "$FM_SM_LIVE_LIB_DIR/fm-remote-readiness-lib.sh"
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$FM_SM_LIVE_LIB_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-control-lib.sh
+. "$FM_SM_LIVE_LIB_DIR/fm-control-lib.sh"
+
+# An hc reading only counts on the core the record names, so every one is
+# settled by fm_control_endpoint_absence_verdict: gone reads missing, dead and
+# alive stay those states, and anything else reads unproven with its reason in
+# FM_SM_LIVE_ABSENCE_REASON. Other backends keep the raw state. The settled
+# state is left in FM_SM_LIVE_SETTLED.
+fm_sm_live_settle_state() {  # <backend> <target> <meta> <raw-state>
+  local verdict
+  FM_SM_LIVE_SETTLED=$4 FM_SM_LIVE_ABSENCE_REASON=''
+  [ "$1" = hc ] || return 0
+  verdict=$(fm_control_endpoint_absence_verdict "$1" "$2" "$3")
+  case "${verdict%%$'\t'*}" in
+    gone) FM_SM_LIVE_SETTLED=missing ;;
+    dead | alive) FM_SM_LIVE_SETTLED=${verdict%%$'\t'*} ;;
+    *) FM_SM_LIVE_SETTLED=unproven FM_SM_LIVE_ABSENCE_REASON=${verdict#*$'\t'} ;;
+  esac
+}
 
 # Per-task probe+kill+relaunch serialization. A busy lock means another
 # supervisor (the other sweep, or a racing tick) is mid-episode on this mate;
@@ -251,6 +270,8 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
   target=$(fm_backend_target_of_meta "$meta")
   [ -n "$target" ] || target="$window"
   agent_state=$(fm_backend_agent_state "$backend" "$target" 2>/dev/null) || agent_state=unreadable
+  fm_sm_live_settle_state "$backend" "$target" "$meta" "$agent_state"
+  agent_state=$FM_SM_LIVE_SETTLED
   case "$harness" in
     claude|codex|opencode|pi|pi-signed|grok|kimi|omp) ;;
     *)
@@ -286,6 +307,9 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
     unreadable)
       FM_SM_LIVE_REASON="endpoint probe unreadable (backend=$backend)"
       ;;
+    unproven)
+      FM_SM_LIVE_REASON="endpoint absence unproven (backend=$backend): ${FM_SM_LIVE_ABSENCE_REASON:-no reason given}"
+      ;;
     unverified-harness)
       FM_SM_LIVE_REASON="recorded harness '$harness' is unverified for recovery (backend=$backend)"
       ;;
@@ -301,7 +325,7 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
 # Acts on a `relaunchable` probe verdict for <id>: takes the per-home relaunch
 # lock, records the attempt, kills a confirmed-dead local endpoint if required
 # (FM_SM_LIVE_KILL), runs the guarded spawn, then records its outcome.
-# On t3code a close that cannot be proven stops there: the thread and its
+# On t3code and hc a close that cannot be proven stops there: the thread and its
 # metadata stay as recorded, the verdict becomes skipped, and nothing is
 # spawned, because a second thread beside a live one is the duplicate
 # supervisor recovery must never create. Other backends keep their existing
@@ -366,6 +390,8 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
     # An endpoint that cannot be read at all is not a deferral: it is left
     # untouched below, but recorded as a failed attempt and reported.
     current_state=$(fm_backend_agent_state "$backend" "$target" 2>/dev/null) || current_state=unreadable
+    fm_sm_live_settle_state "$backend" "$target" "$meta" "$current_state"
+    current_state=$FM_SM_LIVE_SETTLED
     if [ "$current_state" != dead ] && [ "$current_state" != unreadable ] && ! { [ "$backend" = t3code ] && [ "$current_state" = missing ]; }; then
       fm_lock_release "$spawn_lock" || true
       fm_lock_release "$relaunch_lock" || true
@@ -392,7 +418,7 @@ fm_secondmate_liveness_relaunch() {  # <meta> <id> [timeout-secs]
       FM_SM_LIVE_REASON="could not prove the old $backend endpoint $target closed: it now reads unreadable, so it and its record are left in place, not replaced"
       FM_SM_LIVE_RC=1
       return 1
-    elif [ "$backend" != t3code ]; then
+    elif [ "$backend" != t3code ] && [ "$backend" != hc ]; then
       if [ -n "$target" ]; then
         if [ "$backend" = rex ]; then
           local home

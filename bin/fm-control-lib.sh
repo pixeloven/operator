@@ -356,14 +356,14 @@ fm_control_backend_supports_key() {  # <backend> <key>
 }
 
 # Whether <backend> has a recovery-grade agent-state classifier. tmux, herdr,
-# rex, and t3code implement fm_backend_agent_state; zellij, orca, cmux, and paseo report
-# `unverified`, and tern's `tern process` classifier answers for display but is
-# not promoted to this list, so no reading of theirs can prove an agent stopped.
-# The control plane refuses a stop-proving verb there instead of reporting an
-# unprovable transition as success.
+# rex, t3code, and hc implement fm_backend_agent_state; zellij, orca, cmux, and
+# paseo report `unverified`, and tern's `tern process` classifier answers for
+# display but is not promoted to this list, so no reading of theirs can prove an
+# agent stopped. The control plane refuses a stop-proving verb there instead of
+# reporting an unprovable transition as success.
 fm_control_backend_state_verified() {  # <backend>
   case "${1-}" in
-    tmux|herdr|rex|t3code) return 0 ;;
+    tmux|herdr|rex|t3code|hc) return 0 ;;
   esac
   return 1
 }
@@ -391,7 +391,7 @@ fm_control_backend_exit_supported() {  # <backend>
 # fm_control_backend_state_verified first.
 fm_control_backend_relaunch_supported() {  # <backend>
   case "${1-}" in
-    tmux|herdr|rex) return 0 ;;
+    tmux|herdr|rex|hc) return 0 ;;
   esac
   return 1
 }
@@ -402,8 +402,12 @@ fm_control_backend_relaunch_supported() {  # <backend>
 # passive reads never start a server, so a stopped server - which ends every
 # session on it - reads as unreachable rather than not-found, and only the
 # recheck (which may start the personal server) can turn that into a proof.
+# Every hc reading does: hc addresses are per core, so a session name that now
+# reaches another core can answer dead or alive about an unrelated terminal at
+# the recorded address, and only the recheck ties the answer to hc_core.
 # Passive readers keep the raw state.
 fm_control_absence_recheck_applies() {  # <backend> <raw-state>
+  [ "${1-}" != hc ] || return 0
   case "${2-}" in
     missing) return 0 ;;
     unreadable) [ "${1-}" = rex ] ;;
@@ -449,6 +453,13 @@ fm_control_absence_recheck_applies() {  # <backend> <raw-state>
 #     (rex_server, from the task's [meta]); the recheck refuses unless the
 #     server this process reaches - starting a stopped personal server, which
 #     then answers with authority - is that one.
+#   hc CAN prove it, the way rex does. hc never reuses a terminal address,
+#     keeps a terminal's record across a core restart (a terminal its stopped
+#     core ended reads `finished`), and reports a core identity that survives
+#     that restart. The record names that identity (hc_core, from the task's
+#     [meta]); the recheck re-reads the recorded session - starting its core
+#     if it is stopped - and refuses unless the core that answered is that one.
+#     A record from before hc_core existed has nothing to compare and refuses.
 #   t3code has a native absence verdict: `missing` means archived or not found
 #     on the verified server, while an unreachable server reads `unreadable`.
 #     The proof re-reads the thread, but exit and relaunch refuse before it:
@@ -488,6 +499,15 @@ fm_control_endpoint_absence_verdict() {  # <backend> <target> [meta]
         alive) printf 'alive\t' ;;
         missing) printf 'gone\t' ;;
         *) printf 'unproven\tthe Rex server the task was created on could not be reached from here, or its block could not be classified' ;;
+      esac
+      ;;
+    hc)
+      case "$(fm_backend_hc_endpoint_absence_recheck "$target" "$(fm_meta_get "$meta" hc_core)")" in
+        dead) printf 'dead\t' ;;
+        alive) printf 'alive\t' ;;
+        missing) printf 'gone\t' ;;
+        other-core) printf 'unproven\tthe recorded hc session now reaches a core other than the one the task was created on (hc_core), so its answer says nothing about that endpoint' ;;
+        *) printf 'unproven\tthe hc core the task was created on could not be identified from here (the record may predate hc_core), or its terminal could not be classified' ;;
       esac
       ;;
     t3code)

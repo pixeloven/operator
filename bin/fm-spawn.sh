@@ -145,8 +145,9 @@
 #   top-level shell into it, because a restart restores that shell's cwd.
 #   codex-app is not a known backend yet; docs/codex-app-backend.md owns that
 #   blocked backend contract. Default tmux spawns do not write backend= to meta;
-#   absent backend= means tmux. Orca, cmux, paseo, tern, and hc do not support
-#   --secondmate spawns.
+#   absent backend= means tmux. Orca, cmux, paseo, and tern do not support
+#   --secondmate spawns. An hc secondmate's terminal joins that mate's own
+#   Herdr app space (bin/backends/hc.sh owns placement).
 #   A rex crewmate or scout opens one tab in the Rex session the launching
 #   firstmate runs in when it runs directly inside Rex, otherwise in its home's
 #   own Rex session; a --secondmate launch opens its tab in that secondmate
@@ -2408,10 +2409,6 @@ if [ "$RELAUNCH" -eq 0 ]; then
     echo "error: backend=tern does not support --secondmate spawns yet" >&2
     exit 1
   fi
-  if [ "$BACKEND" = hc ] && [ "$KIND" = secondmate ]; then
-    echo "error: backend=hc does not support --secondmate spawns yet" >&2
-    exit 1
-  fi
   fm_backend_runtime_check "$BACKEND" || exit 1
   if [ "$BACKEND" = rex ]; then
     fm_backend_rex_local_server_ensure || exit 1
@@ -2513,7 +2510,7 @@ if [ "$RELAUNCH" -eq 1 ]; then
   # endpoint was DESTROYED" with "the endpoint is UNREACHABLE from here right
   # now", and an unreachable endpoint can still hold the live agent this
   # relaunch would duplicate. So absence is PROVEN before it may rebind, never
-  # inferred from a failed read - and only HERDR and REX can prove it:
+  # inferred from a failed read - and only HERDR, REX, and HC can prove it:
   #   herdr - the recorded session's server is started, and the recorded pane is
   #           RE-READ through that session's own socket. `dead` means the pane
   #           survived the restart and is adopted after all; `alive` means the
@@ -2525,6 +2522,11 @@ if [ "$RELAUNCH" -eq 1 ]; then
   #           `unreadable` is rechecked too, because a stopped Rex server
   #           reads as unreachable to a read that never starts it
   #           (fm_control_absence_recheck_applies owns that rule).
+  #   hc    - the recorded terminal is re-read through its recorded session,
+  #           and the core that answers must report the recorded hc_core: hc
+  #           never reuses an address and keeps a finished terminal's record
+  #           across a core restart, so not_found or finished there proves the
+  #           terminal gone, while another core under that name proves nothing.
   #   tmux  - REFUSES, always. A task record carries no socket identity for its
   #           endpoint, and a server-wide inventory describes only the server
   #           this process addresses, so no read available here can tell "gone"
@@ -2649,6 +2651,11 @@ if [ "$RELAUNCH" -eq 1 ]; then
     HERDR_WORKSPACE_ID=$(fm_meta_get "$RELAUNCH_META" herdr_workspace_id)
     HERDR_TAB_ID=$(fm_meta_get "$RELAUNCH_META" herdr_tab_id)
     HERDR_PANE_ID=$(fm_meta_get "$RELAUNCH_META" herdr_pane_id)
+  fi
+  if [ "$BACKEND" = hc ]; then
+    HC_SES=$(fm_meta_get "$RELAUNCH_META" hc_session)
+    HC_TERMINAL=$(fm_meta_get "$RELAUNCH_META" hc_terminal)
+    HC_CORE=$(fm_meta_get "$RELAUNCH_META" hc_core)
   fi
   if [ "$BACKEND" = rex ]; then
     FM_REX_TASK_SESSION_ID=$(fm_meta_get "$RELAUNCH_META" rex_session_id)
@@ -5023,6 +5030,23 @@ EOF
     T=$(fm_backend_rex_target "$FM_REX_TASK_SESSION_ID" "$FM_REX_TASK_BLOCK_ID")
     SES=${T%%:*}
     WT_TARGET=$T
+  elif [ "$BACKEND" = hc ]; then
+    # hc reaches here only on a terminal PROVEN gone from the core the record
+    # names (hc_core; fm_control_endpoint_absence_verdict owns that argument).
+    # Re-create it in the RECORDED session, and only while that session still
+    # reaches the recorded core: a reclaim never moves a task to another core.
+    # The fresh terminal opens directly in the recorded worktree; create_task
+    # removes the finished predecessor carrying this task's labels.
+    HC_SES=$(HC_SESSION="$HC_SES" fm_backend_hc_container_ensure) || exit 1
+    HC_REBIND_CORE=$(fm_backend_hc_core_id "$HC_SES") || HC_REBIND_CORE=
+    if [ -z "$HC_CORE" ] || [ "$HC_REBIND_CORE" != "$HC_CORE" ]; then
+      echo "error: task $ID's endpoint could not be re-created on its recorded hc core '${HC_CORE:-unrecorded}' (session '$HC_SES' now reaches '${HC_REBIND_CORE:-an unidentified core}'); a reclaim never moves a task to another core" >&2
+      exit 1
+    fi
+    HC_TERMINAL=$(fm_backend_hc_create_task "$HC_SES" "$W" "$WT") || exit 1
+    T="$HC_SES:$HC_TERMINAL"
+    SES=$HC_SES
+    WT_TARGET=$T
   else
     # The recorded endpoint is authoritatively gone, so there is nothing to
     # adopt: create ONE fresh endpoint for the same task, opened directly in the
@@ -5033,7 +5057,7 @@ EOF
     # Herdr reaches here only on a PROVEN-gone pane: its every read is scoped to
     # the session the record names (fm_control_endpoint_absence_verdict owns
     # that argument). tmux and every secondmate were already refused, and rex
-    # took the branch above, so there is no dispatch left to make.
+    # and hc took the branches above, so there is no dispatch left to make.
     #
     # This deliberately uses the FLAT container shape rather than Herdr's
     # presentation projection: projection is a presentation-only layout that is
@@ -5375,7 +5399,18 @@ EOF
     ;;
   hc)
     HC_SES=$(fm_backend_hc_container_ensure) || exit 1
-    HC_TERMINAL=$(fm_backend_hc_create_task "$HC_SES" "$W" "$PROJ_ABS") || exit 1
+    # The core identity a later absence proof compares against. A core that
+    # reports none leaves it empty, and exit and relaunch then refuse to call
+    # that task's endpoint gone rather than trust a bare session name.
+    HC_CORE=$(fm_backend_hc_core_id "$HC_SES") || HC_CORE=
+    # A --secondmate launch puts the mate in its OWN home's Herdr app space,
+    # the one its own crew lands in, exactly as that home's processes derive
+    # it (FM_ROOT is the home itself there, as for Rex).
+    HC_SPACE=
+    if [ "$KIND" = secondmate ] && [ -z "${FM_HC_SPACE:-}" ]; then
+      HC_SPACE="fm-$(FM_HOME="$PROJ_ABS" FM_ROOT="$PROJ_ABS" fm_backend_hometag)"
+    fi
+    HC_TERMINAL=$(fm_backend_hc_create_task "$HC_SES" "$W" "$PROJ_ABS" "$HC_SPACE") || exit 1
     T="$HC_SES:$HC_TERMINAL"
     ;;
   orca)
@@ -7338,7 +7373,7 @@ SPAWN_META_PATH=$SPAWN_META_TMP
 preserve_relaunch_meta() {
   awk -F= '
     BEGIN {
-      split("window endpoint_task_id worktree project harness hermes_profile hermes_home kind mode yolo branch tasktmp base_branch upstream_consent forge backup_remote backup_prefix model effort opencode_version account account_provider omp_profile busy_gen spawn_gen approval_mode traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id paseo_terminal_id paseo_workspace_id rex_server rex_session_id rex_window_id rex_block_id t3_thread_id t3_project_id tern_session_id tern_tab_id tern_block_id hc_session hc_terminal home projects control_relaunch_tx polytoken_session polytoken_port polytoken_credential", keys, " ")
+      split("window endpoint_task_id worktree project harness hermes_profile hermes_home kind mode yolo branch tasktmp base_branch upstream_consent forge backup_remote backup_prefix model effort opencode_version account account_provider omp_profile busy_gen spawn_gen approval_mode traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id paseo_terminal_id paseo_workspace_id rex_server rex_session_id rex_window_id rex_block_id t3_thread_id t3_project_id tern_session_id tern_tab_id tern_block_id hc_session hc_terminal hc_core home projects control_relaunch_tx polytoken_session polytoken_port polytoken_credential", keys, " ")
       for (i in keys) owned[keys[i]] = 1
     }
     !($1 in owned)
@@ -7436,6 +7471,7 @@ preserve_relaunch_meta() {
   if [ "$BACKEND" = hc ]; then
     echo "hc_session=$HC_SES"
     echo "hc_terminal=$HC_TERMINAL"
+    [ -z "${HC_CORE:-}" ] || echo "hc_core=$HC_CORE"
   fi
   if [ "$KIND" = secondmate ]; then
     echo "home=$PROJ_ABS"

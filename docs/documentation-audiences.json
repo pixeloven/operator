@@ -454,6 +454,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0031-hc-secondmates-and-recovery.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
