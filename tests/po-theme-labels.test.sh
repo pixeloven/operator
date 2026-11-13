@@ -33,7 +33,8 @@
 #     `operator: away-mode escalations WEDGED` (plan output, and the real
 #     osascript and herdr argv against recording fakes, the macOS title as argv
 #     item 2), an S1-era values cache is rebuilt, absent keys derive from the
-#     role words, and the validator refuses bad strings
+#     role words (the digest call section from the address word), and the
+#     validator refuses bad strings, including digest section names
 #   - the registry check refuses an unregistered changed line, and anchors fail
 #     when a registered hook line is lost
 #   - A11: routing names, hometags, session names, and the worker role contract
@@ -529,16 +530,21 @@ verb|str.sidebar.needs = "needs-decision"|contains the status verb needs-decisio
 fmtoken|str.alert.wedge_title = "fm-alert WEDGED"|contains an architectural token
 long|str.alert.wedge_title = "operator: away-mode escalations WEDGED and still undelivered after many retries in a row"|longer than 80 characters
 unknown|str.alert.other = "x"|unknown key: str.alert.other
+digestshape|str.digest.call = "Ops: Call"|str.digest.call: 'Ops: Call' must be a heading of at most 32
+digestlong|str.digest.charted = "Charted Next and Everything After"|str.digest.charted: 'Charted Next and Everything After' must be a heading
+digestdupe|str.digest.landed = "underway"|str.digest.landed and str.digest.underway share the section name 'underway'
+digestverb|str.digest.landed = "Recently done"|contains the status verb done
 EOF
   sed -e 's/^name = .*/name = "derived"/' -e '/^str\./d' -e 's/^user = .*/user = "field boss"/' -e 's/^product = .*/product = "ops"/' \
     "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/derived.theme"
   printf 'derived\n' > "$home/config/po-theme"
   assert_equals "needs-field-boss" "$(lib "$home" 'po_str sidebar.needs')" "an absent sidebar state did not derive from the user word"
   assert_equals "ops: away-mode escalations WEDGED" "$(lib "$home" 'po_str alert.wedge_title')" "an absent wedge title did not derive from the product word"
+  assert_contains "$(FM_HOME="$home" "$PT" persona derived)" "| Captain's Call (the /bearings section) | Operator's Call |" "an absent digest call did not derive from the address word"
   sed -e 's/^name = .*/name = "oldstr"/' -e 's#^schema = .*#schema = "po-theme/1"#' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldstr.theme"
   out=$(FM_HOME="$home" "$PT" validate oldstr 2>&1) && fail "a po-theme/1 theme accepted a str key"
   assert_contains "$out" "str.sidebar.needs: needs schema po-theme/2" "a str key under po-theme/1 was refused for the wrong reason"
-  pass "absent strings derive from the role words, and the validator refuses bad or misplaced strings"
+  pass "absent strings derive from the role words and the address word, and the validator refuses bad or misplaced strings"
 }
 
 # fixture_repo <name>: a throwaway repository whose first commit carries the
@@ -590,6 +596,7 @@ test_anchors_name_a_lost_hook() {
     mkdir -p "$code/.agents/skills/$s"
     printf -- '---\nname: %s\nuser-invocable: true\n---\n' "$s" > "$code/.agents/skills/$s/SKILL.md"
   done
+  cp "$ROOT/.agents/skills/bearings/SKILL.md" "$code/.agents/skills/bearings/SKILL.md"
   # The surface canary scans tracked files, so the fixture is a work tree.
   git init -q -b main "$code"
   git -C "$code" add -A

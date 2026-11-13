@@ -10,7 +10,8 @@
 # workspace labels, and the str values upstream's herdr sidebar state and
 # wedge-alarm title, which bin/po-theme-lib.sh also compiles in for the
 # nautical fast path; `anchors` checks the upstream lines through the hook
-# registry.
+# registry. The str.digest values are the /bearings digest section names, which
+# `anchors` checks in the bearings skill.
 schema = "po-theme/2"
 name = "nautical"
 description = "Upstream firstmate's nautical voice"
@@ -40,6 +41,10 @@ label.afk = "firstmate-afk-daemon"
 
 str.sidebar.needs = "needs-captain"
 str.alert.wedge_title = "firstmate: away-mode escalations WEDGED"
+str.digest.call = "Captain's Call"
+str.digest.underway = "Underway"
+str.digest.landed = "Recently Landed"
+str.digest.charted = "Charted Next"
 
 alias.afk = "afk"
 alias.ahoy = "ahoy"
