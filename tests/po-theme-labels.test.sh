@@ -27,6 +27,10 @@
 #     planning only under --dry-run), and keeps a history label a Paseo
 #     workspace or another recorded herdr session still uses, or any it
 #     cannot list (fake clients)
+#   - relabel --hc renames only this home's Herdr app spaces that carry the
+#     app's automatic name or one of the label's words, a second mate record's
+#     under its own label, keeps a name a person chose, plans only under
+#     --dry-run, and skips a closed window (fake hc and herdr-app)
 #   - the validator refuses bad labels
 #   - display strings: nautical gives upstream's herdr group state
 #     `needs-captain` and wedge-alarm title, operator gives `needs-operator` and
@@ -640,6 +644,78 @@ test_a11_architectural_invariance() {
   pass "A11: routing names, session names, and the worker role contract are identical under every bundled theme"
 }
 
+# relabel --hc renames this home's Herdr app spaces: the space each hc record's
+# terminal shows in, under the home's label or a second mate record's own, but
+# only while the space carries the app's automatic name or one of the label's
+# words. A name a person chose is kept, a stale record whose address now names
+# another home's terminal or another task of this home is skipped, and --dry-run only plans.
+test_relabel_hc_spaces() {
+  local home fake out tag t a sp task hometag
+  command -v jq >/dev/null 2>&1 || { echo "skip: relabel hc case needs jq"; return 0; }
+  fake="$TMP_ROOT/fakehc"
+  mkdir -p "$fake"
+  cat > "$fake/hc" <<'SH'
+#!/usr/bin/env bash
+d=$(dirname "$0")
+case "$1" in
+  --version) echo "hc 0.1.21" ;;
+  get) for a in "$@"; do last=$a; done; cat "$d/term-$last.json" 2>/dev/null || exit 3 ;;
+  *) exit 1 ;;
+esac
+SH
+  cat > "$fake/herdr-app" <<'SH'
+#!/usr/bin/env bash
+d=$(dirname "$0")
+case "$1" in
+  ls) cat "$d/app-ls.json" 2>/dev/null || exit 1 ;;
+  do) printf '%s\n' "$*" >> "$d/app-calls"; printf '{}\n' ;;
+  *) : > "$d/app-window-opened"; exit 1 ;;
+esac
+SH
+  chmod +x "$fake/hc" "$fake/herdr-app"
+  home=$(new_home relabel-hc operator)
+  # shellcheck disable=SC2016 # expands in the child shell.
+  tag=$(FM_HOME="$home" bash -c '. "$1/bin/fm-backend.sh" && fm_backend_source hc && fm_backend_hometag' _ "$ROOT") || fail "could not derive the home tag"
+  for t in t1:fm-home:fm-t1:"$tag" t2:fm-mate:fm-gfm:"$tag" t3:spc-person:fm-t3:"$tag" t4:spc-other:fm-t4:2ndmate-other-00000000 t5:spc-sibling:fm-t1:"$tag"; do
+    IFS=: read -r a sp task hometag <<<"$t"
+    jq -cn --arg a "$a" --arg sp "$sp" --arg task "$task" --arg h "$hometag" \
+      '{address: $a, state: "live", labels: {"herdr.space": $sp, "firstmate.task": $task, "firstmate.home": $h}}' > "$fake/term-$a.json"
+  done
+  printf 'backend=hc\nkind=ship\nhc_session=lab\nhc_terminal=t1\n' > "$home/state/t1.meta"
+  printf 'backend=hc\nkind=secondmate\nhc_session=lab\nhc_terminal=t2\n' > "$home/state/gfm.meta"
+  printf 'backend=hc\nkind=ship\nhc_session=lab\nhc_terminal=t3\n' > "$home/state/t3.meta"
+  printf 'backend=hc\nkind=ship\nhc_session=lab\nhc_terminal=t4\n' > "$home/state/t4.meta"
+  printf 'backend=hc\nkind=secondmate\nhc_session=lab\nhc_terminal=t5\n' > "$home/state/old.meta"
+  FM_HOME="$home" "$PT" refresh >/dev/null || fail "refresh failed"
+  cat > "$fake/app-ls.json" <<'JSON'
+{"spaces":[
+  {"id":"fm-home","name":"operator","folder":"/srv/slots/1/operator"},
+  {"id":"fm-mate","name":"2ndmate-gfm","folder":"/srv/mates/gfm"},
+  {"id":"spc-person","name":"My space","folder":"/srv/x"},
+  {"id":"spc-other","name":"operator","folder":"/srv/slots/2/operator"},
+  {"id":"spc-sibling","name":"operator","folder":"/srv/slots/3/operator"}]}
+JSON
+  # shellcheck disable=SC2016 # expands in the child shell.
+  run_relabel() { env -u HC_TERMINAL_ID -u HC_TERMINAL_SOCKET FM_HC_BIN="$fake/hc" FM_HERDR_APP_BIN="$fake/herdr-app" FM_HOME="$home" "$PT" relabel "$@" 2>&1; }
+  out=$(run_relabel --hc --dry-run) || fail "relabel --hc --dry-run failed: $out"
+  assert_contains "$out" "relabel: Herdr app space fm-home 'operator' -> 'spotter'" "relabel did not plan the home's automatically named space"
+  assert_contains "$out" "relabel: Herdr app space fm-mate '2ndmate-gfm' -> 'navigator-gfm'" "relabel did not plan the second mate's space under its own label"
+  assert_contains "$out" "named 'My space' by a person" "relabel did not report the name a person chose"
+  case "$out" in *spc-other*) fail "relabel planned a space whose terminal now belongs to another home: $out" ;; esac
+  case "$out" in *spc-sibling*) fail "relabel planned a space whose terminal now holds another task of this home: $out" ;; esac
+  assert_absent "$fake/app-calls" "--dry-run sent a rename"
+  out=$(run_relabel --hc) || fail "relabel --hc failed: $out"
+  assert_equals "do space.rename {\"id\":\"fm-home\",\"name\":\"spotter\"}
+do space.rename {\"id\":\"fm-mate\",\"name\":\"navigator-gfm\"}" "$(sort "$fake/app-calls")" "relabel --hc renamed the wrong spaces"
+  assert_absent "$fake/app-window-opened" "relabel --hc ran a bare herdr-app, which opens the window"
+  rm -f "$fake/app-ls.json"
+  out=$(run_relabel --hc) || fail "relabel --hc with no window failed: $out"
+  assert_contains "$out" "no open Herdr app window answered" "relabel --hc did not report the closed window"
+  out=$(run_relabel 2>&1) && fail "relabel ran with neither --session nor --hc"
+  assert_contains "$out" "needs --session" "relabel refused for the wrong reason"
+  pass "relabel --hc renames only this home's automatically or self-named Herdr app spaces"
+}
+
 if [ "${1:-}" = a11 ]; then
   test_a11_architectural_invariance
   exit 0
@@ -657,6 +733,7 @@ test_anchors_name_a_lost_hook
 test_a11_architectural_invariance
 test_relabel_keeps_history_other_containers_use
 test_relabel_secondmate_records
+test_relabel_hc_spaces
 test_relabel_in_lab
 
 echo "all po-theme-labels tests passed"

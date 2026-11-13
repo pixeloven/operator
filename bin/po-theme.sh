@@ -69,7 +69,8 @@
 #   po-theme.sh refresh               rebuild state/po-theme/values for this home and
 #                                     record its labels in state/po-theme/history;
 #                                     nautical removes the values file and keeps history
-#   po-theme.sh relabel --session S [--dry-run]
+#   po-theme.sh relabel [--session S] [--hc] [--dry-run]
+#                                     needs --session, --hc, or both.
 #                                     herdr: rename this home's recorded workspaces in
 #                                     session S (ids from state/*.meta) whose label
 #                                     is in the home's accept-set to the current
@@ -79,8 +80,22 @@
 #                                     retire history words no live
 #                                     workspace of this home still uses (herdr
 #                                     sessions S and those its task records name,
-#                                     and every Paseo workspace); an
-#                                     unlistable one keeps every history word
+#                                     and every Paseo workspace, plus the Herdr
+#                                     app's spaces when this home has hc
+#                                     records); an unlistable one keeps every
+#                                     history word.
+#                                     --hc: rename this home's Herdr app spaces
+#                                     (hc-spaces below) in the open app window
+#   po-theme.sh hc-spaces <task-id>   name the Herdr app spaces an hc spawn of
+#                                     <task-id> touched: its terminal's space under
+#                                     the home's label (a primary home's
+#                                     kind=secondmate record: that secondmate's
+#                                     label) and the launching supervisor's own
+#                                     terminal's space under the home's label. A
+#                                     space is renamed only while it carries the
+#                                     app's automatic name or one of the labels'
+#                                     accept-set words; a name a person chose is
+#                                     kept. A closed window is a silent no-op.
 #   po-theme.sh registry files        upstream-owned files that carry theme hooks
 #   po-theme.sh registry check-diff <ref>
 #                                     gate A9: every line a registered upstream-owned
@@ -929,6 +944,12 @@ live_labels() {
   done < <(sed -n 's/^herdr_session=//p' "$STATE"/*.meta 2>/dev/null | sort -u)
   l=$(paseo_workspaces) && printf '%s' "$l" | jq -e 'type == "array"' >/dev/null 2>&1 || return 1
   printf '%s' "$l" | jq -r '.[].name | strings' 2>/dev/null
+  # Herdr app space names live only in the app, so they count once this home
+  # has hc records and the app's CLI is installed; a closed window keeps all.
+  grep -qx 'backend=hc' "$STATE"/*.meta 2>/dev/null || return 0
+  hc_backend fm_backend_hc_app_bin >/dev/null 2>&1 || return 0
+  l=$(hc_backend fm_backend_hc_app_spaces) || return 1
+  printf '%s' "$l" | jq -r '.spaces[]?.name | strings' 2>/dev/null
 }
 
 # mate_accept <home> <canonical-label>: <canonical-label>'s accept-set as that
@@ -946,22 +967,132 @@ mate_accept() {
     bash -c '. "$1/bin/po-theme-lib.sh"; po_home_accept "$2"' _ "$1" "$2"
 }
 
-# relabel --session <name> [--dry-run]
+# hc_backend <function> <args...>: one hc adapter function, sourced through
+# bin/fm-backend.sh exactly as the spawn sources it.
+hc_backend() {
+  # shellcheck disable=SC2016
+  FM_HOME="$FM_HOME" bash -c '. "$1/bin/fm-backend.sh" && fm_backend_source hc || exit 1; shift; "$@"' _ "$CODE_ROOT" "$@"
+}
+
+# meta_field <file> <key>: one key=value field of a task record.
+meta_field() {
+  awk -F= -v k="$2" '$1 == k { print substr($0, index($0, "=") + 1); exit }' "$1"
+}
+
+# hc_home_canonical: this home's canonical label.
+hc_home_canonical() {
+  if is_secondmate_home; then
+    printf '2ndmate-%s' "$(tr -d '[:space:]' < "$FM_HOME/.fm-secondmate-home")"
+  else
+    printf 'firstmate'
+  fi
+}
+
+# hc_space_plan [task-id]: "<space-id><TAB><canonical-label>" lines for the
+# Herdr app spaces this home's hc records show in, or [task-id]'s record only.
+# The launching supervisor's own terminal comes first, under the home's label,
+# then each record's terminal that still carries this home's and that record's
+# own task labels (a stale address reused by another terminal is skipped): a
+# primary home's kind=secondmate record under that secondmate's label, any
+# other under the home's. A space keeps the first label it gets, so the
+# supervisor living in a space names it.
+hc_space_plan() {
+  local only=${1:-} canon f id session term space sessions='' s caller
+  canon=$(hc_home_canonical)
+  : > "$TMPD/hc-plan"
+  for f in "$STATE"/*.meta; do
+    [ -f "$f" ] || continue
+    id=$(basename "$f" .meta)
+    [ -z "$only" ] || [ "$id" = "$only" ] || continue
+    [ "$(meta_field "$f" backend)" = hc ] || continue
+    session=$(meta_field "$f" hc_session)
+    term=$(meta_field "$f" hc_terminal)
+    [ -n "$session" ] && [ -n "$term" ] || continue
+    sessions="$sessions$session
+"
+    case "$(hc_backend fm_backend_hc_endpoint_state "$session:$term" "fm-$id")" in
+      ready | finished) ;;
+      *) continue ;;
+    esac
+    space=$(hc_backend fm_backend_hc_terminal_space "$session:$term") || continue
+    if ! is_secondmate_home && [ "$(meta_field "$f" kind)" = secondmate ]; then
+      printf '%s\t2ndmate-%s\n' "$space" "$id" >> "$TMPD/hc-plan"
+    else
+      printf '%s\t%s\n' "$space" "$canon" >> "$TMPD/hc-plan"
+    fi
+  done
+  [ -n "${HC_TERMINAL_ID:-}" ] || sessions=''
+  [ -z "$sessions" ] || sessions="$sessions${HC_SESSION:-default}
+"
+  printf '%s' "$sessions" | awk 'NF && !seen[$0]++' > "$TMPD/hc-sessions"
+  while IFS= read -r s; do
+    caller=$(hc_backend fm_backend_hc_caller_terminal "$s") || continue
+    space=$(hc_backend fm_backend_hc_terminal_space "$s:$caller") || continue
+    printf '%s\t%s\n' "$space" "$canon"
+    break
+  done < "$TMPD/hc-sessions"
+  cat "$TMPD/hc-plan"
+}
+
+# hc_spaces_apply <dry> <verbose> [task-id]: rename each planned space that
+# still carries the app's automatic name or one of its label's accept-set
+# words. A space the window does not show yet is re-read briefly, because the
+# app projects a new terminal's space a moment after the spawn creates it.
+hc_spaces_apply() {
+  local dry=$1 verbose=$2 only=${3:-} spaces id canon want accept cur rc tries
+  hc_space_plan "$only" | awk -F "$TAB" 'NF && !seen[$1]++' > "$TMPD/hc-spaces"
+  if [ ! -s "$TMPD/hc-spaces" ]; then
+    [ "$verbose" -eq 0 ] || echo "relabel: no Herdr app space recorded for this home"
+    return 0
+  fi
+  spaces=$(hc_backend fm_backend_hc_app_spaces) || {
+    [ "$verbose" -eq 0 ] || echo "relabel: no open Herdr app window answered; its spaces were not renamed"
+    return 0
+  }
+  while IFS="$TAB" read -r id canon; do
+    want=$(po_home_label "$canon")
+    accept=$(po_home_accept "$want")
+    tries=${FM_HC_SPACE_WAIT_TRIES:-3}
+    while :; do
+      rc=0
+      cur=$(hc_backend fm_backend_hc_space_name_state "$spaces" "$id" "$accept") || rc=$?
+      [ "$rc" -eq 1 ] && [ "$tries" -gt 0 ] && [ -n "$only" ] || break
+      tries=$((tries - 1))
+      sleep 0.3
+      spaces=$(hc_backend fm_backend_hc_app_spaces) || break
+    done
+    case "$rc" in
+      0) ;;
+      1) [ "$verbose" -eq 0 ] || echo "relabel: Herdr app space $id is not in the open window; skipped"; continue ;;
+      *) [ "$verbose" -eq 0 ] || echo "relabel: Herdr app space $id is named '$cur' by a person, not by this home; kept"; continue ;;
+    esac
+    [ "$cur" != "$want" ] || continue
+    [ "$verbose" -eq 0 ] || echo "relabel: Herdr app space $id '$cur' -> '$want'"
+    [ "$dry" -eq 1 ] || hc_backend fm_backend_hc_space_rename "$id" "$want" || return 1
+  done < "$TMPD/hc-spaces"
+}
+
+# relabel [--session <name>] [--hc] [--dry-run]
 relabel() {
-  local session='' dry=0 ids='' id home want list cur role w f mid mhome accept renamed=0
+  local session='' dry=0 hc=0 ids='' id home want list cur role w f mid mhome accept renamed=0
   while [ $# -gt 0 ]; do
     case "$1" in
-      --session) [ $# -ge 2 ] || die "usage: relabel --session <name> [--dry-run]"; session=$2; shift 2 ;;
+      --session) [ $# -ge 2 ] || die "usage: relabel [--session <name>] [--hc] [--dry-run]"; session=$2; shift 2 ;;
+      --hc) hc=1; shift ;;
       --dry-run) dry=1; shift ;;
       *) die "relabel: unknown argument: $1" ;;
     esac
   done
-  [ -n "$session" ] || die "relabel needs --session <herdr session>; it never guesses one"
+  [ -n "$session" ] || [ "$hc" -eq 1 ] || die "relabel needs --session <herdr session>, --hc, or both; it never guesses one"
   command -v jq >/dev/null 2>&1 || die "relabel needs jq"
   # shellcheck source=bin/po-theme-lib.sh
   . "$SCRIPT_DIR/po-theme-lib.sh"
   # shellcheck source=bin/fm-secondmate-registry-lib.sh
   . "$SCRIPT_DIR/fm-secondmate-registry-lib.sh"
+  if [ "$hc" -eq 1 ]; then
+    hc_spaces_apply "$dry" 1 || die "relabel: the Herdr app refused a space rename"
+  fi
+  [ -n "$session" ] || return 0
   if is_secondmate_home; then
     home=$(po_home_label "2ndmate-$(tr -d '[:space:]' < "$FM_HOME/.fm-secondmate-home")")
   else
@@ -1103,6 +1234,12 @@ case "$cmd" in
     po_label "$1" || die "unknown label role: $1"
     printf '\n' ;;
   relabel) relabel "$@" ;;
+  hc-spaces)
+    [ $# -eq 1 ] || die "usage: hc-spaces <task-id>"
+    command -v jq >/dev/null 2>&1 || die "hc-spaces needs jq"
+    # shellcheck source=bin/po-theme-lib.sh
+    . "$SCRIPT_DIR/po-theme-lib.sh"
+    hc_spaces_apply 0 0 "$1" ;;
   registry)
     case "${1:-}" in
       files) registry_files ;;

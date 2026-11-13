@@ -13,6 +13,7 @@ This page owns the theme format, the validation rules, the boundary between them
 | The intent-address guard for no-mistakes | also refuses the theme's vocative, so a theme never weakens it; the vocative comes from the applied Persona block, so a selection broken after `apply` does not switch the guard off |
 | Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude`; primary home only |
 | Herdr and Paseo workspace labels | the home workspace a person sees in the sidebar, such as `spotter` and `navigator-gfm`, and the away-mode daemon's herdr workspace; matching also accepts the nautical names and every label this home applied earlier, so a live workspace is never orphaned |
+| Herdr desktop app space names | the same labels on the spaces the hc backend's terminals show in, while the app window is open; a name a person chose is kept |
 
 Rules, identifiers, and record formats never change: an instruction that names the captain still binds the same person with exactly the same limits.
 
@@ -24,6 +25,7 @@ printf 'operator\n' > config/po-theme
 bin/po-theme.sh apply               # primary home only
 bin/po-theme.sh verify              # exit 1 on any drift
 bin/po-theme.sh relabel --session default --dry-run   # then without --dry-run
+bin/po-theme.sh relabel --hc --dry-run                 # Herdr desktop app spaces, then without --dry-run
 ```
 
 The selection is the first line of the gitignored `config/po-theme`; absent, empty, or `nautical` means upstream's own voice, and `apply` then removes any block and alias it wrote earlier.
@@ -49,6 +51,14 @@ New herdr and Paseo home workspaces take the theme's label from the first spawn 
 Existing workspaces keep their names and are still found, because every matcher accepts the nautical label, the current label, and every label this home applied earlier, kept in `state/po-theme/history`.
 `relabel` finishes a switch in herdr: it renames only the workspaces this home's task records name in that session, and only when their label is one of this home's own; a primary home's second mate record names that second mate's own workspace, which is renamed to its `navigator-<id>` label only when that second mate's own home (the `home=` its record names, else its `data/secondmates.md` entry) already accepts both its current label and the new one, as that home's own checkout resolves them, since its workers spawn from that checkout's code and the block can reach it before a theme-aware checkout does; until both have, relabel skips it and says to rerun after they propagate, and it skips a remote or unreadable home as one it cannot read locally. It then retires history labels no live workspace of this home still uses: that session, every other herdr session its task records name, and every Paseo workspace, whatever its folder. If any of those cannot be listed, it keeps the whole history.
 It never guesses a session, and it does not rename Paseo workspaces, which keep matching by the accept-set.
+When this home has hc records, the open Herdr desktop app's space names count as live labels too, and a closed app window keeps the whole history.
+
+### Herdr desktop app spaces
+
+The desktop app names a space nobody named after its first terminal's repository, so the primary and every second mate used to read alike.
+After each fresh hc spawn, `bin/po-theme.sh hc-spaces <task-id>` names the space the task shows in after the launching home's label, a second mate's space after that second mate's `navigator-<id>` label, and the space the launching supervisor's own terminal shows in after the launching home's label.
+`relabel --hc` does the same for every hc record of the home after a switch.
+Both rename a space only while it carries the app's automatic name or one of its label's accept-set words, never one a person chose, and do nothing when no app window is open; [`hc-backend.md`](../hc-backend.md#space-names) owns the app mechanics.
 
 ### Sidebar state and alert title
 
@@ -110,7 +120,7 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels, the herdr sidebar state of a task waiting on the user, and the wedge-alarm notification title, as listed above.
+Themed today: chat, worker prose a person reads, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, and the wedge-alarm notification title, as listed above.
 Not yet themed, and scheduled by later ADR-0020 stages: supervision-note glyphs, Calm text and animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
 
 ## Residue: person-visible strings that stay canonical
