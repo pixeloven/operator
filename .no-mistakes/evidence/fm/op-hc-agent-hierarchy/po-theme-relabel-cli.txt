@@ -1,0 +1,11 @@
+$ po-theme.sh relabel            # no target
+po-theme: relabel needs --session <herdr session>, --hc, or both; it never guesses one
+exit=1
+$ po-theme.sh relabel --hc --dry-run   # home has no hc records
+relabel: no Herdr app space recorded for this home
+exit=0
+$ po-theme.sh hc-spaces            # missing task id
+po-theme: usage: hc-spaces <task-id>
+exit=1
+$ po-theme.sh hc-spaces nosuchtask  # unknown task: silent no-op
+exit=0

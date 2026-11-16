@@ -1,0 +1,15 @@
+0030-carry-upstream-pi-calm-fake-host-field.md
+0031-hc-secondmates-and-recovery.md
+0033-hc-agent-hierarchy-and-themed-spaces.md
+0035-carry-three-lint-partitions.md
+--- refs to 0033 file:
+docs/adr/README.md:46:| [0033](0033-hc-agent-hierarchy-and-themed-spaces.md) | Nest hc tasks under their supervisor, lease their copies, and name app spaces from the theme | Proposed | Flat Agents panel and repository-named spaces in the Herdr desktop app; a wrapped hc worker recorded the primary clone |
+docs/documentation-audiences.json:461:      "path": "docs/adr/0033-hc-agent-hierarchy-and-themed-spaces.md",
+--- any branch-introduced ADR-0032 refs:
+none
+--- link check:
+0033-hc-agent-hierarchy-and-themed-spaces.md
+docs/adr/0033-hc-agent-hierarchy-and-themed-spaces.md
+ok docs/adr/README.md -> 0033-hc-agent-hierarchy-and-themed-spaces.md
+ok docs/documentation-audiences.json -> docs/adr/0033-hc-agent-hierarchy-and-themed-spaces.md
+fm-documentation-audiences.test.sh
