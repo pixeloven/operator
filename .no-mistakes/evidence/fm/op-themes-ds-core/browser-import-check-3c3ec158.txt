@@ -1,0 +1,8 @@
+# Browser check (Chrome via chrome-devtools-axi, served from 127.0.0.1) of ds-css output at 3c3ec158
+## cimport-light.html (local design with commented-out Foo + evil.example @import)
+CSSImportRules in po-ds-cimport.css: ["https://fonts.googleapis.com/css2?family=Chango&family=Jost:...&family=JetBrains+Mono:...&display=swap"]  (first rule: CSSImportRule)
+--accent: #a93a1f ; h1 font: Chango, "Cooper Black", Rockwell, Georgia, serif
+Network: only fonts.googleapis.com Chango/Jost/JetBrains request; no request for family=Foo or evil.example
+## pixeloven-dark.html
+CSSImportRules: ["https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"]
+body font: "IBM Plex Sans", system-ui, -apple-system, sans-serif ; --accent: #7c3cff
