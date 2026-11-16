@@ -66,7 +66,7 @@ That sentence is a registered `str.digest.call` hook in `surfaces.tsv`, so `anch
 `anchors` accepts a digest heading in the `/bearings` skill written with either a straight (U+0027) or a curly (U+2019) apostrophe.
 The skill text and the board payload keys, such as `captains_call`, stay canonical.
 
-A themed home spends about 1,290 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.
+A themed home spends about 1,320 estimated tokens of the default 7,500-token startup-memory budget on the block; a nautical home spends nothing.
 
 ## Theme format
 
