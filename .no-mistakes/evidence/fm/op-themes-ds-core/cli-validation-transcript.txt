@@ -1,0 +1,51 @@
+# re-run with design.toml present
+$ po-theme.sh ds-validate good
+ds-validate: good ok
+  exit=
+$ po-theme.sh ds-validate smuggle
+error: $LAB/home/config/po-designs/smuggle/adapter.css: url() is not allowed
+error: $LAB/home/config/po-designs/smuggle/adapter.css: !important is not allowed
+error: $LAB/home/config/po-designs/smuggle/adapter.css: --font-display: value has a function, quote, or parenthesis outside the allowed shapes
+error: $LAB/home/config/po-designs/smuggle/adapter.css: selector is not allowed: body
+error: $LAB/home/config/po-designs/smuggle/adapter.css: --font-sans: value has a function, quote, or parenthesis outside the allowed shapes
+  exit=
+$ po-theme.sh ds-validate badselector
+error: $LAB/home/config/po-designs/badselector/adapter.css: selector is not allowed: body
+  exit=
+$ po-theme.sh ds-validate badimport
+error: $LAB/home/config/po-designs/badimport/adapter.css: @import is not a Google Fonts css2 stylesheet: @import url("https://evil.example/x.css");
+  exit=
+$ po-theme.sh ds-validate commentedimport
+ds-validate: commentedimport ok
+  exit=
+$ po-theme.sh ds-validate commentedevilimport
+ds-validate: commentedevilimport ok
+  exit=
+$ po-theme.sh ds-validate commentedrule
+ds-validate: commentedrule ok
+  exit=
+$ po-theme.sh ds-validate expression
+error: $LAB/home/config/po-designs/expression/adapter.css: expression is not allowed
+error: $LAB/home/config/po-designs/expression/adapter.css: --accent: value has a function, quote, or parenthesis outside the allowed shapes
+  exit=
+$ ds-css good | sed -n 2p   (import hoisted first)
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap");
+$ ds-css commentedimport | grep -c "^@import"   (commented import not hoisted)
+2
+$ ds-css commentedrule | sed -n 2p   (import hoisted despite commented rule)
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap");
+$ ds-css smuggle
+po-theme: design system smuggle failed validation
+  exit=
+$ apply with config/po-design=smuggle  (all-or-nothing)
+(eval):12: no matches found: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//po-ds-live.CaS1fu/home/data/*
+po-theme: design system smuggle failed validation
+  exit=
+state contents: po-theme
+$ apply with config/po-design=good
+design: good stylesheet written to $LAB/home/state/po-design/po-ds.css; marker written to $LAB/home/data/captain-shared.md
+design: ok (good)
+$ tamper state/po-design/po-ds.css then verify / ds-css
+verify: ok (operator)
+design drift: $LAB/home/state/po-design/po-ds.css is missing, stale, or hand-edited; run apply
+ds-css exit=1
