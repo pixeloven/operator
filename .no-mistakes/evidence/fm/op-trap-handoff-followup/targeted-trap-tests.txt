@@ -1,0 +1,18 @@
+## tests/fm-wake-queue.test.sh (selected)
+### bash 5.2.0(1)-release
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.0(1)-release)
+ok - fm_trap_exit --run runs its action and exits on a signal pending at a $() scan (bash 5.2.0(1)-release)
+ok - fm_trap_exit --run runs its action and exits on a plain signal (bash 5.2.0(1)-release)
+ok - lock handoff releases and exits on TERM pending at a $() scan (bash 5.2.0(1)-release)
+ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+### bash 3.2.57(1)-release
+ok - fm_trap_exit exits on a signal pending at a $() scan (bash 3.2.57(1)-release)
+ok - fm_trap_exit --run runs its action and exits on a signal pending at a $() scan (bash 3.2.57(1)-release)
+ok - fm_trap_exit --run runs its action and exits on a plain signal (bash 3.2.57(1)-release)
+ok - lock handoff releases and exits on TERM pending at a $() scan (bash 3.2.57(1)-release)
+ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+## tests/fm-startup-growth-check.test.sh (selected)
+### bash 5.2.0(1)-release
+ok - fm-startup-growth-check
+### bash 3.2.57(1)-release
+ok - fm-startup-growth-check

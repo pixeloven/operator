@@ -1,0 +1,49 @@
+## tests/fm-on.test.sh under bash 5.2.0: exit=0
+ok - fm-on --stdin preserves argv, stdin, stdout, stderr, and exit status without shell interpretation
+ok - fm-on defaults the remote command's stdin to /dev/null
+ok - fm-on arms a bounded SSH dead-peer detection window by default (15s x 3 = 45s)
+ok - fm-on's dead-peer detection window is env-overridable
+ok - fm-on rejects invalid dead-peer settings before launching ssh
+ok - the fixed entrypoint runs every command in the worker's explicit environment
+ok - the entrypoint composes a deduplicated discovered child PATH (kept 2 existing, omitted 9 absent)
+ok - read-only doctor inspects worker gaps over plain SSH without repair
+ok - the remote doctor reports the same PATH the entrypoint hands its children
+ok - the remote doctor derives tool readiness from the installed worker
+ok - the remote doctor reports its required runtime tool set and optional tools
+ok - multiple fm-*.sh executables work without a command table
+ok - tracked-command authorization excludes checkout-local git
+ok - doctor bootstrap remains authenticated when git is unavailable
+ok - transport rejects shell escape, traversal, symlink, and option-injection surfaces
+ok - the fixed entrypoint refuses incompatible protocols and unsafe roots
+ok - ambiguous aliases refuse while exact secondmate ids remain routable
+ok - unreachable and ambiguous transport failures are surfaced without retry
+## tests/fm-remote-job-orphan-reap.test.sh under bash 5.2.0: exit=0
+ok - the Linux start path puts the whole worker tree in its own process group
+ok - removing the state root and killing the recorded worker pid leaves the tree running, orphaned
+ok - a worker whose code root still exists is never reaped
+ok - a worker stops its whole tree once its code root is pruned
+ok - a dry run reports the abandoned worker and signals nothing
+ok - the reaper stops an abandoned worker's whole tree
+ok - the reaper is idempotent
+## tests/fm-mail-check.test.sh under bash 5.2.0: exit=0
+ok - fm-mail-check: help and usage plumbing
+ok - fm-mail-check: arm writes and binds, re-arm is idempotent, disarm removes
+ok - fm-mail-check: arm resolves a relative home into the shim
+ok - fm-mail-check: arm refuses a symlink at the shim path
+ok - fm-mail-check: arm refuses without the mail plane
+ok - fm-mail-check: a successful poll that surfaces new mail emits one wake line
+ok - fm-mail-check: a poll failure is reported once and re-reported after recovery
+ok - fm-mail-check: an unconfigured home is reported once, not every poll
+ok - fm-mail-check: a slow poll times out into a one-line report
+ok - fm-mail-check: a fail-closed poll after a wake reports the failure, not the wake
+ok - fm-mail-check: a repeated status-4 fail-closed poll still wakes
+ok - fm-mail-check: a repeated status-2 stays-queued poll still wakes
+ok - fm-mail-check: a repeated failure that queued new mail still wakes
+ok - fm-mail-check: large repeated polls drain every reader without output noise
+ok - fm-mail-check: a repeated timeout still wakes
+ok - fm-mail-check: a repeated pre-wake heal failure stays silent
+ok - fm-mail-check: a missing mail plane is reported, not assumed
+## tests/fm-gotmp.test.sh under bash 5.2.0: exit=0
+ok - fm-teardown removes the dir pointed to by tasktmp= in meta
+ok - fm-teardown skips gracefully when tasktmp= is absent (backward compat)
+ok - fm-teardown skips gracefully when tasktmp= points to a nonexistent dir

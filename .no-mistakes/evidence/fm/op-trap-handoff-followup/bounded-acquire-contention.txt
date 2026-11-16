@@ -1,0 +1,9 @@
+[base] bash 5.2.0(1)-release holder=83440 owner_after=83440 leaked_helpers=5 runs(rc secs heldpid): [124 2 83440] [124 2 83440] [124 1 83440] [124 1 83440] [124 1 83440]
+[base]   after holder exit: rc=0 owner=86108 me=86108
+[head] bash 5.2.0(1)-release holder=86330 owner_after=86330 leaked_helpers=5 runs(rc secs heldpid): [124 2 86330] [124 1 86330] [124 2 86330] [124 1 86330] [124 2 86330]
+[head]   after holder exit: rc=0 owner=89575 me=89575
+[base] bash 3.2.57(1)-release holder=89789 owner_after=89789 leaked_helpers=5 runs(rc secs heldpid): [124 2 89789] [124 1 89789] [124 2 89789] [124 1 89789] [124 2 89789]
+[base]   after holder exit: rc=0 owner=94550 me=94550
+[head] bash 3.2.57(1)-release holder=94880 owner_after=94880 leaked_helpers=5 runs(rc secs heldpid): [124 2 94880] [124 1 94880] [124 1 94880] [124 2 94880] [124 1 94880]
+[head]   after holder exit: rc=0 owner=98462 me=98462
+note: leaked_helpers counts were a pgrep false positive - the only match was the outer no-mistakes process whose --intent text names _fm_lock_acquire_wait_handoff; no handoff helper survived any run.

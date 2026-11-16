@@ -1,0 +1,7 @@
+[BASE 07692ce0] bash 5.2.0(1)-release exit=0 lock_still_held=yes
+    stderr: environment: trap: line 2: unexpected EOF while looking for matching `)'
+    stderr: environment: -c: line 6: unexpected EOF while looking for matching `)'
+    stderr: handoff returned 1 after TERM
+[HEAD 93694215] bash 5.2.0(1)-release exit=143 lock_still_held=no
+[BASE 07692ce0] bash 3.2.57(1)-release exit=143 lock_still_held=no
+[HEAD 93694215] bash 3.2.57(1)-release exit=143 lock_still_held=no
