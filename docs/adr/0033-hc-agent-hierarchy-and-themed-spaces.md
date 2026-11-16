@@ -1,4 +1,4 @@
-# ADR-0032: Nest hc tasks under their supervisor, lease their copies, and name app spaces from the theme
+# ADR-0033: Nest hc tasks under their supervisor, lease their copies, and name app spaces from the theme
 
 - **Status:** Proposed
 - **Date:** 2026-11-13
