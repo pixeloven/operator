@@ -1,0 +1,31 @@
+== full inventory
+     613
+partition 1of2: roots=     306 bytes= 11088077
+partition 2of2: roots=     307 bytes= 11088281
+N=2 union sorted == inventory: yes  duplicates:        0
+partition 1of3: roots=     204 bytes= 7392078
+partition 2of3: roots=     204 bytes= 7392033
+partition 3of3: roots=     205 bytes= 7392247
+N=3 union sorted == inventory: yes  duplicates:        0
+== N=2 identical to base (872c2304) packing
+1of2 identical: yes
+2of2 identical: yes
+== determinism
+2of3 repeat identical: yes
+== refusals
+--partition '0of3' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 0of3.
+--partition '4of3' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 4of3.
+--partition '1of1' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 1of1.
+--partition '1of0' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 1of0.
+--partition '1of' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 1of.
+--partition '2' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 2.
+--partition '1ofx' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 1ofx.
+--partition 'abc' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got abc.
+--partition '01of3' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 01of3.
+--partition '100of100' -> rc=2: fm-lint.sh: --partition must be KofN with 1 <= K <= N and N >= 2, got 100of100.
+--partition (missing) -> rc=2: fm-lint.sh: --partition requires KofN, such as 1of3.
+--partition 1of3 <path> -> rc=2: fm-lint.sh: --partition requires full canonical lint; omit --fast and explicit paths.
+--fast --partition 1of3 -> rc=2: fm-lint.sh: --partition requires full canonical lint; omit --fast and explicit paths.
+== accepted larger N
+5of5 rc=0 roots=     123
+10of12 rc=0 roots=      51

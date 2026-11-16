@@ -1,0 +1,2 @@
+target A4 allowlist (len 1361): paths outside = []
+base A4 allowlist (len 1345): paths outside = ['bin/fm-lint.sh', 'tests/fm-lint.test.sh']

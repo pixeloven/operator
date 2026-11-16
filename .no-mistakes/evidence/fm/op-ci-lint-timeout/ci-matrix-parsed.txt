@@ -1,0 +1,2 @@
+lint job lint name= ${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && 'Not run for label - ' || '' }}Lint ${{ matrix.partition }} matrix= [1, 2, 3] timeout= 30
+full job full-suite needs ['lint', 'test-coverage', 'tests-portable-parallel-1', 'tests-portable-parallel-2', 'tests-portable-serial', 'tests-herdr', 'tests-hc', 'macos-stock-bash', 'invariants']
