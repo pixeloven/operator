@@ -237,6 +237,12 @@ test_local_design_refusals() {
   assert_equals "" "$(printf '%s\n' "$css" | sed -n '3,/---- adapter.css ----/p' | grep '@import')" \
     "a commented-out @import was hoisted ahead of the adapter"
   assert_contains "$(section "$css" adapter.css)" "family=Foo" "the commented-out @import was dropped from the adapter body"
+  { printf '/* :root { --accent: #000000; } */\n/*\n:root {\n  --accent: #000000;\n}\n*/\n'
+    cat "$DESIGNS/firstmate/adapter.css"; } > "$dir/adapter.css"
+  assert_equals "ds-validate: mine ok" "$(FM_HOME="$home" "$PT" ds-validate mine 2>&1)" "a commented-out rule counted as a rule before the leading @import"
+  css=$(FM_HOME="$home" "$PT" ds-css mine) || fail "ds-css of a design with a commented-out leading rule failed"
+  assert_contains "$(printf '%s\n' "$css" | sed -n 2p)" '@import url("https://fonts.googleapis.com/css2?family=Chango' \
+    "the leading import was not hoisted after a commented-out rule"
   edit() { cp "$DESIGNS/firstmate/adapter.css" "$dir/adapter.css"; printf '%s\n' "$1" >> "$dir/adapter.css"; }
   edit ':root { --accent: url(https://example.invalid/x.png); }'; refused "$home" mine "url() is not allowed"
   edit 'body { --accent: #000000; }'; refused "$home" mine "selector is not allowed: body"

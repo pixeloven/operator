@@ -91,16 +91,18 @@ pd_marker_field() {
 pd_has_marker() { [ -f "$SHARED" ] && grep -q "^$PD_MARK_PREFIX" "$SHARED"; }
 
 # PD_AWK_COMMENT: awk function pd_scan(line) that carries the global
-# incomment across lines, skipping quoted strings (needs -v sq="'"); a line is
-# a live @import only when it starts outside a comment.
+# incomment across lines, skipping quoted strings (needs -v sq="'"), and sets
+# brace when the line opens a live block; a line is a live @import only when it
+# starts outside a comment.
 PD_AWK_COMMENT='
     function pd_scan(l,    i, n, c, q) {
-      n = length(l); i = 1
+      n = length(l); i = 1; brace = 0
       while (i <= n) {
         if (incomment) { if (substr(l, i, 2) == "*/") { incomment = 0; i += 2 } else i++; continue }
         c = substr(l, i, 1)
         if (c == "/" && substr(l, i + 1, 1) == "*") { incomment = 1; i += 2; continue }
         if (c == "\"" || c == sq) { q = index(substr(l, i + 1), c); if (q == 0) return; i += q + 1; continue }
+        if (c == "{") brace = 1
         i++
       }
     }
@@ -149,7 +151,7 @@ pd_css_check() {
         }
         next
       }
-      if (index(line, "{")) seen_rule = 1
+      if (brace) seen_rule = 1
       s = s line "\n"
     }
     END {
