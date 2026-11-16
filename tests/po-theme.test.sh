@@ -6,7 +6,8 @@
 #   - bundled themes validate; each refusal reason fails with its named reason
 #   - anchors pass on this tree and fail on a fixture whose mirrored wording,
 #     /bearings digest section name, user-invocable skill set, or hook line
-#     drifted
+#     drifted, including the Persona block's digest-heading sentence; a digest
+#     heading typeset with a curly apostrophe still anchors
 #   - the surface canary fails on an unregistered nautical word in each
 #     producer pattern, passes a registered hook line or a residue row, refuses
 #     a residue row without a rule or stage, and notes a stale one
@@ -18,7 +19,8 @@
 #     matches the unpatched upstream detector on a sample corpus
 #   - the Persona block scopes the command aliases to the primary home
 #   - the Persona block maps each /bearings digest section name a theme
-#     changes, given or derived from the address word, and only those
+#     changes, given or derived from the address word, and only those, and
+#     states a changed call heading outright in one sentence
 #   - the worker role contract is byte-identical to upstream under nautical and
 #     gains exactly one vocabulary line under a theme
 #   - a secondmate home resolves a custom theme from the inherited values line,
@@ -215,6 +217,18 @@ test_anchors() {
   sed "s/\\*\\*Captain's Call\\*\\*/**Captain's Desk**/g" "$ROOT/.agents/skills/bearings/SKILL.md" > "$code/.agents/skills/bearings/SKILL.md"
   out=$(FM_HOME="$TMP_ROOT/anchors-digest" "$code/bin/po-theme.sh" anchors 2>&1) && fail "anchors passed with a renamed digest section"
   assert_contains "$out" "anchor missing: **Captain's Call** not found in .agents/skills/bearings/SKILL.md" "anchors did not name the renamed digest section"
+
+  # A curly apostrophe (U+2019) in a digest heading still anchors it.
+  code=$(new_code anchors-curly)
+  sed "s/\\*\\*Captain's Call\\*\\*/**Captain$(printf '\342\200\231')s Call**/g" "$ROOT/.agents/skills/bearings/SKILL.md" > "$code/.agents/skills/bearings/SKILL.md"
+  out=$(FM_HOME="$TMP_ROOT/anchors-curly" "$code/bin/po-theme.sh" anchors 2>&1)
+  assert_not_contains "$out" "Call** not found" "anchors refused a digest heading typeset with a curly apostrophe"
+
+  # The Persona block's digest-heading sentence is a registered hook: losing it fails.
+  code=$(new_code anchors-call-hook)
+  grep -vF 'digest heading `%s` reads `%s`' "$PT" > "$code/bin/po-theme.sh"
+  out=$(FM_HOME="$TMP_ROOT/anchors-call-hook" bash "$code/bin/po-theme.sh" anchors 2>&1) && fail "anchors passed without the digest-heading sentence"
+  assert_contains "$out" "anchor missing: hook str.digest.call not found in bin/po-theme.sh" "anchors did not name the lost digest-heading hook"
   pass "anchors pass on this tree and fail on drifted wording, a renamed digest section, a new command, or a lost hook"
 }
 
@@ -814,6 +828,8 @@ test_digest_section_rows() {
 
 " "the call row does not close the role table"
   assert_not_contains "$out" "Underway (the /bearings section)" "the block maps an unchanged section name"
+  assert_contains "$out" "- The Bearings/sitrep digest heading \`Captain's Call\` reads \`Operator's Call\`; other digest headings stay as written.
+" "the block does not state the translated call heading outright"
   derive "$home" digest '/^user_address = /s/.*/user_address = "Chief"/; s/^noop_reply = .*/noop_reply = "Chief, all systems nominal."/; s/^bad_news_example = .*/bad_news_example = "Chief, the build broke - ..."/'
   printf '%s\n' 'str.digest.underway = "Live Ops"' 'str.digest.landed = "Recently Landed"' >> "$home/config/po-themes/digest.theme"
   out=$(FM_HOME="$home" "$PT" persona digest) || fail "persona digest failed: $out"
@@ -823,6 +839,11 @@ test_digest_section_rows() {
 " "the block does not map a derived call and a given section name in order"
   assert_not_contains "$out" "Recently Landed (the /bearings section)" "the block maps a section name set to its nautical value"
   assert_not_contains "$out" "Charted Next (the /bearings section)" "the block maps an absent section name"
+  assert_contains "$out" "- The Bearings/sitrep digest heading \`Captain's Call\` reads \`Chief's Call\`; other digest headings stay as written unless the table above maps them.
+" "the call sentence does not defer to the table for a changed section name"
+  printf '%s\n' "str.digest.call = \"Captain's Call\"" >> "$home/config/po-themes/digest.theme"
+  out=$(FM_HOME="$home" "$PT" persona digest) || fail "persona digest with a nautical call failed: $out"
+  assert_not_contains "$out" "digest heading" "the block states a call heading the theme keeps nautical"
   assert_equals "" "$(FM_HOME="$home" "$PT" persona nautical)" "nautical printed a persona block"
   pass "the Persona block maps each changed digest section name, given or derived, and only those"
 }

@@ -122,6 +122,7 @@ ALIAS_MARKER='.po-theme-alias'
 EXCLUDE_START='# po-theme:aliases:start'
 EXCLUDE_END='# po-theme:aliases:end'
 TAB=$(printf '\t')
+RSQUO=$(printf '\342\200\231')  # U+2019, the curly apostrophe a model may typeset
 
 ROLE_KEYS='user self worker crew submate fleet scout_task ship_task'
 STATUS_TOKENS='working done blocked paused failed needs-decision resolved note captain-held'
@@ -491,7 +492,7 @@ values_line() {  # <kv> [local]
 
 # shellcheck disable=SC2016  # backticks are literal Markdown code spans for the reading agent.
 persona() {  # <name> <kv> [local]
-  local name=$1 kv=$2 origin=${3:-} k v seasoning
+  local name=$1 kv=$2 origin=${3:-} k v seasoning canon_call call others bearings
   [ "$name" = nautical ] && return 0
   t() { get "$kv" "$1"; }
   parse "$BUNDLED/nautical.theme" > "$TMPD/persona-canon.kv" || die "bundled nautical theme is malformed"
@@ -531,6 +532,18 @@ persona() {  # <name> <kv> [local]
     esac
   done < "$kv"
   printf -- "- Identifiers never change: script names, paths, environment variables, skill names, status verbs, and brief headings such as \`## Captain's intent\` stay exactly as written.\n"
+  # The digest's call heading is a display string, not a fixed title: say so
+  # outright, since the identifiers rule above otherwise reads as keeping it.
+  canon_call=$(get "$TMPD/persona-canon.kv" str.digest.call) call=$(get "$TMPD/persona-strs" str.digest.call)
+  if [ "$call" != "$canon_call" ]; then
+    others='other digest headings stay as written'
+    for k in str.digest.underway str.digest.landed str.digest.charted; do
+      [ "$(get "$TMPD/persona-strs" "$k")" = "$(get "$TMPD/persona-canon.kv" "$k")" ] || others='other digest headings stay as written unless the table above maps them'
+    done
+    bearings=Bearings
+    [ "$(t alias.bearings)" = bearings ] || bearings="Bearings/$(t alias.bearings)"
+    printf -- '- The %s digest heading `%s` reads `%s`; %s.\n' "$bearings" "$canon_call" "$call" "$others"
+  fi
   printf -- '- Command aliases, generated in the primary home only (a second-mate home keeps the original command names):'
   while IFS="$TAB" read -r k v; do
     case "$k" in alias.*) [ "$v" = "${k#alias.}" ] || printf ' /%s = /%s;' "$v" "${k#alias.}" ;; esac
@@ -779,7 +792,11 @@ anchors() {
   while IFS="$TAB" read -r k v; do
     case "$k" in
       schema|name|description|*_plural|avoid.*|label.*) ;;
-      str.digest.*) chk .agents/skills/bearings/SKILL.md "**$v**" ;;
+      # A digest heading may be typeset with a straight (U+0027) or curly
+      # (U+2019) apostrophe; either spelling anchors it.
+      str.digest.*)
+        grep -qF -- "**$(printf '%s' "$v" | sed "s/'/$RSQUO/g")**" "$CODE_ROOT/.agents/skills/bearings/SKILL.md" 2>/dev/null \
+          || chk .agents/skills/bearings/SKILL.md "**$v**" ;;
       str.*)
         registry_rows | awk -F '\t' -v k="$k" -v v="$v" '$1 == k && index($6, v) { found = 1 } END { exit !found }' \
           || { printf 'anchor missing: nautical %s is not in the upstream line of any registered %s hook\n' "$k" "$k"; miss=1; } ;;
