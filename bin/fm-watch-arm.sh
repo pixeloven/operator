@@ -548,9 +548,9 @@ handle_attached_signal() {
   exit "$rc"
 }
 
-trap 'handle_attached_signal HUP 129' HUP
-trap 'handle_attached_signal TERM 143' TERM
-trap 'handle_attached_signal INT 130' INT
+fm_trap_exit --run 'handle_attached_signal HUP 129' 129 HUP
+fm_trap_exit --run 'handle_attached_signal TERM 143' 143 TERM
+fm_trap_exit --run 'handle_attached_signal INT 130' 130 INT
 
 watch_output_has_wake() {
   local out=$1
@@ -788,9 +788,9 @@ handle_arm_signal() {
   exit "$rc"
 }
 
-trap 'handle_arm_signal HUP 129' HUP
-trap 'handle_arm_signal TERM 143' TERM
-trap 'handle_arm_signal INT 130' INT
+fm_trap_exit --run 'handle_arm_signal HUP 129' 129 HUP
+fm_trap_exit --run 'handle_arm_signal TERM 143' 143 TERM
+fm_trap_exit --run 'handle_arm_signal INT 130' 130 INT
 
 child_out=$(mktemp "$STATE/.watch-arm-output.XXXXXX") || {
   echo "watcher: FAILED - no live watcher with a fresh beacon"

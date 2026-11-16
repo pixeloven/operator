@@ -29,6 +29,8 @@ STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 
 # shellcheck source=bin/fm-secondmate-registry-lib.sh
 . "$SCRIPT_DIR/fm-secondmate-registry-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 # shellcheck source=bin/fm-config-inherit-lib.sh
 . "$SCRIPT_DIR/fm-config-inherit-lib.sh"
 # shellcheck source=bin/fm-secondmate-nudge-lib.sh
@@ -51,8 +53,8 @@ REMOTE=$(secondmate_registry_field "$DATA/secondmates.md" "$ID" remote 2>/dev/nu
 [ "$REMOTE" = 1 ] || die "secondmate $ID is not a remote route"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-remote-inherit-push.XXXXXX") || die "cannot create inheritance staging directory"
 trap 'rm -rf -- "$TMP"' EXIT
-trap 'exit 143' TERM
-trap 'exit 130' INT
+fm_trap_exit 143 TERM
+fm_trap_exit 130 INT
 EMPTY="$TMP/empty"
 : > "$EMPTY"
 EMPTY_HASH=$(sha256_file "$EMPTY") || die "cannot hash empty inheritance payload"

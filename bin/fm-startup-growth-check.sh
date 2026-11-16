@@ -65,6 +65,8 @@ BUDGET_BIN="$SCRIPT_DIR/fm-startup-memory-budget.sh"
 
 # shellcheck source=bin/fm-pr-lib.sh
 . "$SCRIPT_DIR/fm-pr-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 # shellcheck source=bin/fm-startup-memory-budget-lib.sh
 . "$SCRIPT_DIR/fm-startup-memory-budget-lib.sh"
 # shellcheck source=bin/fm-line-cap-lib.sh
@@ -281,7 +283,8 @@ run_check() {
   reported_previous=$(awk -F '\t' '$1 == "reported" { print substr($0, index($0, "\t") + 1); exit }' "$OLD_RECORD" 2>/dev/null || true)
   NEW_RECORD=$(mktemp "$STATE/.startup-growth-check.XXXXXX") || exit 1
   trap 'rm -f -- "${NEW_RECORD:-}"' EXIT
-  trap 'rm -f -- "${NEW_RECORD:-}"; exit 1' HUP INT TERM
+  # shellcheck disable=SC2016 # Expanded when the trap fires.
+  fm_trap_exit --run 'rm -f -- "${NEW_RECORD:-}"' 1 HUP INT TERM
   FINDINGS=
   printf '%s\n' "$RECORD_SCHEMA_LINE" > "$NEW_RECORD" || exit 1
   printf '%s\t%s\n' last_eval "$now" >> "$NEW_RECORD" || exit 1
@@ -380,7 +383,7 @@ arm() {
   if [ -f "$CHECK_SHIM" ] && [ ! -L "$CHECK_SHIM" ]; then
     ARM_BACKUP=$(shim_backup "$state_device") || fail "could not save the existing check shim"
   fi
-  trap 'arm_failed "arming was interrupted"' HUP INT TERM
+  fm_trap_exit --run 'arm_failed "arming was interrupted"' 1 HUP INT TERM
   shim_write "$want" "$state_device" || arm_failed "check shim path is unavailable"
   FM_HOME="$home" "$REGISTER_BIN" "$CHECK_ID" >/dev/null || arm_failed "could not register the check shim"
   trap - HUP INT TERM

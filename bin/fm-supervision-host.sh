@@ -1235,9 +1235,9 @@ if ! host_still_owner; then
   stand_down "this session does not own supervision"
 fi
 trap cleanup EXIT
-trap 'exit 129' HUP
-trap 'exit 143' TERM
-trap 'exit 130' INT
+fm_trap_exit 129 HUP
+fm_trap_exit 143 TERM
+fm_trap_exit 130 INT
 activate || { echo "supervision-host stood down: the host record could not be written"; exit 0; }
 log_line "start	gen=$GEN	primary=$PRIMARY"
 

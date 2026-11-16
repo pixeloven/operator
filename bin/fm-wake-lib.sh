@@ -12,6 +12,8 @@ FM_WAKE_QUEUE_LOCK="${FM_WAKE_QUEUE_LOCK:-$STATE/.wake-queue.lock}"
 FM_LOCK_STALE_AFTER="${FM_LOCK_STALE_AFTER:-2}"
 # shellcheck source=bin/fm-path-lib.sh
 . "$FM_WAKE_LIB_DIR/fm-path-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$FM_WAKE_LIB_DIR/fm-trap-lib.sh"
 # Resolved once at source time: fm_pid_identity and fm_path_mtime run inside 0.2s
 # confirm and 0.5s attach polls, and forking uname per call is a measurable cost on
 # the platform (Git Bash/MSYS) that already pays the highest fork price.
@@ -55,19 +57,6 @@ fm_current_pid() {  # [output-variable]
   else
     printf '%s\n' "$fm_pid"
   fi
-}
-
-# fm_trap_exit <status> <signal>...
-# Trap each signal to exit with <status>, including on Bash 5.2. Bash 5.2 runs a
-# trap that falls due while it rescans a $(...) word at expansion time (even an
-# unexecuted ${var:-$(...)} alternative) inside that scan's half-open $( parser
-# state, so a plain action fails with "unexpected EOF while looking for matching
-# `)'" and the signal is lost (Bash 5.3 defers such traps). The action's second
-# line closes that phantom $( there; everywhere else exit runs before that line
-# is read.
-fm_trap_exit() {  # <status> <signal>...
-  # shellcheck disable=SC2064 # The status is a literal, fixed now.
-  trap "exit $1"$'\n'")" "${@:2}"
 }
 
 # Fork-free stand-in for `$(date +%s)` on the watcher, drain, and lock paths
@@ -1645,7 +1634,8 @@ _fm_lock_acquire_wait_handoff() {  # <lockdir> <caller-pid>
   local lockdir=$1 caller_pid=$2 ownerdir current back caller_start
   case "$caller_pid" in ''|*[!0-9]*) return 1 ;; esac
   fm_pid_alive "$caller_pid" || return 1
-  trap 'fm_lock_release "$lockdir"; exit 143' TERM INT
+  # shellcheck disable=SC2016 # Expanded when the trap fires.
+  fm_trap_exit --run 'fm_lock_release "$lockdir"' 143 TERM INT
   fm_lock_acquire_wait "$lockdir" || return 1
   if [ -L "$lockdir" ]; then
     ownerdir=$(fm_lock_link_owner "$lockdir" 2>/dev/null) || {

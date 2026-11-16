@@ -93,6 +93,8 @@ SCRIPT_DIR=$(CDPATH='' cd -- "$SCRIPT_DIR" && pwd -P)
 FM_ROOT="${FM_ROOT_OVERRIDE:-$(CDPATH='' cd "$SCRIPT_DIR/.." && pwd -P)}"
 # shellcheck source=bin/fm-remote-job-lib.sh
 . "$SCRIPT_DIR/fm-remote-job-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 # shellcheck source=bin/fm-tasks-axi-lib.sh
 . "$SCRIPT_DIR/fm-tasks-axi-lib.sh"
 # shellcheck source=bin/fm-remote-herdr-owner-lib.sh
@@ -1120,9 +1122,9 @@ authorize_guard_takeover() {
   [ "$AUTOMATIC" -eq 0 ] || return 0
   start=$(fm_remote_job_process_start "$$") || return 1
   trap revoke_guard_takeover EXIT
-  trap 'exit 129' HUP
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
+  fm_trap_exit 129 HUP
+  fm_trap_exit 130 INT
+  fm_trap_exit 143 TERM
   marker=$(herdr_takeover_marker)
   if ! printf '%s\n%s\n' "$$" "$start" > "$marker.tmp.$$" 2>/dev/null || ! mv -f -- "$marker.tmp.$$" "$marker" 2>/dev/null; then
     rm -f -- "$marker.tmp.$$"
