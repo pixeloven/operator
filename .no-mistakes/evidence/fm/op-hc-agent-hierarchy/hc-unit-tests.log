@@ -1,0 +1,7 @@
+ok - hc: a worker whose wrapped shell never reaches its leased copy is refused before launch
+ok - hc: a secondmate nests under the primary's terminal, its spaces take the home labels, and restart, recovery and cleanup keep its terminal
+ok - hc: a spawn keeps a space name a person chose and starts parentless without a supervisor terminal
+FM_TEST_COMPLETE
+ok - relabel --hc renames only this home's automatically or self-named Herdr app spaces
+ok - relabel renames only recorded workspaces in a named lab session and retires unused history
+all po-theme-labels tests passed

@@ -1,0 +1,113 @@
+lab core session fm-hclab-drvlease-64969-10986 ready (server pid 65316)
+== supervisor terminal: t1
+== spawn (real fm-spawn.sh, backend=hc, launched from supervisor terminal t1)
+warning: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/data/drvcrew1/launch-brief.md records no ship branch; defaulting to legacy branch fm/drvcrew1
+warning: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/data/drvcrew1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj. Run 'treehouse return /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj' to release it.
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-drvcrew1/gitconfig signing=disabled
+spawned drvcrew1 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-drvlease-64969-10986:t2 worktree=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj
+spawn rc=0
+== meta
+window=fm-hclab-drvlease-64969-10986:t2
+endpoint_task_id=drvcrew1
+worktree=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj
+project=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/proj
+harness=sh
+kind=ship
+mode=no-mistakes
+yolo=off
+branch=fm/drvcrew1
+tasktmp=/tmp/fm-drvcrew1
+model=default
+effort=default
+spawn_gen=s1794854713.65979.3782
+backend=hc
+hc_session=fm-hclab-drvlease-64969-10986
+hc_terminal=t2
+hc_core=008def8e0fdde7e63266a863e939193d
+== hc get worker
+{
+  "address": "t2",
+  "parent": "t1",
+  "state": "live",
+  "labels": {
+    "firstmate.home": "firstmate-808cce4c",
+    "firstmate.task": "fm-drvcrew1",
+    "herdr.space": "fm-firstmate-808cce4c",
+    "herdr.tab": "firstmate-808cce4c-fm-drvcrew1"
+  },
+  "cwd": "/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj"
+}
+== treehouse status (lease holder)
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+[
+  {
+    "name": "1",
+    "path": "/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj",
+    "status": "leased",
+    "branch": "",
+    "detached": true,
+    "flavor": "git",
+    "lease_id": "66b8facff7f12b90fcafdcb71ca49a19",
+    "lease_holder": "drvcrew1",
+    "leased_at": "2026-11-16T10:45:10.35793-08:00",
+    "processes": [
+      {
+        "pid": 69178,
+        "name": "zsh"
+      },
+      {
+        "pid": 78022,
+        "name": "bash"
+      },
+      {
+        "pid": 78039,
+        "name": "sleep"
+      }
+    ]
+  }
+]
+== worker screen
+jq: parse error: Invalid numeric literal at line 2, column 5
+== po-theme hc-spaces drvcrew1 (no app window)
+rc=0
+== po-theme relabel --hc --dry-run (no app window)
+relabel: no open Herdr app window answered; its spaces were not renamed
+rc=0
+== adversarial: relabel with neither --session nor --hc
+po-theme: relabel needs --session <herdr session>, --hc, or both; it never guesses one
+rc=1
+== teardown
+
+🌳 Worktree returned to pool.
+/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/proj: already current
+teardown drvcrew1 complete (window fm-hclab-drvlease-64969-10986:t2, worktree /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj)
+Backlog: drvcrew1 just finished (this home keeps no markdown backlog at /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/data/backlog.md). Update /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/data/backlog.md - move drvcrew1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+teardown rc=0
+== treehouse status after teardown
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+[
+  {
+    "name": "1",
+    "path": "/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-drv-hc.7Utogx/th-pool/.treehouse/proj-b381e3/1/proj",
+    "status": "available",
+    "branch": "",
+    "detached": true,
+    "flavor": "git",
+    "lease_id": "",
+    "lease_holder": "",
+    "leased_at": null,
+    "processes": []
+  }
+]
+== supervisor after teardown: live
+teardown rc=0
