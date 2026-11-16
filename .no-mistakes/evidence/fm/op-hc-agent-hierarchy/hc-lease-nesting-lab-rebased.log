@@ -1,0 +1,43 @@
+lab core session fm-hclab-appdetect-25934-31151 ready (server pid 26066)
+== supervisor terminal: t1
+== spawn rc=0
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-leasedrv1/gitconfig signing=disabled
+spawned leasedrv1 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-appdetect-25934-31151:t2 worktree=/Users/brian/.treehouse/scratch-project-fa66a5/1/scratch-project
+NOTICE: auto-detected a Herdr-app-projected terminal (fm-hclab-appdetect-25934-31151:t1 carries a herdr.space label) - spawning into the EXPERIMENTAL hc backend with Herdr app presentation (herdr.space/herdr.tab labels). Set config/backend or pass --backend <name> to opt out.
+warning: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-backend-hc-appdetect.cAEJVL/data/leasedrv1/launch-brief.md records no ship branch; defaulting to legacy branch fm/leasedrv1
+warning: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-backend-hc-appdetect.cAEJVL/data/leasedrv1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/scratch-project-fa66a5/1/scratch-project. Run 'treehouse return ~/.treehouse/scratch-project-fa66a5/1/scratch-project' to release it.
+== meta
+worktree=/Users/brian/.treehouse/scratch-project-fa66a5/1/scratch-project
+project=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-backend-hc-appdetect.cAEJVL/scratch-project
+backend=hc
+backend_detect=app-terminal
+hc_session=fm-hclab-appdetect-25934-31151
+hc_terminal=t2
+== hc get worker
+{
+  "address": "t2",
+  "parent": "t1",
+  "state": "live",
+  "labels": {
+    "firstmate.home": "firstmate-808cce4c",
+    "firstmate.task": "fm-leasedrv1",
+    "herdr.space": "fm-firstmate-808cce4c",
+    "herdr.tab": "firstmate-808cce4c-fm-leasedrv1"
+  },
+  "cwd": "/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-backend-hc-appdetect.cAEJVL/scratch-project"
+}
+== treehouse status before teardown
+
+base  master  (repository default)
+1     leased       ~/.treehouse/scratch-project-fa66a5/1/scratch-project  (detached)  (held by leasedrv1)
+                   zsh (28118), bash (33087), sleep (33098)
+== after teardown
+
+base  master  (repository default)
+1     available    ~/.treehouse/scratch-project-fa66a5/1/scratch-project  (detached)
+worker terminal removed
+supervisor state: live
+ok - lease driver: worker nested under supervisor t1 in leased copy /Users/brian/.treehouse/scratch-project-fa66a5/1/scratch-project; teardown closed it and kept the supervisor
