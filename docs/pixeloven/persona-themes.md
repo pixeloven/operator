@@ -61,7 +61,7 @@ Nothing matches either string, so a switch needs no relabel.
 
 The `str.digest.*` strings name the four `/bearings` digest sections the agent copies into chat: `Captain's Call`, `Underway`, `Recently Landed`, and `Charted Next` under nautical.
 The Persona block adds one table row for each name the theme changes, such as `Captain's Call (the /bearings section)` mapped to the theme's `{User}'s Call` heading built from its user word, so a themed chat heading survives a compaction.
-Because the block's identifiers rule keeps brief headings as written, a model can read `Captain's Call` as a fixed title, so when the call heading changes the block also states it outright in one sentence, such as "The Bearings/sitrep digest heading `Captain's Call` reads `Operator's Call`; other digest headings stay as written."
+Because the block's identifiers rule keeps brief headings as written, a model can read `Captain's Call` as a fixed title, so when the call heading changes the block also states it outright in one sentence, in the form "The Bearings/sitrep digest heading `Captain's Call` reads `{User}'s Call`; other digest headings stay as written."
 That sentence is a registered `str.digest.call` hook in `surfaces.tsv`, so `anchors` fails if it is lost.
 `anchors` accepts a digest heading in the `/bearings` skill written with either a straight (U+0027) or a curly (U+2019) apostrophe.
 The skill text and the board payload keys, such as `captains_call`, stay canonical.
