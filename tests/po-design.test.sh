@@ -223,10 +223,20 @@ refused() {
 }
 
 test_local_design_refusals() {
-  local home dir
+  local home dir css
   home=$(new_home refusals)
   dir=$(local_design "$home" mine)
   assert_equals "ds-validate: mine ok" "$(FM_HOME="$home" "$PT" ds-validate mine 2>&1)" "a copied Firstmate Default did not validate as a local design system"
+  { sed -n '/^@import/p' "$DESIGNS/firstmate/adapter.css"
+    printf '/*\n@import url("https://fonts.googleapis.com/css2?family=Foo");\n@import url("https://example.invalid/x.css");\n*/\n'
+    sed '/^@import/d' "$DESIGNS/firstmate/adapter.css"; } > "$dir/adapter.css"
+  assert_equals "ds-validate: mine ok" "$(FM_HOME="$home" "$PT" ds-validate mine 2>&1)" "a commented-out @import was validated as a live import"
+  css=$(FM_HOME="$home" "$PT" ds-css mine) || fail "ds-css of a design with a commented-out @import failed"
+  assert_contains "$(printf '%s\n' "$css" | sed -n 2p)" '@import url("https://fonts.googleapis.com/css2?family=Chango' \
+    "the live import is not the first rule when a commented-out import follows it"
+  assert_equals "" "$(printf '%s\n' "$css" | sed -n '3,/---- adapter.css ----/p' | grep '@import')" \
+    "a commented-out @import was hoisted ahead of the adapter"
+  assert_contains "$(section "$css" adapter.css)" "family=Foo" "the commented-out @import was dropped from the adapter body"
   edit() { cp "$DESIGNS/firstmate/adapter.css" "$dir/adapter.css"; printf '%s\n' "$1" >> "$dir/adapter.css"; }
   edit ':root { --accent: url(https://example.invalid/x.png); }'; refused "$home" mine "url() is not allowed"
   edit 'body { --accent: #000000; }'; refused "$home" mine "selector is not allowed: body"
