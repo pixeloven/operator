@@ -29,6 +29,14 @@
 #   - headline prints nothing under nautical, the applied persona in two lines
 #     under a theme, and one drift line when verify fails; the real
 #     fm-session-start.sh prints it before LOCK and nothing there under nautical
+#   - the supervision branch's per-wake prompt (bin/fm-branch-dispatch.mjs
+#     wake-prompt) is byte-identical to upstream's under nautical and under an
+#     unresolvable selection, gains exactly one vocabulary paragraph before the
+#     away tail under a theme, and the branch system prompt
+#     (bin/fm-branch-prompt.sh) stays byte-identical across themes
+#   - one long-lived host runs po-theme.sh wake-line once per theme selection,
+#     never under nautical, and again only when the selection changes or the
+#     last run was killed rather than exiting
 #
 # Fixture code roots are throwaway git repositories: apply writes alias skills
 # and .git/info/exclude under the code root of the script it runs, so no case
@@ -474,6 +482,115 @@ test_worker_role_contract() {
   pass "the worker role contract is upstream under nautical and gains exactly one line under a theme"
 }
 
+# wake_prompt <root> <home> <args...>: the branch wake prompt that root's
+# dispatch entry prints for one fixed wake reason under that home.
+wake_prompt() {
+  local root=$1 home=$2
+  shift 2
+  printf 'signal: fm-task-1 done\n' | FM_HOME="$home" node "$root/bin/fm-branch-dispatch.mjs" wake-prompt "$@"
+}
+
+# upstream_dispatch_root: a code root whose wake-prompt module is the upstream
+# pin's, beside this tree's dispatch entry. Echoes nothing when the pin commit
+# is not in this clone.
+upstream_dispatch_root() {
+  local dir="$TMP_ROOT/upstream-dispatch"
+  [ -d "$dir" ] && { printf '%s\n' "$dir"; return 0; }
+  [ -n "$PIN" ] && git -C "$ROOT" cat-file -e "$PIN:.pi/extensions/lib/fm-branch-dispatch.ts" 2>/dev/null || return 0
+  mkdir -p "$dir/bin" "$dir/.pi/extensions"
+  cp "$ROOT/bin/fm-branch-dispatch.mjs" "$dir/bin/"
+  cp -R "$ROOT/.pi/extensions/lib" "$dir/.pi/extensions/"
+  git -C "$ROOT" show "$PIN:.pi/extensions/lib/fm-branch-dispatch.ts" > "$dir/.pi/extensions/lib/fm-branch-dispatch.ts"
+  printf '%s\n' "$dir"
+}
+
+test_wake_prompt_tail() {
+  local home upstream nautical operator broken readback mirror args added surface
+  command -v node >/dev/null 2>&1 || { echo "skip: node absent (branch wake prompt)"; return 0; }
+  home=$(new_home wake)
+  readback="$TMP_ROOT/wake/readback"
+  mirror="$TMP_ROOT/wake/mirror"
+  printf 'Merge anything green.\n' > "$readback"
+  printf '[captain] keep going\n' > "$mirror"
+  upstream=$(upstream_dispatch_root)
+  [ -n "$upstream" ] || printf 'note: upstream pin %s is not in this clone; the nautical wake prompt is compared only to the themed one\n' "${PIN:-?}"
+  for args in "--report fm_branch_report" "--report bin/fm-branch-report.sh --mirror-file $mirror --away --readback-file $readback"; do
+    # shellcheck disable=SC2086  # each case is a word list of flags.
+    nautical=$(wake_prompt "$ROOT" "$home" $args) || fail "the nautical wake prompt failed ($args)"
+    # shellcheck disable=SC2086
+    [ -z "$upstream" ] || assert_equals "$(wake_prompt "$upstream" "$home" $args)" "$nautical" "the nautical wake prompt differs from upstream ($args)"
+    assert_not_contains "$nautical" "Vocabulary for" "the nautical wake prompt carries a vocabulary line ($args)"
+    printf 'no-such-theme\n' > "$home/config/po-theme"
+    # shellcheck disable=SC2086
+    broken=$(wake_prompt "$ROOT" "$home" $args) || fail "the wake prompt failed under an unresolvable selection ($args)"
+    assert_equals "$nautical" "$broken" "an unresolvable selection changed the wake prompt ($args)"
+    printf 'operator\n' > "$home/config/po-theme"
+    # shellcheck disable=SC2086
+    operator=$(wake_prompt "$ROOT" "$home" $args) || fail "the themed wake prompt failed ($args)"
+    rm "$home/config/po-theme"
+    added=$(diff <(printf '%s\n' "$nautical") <(printf '%s\n' "$operator") | grep -E '^[<>]' || true)
+    assert_equals 2 "$(printf '%s\n' "$added" | wc -l | tr -d ' ')" "the themed wake prompt changed more than the vocabulary paragraph ($args)"
+    assert_contains "$added" '> Vocabulary for the outcome summaries a person reads: this home calls the captain "operator", firstmate "spotter"' "the themed wake prompt lacks the theme words ($args)"
+    surface=${args#--report }
+    assert_contains "$operator" "$(printf 'finish with %s.\n\nVocabulary for' "${surface%% *}")" "the vocabulary paragraph does not follow the report instruction ($args)"
+  done
+  assert_contains "$operator" "$(printf 'verdict values, identifiers, and every rule above keep their exact words and meaning.\n\nPOSTURE: AWAY.')" "the vocabulary paragraph is not placed before the away tail"
+  assert_contains "$operator" "$(printf 'The record, verbatim:\nMerge anything green.')" "the away record no longer ends the themed wake prompt"
+  nautical=$(FM_HOME="$home" "$ROOT/bin/fm-branch-prompt.sh") || fail "the nautical branch system prompt failed"
+  printf 'operator\n' > "$home/config/po-theme"
+  operator=$(FM_HOME="$home" "$ROOT/bin/fm-branch-prompt.sh") || fail "the themed branch system prompt failed"
+  rm "$home/config/po-theme"
+  assert_equals "$nautical" "$operator" "a theme changed the branch system prompt"
+  pass "the branch wake prompt is upstream under nautical, gains one vocabulary paragraph under a theme, and the system prompt stays byte-identical"
+}
+
+# One long-lived host (the Pi branch) builds many wake prompts: wake-line runs
+# once per theme selection, never under nautical, and again only when the
+# selection or its theme file changes.
+test_wake_vocabulary_memo() {
+  local home code log kill out
+  command -v node >/dev/null 2>&1 || { echo "skip: node absent (wake vocabulary memo)"; return 0; }
+  home=$(new_home wake-memo)
+  code="$TMP_ROOT/wake-memo/code"
+  log="$TMP_ROOT/wake-memo/spawns"
+  kill="$TMP_ROOT/wake-memo/kill-next"
+  mkdir -p "$code/bin" "$code/.pi/extensions"
+  cp -R "$ROOT/.pi/extensions/lib" "$code/.pi/extensions/"
+  cp -R "$ROOT/.agents" "$code/"
+  printf '#!/usr/bin/env bash\necho "$*" >> %q\n[ ! -e %q ] || { rm -f %q; kill -TERM $$; }\nexec %q "$@"\n' "$log" "$kill" "$kill" "$ROOT/bin/po-theme.sh" > "$code/bin/po-theme.sh"
+  chmod +x "$code/bin/po-theme.sh"
+  : > "$log"
+  # shellcheck disable=SC2016  # the template literals belong to the node script.
+  out=$(FM_HOME="$home" SPAWNS="$log" KILL_NEXT="$kill" node --input-type=module -e '
+    const { readFileSync, writeFileSync, copyFileSync, rmSync } = await import("node:fs");
+    const [module, home, operator] = process.argv.slice(1);
+    const dispatch = await import(module);
+    const spawns = () => readFileSync(process.env.SPAWNS, "utf8").split("\n").filter(Boolean).length;
+    const step = (label) => { const prompt = dispatch.branchWakePrompt("signal: fm-task-1 done", "fm_branch_report", ""); const words = /captain "([^"]*)"/.exec(prompt); console.log(`${label} spawns=${spawns()} captain=${words ? words[1] : "-"}`); };
+    step("nautical"); step("nautical-again");
+    writeFileSync(`${home}/config/po-theme`, "operator\n");
+    step("operator"); step("operator-again");
+    writeFileSync(`${home}/config/po-themes/operator.theme`, readFileSync(operator, "utf8").replace(/^user = .*$/m, "user = \"skipper\""));
+    step("shadowed"); step("shadowed-again");
+    rmSync(`${home}/config/po-themes/operator.theme`); writeFileSync(process.env.KILL_NEXT, "");
+    step("killed"); step("retried"); step("retried-again");
+    writeFileSync(`${home}/config/po-theme`, "no-such-theme\n");
+    step("unresolvable"); step("unresolvable-again");
+    writeFileSync(`${home}/config/po-theme`, "nautical\n");
+    step("back-to-nautical");
+  ' "file://$code/.pi/extensions/lib/fm-branch-dispatch.ts" "$home" "$ROOT/.agents/skills/po-theme/themes/operator.theme") \
+    || fail "the wake vocabulary memo script failed"
+  assert_equals "$(printf '%s\n' \
+    'nautical spawns=0 captain=-' 'nautical-again spawns=0 captain=-' \
+    'operator spawns=1 captain=operator' 'operator-again spawns=1 captain=operator' \
+    'shadowed spawns=2 captain=skipper' 'shadowed-again spawns=2 captain=skipper' \
+    'killed spawns=3 captain=-' 'retried spawns=4 captain=operator' 'retried-again spawns=4 captain=operator' \
+    'unresolvable spawns=5 captain=-' 'unresolvable-again spawns=5 captain=-' \
+    'back-to-nautical spawns=5 captain=-')" "$out" "wake-line did not run exactly once per theme selection, or a killed run was remembered"
+  assert_equals "wake-line" "$(sort -u "$log")" "the memo ran a po-theme command other than wake-line"
+  pass "wake-line runs once per theme selection, never under nautical, again when the selection changes, and again after a killed run"
+}
+
 test_secondmate_home() {
   local code primary mate out
   code=$(new_code secondmate)
@@ -703,6 +820,8 @@ test_session_start_prints_persona
 test_headline
 test_intent_address_check
 test_worker_role_contract
+test_wake_prompt_tail
+test_wake_vocabulary_memo
 test_secondmate_home
 test_address_guard_survives_broken_selection
 test_persona_aliases_primary_only

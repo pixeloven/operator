@@ -10,6 +10,7 @@ This page owns the theme format, the validation rules, the boundary between them
 |---|---|
 | Chat: self-name, the user's address word, role nouns, seasoning, the exact no-op reply | a Persona block in the primary home's `data/captain-shared.md`, which every session-start digest prints and every second mate inherits read-only, plus a two-line headline at the head of the digest |
 | Worker prose a person reads, such as scout reports | one vocabulary line in the worker launch role contract |
+| Supervision notes the supervision branch writes | one vocabulary paragraph in each per-wake prompt, never in the branch's system prompt, which stays byte-identical across themes |
 | The intent-address guard for no-mistakes | also refuses the theme's vocative, so a theme never weakens it; the vocative comes from the applied Persona block, so a selection broken after `apply` does not switch the guard off |
 | Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude`; primary home only |
 | Herdr and Paseo workspace labels | the home workspace a person sees in the sidebar, such as `spotter` and `navigator-gfm`, and the away-mode daemon's herdr workspace; matching also accepts the nautical names and every label this home applied earlier, so a live workspace is never orphaned |
@@ -27,7 +28,7 @@ bin/po-theme.sh relabel --session default --dry-run   # then without --dry-run
 ```
 
 The selection is the first line of the gitignored `config/po-theme`; absent, empty, or `nautical` means upstream's own voice, and `apply` then removes any block and alias it wrote earlier.
-The chat words change from the next session start; workers launched after `apply` get the new vocabulary line at once.
+The chat words change from the next session start; workers launched after `apply` get the new vocabulary line at once, and the supervision branch from its next wake.
 Second mates pick up the block when `data/captain-shared.md` next propagates to them, and they resolve the theme from its values line, so a custom theme defined only in the primary home still applies there.
 `apply` refuses in a second mate home, and a selection file there is ignored, because the persona is primary-authoritative.
 After an update that changes a theme's words, such as the lowercase role words of ADR-0020, the primary home reruns `apply` so second mates inherit the new block; until then a second mate reads an inherited values line's role words in lowercase.
@@ -110,7 +111,7 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels, the herdr sidebar state of a task waiting on the user, and the wedge-alarm notification title, as listed above.
+Themed today: chat, worker prose a person reads, the words of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels, the herdr sidebar state of a task waiting on the user, and the wedge-alarm notification title, as listed above.
 Not yet themed, and scheduled by later ADR-0020 stages: supervision-note glyphs, Calm text and animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
 
 ## Residue: person-visible strings that stay canonical

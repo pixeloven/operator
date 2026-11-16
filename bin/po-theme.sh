@@ -64,6 +64,10 @@
 #                                     block's, else the selection's (empty for nautical)
 #   po-theme.sh worker-line           one-line worker vocabulary for the launch role
 #                                     contract (empty for nautical)
+#   po-theme.sh wake-line             one-line vocabulary for the supervision branch's
+#                                     per-wake prompt, so its outcome notes use the
+#                                     theme's words (empty for nautical; the system
+#                                     prompt never carries it)
 #   po-theme.sh label <role>          the workspace label for primary, submate, or
 #                                     afk (bin/po-theme-lib.sh po_label)
 #   po-theme.sh refresh               rebuild state/po-theme/values for this home and
@@ -1031,6 +1035,13 @@ registry_rows() {
   awk -F '\t' '!/^#/ && NF >= 5' "$REGISTRY"
 }
 
+# vocabulary <kv>: the role-word mapping both vocabulary lines carry.
+vocabulary() {
+  printf 'this home calls the captain "%s", firstmate "%s", crewmates "%s", the crew "%s", second mates "%s", the fleet "%s", ship tasks "%s", and scout tasks "%s"' \
+    "$(get "$1" user)" "$(get "$1" self)" "$(get "$1" worker_plural)" "$(get "$1" crew)" \
+    "$(get "$1" submate_plural)" "$(get "$1" fleet)" "$(get "$1" ship_task)" "$(get "$1" scout_task)"
+}
+
 registry_files() {
   registry_rows | awk -F '\t' '$4 == "upstream" && !seen[$3]++ { print $3 }'
 }
@@ -1121,10 +1132,12 @@ case "$cmd" in
     active_is_nautical && exit 0
     resolve_active
     [ "$ACTIVE_NAME" = nautical ] && exit 0
-    kv=$ACTIVE_KV
-    printf 'Vocabulary for prose a person reads (reports, summaries): this home calls the captain "%s", firstmate "%s", crewmates "%s", the crew "%s", second mates "%s", the fleet "%s", ship tasks "%s", and scout tasks "%s"; identifiers and brief headings stay as written.\n' \
-      "$(get "$kv" user)" "$(get "$kv" self)" "$(get "$kv" worker_plural)" "$(get "$kv" crew)" \
-      "$(get "$kv" submate_plural)" "$(get "$kv" fleet)" "$(get "$kv" ship_task)" "$(get "$kv" scout_task)" ;;
+    printf 'Vocabulary for prose a person reads (reports, summaries): %s; identifiers and brief headings stay as written.\n' "$(vocabulary "$ACTIVE_KV")" ;;
+  wake-line)
+    active_is_nautical && exit 0
+    resolve_active
+    [ "$ACTIVE_NAME" = nautical ] && exit 0
+    printf 'Vocabulary for the outcome summaries a person reads: %s; tool names, verdict values, identifiers, and every rule above keep their exact words and meaning.\n' "$(vocabulary "$ACTIVE_KV")" ;;
   -h|--help|help|'') sed -n '2,/^set -eu$/p' "$0" | sed '$d; s/^# \{0,1\}//' ;;
   *) die "unknown command: $cmd" ;;
 esac
