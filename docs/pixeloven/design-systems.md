@@ -21,6 +21,7 @@ This page owns the role contract's meaning, the format of a design system, its v
 - **`pixeloven`, the PixelOven design system.** `@pixeloven/tokens` 0.6.0 from the `pixeloven/design` repository, vendored as its prebuilt `tokens.css` with the version, source, license, and SHA-256 in `design.toml`, plus an adapter that supplies every color, radius, type, and shadow role by `var(--pxo-*)` reference only, following PixelOven's rule that a consumer never defines its own values.
   The package has no spacing scale and its consumers use a 4px grid, so the adapter's spacing roles are that grid.
   It is dark by default and follows the operating system's light scheme unless the page's root sets `data-theme`.
+  Its IBM Plex Sans and IBM Plex Mono fonts load from Google Fonts when the page is online and fall back to the tokens' system fonts offline.
   A version bump is a reviewed re-vendor: rebuild `tokens.css` from the release tag, replace it, and update every `vendored.*` key in the same change.
   Known gap, to be fixed in the `pixeloven/design` tokens: in PixelOven's light scheme, `--status-info-ink` (`--pxo-accent-soft`) measures 4.31:1 on its soft ground, so the working chip is under 4.5:1, and `--status-danger-ink` (`--pxo-status-danger`) measures 4.37:1, so the blocked and failed chips are under 4.5:1.
   No accent or status token in 0.6.0 reaches 4.5:1 on those grounds in both schemes, and the adapter may not define its own values, so the mapping stays until a token release closes the gap. PixelOven's dark scheme reaches 4.5:1 on every pair.

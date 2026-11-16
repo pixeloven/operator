@@ -149,6 +149,9 @@ test_bundled_design_systems() {
   assert_equals 1 "$(printf '%s\n' "$css" | grep -c '@import')" "the firstmate stylesheet does not carry exactly one import"
   assert_contains "$css" ".po-chip[data-status=\"needs-decision\"]" "the firstmate stylesheet lacks the component sheet"
   css=$("$PT" ds-css pixeloven) || fail "ds-css pixeloven failed"
+  assert_contains "$(printf '%s\n' "$css" | sed -n 2p)" '@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono' \
+    "the IBM Plex import is not the first rule of the pixeloven stylesheet"
+  assert_equals 1 "$(printf '%s\n' "$css" | grep -c '@import')" "the pixeloven stylesheet does not carry exactly one import"
   assert_contains "$(section "$css" 'vendored tokens.css')" "--pxo-surface-bg: #0d101e;" "the pixeloven stylesheet lacks the vendored tokens"
   out=$(printf '%s\n' "$css" | grep -n -e '---- vendored tokens.css ----' -e '---- adapter.css ----' -e '---- components.css ----' | cut -d: -f1 | tr '\n' ' ')
   # shellcheck disable=SC2086  # word-split the three line numbers on purpose

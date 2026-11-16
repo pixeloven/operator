@@ -6,7 +6,10 @@
    its consumers use a 4px grid, so the spacing roles are that grid; the focus
    ring's offsets are geometry around referenced colors.
    The tokens switch light and dark themselves, so one :root block serves
-   both schemes; only color-scheme follows them here. */
+   both schemes; only color-scheme follows them here.
+   The import loads the IBM Plex families the tokens name, at the weights
+   they use; offline, the tokens' own system-font fallbacks apply. */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 
 :root {
   color-scheme: dark;
