@@ -1,0 +1,12 @@
+[target bash3.2] ok - fm_trap_exit exits on a signal pending at a $() scan (bash 3.2.57(1)-release)
+[target bash3.2] ok - fm_trap_exit --run runs its action and exits on a signal pending at a $() scan (bash 3.2.57(1)-release)
+[target bash3.2] ok - fm_trap_exit --run runs its action and exits on a plain signal (bash 3.2.57(1)-release)
+[target bash3.2] ok - lock handoff releases and exits on TERM pending at a $() scan (bash 3.2.57(1)-release)
+[target bash3.2] ok - branch grant release lock acquisition: failure
+[target bash3.2] ok - branch grant deactivate lock acquisition: failure
+[target bash3.2] ok - branch grant activate lock acquisition: failure
+[target bash3.2] ok - branch grant publish lock acquisition: failure
+[target bash3.2] ok - branch grant release lock acquisition: success
+[target bash3.2] ok - branch grant deactivate lock acquisition: success
+[target bash3.2] ok - branch grant activate lock acquisition: success
+[target bash3.2] ok - branch grant publish lock acquisition: success

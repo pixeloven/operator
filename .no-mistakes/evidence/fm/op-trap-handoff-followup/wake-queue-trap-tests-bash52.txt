@@ -1,4 +1,10 @@
-ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.0(1)-release)
-ok - fm_trap_exit --run runs its action and exits on a signal pending at a $() scan (bash 5.2.0(1)-release)
-ok - fm_trap_exit --run runs its action and exits on a plain signal (bash 5.2.0(1)-release)
-ok - lock handoff releases and exits on TERM pending at a $() scan (bash 5.2.0(1)-release)
+[target] ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.37(1)-release)
+[target] ok - fm_trap_exit --run runs its action and exits on a signal pending at a $() scan (bash 5.2.37(1)-release)
+[target] ok - fm_trap_exit --run runs its action and exits on a plain signal (bash 5.2.37(1)-release)
+[target] ok - lock handoff releases and exits on TERM pending at a $() scan (bash 5.2.37(1)-release)
+[target] ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit
+[base] ok - fm_trap_exit exits on a signal pending at a $() scan (bash 5.2.37(1)-release)
+[base] absent - test_trap_exit_run_survives_pending_comsub_scan
+[base] absent - test_trap_exit_run_outside_comsub_scan
+[base] absent - test_lock_handoff_term_pending_comsub_scan
+[base] ok - wake drain: TERM inside sibling $() substitutions still interrupts before commit

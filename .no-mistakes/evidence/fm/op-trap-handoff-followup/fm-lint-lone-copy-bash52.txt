@@ -1,0 +1,6 @@
+fm-lint.sh - the single owner of firstmate's lint definition.
+
+Runs its file set with ShellCheck's default severity, extended analysis,
+ambient configuration disabled, and one exact ShellCheck version. CI selects
+canonical partitions; no-mistakes invokes the context-selected default, so
+rc=0

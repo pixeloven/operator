@@ -1,0 +1,11 @@
+== BASE 6759cb44 _fm_lock_acquire_wait_handoff (5.2.37(1)-release)
+exit=0
+stderr:
+  /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//bash52.4bsV9r/handoff.sh: trap: line 2: unexpected EOF while looking for matching `)'
+  /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//bash52.4bsV9r/handoff.sh: line 5: unexpected EOF while looking for matching `)'
+  handoff returned 1 after TERM
+lock: STILL HELD
+== TARGET e31b4fcb _fm_lock_acquire_wait_handoff (5.2.37(1)-release)
+exit=143
+stderr:
+lock: released

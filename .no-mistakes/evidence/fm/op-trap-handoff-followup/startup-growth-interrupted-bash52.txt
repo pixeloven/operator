@@ -1,0 +1,4 @@
+[target] ok - interrupted evaluation (bash 5.2.37(1)-release)
+[target] rc=
+[base] ok - interrupted evaluation (bash 5.2.37(1)-release)
+[base] rc=
