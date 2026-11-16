@@ -1,0 +1,93 @@
+ ▐▛███▛█   Claude Code v2.1.325
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M7JTT8DB0CQ47XG4NYZNV35H
+
+  ⎿  SessionStart:startup says: dotfiles: 8 changes not codified - run /codify
+
+❯ /sitrep
+
+⏺ Skill(bearings)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(echo "FM_HOME=$FM_HOME" && snapshot=$(bin/fm-bearings-snapshot.sh --json); echo "rc=$?"; echo "$snapshot" | head -c 20000)
+  ⎿  FM_HOME=/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.s9RrGM
+     rc=0
+     {
+     … +59 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Bash(ls "$FM_HOME" "$FM_HOME/data" 2>&1 | head; bin/po-theme.sh --help 2>&1 | head -20; grep -n -i -A15 'persona' "$FM_HOME/data/captain-shared.md" 2>/dev/null | hea…)
+  ⎿  /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.s9RrGM:
+     config
+     data
+ ▐▛███▛█   Claude Code v2.1.325
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M7JTT8DB0CQ47XG4NYZNV35H
+
+
+✻ Conversation compacted (ctrl+o for the summary)
+ ▐▛███▛█   Claude Code v2.1.325
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M7JTT8DB0CQ47XG4NYZNV35H
+
+
+✻ Conversation compacted (ctrl+o for the summary)
+  Earlier messages are saved in ~/.claude/projects/-Users-brian--no-mistakes-worktrees-1d049b31b4fb-01M7JTT8DB0CQ47XG4NYZNV35H/187361a5-5750-495e-988e-2811292a4fc9.jsonl
+
+
+⏺ Operator's Call
+  - No decision is recorded, but I can't confirm you're clear: the check of your owned contributions found 0 tracked (0 checked) and hit 1 record it couldn't read.
+
+  Recently Landed
+  - No recent completions are in the current baseline.
+
+  Underway
+  - Nothing is underway.
+
+  Charted Next
+  - Nothing is queued.
+
+  Operator, this sitrep only covers the temporary test home this session is pointed at (a scratch lab folder), not your main task force. That's why everything above is empty. If you want your real
+  task force's sitrep, run /sitrep from your primary operator session.
+
+✻ Sautéed for 33s · done 10:49 AM
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file AGENTS.md
+  ⎿  Skills restored (bearings, sitrep)
+  ⎿  SessionStart:compact says: dotfiles: 8 changes not codified - run /codify
+
+❯ /sitrep
+
+⏺ Bash(echo "FM_HOME=$FM_HOME"; snapshot=$(bin/fm-bearings-snapshot.sh --json); echo "$snapshot")
+  ⎿  FM_HOME=/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.s9RrGM
+     {
+       "schema": "fm-bearings.v1",
+     … +58 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Operator, a fresh check shows nothing has changed since the last sitrep.
+
+  Operator's Call
+  - No decision is recorded. I can't call you all clear, though: no contributions are tracked (0 of 0 checked), and one record couldn't be read.
+
+  Recently Landed
+  - No recent completions are in the current baseline.
+
+  Underway
+  - Nothing is underway.
+
+  Charted Next
+  - Nothing is queued.
+
+  This session is still pointed at a temporary test home, not your main task force, so these empty results don't reflect your real work. Run /sitrep from your primary operator session to see that.
+
+✻ Brewed for 11s · done 10:50 AM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ /sitrep lavish
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)
+
+

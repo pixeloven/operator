@@ -1,0 +1,108 @@
+
+ pi v0.87.1
+ escape interrupt · ctrl+c/ctrl+d clear/exit · / commands · ! bash · ctrl+o more
+ Press ctrl+o to show full startup help and loaded resources.
+
+ Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.
+
+
+[Context]
+  AGENTS.md
+
+[Skills]
+  account-investigation, activation-contracts, afk, agent-platform-design, agent-skill-trigger-index, ahoy, ansible-conventions, ask-user-authority, auth-flow-tracing, auth-funnel-signatures,
+auth-seams, autonomous-agent-design, away-quiet-supervision, bearings, bootstrap-diagnostics, captain-hold-lifecycle, codify, council-mode, cross-functional-review, debrief, decision-records,
+delta-handling, diagnostic-reasoning, doctor, firstmate-codexapp, firstmate-coding-guidelines, firstmate-orca, firstmate-self-repo, flush, fmx-respond, github-actions-conventions,
+github-repo-workflow, gnhf, go-public-review, harness-adapters, idea-shaping, identity-ground-rules, identity-surface-map, identity-vendor-config, impeccable, incident-runbook-template, infra-seams,
+intake-process, k8s-diagnostics, k8s-kustomize-conventions, k8s-workload-patterns, lastreply, lavish, lavish-url, learn, mcp-server-design, no-mistakes, onboarding, operational-home-layout,
+orchestration-patterns, pi-subagents, plan-execution, plan-generation, plan-validation, platform-glossary, po-crew, po-theme, pr-review-checklist, process-event-sources, project-management,
+python-conventions, quiet, quota-array-dispatch, readiness-gates, release-and-versioning, requirements-review, risk-signal-trends, scout-completion, seam-alert-routing, seam-detection,
+secondmate-provisioning, session-start-recovery, ship-landing, sitrep, story-breakdown, stow, stuck-crewmate-recovery, terraform-conventions, theme-portfolio, tracker-sync, updatefirstmate,
+updateoperator, validation-supervision
+
+[Prompts]
+  /council, /gather-context-and-clarify, /parallel-cleanup, /parallel-research, /parallel-review, /review-loop
+
+[Extensions]
+  fm-branch-supervision.ts, fm-calm.ts, fm-primary-pi-watch.ts, fm-primary-read-repetition.ts, fm-primary-turnend-guard.ts, herdr-agent-state.ts, pi-subagents
+
+[Skill conflicts]
+  "impeccable" collision:
+    ✓ auto (user) ~/.pi/agent/skills/impeccable/SKILL.md
+    ✗ ~/.agents/skills/impeccable/SKILL.md (skipped)
+
+
+ Resolving file reading method conflicts
+
+ Planning parallel reading of files
+
+
+ read bin/po-theme.sh:1-2000
+
+
+
+ read docs/pixeloven/persona-themes.md:1-2000
+
+
+ Completing bin file read from offset 981 to 1183
+
+
+ read bin/po-theme.sh:981-1480
+
+
+ Reconciling user request with addressing rules
+
+ Confirming address with single word response
+
+ Operator, read.
+
+
+ [compaction]
+
+ Compacted from 59,829 tokens (ctrl+o to expand)
+
+
+
+ [skill] sitrep (ctrl+o to expand)
+
+
+ Planning sitrep invocation with bearings
+
+
+ [skill] bearings:1-2000 (ctrl+o to expand)
+
+
+ Configuring exact snapshot execution
+
+
+ $ bin/fm-bearings-snapshot.sh --json (timeout 120s)
+
+ ... (55 earlier lines, ctrl+o to expand)
+       "surface": "live PR discovery + checks",
+       "reveal": "--include-prs"
+     }
+   ]
+ }
+
+ Took 0.6s
+
+
+ Designing four persona sections with coverage details
+
+ Operator’s Call
+ No decision is recorded, Operator; contribution coverage is incomplete: 0 checked / 0 known, with 1 unreadable record.
+
+ Recently Landed
+ No recent completions are in the current baseline.
+
+ Underway
+ Nothing is underway.
+
+ Charted Next
+ Nothing is queued.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+~/.no-mistakes/worktrees/1d049b31b4fb/01M7JTT8DB0CQ47XG4NYZNV35H (detached)
+↑95k ↓3.7k R855k CH98.9% $0.796 (sub) 19.8%/272k (auto)                                                                                                                               gpt-5.6-sol • high

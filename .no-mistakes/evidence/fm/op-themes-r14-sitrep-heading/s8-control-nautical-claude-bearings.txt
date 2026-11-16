@@ -1,0 +1,35 @@
+ ▐▛███▛█   Claude Code v2.1.325
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M7JTT8DB0CQ47XG4NYZNV35H
+
+  ⎿  SessionStart:startup says: dotfiles: 8 changes not codified - run /codify
+
+❯ /bearings
+
+⏺ Bash(snapshot=$(bin/fm-bearings-snapshot.sh --json 2>&1); echo "$snapshot" | head -c 20000; echo; echo "FM_HOME=${FM_HOME:-unset}")
+  ⎿  {
+       "schema": "fm-bearings.v1",
+       "home": "/fm-lab.s9RrGM",
+     … +59 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Captain, this snapshot comes from a temporary test home, not your real fleet, so it shows nothing about your actual work. Run /bearings from your main session to see that.
+
+  Captain's Call
+  No decision is recorded here, but I can't confirm you're clear: 0 of 0 contributions were checked and 1 contribution record couldn't be read.
+
+  Recently Landed
+  No recent completions are in the current baseline.
+
+  Underway
+  Nothing is underway.
+
+  Charted Next
+  Nothing is queued.
+
+✻ Sautéed for 10s · done 10:58 AM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ /bearings include PRs
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)

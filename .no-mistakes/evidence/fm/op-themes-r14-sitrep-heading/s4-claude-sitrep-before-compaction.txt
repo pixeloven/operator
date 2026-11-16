@@ -1,0 +1,60 @@
+ ▐▛███▛█   Claude Code v2.1.325
+▝▜██████▀  Opus 5.5 · Claude Enterprise
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/1d049b31b4fb/01M7JTT8DB0CQ47XG4NYZNV35H
+
+  ⎿  SessionStart:startup says: dotfiles: 8 changes not codified - run /codify
+
+❯ /sitrep
+
+⏺ Skill(bearings)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(echo "FM_HOME=$FM_HOME" && snapshot=$(bin/fm-bearings-snapshot.sh --json); echo "rc=$?"; echo "$snapshot" | head -c 20000)
+  ⎿  FM_HOME=/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.s9RrGM
+     rc=0
+     {
+     … +59 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Bash(ls "$FM_HOME" "$FM_HOME/data" 2>&1 | head; bin/po-theme.sh --help 2>&1 | head -20; grep -n -i -A15 'persona' "$FM_HOME/data/captain-shared.md" 2>/dev/null | hea…)
+  ⎿  /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.s9RrGM:
+     config
+     data
+     … +46 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Bash(sed -n 17,32p "$FM_HOME/data/captain-shared.md")
+  ⎿  | ship (a change task) | deploy |
+     | Captain's Call (the /bearings section) | Operator's Call |
+     … +16 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode
+
+⏺ Operator's Call
+  - No decision is recorded, but I can't confirm you're clear: the check of your owned contributions found 0 tracked (0 checked) and hit 1 record it couldn't read.
+
+  Recently Landed
+  - No recent completions are in the current baseline.
+
+  Underway
+  - Nothing is underway.
+
+  Charted Next
+  - Nothing is queued.
+
+  Operator, this sitrep only covers the temporary test home this session is pointed at (a scratch lab folder), not your main task force. That's why everything above is empty. If you want your real
+  task force's sitrep, run /sitrep from your primary operator session.
+
+✻ Sautéed for 33s · done 10:49 AM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)
+
+
+
+
+
+
+
+

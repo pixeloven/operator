@@ -1,0 +1,21 @@
+=== A: anchors on the change as shipped ===
+note: upstream pin 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208 is not in this clone; replaced upstream lines not checked
+anchors: ok
+exit=0
+
+=== B: bearings SKILL.md digest headings retypeset with U+2019 ===
+straight-apostrophe **Captain's Call** lines: 0
+curly-apostrophe **Captain’s Call** lines: 2
+note: upstream pin 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208 is not in this clone; replaced upstream lines not checked
+anchors: ok
+exit=0
+
+=== B2 control: heading renamed to Captain's Desk (true drift) ===
+anchor missing: **Captain's Call** not found in .agents/skills/bearings/SKILL.md
+note: upstream pin 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208 is not in this clone; replaced upstream lines not checked
+exit=1
+
+=== C: Persona digest-heading sentence deleted from po-theme.sh ===
+note: upstream pin 913bb7a7b6e68a107c2d0ee755ee29c6f9e7b208 is not in this clone; replaced upstream lines not checked
+anchor missing: hook str.digest.call not found in bin/po-theme.sh: printf -- '- The %s digest heading `%s` reads `%s`; %s.\n' "$bearings" "$canon_call" "$call" "$others"
+exit=1
