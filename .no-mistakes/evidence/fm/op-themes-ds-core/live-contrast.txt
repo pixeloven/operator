@@ -1,0 +1,16 @@
+== firstmate-light
+result: "\"working=5.43 needs-decision=5.02 blocked=5.50 paused=5.69 done=5.51 failed=5.50 needs-decision=5.02 DT=6.13 DT=6.13 recommended=6.23 SMALL=5.69 SMALL=6.13 po-button=6.23 risk=6.13 recommended=6.23 risk=6.13 po-button=6.23 | body=rgb(246, 236, 211) font=Jost, ui-sans-serif, system-ui\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+== firstmate-dark
+result: "\"working=7.35 needs-decision=8.91 blocked=7.15 paused=6.50 done=6.53 failed=7.15 needs-decision=8.91 DT=7.13 DT=7.13 recommended=6.26 SMALL=6.50 SMALL=7.13 po-button=6.26 risk=7.13 recommended=6.26 risk=7.13 po-button=6.26 | body=rgb(20, 26, 44) font=Jost, ui-sans-serif, system-ui\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+== pixeloven-light
+result: "\"working=4.31 needs-decision=4.71 blocked=4.37 paused=7.05 done=4.78 failed=4.37 needs-decision=4.71 DT=7.52 DT=7.52 recommended=5.32 SMALL=7.05 SMALL=7.52 po-button=5.32 risk=7.52 recommended=5.32 risk=7.52 po-button=5.32 | body=rgb(243, 243, 245) font=\\\"IBM Plex Sans\\\", system-ui, -a\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+== pixeloven-dark
+result: "\"working=8.44 needs-decision=10.05 blocked=5.92 paused=7.09 done=10.10 failed=5.92 needs-decision=10.05 DT=7.55 DT=7.55 recommended=5.32 SMALL=7.09 SMALL=7.55 po-button=5.32 risk=7.55 recommended=5.32 risk=7.55 po-button=5.32 | body=rgb(13, 16, 30) font=\\\"IBM Plex Sans\\\", system-ui, -a\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state

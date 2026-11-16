@@ -1,0 +1,97 @@
+$ # S4 a home-local design system (copy of firstmate with a changed accent)
+  --accent: #7a2e8c;
+$ ds-validate mine
+ds-validate: mine ok
+exit=0
+$ apply
+design: mine stylesheet written to $LAB/state/po-design/po-ds.css; marker written to $LAB/data/captain-shared.md
+mine applied
+verify: ok (operator)
+design: ok (mine)
+verify exit=0
+
+$ # S5 adversarial custom design systems - every one must be refused
+--- evilurl: body { background: url(https://evil.example/x); }
+error: $LAB/config/po-designs/evilurl/adapter.css: url() is not allowed
+error: $LAB/config/po-designs/evilurl/adapter.css: selector is not allowed: body
+exit=1
+--- evilsel: input[value^="a"] { --accent: #000; }
+error: $LAB/config/po-designs/evilsel/adapter.css: selector is not allowed: input[value^="a"]
+exit=1
+--- evilimport: @import url("https://evil.example/x.css");
+error: $LAB/config/po-designs/evilimport/adapter.css: @import must come before every rule
+exit=1
+--- evilfont: @font-face { font-family: x; src: url(https://evil.example/f.woff); }
+error: $LAB/config/po-designs/evilfont/adapter.css: url() is not allowed
+error: $LAB/config/po-designs/evilfont/adapter.css: at-rule @font-face is not allowed
+error: $LAB/config/po-designs/evilfont/adapter.css: selector is not allowed: @font-face
+exit=1
+--- evilexpr: :root { --accent: expression(alert(1)); }
+error: $LAB/config/po-designs/evilexpr/adapter.css: expression is not allowed
+error: $LAB/config/po-designs/evilexpr/adapter.css: --accent: value has a function, quote, or parenthesis outside the allowed shapes
+exit=1
+--- evilscript: :root { --accent: "</style><script>alert(1)</script>"; }
+error: $LAB/config/po-designs/evilscript/adapter.css: markup characters are not allowed
+error: $LAB/config/po-designs/evilscript/adapter.css: --accent: value has a function, quote, or parenthesis outside the allowed shapes
+exit=1
+--- evilimp: :root { --accent: red !important; }
+error: $LAB/config/po-designs/evilimp/adapter.css: !important is not allowed
+error: $LAB/config/po-designs/evilimp/adapter.css: --accent: value token is not an allowed shape: !important
+exit=1
+--- evilrole: :root { --not-a-role: #fff; }
+error: adapter.css: --not-a-role is not a role name (designs/roles)
+exit=1
+--- evilquote: :root { --font-display: "a/*"; } body { background: url(https://evil.example/x) !important; } input[value^="a"] { background-image: url(https://evil.example/a); } :root { --font-sans: "*/b"; }
+error: $LAB/config/po-designs/evilquote/adapter.css: url() is not allowed
+error: $LAB/config/po-designs/evilquote/adapter.css: !important is not allowed
+error: $LAB/config/po-designs/evilquote/adapter.css: --font-display: value has a function, quote, or parenthesis outside the allowed shapes
+error: $LAB/config/po-designs/evilquote/adapter.css: selector is not allowed: body
+error: $LAB/config/po-designs/evilquote/adapter.css: selector is not allowed: input[value^="a"]
+error: $LAB/config/po-designs/evilquote/adapter.css: --font-sans: value has a function, quote, or parenthesis outside the allowed shapes
+exit=1
+
+$ # S6 vendored tokens.css is checksum pinned: tamper after validation
+ds-validate: vend ok
+exit=0
+design: vend stylesheet written to $LAB/state/po-design/po-ds.css; marker written to $LAB/data/captain-shared.md
+verify: ok (operator)
+design: ok (vend)
+verify exit=0
+$ (tokens.css changed) verify
+verify: ok (operator)
+design drift: design system vend no longer validates: error: tokens.css: SHA-256 d639565a9789895adaec24505b01ae19bfdd9000107f92b117ee45351ff8a8ae does not match vendored.sha256 d14f561963548be425874b1627e5c8cafb685eb943b7a785786bd6327140b1c5 (a changed vendored copy)
+verify exit=1
+$ ds-css
+exit=0
+$ # S7 apply is all-or-nothing: invalid design must not write the persona half
+error: $LAB/config/po-designs/evilurl/adapter.css: url() is not allowed
+error: $LAB/config/po-designs/evilurl/adapter.css: selector is not allowed: body
+po-theme: design system evilurl failed validation
+apply exit=1
+captain-shared.md unchanged after refused apply (Persona block still operator)
+1
+$ # S8 local firstmate cannot shadow the bundled default
+ds-validate: firstmate ok
+exit=0
+$ # path-shaped name
+po-theme: invalid design system name: ../etc
+/Users/brian/.no-mistakes/worktrees/1d049b31b4fb/01M782XM4YFCHYHGW3QZBHVJVV/bin/po-design-lib.sh: line 251: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//po-theme.kwpkmZ/pd.../etc.defs: No such file or directory
+/Users/brian/.no-mistakes/worktrees/1d049b31b4fb/01M782XM4YFCHYHGW3QZBHVJVV/bin/po-design-lib.sh: line 251: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//po-theme.kwpkmZ/pd.../etc.refs: No such file or directory
+/Users/brian/.no-mistakes/worktrees/1d049b31b4fb/01M782XM4YFCHYHGW3QZBHVJVV/bin/po-design-lib.sh: line 251: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//po-theme.kwpkmZ/pd.../etc.vdefs: No such file or directory
+error: : design.toml is missing
+awk: can't open file /adapter.css
+ source line number 94
+awk: can't open file /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//po-theme.kwpkmZ/pd.../etc.defs
+ input record number 38, file /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//po-theme.kwpkmZ/pd.../etc.defs
+ source line number 2
+exit=1
+$ ds-css vend (tokens.css tampered)
+error: tokens.css: SHA-256 d639565a9789895adaec24505b01ae19bfdd9000107f92b117ee45351ff8a8ae does not match vendored.sha256 d14f561963548be425874b1627e5c8cafb685eb943b7a785786bd6327140b1c5 (a changed vendored copy)
+po-theme: design system vend failed validation
+exit=1
+$ apply with tampered vend
+error: tokens.css: SHA-256 d639565a9789895adaec24505b01ae19bfdd9000107f92b117ee45351ff8a8ae does not match vendored.sha256 d14f561963548be425874b1627e5c8cafb685eb943b7a785786bd6327140b1c5 (a changed vendored copy)
+po-theme: design system vend failed validation
+exit=
+$ ds-css firstmate | grep -c evil.example (local firstmate ignored)
+0
