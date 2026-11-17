@@ -1,8 +1,8 @@
 ---
 name: po-theme
 description: >-
-  Agent-only owner of the PixelOven persona theme layer: switching, adding, editing, applying, verifying, and relabeling themes.
-  Load when the captain asks to change how the agents address them, name themselves, name workers, or season replies, or to switch, add, or edit a theme; when renaming live workspaces to a changed theme's labels; after `/updatefirstmate`, an upstream merge, or any fast-forward of this repository in a home with a non-nautical theme; while preparing or fixing an upstream-merge PR, including a failing anchors or hook-registry gate; when a clear or compaction left no Persona block in context; and when `bin/po-theme.sh validate`, `verify`, `anchors`, or the session-start headline reports a finding, or the Persona block looks hand-edited or stale.
+  Agent-only owner of the PixelOven persona theme layer and design-system layer: switching, adding, editing, applying, verifying, and relabeling themes, and choosing or adding the design system of generated pages.
+  Load before writing a Lavish page or generated HTML report; when the captain asks to change how the agents address them, name themselves, name workers, or season replies, to switch, add, or edit a theme, or to switch, add, or edit a design system (the look of generated pages); when renaming live workspaces to a changed theme's labels; after `/updatefirstmate`, an upstream merge, or any fast-forward of this repository in a home with a non-nautical theme; while preparing or fixing an upstream-merge PR, including a failing anchors or hook-registry gate; when a clear or compaction left no Persona block in context; and when `bin/po-theme.sh validate`, `verify`, `anchors`, `ds-validate`, or the session-start headline reports a finding, the Persona block looks hand-edited or stale, or the session-start digest prints a `design drift:` line.
 user-invocable: false
 metadata:
   internal: true
@@ -56,3 +56,13 @@ In a PR that merges upstream firstmate, `bin/po-theme.sh anchors` must pass (gat
 - A missing anchor means upstream changed wording a nautical key mirrors or added a user-invocable skill: update `themes/nautical.theme` and the matching key of every other theme.
 - A `surface canary` finding means upstream added a person-visible nautical string: theme it through a registered hook, or add a `residue.tsv` row whose reason opens with its rule or stage.
 - A missing theme hook or replaced upstream line means the merge touched a hooked line: re-apply the one hook line and update its row in `surfaces.tsv`.
+
+## Design systems
+
+A design system supplies the look of generated pages, chosen independently of the theme; `docs/pixeloven/design-systems.md` owns its format, role contract, component markup, and validation.
+
+- Before writing a Lavish page or generated HTML report, copy the design system in force with `bin/po-theme.sh ds-css > <artifact-dir>/po-ds.css`, link it at the document root with one stylesheet link in `<head>` and `class="po-page"` on `<body>`, build decisions, checklists, reviews, and status chips from its `po-` components, and write every label in the theme's words (`bin/po-theme.sh ds-labels` prints the status-chip labels).
+- The selection is the first line of `config/po-design` in the primary home; absent means `firstmate`, the Firstmate Default, which writes nothing.
+  To switch: run `bin/po-theme.sh ds-validate <name>`, write the name to `config/po-design`, then run `bin/po-theme.sh apply` and `bin/po-theme.sh verify` in the primary home.
+- A home's own design system lives in `config/po-designs/<name>/`; it is captain-owned data that validation keeps free of URLs, at-rules, and script, and a vendored stylesheet in it stays pinned by its checksum.
+- On a `design drift:` line, run `bin/po-theme.sh verify` and rerun `apply` in the primary home; never hand-edit `state/po-design/` or the `po-design` marker line in `data/captain-shared.md`.

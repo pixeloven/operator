@@ -1,0 +1,60 @@
+# po-design role contract (schema po-design/1).
+# The component sheet reads only these custom properties, and every design
+# system's adapter.css supplies every one of them in its plain :root block.
+# The names are the Bearings board's own semantic token names, plus the accent,
+# status-ink, shape, and spacing roles; docs/pixeloven/design-systems.md owns
+# what each group means. One role per line; # starts a comment.
+
+# Page and surfaces
+--bg-page
+--surface-card
+--surface-card-warm
+
+# Text
+--text-strong
+--text-body
+--text-muted
+
+# Borders and focus
+--border-default
+--border-soft
+--focus-ring
+
+# Accent: a fill and the text that sits on it
+--accent
+--accent-ink
+
+# Status: a fill or border color, a soft ground, and text-safe ink
+--status-online
+--status-online-soft
+--status-online-ink
+--status-warn
+--status-warn-soft
+--status-warn-ink
+--status-danger
+--status-danger-soft
+--status-danger-ink
+--status-info
+--status-info-soft
+--status-info-ink
+
+# Type
+--font-display
+--font-sans
+--font-mono
+--display-weight
+--display-tracking
+
+# Shape
+--radius-card
+--radius-chip
+--radius-control
+--card-shadow
+
+# Spacing
+--space-1
+--space-2
+--space-3
+--space-4
+--space-5
+--space-6

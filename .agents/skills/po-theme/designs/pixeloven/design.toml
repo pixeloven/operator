@@ -1,0 +1,12 @@
+# po-design/1 - the PixelOven design system (https://github.com/pixeloven/design).
+# tokens.css is the package's prebuilt stylesheet, built with `node src/build.mjs`
+# from tag tokens-v0.6.0 because the release publishes no CSS asset. A version
+# bump is a reviewed re-vendor: replace tokens.css and update every vendored.* key.
+schema = "po-design/1"
+name = "pixeloven"
+description = "PixelOven: @pixeloven/tokens through a reference-only adapter"
+vendored.package = "@pixeloven/tokens"
+vendored.version = "0.6.0"
+vendored.source = "https://github.com/pixeloven/design/tree/tokens-v0.6.0/packages/tokens"
+vendored.sha256 = "d14f561963548be425874b1627e5c8cafb685eb943b7a785786bd6327140b1c5"
+vendored.license = "MIT"

@@ -1,0 +1,148 @@
+/* po-design shared component sheet: decision card, checklist, review row, and
+   status chips. It reads only the role names in designs/roles, so it serves
+   every design system; the words on a page, including chip labels, come from
+   the theme. docs/pixeloven/design-systems.md owns the markup contract. */
+
+.po-page {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+.po-page h1, .po-page h2, .po-page h3 {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  color: var(--text-strong);
+}
+.po-page code { font-family: var(--font-mono); }
+.po-page :focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Card: the surface every component sits on. */
+.po-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+  padding: var(--space-4);
+  min-width: 0;
+}
+.po-card > h2, .po-card > h3, .po-card .po-title h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  color: var(--text-strong);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.po-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+
+/* Status chip: data-status is the architectural status verb (never themed);
+   the label text is the theme's word. Shape marks keep it readable without color. */
+.po-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-chip);
+  background: var(--surface-card-warm);
+  color: var(--text-muted);
+  font: 600 0.72rem/1.5 var(--font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.po-chip[data-status]::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.po-chip[data-status="working"] { background: var(--status-info-soft); color: var(--status-info-ink); border-color: var(--status-info); }
+.po-chip[data-status="needs-decision"] { background: var(--status-warn-soft); color: var(--status-warn-ink); border-color: var(--status-warn); }
+.po-chip[data-status="blocked"], .po-chip[data-status="failed"] { background: var(--status-danger-soft); color: var(--status-danger-ink); border-color: var(--status-danger); }
+.po-chip[data-status="paused"] { background: var(--surface-card-warm); color: var(--text-muted); border-color: var(--border-default); }
+.po-chip[data-status="done"] { background: var(--status-online-soft); color: var(--status-online-ink); border-color: var(--status-online); }
+.po-chip[data-status="blocked"]::before { border-radius: 1px; }
+.po-chip[data-status="failed"]::before { border-radius: 0; transform: rotate(45deg); }
+.po-chip[data-status="paused"]::before { border-radius: 1px; width: 6px; }
+.po-chip[data-kind="recommended"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.po-chip[data-kind="risk"] { background: transparent; }
+
+/* Decision card: about and decide rows, native radio options, one queue button. */
+.po-rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1) var(--space-3); margin: 0 0 var(--space-3); }
+.po-rows dt { font: 600 0.72rem/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.po-rows dd { margin: 0; overflow-wrap: anywhere; }
+.po-options { display: grid; gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; border: 0; }
+.po-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px var(--space-2);
+  align-items: start;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.po-option:has(input:checked) { border-color: var(--accent); background: var(--surface-card-warm); }
+.po-option:focus-within { box-shadow: var(--focus-ring); }
+.po-option input { margin: 4px 0 0; accent-color: var(--accent); }
+.po-option b { color: var(--text-strong); font-weight: 600; }
+.po-option small { grid-column: 2; color: var(--text-muted); }
+.po-button {
+  padding: 9px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 600 0.85rem/1 var(--font-sans);
+  cursor: pointer;
+}
+.po-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.po-button[data-state="queued"] { background: transparent; color: var(--text-strong); }
+.po-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.po-foot .po-note { font-size: 0.8rem; color: var(--text-muted); }
+
+/* Checklist: a mono id, a state mark that is never color-only, an optional link. */
+.po-checklist { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.po-checklist li { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+.po-checklist .po-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-chip);
+  color: var(--text-muted);
+  font: 700 0.75rem/1 var(--font-mono);
+}
+.po-checklist [data-state="done"] .po-mark { background: var(--status-online-soft); color: var(--status-online-ink); border-color: var(--status-online); }
+.po-checklist [data-state="blocked"] .po-mark { background: var(--status-danger-soft); color: var(--status-danger-ink); border-color: var(--status-danger); }
+.po-checklist code, .po-review code { font: 600 0.75rem/1.6 var(--font-mono); color: var(--text-muted); }
+.po-checklist li > :last-child { overflow-wrap: anywhere; }
+.po-checklist a { color: var(--accent); }
+
+/* Review row: mono id, change, rationale, risk and recommend chips, approve or decline. */
+.po-review { display: grid; gap: var(--space-2); }
+.po-review-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-soft);
+}
+.po-review-row:first-child { padding-top: 0; border-top: 0; }
+.po-review-row b { display: block; color: var(--text-strong); overflow-wrap: anywhere; }
+.po-review-row p { margin: 2px 0 6px; color: var(--text-muted); font-size: 0.88rem; overflow-wrap: anywhere; }
+.po-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.po-choice { display: inline-flex; overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-control); }
+.po-choice label { padding: 4px 10px; color: var(--text-body); font: 600 0.78rem/1.4 var(--font-sans); cursor: pointer; }
+.po-choice label + label { border-left: 1px solid var(--border-default); }
+.po-choice label:focus-within { box-shadow: var(--focus-ring); }
+.po-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.po-choice label:has(input[value="approve"]:checked) { background: var(--status-online-soft); color: var(--status-online-ink); }
+.po-choice label:has(input[value="decline"]:checked) { background: var(--status-danger-soft); color: var(--status-danger-ink); }

@@ -462,6 +462,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0034-design-systems-independent-of-themes.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/0035-carry-three-lint-partitions.md",
       "audience": "maintainer-architecture"
     },
@@ -619,6 +623,10 @@
     },
     {
       "path": "docs/pixeloven/crew.md",
+      "audience": "operator-current"
+    },
+    {
+      "path": "docs/pixeloven/design-systems.md",
       "audience": "operator-current"
     },
     {

@@ -1,0 +1,675 @@
+/* PixelOven design tokens — piWebDark.
+ * GENERATED from packages/tokens/src/tokens.json. Do not edit.
+ * Consumers without a bundler vendor this file at a pinned version.
+ */
+
+/* Default scheme (dark). A page with no theme wiring gets this. */
+:root {
+
+  /* surface */
+  --pxo-surface-void: #04060a; /* the page ground; nothing sits behind it */
+  --pxo-surface-void-rgb: 4 6 10;
+  --pxo-surface-canvas: #090b15; /* terminal and code grounds */
+  --pxo-surface-canvas-rgb: 9 11 21;
+  --pxo-surface-bg: #0d101e; /* default app background */
+  --pxo-surface-bg-rgb: 13 16 30;
+  --pxo-surface: #111526; /* cards, panels, the default raised plane */
+  --pxo-surface-rgb: 17 21 38;
+  --pxo-surface-hover: #151b32; /* hover state of a surface */
+  --pxo-surface-hover-rgb: 21 27 50;
+  --pxo-surface-raised: #1a213d; /* popovers, menus, anything above a surface */
+  --pxo-surface-raised-rgb: 26 33 61;
+
+  /* border */
+  --pxo-border-muted: #1f2949; /* hairlines inside a surface */
+  --pxo-border-muted-rgb: 31 41 73;
+  --pxo-border: #263158; /* the default border */
+  --pxo-border-rgb: 38 49 88;
+  --pxo-border-strong: #2e3c6c; /* emphasis, focus rings on neutral elements */
+  --pxo-border-strong-rgb: 46 60 108;
+  --pxo-border-accent: #384983; /* border on an accented element */
+  --pxo-border-accent-rgb: 56 73 131;
+
+  /* text */
+  --pxo-text-bright: #ffffff; /* maximum emphasis; use sparingly */
+  --pxo-text-bright-rgb: 255 255 255;
+  --pxo-text: #f7f4ff; /* body text */
+  --pxo-text-rgb: 247 244 255;
+  --pxo-text-secondary: #aaa4bd; /* supporting text, labels */
+  --pxo-text-secondary-rgb: 170 164 189;
+  --pxo-text-dim: #9089ab; /* de-emphasised text; still AA on surface */
+  --pxo-text-dim-rgb: 144 137 171;
+  --pxo-text-on-accent: #ffffff; /* text on an accent fill — white in BOTH schemes, unlike text.bright */
+  --pxo-text-on-accent-rgb: 255 255 255;
+
+  /* accent */
+  --pxo-accent: #7c3cff; /* primary actions, brand emphasis */
+  --pxo-accent-rgb: 124 60 255;
+  --pxo-accent-deep: #6a2ce0; /* active and pressed states — a FILL, never a foreground */
+  --pxo-accent-deep-rgb: 106 44 224;
+  --pxo-accent-soft: #b7a2ff; /* accent text against the ground; the muted brand tone */
+  --pxo-accent-soft-rgb: 183 162 255;
+
+  /* status */
+  --pxo-status-success: #00f0d8; /* healthy, complete, passing */
+  --pxo-status-success-rgb: 0 240 216;
+  --pxo-status-warning: #ffb000; /* degraded, needs attention */
+  --pxo-status-warning-rgb: 255 176 0;
+  --pxo-status-danger: #ff4f7b; /* failed, destructive */
+  --pxo-status-danger-rgb: 255 79 123;
+
+  /* status-surface */
+  --pxo-status-surface-success: #092d31; /* success callout ground */
+  --pxo-status-surface-success-rgb: 9 45 49;
+  --pxo-status-surface-success-muted: #071e22; /* subtler success ground */
+  --pxo-status-surface-success-muted-rgb: 7 30 34;
+  --pxo-status-surface-warning: #16140d; /* warning callout ground */
+  --pxo-status-surface-warning-rgb: 22 20 13;
+  --pxo-status-surface-danger: #1e0d16; /* danger callout ground */
+  --pxo-status-surface-danger-rgb: 30 13 22;
+  --pxo-status-surface-accent: #181026; /* accent callout ground */
+  --pxo-status-surface-accent-rgb: 24 16 38;
+
+  /* font */
+  --pxo-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; /* the brand voice — code, labels, data, eyebrows */
+  --pxo-font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif; /* prose and UI copy */
+
+  /* radius */
+  --pxo-radius-xs: 3px; /* chips, tags, badges — the smallest enclosed shapes */
+  --pxo-radius-sm: 4px; /* controls: buttons, inputs, list rows */
+  --pxo-radius: 8px; /* panels and cards; the default radius */
+  --pxo-radius-lg: 12px; /* modals and sheets — the largest enclosing shapes */
+
+  /* type */
+  --pxo-type-display-size: 24px;
+  --pxo-type-display-line-height: 28px;
+  --pxo-type-display-weight: 600;
+  --pxo-type-display-letter-spacing: -0.02em;
+  --pxo-type-title-size: 17px;
+  --pxo-type-title-line-height: 22px;
+  --pxo-type-title-weight: 600;
+  --pxo-type-title-letter-spacing: -0.01em;
+  --pxo-type-subtitle-size: 15px;
+  --pxo-type-subtitle-line-height: 20px;
+  --pxo-type-subtitle-weight: 500;
+  --pxo-type-subtitle-letter-spacing: 0em;
+  --pxo-type-body-size: 13px;
+  --pxo-type-body-line-height: 18px;
+  --pxo-type-body-weight: 400;
+  --pxo-type-body-letter-spacing: 0em;
+  --pxo-type-ui-size: 12px;
+  --pxo-type-ui-line-height: 16px;
+  --pxo-type-ui-weight: 500;
+  --pxo-type-ui-letter-spacing: 0.005em;
+  --pxo-type-label-size: 11px;
+  --pxo-type-label-line-height: 14px;
+  --pxo-type-label-weight: 500;
+  --pxo-type-label-letter-spacing: 0.08em;
+  --pxo-type-micro-size: 10px;
+  --pxo-type-micro-line-height: 13px;
+  --pxo-type-micro-weight: 500;
+  --pxo-type-micro-letter-spacing: 0.12em;
+
+  /* reading */
+  --pxo-reading-body-size: 1rem;
+  --pxo-reading-body-line-height: 1.5rem;
+  --pxo-reading-body-weight: 400;
+  --pxo-reading-body-letter-spacing: 0em;
+  --pxo-reading-body-font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --pxo-reading-control-size: 0.875rem;
+  --pxo-reading-control-line-height: 1.25rem;
+  --pxo-reading-control-weight: 500;
+  --pxo-reading-control-letter-spacing: 0em;
+  --pxo-reading-control-font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --pxo-reading-input-size: 1rem;
+  --pxo-reading-input-line-height: 1.5rem;
+  --pxo-reading-input-weight: 400;
+  --pxo-reading-input-letter-spacing: 0em;
+  --pxo-reading-input-font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --pxo-reading-code-size: 0.875rem;
+  --pxo-reading-code-line-height: 1.375rem;
+  --pxo-reading-code-weight: 400;
+  --pxo-reading-code-letter-spacing: 0em;
+  --pxo-reading-code-font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+
+  /* graph-origin */
+  --pxo-graph-origin-wikilink: #8e98b6; /* neutral stored wikilink edge; solid pattern */
+  --pxo-graph-origin-wikilink-rgb: 142 152 182;
+  --pxo-graph-origin-embed: #46d8c6; /* embedded-note edge; teal family, solid pattern */
+  --pxo-graph-origin-embed-rgb: 70 216 198;
+  --pxo-graph-origin-tag: #e8b93c; /* shared-tag connection; amber family, solid pattern */
+  --pxo-graph-origin-tag-rgb: 232 185 60;
+  --pxo-graph-origin-dataview: #8a6bf0; /* computed Dataview edge; violet family, solid pattern remains under reduced motion */
+  --pxo-graph-origin-dataview-rgb: 138 107 240;
+  --pxo-graph-origin-frontmatter-ref: #e4607e; /* frontmatter-reference edge; rose family, solid pattern */
+  --pxo-graph-origin-frontmatter-ref-rgb: 228 96 126;
+  --pxo-graph-origin-canvas: #8e98b6; /* canvas edge; must use dashed DOM strokes or curved 3D links */
+  --pxo-graph-origin-canvas-rgb: 142 152 182;
+
+  /* graph-pattern */
+  --pxo-graph-pattern-wikilink: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-embed: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-tag: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-dataview: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-frontmatter-ref: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-canvas: dashed; /* canvas secondary encoding; dashed in DOM, map to curvature in 3D */
+
+  /* graph */
+  --pxo-graph-canvas: #090b15; /* graph clear colour and fog ground */
+  --pxo-graph-canvas-rgb: 9 11 21;
+  --pxo-graph-node: #b9c2de; /* default opaque node; neutral so origins own the hue channel */
+  --pxo-graph-node-rgb: 185 194 222;
+  --pxo-graph-node-hub: #f7f4ff; /* high loaded-degree node; reinforce with size, never infer corpus degree */
+  --pxo-graph-node-hub-rgb: 247 244 255;
+  --pxo-graph-node-isolated: #6b7396; /* node with no links in the loaded projection; does not claim corpus orphan status */
+  --pxo-graph-node-isolated-rgb: 107 115 150;
+  --pxo-graph-node-selected: #ffffff; /* selected opaque node; pair with visible identity and selection shape */
+  --pxo-graph-node-selected-rgb: 255 255 255;
+  --pxo-graph-node-hover: #ffffff; /* hovered opaque node; pair with visible identity, never make hover the only access */
+  --pxo-graph-node-hover-rgb: 255 255 255;
+  --pxo-graph-node-dimmed: #39405c; /* nonessential out-of-focus node context only; no readable-contrast claim */
+  --pxo-graph-node-dimmed-rgb: 57 64 92;
+  --pxo-graph-edge-dimmed: #2a3050; /* nonessential out-of-focus edge context only; no readable-contrast claim */
+  --pxo-graph-edge-dimmed-rgb: 42 48 80;
+  --pxo-graph-label-surface: #111526; /* opaque selected and hover label ground */
+  --pxo-graph-label-surface-rgb: 17 21 38;
+  --pxo-graph-label-text: #f7f4ff; /* selected and hover identity text on the opaque label surface */
+  --pxo-graph-label-text-rgb: 247 244 255;
+  --pxo-graph-light-ambient: #8e98b6; /* ambient radiance; same cool fill in both themes, not a foreground */
+  --pxo-graph-light-ambient-rgb: 142 152 182;
+  --pxo-graph-light-key: #ffffff; /* key radiance; white light in both themes, not a foreground */
+  --pxo-graph-light-key-rgb: 255 255 255;
+  --pxo-graph-light-rim: #7c3cff; /* violet rim radiance in both themes, not a foreground */
+  --pxo-graph-light-rim-rgb: 124 60 255;
+
+  /* browser */
+  --pxo-browser-theme: #04060a; /* browser theme-color; update alongside DOM and canvas on theme resolution */
+  --pxo-browser-theme-rgb: 4 6 10;
+
+  /* interaction */
+  --pxo-interaction-focus: #b7a2ff; /* visible focus ring for controls and selected outlines; pair with offset */
+  --pxo-interaction-focus-rgb: 183 162 255;
+
+  /* ease */
+  --pxo-ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* the default: decelerate into rest. Anything entering or settling */
+  --pxo-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* symmetric movement — something that slides both ways */
+
+  /* duration */
+  --pxo-duration-in: 0ms; /* hover and focus ENTER — instant on purpose, never eased */
+  --pxo-duration-out: 140ms; /* hover and focus EXIT — the fade that stops flicker across rows */
+  --pxo-duration-fast: 120ms; /* a few px of travel: a chevron, a checkbox, a colour change */
+  --pxo-duration: 180ms; /* the default — tooltips, dropdowns, tens of px of travel */
+  --pxo-duration-exit: 100ms; /* the exit of a base transition; faster than the enter it reverses */
+  --pxo-duration-slow: 280ms; /* hundreds of px: a drawer or panel crossing the viewport */
+
+  /* shadow */
+  --pxo-shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3); /* barely lifted: a dragged row, a sticky header hairline */
+  --pxo-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.55); /* popovers, menus, anything that floats over a surface */
+  --pxo-shadow-strong: 0 16px 48px -12px rgb(0 0 0 / 0.65); /* modals and sheets — the top of the stack */
+  --pxo-shadow-lip: inset 0 1px 0 rgb(var(--pxo-text-rgb) / 0.06); /* the specular top edge that reads as 'in front'; pair with any shadow */
+  --pxo-shadow-lip-strong: inset 0 1px 0 rgb(var(--pxo-text-rgb) / 0.1); /* the same lip on a modal, where the edge has to carry more weight */
+
+  /* z */
+  --pxo-z-canvas: 0; /* the page and anything painted directly on it */
+  --pxo-z-chrome: 10; /* persistent chrome: header, sidebar, rails */
+  --pxo-z-panel: 20; /* docked panels and inspectors */
+  --pxo-z-popover: 30; /* menus, dropdowns, comboboxes */
+  --pxo-z-overlay: 40; /* the scrim behind a modal */
+  --pxo-z-modal: 50; /* dialogs and sheets, above their own scrim */
+  --pxo-z-toast: 60; /* transient notifications — above a modal, never blocked by one */
+  --pxo-z-tooltip: 70; /* the top of the stack; nothing may cover a tooltip */
+}
+
+/* Follow the OS, unless an explicit dark choice overrides it. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+
+    /* surface */
+    --pxo-surface-void: #fbfbfc;
+    --pxo-surface-void-rgb: 251 251 252;
+    --pxo-surface-canvas: #f7f7f8;
+    --pxo-surface-canvas-rgb: 247 247 248;
+    --pxo-surface-bg: #f3f3f5;
+    --pxo-surface-bg-rgb: 243 243 245;
+    --pxo-surface: #eeeef1;
+    --pxo-surface-rgb: 238 238 241;
+    --pxo-surface-hover: #e6e7eb;
+    --pxo-surface-hover-rgb: 230 231 235;
+    --pxo-surface-raised: #dedfe5;
+    --pxo-surface-raised-rgb: 222 223 229;
+
+    /* border */
+    --pxo-border-muted: #d3d5dd;
+    --pxo-border-muted-rgb: 211 213 221;
+    --pxo-border: #c5c9d4;
+    --pxo-border-rgb: 197 201 212;
+    --pxo-border-strong: #b3b8c9;
+    --pxo-border-strong-rgb: 179 184 201;
+    --pxo-border-accent: #9ea5be;
+    --pxo-border-accent-rgb: 158 165 190;
+
+    /* text */
+    --pxo-text-bright: #0a0c12;
+    --pxo-text-bright-rgb: 10 12 18;
+    --pxo-text: #0c0e15;
+    --pxo-text-rgb: 12 14 21;
+    --pxo-text-secondary: #474b57;
+    --pxo-text-secondary-rgb: 71 75 87;
+    --pxo-text-dim: #5b5f6f;
+    --pxo-text-dim-rgb: 91 95 111;
+    --pxo-text-on-accent: #ffffff;
+    --pxo-text-on-accent-rgb: 255 255 255;
+
+    /* accent */
+    --pxo-accent: #7c3cff;
+    --pxo-accent-rgb: 124 60 255;
+    --pxo-accent-deep: #6a2ce0;
+    --pxo-accent-deep-rgb: 106 44 224;
+    --pxo-accent-soft: #735cc1;
+    --pxo-accent-soft-rgb: 115 92 193;
+
+    /* status */
+    --pxo-status-success: #007a6e;
+    --pxo-status-success-rgb: 0 122 110;
+    --pxo-status-warning: #916400;
+    --pxo-status-warning-rgb: 145 100 0;
+    --pxo-status-danger: #da0036;
+    --pxo-status-danger-rgb: 218 0 54;
+
+    /* status-surface */
+    --pxo-status-surface-success: #e7f8f6;
+    --pxo-status-surface-success-rgb: 231 248 246;
+    --pxo-status-surface-success-muted: #f1fbfa;
+    --pxo-status-surface-success-muted-rgb: 241 251 250;
+    --pxo-status-surface-warning: #f8f3e7;
+    --pxo-status-surface-warning-rgb: 248 243 231;
+    --pxo-status-surface-danger: #f8e7eb;
+    --pxo-status-surface-danger-rgb: 248 231 235;
+    --pxo-status-surface-accent: #ede7f8;
+    --pxo-status-surface-accent-rgb: 237 231 248;
+
+    /* graph-origin */
+    --pxo-graph-origin-wikilink: #49525f;
+    --pxo-graph-origin-wikilink-rgb: 73 82 95;
+    --pxo-graph-origin-embed: #2a927c;
+    --pxo-graph-origin-embed-rgb: 42 146 124;
+    --pxo-graph-origin-tag: #8e6d10;
+    --pxo-graph-origin-tag-rgb: 142 109 16;
+    --pxo-graph-origin-dataview: #7842d7;
+    --pxo-graph-origin-dataview-rgb: 120 66 215;
+    --pxo-graph-origin-frontmatter-ref: #6c1321;
+    --pxo-graph-origin-frontmatter-ref-rgb: 108 19 33;
+    --pxo-graph-origin-canvas: #49525f;
+    --pxo-graph-origin-canvas-rgb: 73 82 95;
+
+    /* graph */
+    --pxo-graph-canvas: #f7f7f8;
+    --pxo-graph-canvas-rgb: 247 247 248;
+    --pxo-graph-node: #46516b;
+    --pxo-graph-node-rgb: 70 81 107;
+    --pxo-graph-node-hub: #0c0e15;
+    --pxo-graph-node-hub-rgb: 12 14 21;
+    --pxo-graph-node-isolated: #68708a;
+    --pxo-graph-node-isolated-rgb: 104 112 138;
+    --pxo-graph-node-selected: #0a0c12;
+    --pxo-graph-node-selected-rgb: 10 12 18;
+    --pxo-graph-node-hover: #0a0c12;
+    --pxo-graph-node-hover-rgb: 10 12 18;
+    --pxo-graph-node-dimmed: #ccd0dc;
+    --pxo-graph-node-dimmed-rgb: 204 208 220;
+    --pxo-graph-edge-dimmed: #d6d9e2;
+    --pxo-graph-edge-dimmed-rgb: 214 217 226;
+    --pxo-graph-label-surface: #eeeef1;
+    --pxo-graph-label-surface-rgb: 238 238 241;
+    --pxo-graph-label-text: #0c0e15;
+    --pxo-graph-label-text-rgb: 12 14 21;
+    --pxo-graph-light-ambient: #8e98b6;
+    --pxo-graph-light-ambient-rgb: 142 152 182;
+    --pxo-graph-light-key: #ffffff;
+    --pxo-graph-light-key-rgb: 255 255 255;
+    --pxo-graph-light-rim: #7c3cff;
+    --pxo-graph-light-rim-rgb: 124 60 255;
+
+    /* browser */
+    --pxo-browser-theme: #fbfbfc;
+    --pxo-browser-theme-rgb: 251 251 252;
+
+    /* interaction */
+    --pxo-interaction-focus: #7c3cff;
+    --pxo-interaction-focus-rgb: 124 60 255;
+  }
+}
+
+/* An explicit toggle wins in both directions. */
+:root[data-theme="light"] {
+
+  /* surface */
+  --pxo-surface-void: #fbfbfc;
+  --pxo-surface-void-rgb: 251 251 252;
+  --pxo-surface-canvas: #f7f7f8;
+  --pxo-surface-canvas-rgb: 247 247 248;
+  --pxo-surface-bg: #f3f3f5;
+  --pxo-surface-bg-rgb: 243 243 245;
+  --pxo-surface: #eeeef1;
+  --pxo-surface-rgb: 238 238 241;
+  --pxo-surface-hover: #e6e7eb;
+  --pxo-surface-hover-rgb: 230 231 235;
+  --pxo-surface-raised: #dedfe5;
+  --pxo-surface-raised-rgb: 222 223 229;
+
+  /* border */
+  --pxo-border-muted: #d3d5dd;
+  --pxo-border-muted-rgb: 211 213 221;
+  --pxo-border: #c5c9d4;
+  --pxo-border-rgb: 197 201 212;
+  --pxo-border-strong: #b3b8c9;
+  --pxo-border-strong-rgb: 179 184 201;
+  --pxo-border-accent: #9ea5be;
+  --pxo-border-accent-rgb: 158 165 190;
+
+  /* text */
+  --pxo-text-bright: #0a0c12;
+  --pxo-text-bright-rgb: 10 12 18;
+  --pxo-text: #0c0e15;
+  --pxo-text-rgb: 12 14 21;
+  --pxo-text-secondary: #474b57;
+  --pxo-text-secondary-rgb: 71 75 87;
+  --pxo-text-dim: #5b5f6f;
+  --pxo-text-dim-rgb: 91 95 111;
+  --pxo-text-on-accent: #ffffff;
+  --pxo-text-on-accent-rgb: 255 255 255;
+
+  /* accent */
+  --pxo-accent: #7c3cff;
+  --pxo-accent-rgb: 124 60 255;
+  --pxo-accent-deep: #6a2ce0;
+  --pxo-accent-deep-rgb: 106 44 224;
+  --pxo-accent-soft: #735cc1;
+  --pxo-accent-soft-rgb: 115 92 193;
+
+  /* status */
+  --pxo-status-success: #007a6e;
+  --pxo-status-success-rgb: 0 122 110;
+  --pxo-status-warning: #916400;
+  --pxo-status-warning-rgb: 145 100 0;
+  --pxo-status-danger: #da0036;
+  --pxo-status-danger-rgb: 218 0 54;
+
+  /* status-surface */
+  --pxo-status-surface-success: #e7f8f6;
+  --pxo-status-surface-success-rgb: 231 248 246;
+  --pxo-status-surface-success-muted: #f1fbfa;
+  --pxo-status-surface-success-muted-rgb: 241 251 250;
+  --pxo-status-surface-warning: #f8f3e7;
+  --pxo-status-surface-warning-rgb: 248 243 231;
+  --pxo-status-surface-danger: #f8e7eb;
+  --pxo-status-surface-danger-rgb: 248 231 235;
+  --pxo-status-surface-accent: #ede7f8;
+  --pxo-status-surface-accent-rgb: 237 231 248;
+
+  /* graph-origin */
+  --pxo-graph-origin-wikilink: #49525f;
+  --pxo-graph-origin-wikilink-rgb: 73 82 95;
+  --pxo-graph-origin-embed: #2a927c;
+  --pxo-graph-origin-embed-rgb: 42 146 124;
+  --pxo-graph-origin-tag: #8e6d10;
+  --pxo-graph-origin-tag-rgb: 142 109 16;
+  --pxo-graph-origin-dataview: #7842d7;
+  --pxo-graph-origin-dataview-rgb: 120 66 215;
+  --pxo-graph-origin-frontmatter-ref: #6c1321;
+  --pxo-graph-origin-frontmatter-ref-rgb: 108 19 33;
+  --pxo-graph-origin-canvas: #49525f;
+  --pxo-graph-origin-canvas-rgb: 73 82 95;
+
+  /* graph */
+  --pxo-graph-canvas: #f7f7f8;
+  --pxo-graph-canvas-rgb: 247 247 248;
+  --pxo-graph-node: #46516b;
+  --pxo-graph-node-rgb: 70 81 107;
+  --pxo-graph-node-hub: #0c0e15;
+  --pxo-graph-node-hub-rgb: 12 14 21;
+  --pxo-graph-node-isolated: #68708a;
+  --pxo-graph-node-isolated-rgb: 104 112 138;
+  --pxo-graph-node-selected: #0a0c12;
+  --pxo-graph-node-selected-rgb: 10 12 18;
+  --pxo-graph-node-hover: #0a0c12;
+  --pxo-graph-node-hover-rgb: 10 12 18;
+  --pxo-graph-node-dimmed: #ccd0dc;
+  --pxo-graph-node-dimmed-rgb: 204 208 220;
+  --pxo-graph-edge-dimmed: #d6d9e2;
+  --pxo-graph-edge-dimmed-rgb: 214 217 226;
+  --pxo-graph-label-surface: #eeeef1;
+  --pxo-graph-label-surface-rgb: 238 238 241;
+  --pxo-graph-label-text: #0c0e15;
+  --pxo-graph-label-text-rgb: 12 14 21;
+  --pxo-graph-light-ambient: #8e98b6;
+  --pxo-graph-light-ambient-rgb: 142 152 182;
+  --pxo-graph-light-key: #ffffff;
+  --pxo-graph-light-key-rgb: 255 255 255;
+  --pxo-graph-light-rim: #7c3cff;
+  --pxo-graph-light-rim-rgb: 124 60 255;
+
+  /* browser */
+  --pxo-browser-theme: #fbfbfc;
+  --pxo-browser-theme-rgb: 251 251 252;
+
+  /* interaction */
+  --pxo-interaction-focus: #7c3cff;
+  --pxo-interaction-focus-rgb: 124 60 255;
+}
+
+:root[data-theme="dark"] {
+
+  /* surface */
+  --pxo-surface-void: #04060a; /* the page ground; nothing sits behind it */
+  --pxo-surface-void-rgb: 4 6 10;
+  --pxo-surface-canvas: #090b15; /* terminal and code grounds */
+  --pxo-surface-canvas-rgb: 9 11 21;
+  --pxo-surface-bg: #0d101e; /* default app background */
+  --pxo-surface-bg-rgb: 13 16 30;
+  --pxo-surface: #111526; /* cards, panels, the default raised plane */
+  --pxo-surface-rgb: 17 21 38;
+  --pxo-surface-hover: #151b32; /* hover state of a surface */
+  --pxo-surface-hover-rgb: 21 27 50;
+  --pxo-surface-raised: #1a213d; /* popovers, menus, anything above a surface */
+  --pxo-surface-raised-rgb: 26 33 61;
+
+  /* border */
+  --pxo-border-muted: #1f2949; /* hairlines inside a surface */
+  --pxo-border-muted-rgb: 31 41 73;
+  --pxo-border: #263158; /* the default border */
+  --pxo-border-rgb: 38 49 88;
+  --pxo-border-strong: #2e3c6c; /* emphasis, focus rings on neutral elements */
+  --pxo-border-strong-rgb: 46 60 108;
+  --pxo-border-accent: #384983; /* border on an accented element */
+  --pxo-border-accent-rgb: 56 73 131;
+
+  /* text */
+  --pxo-text-bright: #ffffff; /* maximum emphasis; use sparingly */
+  --pxo-text-bright-rgb: 255 255 255;
+  --pxo-text: #f7f4ff; /* body text */
+  --pxo-text-rgb: 247 244 255;
+  --pxo-text-secondary: #aaa4bd; /* supporting text, labels */
+  --pxo-text-secondary-rgb: 170 164 189;
+  --pxo-text-dim: #9089ab; /* de-emphasised text; still AA on surface */
+  --pxo-text-dim-rgb: 144 137 171;
+  --pxo-text-on-accent: #ffffff; /* text on an accent fill — white in BOTH schemes, unlike text.bright */
+  --pxo-text-on-accent-rgb: 255 255 255;
+
+  /* accent */
+  --pxo-accent: #7c3cff; /* primary actions, brand emphasis */
+  --pxo-accent-rgb: 124 60 255;
+  --pxo-accent-deep: #6a2ce0; /* active and pressed states — a FILL, never a foreground */
+  --pxo-accent-deep-rgb: 106 44 224;
+  --pxo-accent-soft: #b7a2ff; /* accent text against the ground; the muted brand tone */
+  --pxo-accent-soft-rgb: 183 162 255;
+
+  /* status */
+  --pxo-status-success: #00f0d8; /* healthy, complete, passing */
+  --pxo-status-success-rgb: 0 240 216;
+  --pxo-status-warning: #ffb000; /* degraded, needs attention */
+  --pxo-status-warning-rgb: 255 176 0;
+  --pxo-status-danger: #ff4f7b; /* failed, destructive */
+  --pxo-status-danger-rgb: 255 79 123;
+
+  /* status-surface */
+  --pxo-status-surface-success: #092d31; /* success callout ground */
+  --pxo-status-surface-success-rgb: 9 45 49;
+  --pxo-status-surface-success-muted: #071e22; /* subtler success ground */
+  --pxo-status-surface-success-muted-rgb: 7 30 34;
+  --pxo-status-surface-warning: #16140d; /* warning callout ground */
+  --pxo-status-surface-warning-rgb: 22 20 13;
+  --pxo-status-surface-danger: #1e0d16; /* danger callout ground */
+  --pxo-status-surface-danger-rgb: 30 13 22;
+  --pxo-status-surface-accent: #181026; /* accent callout ground */
+  --pxo-status-surface-accent-rgb: 24 16 38;
+
+  /* font */
+  --pxo-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; /* the brand voice — code, labels, data, eyebrows */
+  --pxo-font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif; /* prose and UI copy */
+
+  /* radius */
+  --pxo-radius-xs: 3px; /* chips, tags, badges — the smallest enclosed shapes */
+  --pxo-radius-sm: 4px; /* controls: buttons, inputs, list rows */
+  --pxo-radius: 8px; /* panels and cards; the default radius */
+  --pxo-radius-lg: 12px; /* modals and sheets — the largest enclosing shapes */
+
+  /* type */
+  --pxo-type-display-size: 24px;
+  --pxo-type-display-line-height: 28px;
+  --pxo-type-display-weight: 600;
+  --pxo-type-display-letter-spacing: -0.02em;
+  --pxo-type-title-size: 17px;
+  --pxo-type-title-line-height: 22px;
+  --pxo-type-title-weight: 600;
+  --pxo-type-title-letter-spacing: -0.01em;
+  --pxo-type-subtitle-size: 15px;
+  --pxo-type-subtitle-line-height: 20px;
+  --pxo-type-subtitle-weight: 500;
+  --pxo-type-subtitle-letter-spacing: 0em;
+  --pxo-type-body-size: 13px;
+  --pxo-type-body-line-height: 18px;
+  --pxo-type-body-weight: 400;
+  --pxo-type-body-letter-spacing: 0em;
+  --pxo-type-ui-size: 12px;
+  --pxo-type-ui-line-height: 16px;
+  --pxo-type-ui-weight: 500;
+  --pxo-type-ui-letter-spacing: 0.005em;
+  --pxo-type-label-size: 11px;
+  --pxo-type-label-line-height: 14px;
+  --pxo-type-label-weight: 500;
+  --pxo-type-label-letter-spacing: 0.08em;
+  --pxo-type-micro-size: 10px;
+  --pxo-type-micro-line-height: 13px;
+  --pxo-type-micro-weight: 500;
+  --pxo-type-micro-letter-spacing: 0.12em;
+
+  /* reading */
+  --pxo-reading-body-size: 1rem;
+  --pxo-reading-body-line-height: 1.5rem;
+  --pxo-reading-body-weight: 400;
+  --pxo-reading-body-letter-spacing: 0em;
+  --pxo-reading-body-font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --pxo-reading-control-size: 0.875rem;
+  --pxo-reading-control-line-height: 1.25rem;
+  --pxo-reading-control-weight: 500;
+  --pxo-reading-control-letter-spacing: 0em;
+  --pxo-reading-control-font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --pxo-reading-input-size: 1rem;
+  --pxo-reading-input-line-height: 1.5rem;
+  --pxo-reading-input-weight: 400;
+  --pxo-reading-input-letter-spacing: 0em;
+  --pxo-reading-input-font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --pxo-reading-code-size: 0.875rem;
+  --pxo-reading-code-line-height: 1.375rem;
+  --pxo-reading-code-weight: 400;
+  --pxo-reading-code-letter-spacing: 0em;
+  --pxo-reading-code-font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+
+  /* graph-origin */
+  --pxo-graph-origin-wikilink: #8e98b6; /* neutral stored wikilink edge; solid pattern */
+  --pxo-graph-origin-wikilink-rgb: 142 152 182;
+  --pxo-graph-origin-embed: #46d8c6; /* embedded-note edge; teal family, solid pattern */
+  --pxo-graph-origin-embed-rgb: 70 216 198;
+  --pxo-graph-origin-tag: #e8b93c; /* shared-tag connection; amber family, solid pattern */
+  --pxo-graph-origin-tag-rgb: 232 185 60;
+  --pxo-graph-origin-dataview: #8a6bf0; /* computed Dataview edge; violet family, solid pattern remains under reduced motion */
+  --pxo-graph-origin-dataview-rgb: 138 107 240;
+  --pxo-graph-origin-frontmatter-ref: #e4607e; /* frontmatter-reference edge; rose family, solid pattern */
+  --pxo-graph-origin-frontmatter-ref-rgb: 228 96 126;
+  --pxo-graph-origin-canvas: #8e98b6; /* canvas edge; must use dashed DOM strokes or curved 3D links */
+  --pxo-graph-origin-canvas-rgb: 142 152 182;
+
+  /* graph-pattern */
+  --pxo-graph-pattern-wikilink: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-embed: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-tag: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-dataview: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-frontmatter-ref: solid; /* solid origin encoding; retain when motion is reduced */
+  --pxo-graph-pattern-canvas: dashed; /* canvas secondary encoding; dashed in DOM, map to curvature in 3D */
+
+  /* graph */
+  --pxo-graph-canvas: #090b15; /* graph clear colour and fog ground */
+  --pxo-graph-canvas-rgb: 9 11 21;
+  --pxo-graph-node: #b9c2de; /* default opaque node; neutral so origins own the hue channel */
+  --pxo-graph-node-rgb: 185 194 222;
+  --pxo-graph-node-hub: #f7f4ff; /* high loaded-degree node; reinforce with size, never infer corpus degree */
+  --pxo-graph-node-hub-rgb: 247 244 255;
+  --pxo-graph-node-isolated: #6b7396; /* node with no links in the loaded projection; does not claim corpus orphan status */
+  --pxo-graph-node-isolated-rgb: 107 115 150;
+  --pxo-graph-node-selected: #ffffff; /* selected opaque node; pair with visible identity and selection shape */
+  --pxo-graph-node-selected-rgb: 255 255 255;
+  --pxo-graph-node-hover: #ffffff; /* hovered opaque node; pair with visible identity, never make hover the only access */
+  --pxo-graph-node-hover-rgb: 255 255 255;
+  --pxo-graph-node-dimmed: #39405c; /* nonessential out-of-focus node context only; no readable-contrast claim */
+  --pxo-graph-node-dimmed-rgb: 57 64 92;
+  --pxo-graph-edge-dimmed: #2a3050; /* nonessential out-of-focus edge context only; no readable-contrast claim */
+  --pxo-graph-edge-dimmed-rgb: 42 48 80;
+  --pxo-graph-label-surface: #111526; /* opaque selected and hover label ground */
+  --pxo-graph-label-surface-rgb: 17 21 38;
+  --pxo-graph-label-text: #f7f4ff; /* selected and hover identity text on the opaque label surface */
+  --pxo-graph-label-text-rgb: 247 244 255;
+  --pxo-graph-light-ambient: #8e98b6; /* ambient radiance; same cool fill in both themes, not a foreground */
+  --pxo-graph-light-ambient-rgb: 142 152 182;
+  --pxo-graph-light-key: #ffffff; /* key radiance; white light in both themes, not a foreground */
+  --pxo-graph-light-key-rgb: 255 255 255;
+  --pxo-graph-light-rim: #7c3cff; /* violet rim radiance in both themes, not a foreground */
+  --pxo-graph-light-rim-rgb: 124 60 255;
+
+  /* browser */
+  --pxo-browser-theme: #04060a; /* browser theme-color; update alongside DOM and canvas on theme resolution */
+  --pxo-browser-theme-rgb: 4 6 10;
+
+  /* interaction */
+  --pxo-interaction-focus: #b7a2ff; /* visible focus ring for controls and selected outlines; pair with offset */
+  --pxo-interaction-focus-rgb: 183 162 255;
+
+  /* ease */
+  --pxo-ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* the default: decelerate into rest. Anything entering or settling */
+  --pxo-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* symmetric movement — something that slides both ways */
+
+  /* duration */
+  --pxo-duration-in: 0ms; /* hover and focus ENTER — instant on purpose, never eased */
+  --pxo-duration-out: 140ms; /* hover and focus EXIT — the fade that stops flicker across rows */
+  --pxo-duration-fast: 120ms; /* a few px of travel: a chevron, a checkbox, a colour change */
+  --pxo-duration: 180ms; /* the default — tooltips, dropdowns, tens of px of travel */
+  --pxo-duration-exit: 100ms; /* the exit of a base transition; faster than the enter it reverses */
+  --pxo-duration-slow: 280ms; /* hundreds of px: a drawer or panel crossing the viewport */
+
+  /* shadow */
+  --pxo-shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3); /* barely lifted: a dragged row, a sticky header hairline */
+  --pxo-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.55); /* popovers, menus, anything that floats over a surface */
+  --pxo-shadow-strong: 0 16px 48px -12px rgb(0 0 0 / 0.65); /* modals and sheets — the top of the stack */
+  --pxo-shadow-lip: inset 0 1px 0 rgb(var(--pxo-text-rgb) / 0.06); /* the specular top edge that reads as 'in front'; pair with any shadow */
+  --pxo-shadow-lip-strong: inset 0 1px 0 rgb(var(--pxo-text-rgb) / 0.1); /* the same lip on a modal, where the edge has to carry more weight */
+
+  /* z */
+  --pxo-z-canvas: 0; /* the page and anything painted directly on it */
+  --pxo-z-chrome: 10; /* persistent chrome: header, sidebar, rails */
+  --pxo-z-panel: 20; /* docked panels and inspectors */
+  --pxo-z-popover: 30; /* menus, dropdowns, comboboxes */
+  --pxo-z-overlay: 40; /* the scrim behind a modal */
+  --pxo-z-modal: 50; /* dialogs and sheets, above their own scrim */
+  --pxo-z-toast: 60; /* transient notifications — above a modal, never blocked by one */
+  --pxo-z-tooltip: 70; /* the top of the stack; nothing may cover a tooltip */
+}
