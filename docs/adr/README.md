@@ -45,6 +45,7 @@ Use [`_template.md`](_template.md).
 | [0031](0031-hc-secondmates-and-recovery.md) | Run secondmates on hc with recovery-grade exit and relaunch | Accepted | Navigators invisible in the Herdr desktop app; self-retiring local carry |
 | [0032](0032-carry-remaining-signal-trap-fixes.md) | Carry the remaining Bash 5.2-safe signal traps until a sync brings them | Accepted | ADR-0028's follow-up for the lock-handoff helper and other plain traps; self-retiring local carry |
 | [0035](0035-carry-three-lint-partitions.md) | Carry a third CI lint partition until a sync brings one | Accepted | "Lint 1" cancelled at the 30-minute job timeout on main and open pull requests; self-retiring local carry |
+| [0036](0036-carry-test-harness-trap-order.md) | Carry the test harness's signal-before-EXIT trap order until a sync brings it | Accepted | "Behavior portable serial 5" dead-pid case lost its fixtures on Bash 5.2; self-retiring local carry |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).

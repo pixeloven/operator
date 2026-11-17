@@ -447,11 +447,17 @@ fm_test_tmproot() {
   printf '%s\n' "$root"
 }
 
-trap fm_test_cleanup EXIT
+# Arm the signal traps before the EXIT trap. Bash 5.2 installs its own
+# EXIT-running handler on every untrapped terminating signal when an EXIT trap
+# is first set, and records that handler as the signal's original disposition.
+# A background child signalled before it resets its inherited traps restores
+# that original and re-raises the signal, so it would run this shell's EXIT
+# trap and remove the live fixture root out from under the test.
 trap 'fm_test_cleanup; exit 130' INT
 trap 'fm_test_cleanup; exit 143' TERM
 trap 'fm_test_cleanup; exit 129' HUP
 trap 'fm_test_cleanup; exit 131' QUIT
+trap fm_test_cleanup EXIT
 
 # fm_test_reap_orphans: best-effort sweep for fixture roots left behind by a
 # prior run that was killed hard enough to skip the traps above (e.g. a

@@ -62,6 +62,38 @@ test_fixture_root_gone_after_sigterm() {
   pass "fm_test_tmproot cleans up its fixture root on SIGTERM"
 }
 
+# A suite that signals a background job it just started can reach the forked
+# child before that child resets the traps it inherited. The child must die
+# from the signal without running its parent's EXIT trap, which would remove
+# the live fixture root while the suite is still using it.
+test_fixture_root_survives_signalling_a_fresh_background_child() {
+  local out
+  out=$(bash -c '
+    # shellcheck source=tests/lib.sh
+    . "$1"
+    d=$(fm_test_tmproot fm-test-cleanup-fresh-child)
+    killed=0
+    i=0
+    while [ "$i" -lt 50 ]; do
+      sleep 1 &
+      bg=$!
+      kill "$bg" 2>/dev/null
+      wait "$bg" 2>/dev/null
+      [ "$?" -ne 143 ] || killed=$((killed + 1))
+      [ -d "$d" ] || break
+      i=$((i + 1))
+    done
+    printf "killed:%s\n" "$killed"
+    if [ -d "$d" ]; then printf "root:present\n"; else printf "root:missing after %s\n" "$i"; fi
+  ' _ "$LIB")
+  case "$out" in
+    *"killed:0"*) fail "no background child was terminated by its signal, so the case checked nothing: $out" ;;
+  esac
+  assert_contains "$out" "root:present" \
+    "signalling a fresh background child ran the suite's EXIT trap and removed its live fixture root"
+  pass "signalling a fresh background child leaves the live fixture root in place"
+}
+
 test_cleanup_registry_resists_precreation() {
   local harness shared_tmp victim
   harness=$(fm_test_tmproot fm-test-cleanup-registry-harness)
@@ -245,6 +277,7 @@ test_registries_avoid_git_worktree_root() {
 
 test_fixture_root_gone_after_normal_exit
 test_fixture_root_gone_after_sigterm
+test_fixture_root_survives_signalling_a_fresh_background_child
 test_cleanup_registry_resists_precreation
 test_fixture_registration_failure_rolls_back_root
 test_orphan_sweep_respects_fixture_ownership
