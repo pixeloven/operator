@@ -32,10 +32,10 @@ Theme values are captain-owned display text: validation rejects authority words,
 
 ## Relabel live workspaces
 
-Workspace labels follow the theme for new herdr and Paseo workspaces, while existing ones keep matching.
-To rename this home's live herdr workspaces (from the primary home, each second mate's own workspace too):
+Workspace labels follow the theme for new herdr and Paseo workspaces and for the Herdr desktop app spaces an hc spawn touches, while existing ones keep matching.
+To rename this home's live herdr workspaces (from the primary home, each second mate's own workspace too), and with `--hc` its Herdr desktop app spaces:
 
-1. Run `bin/po-theme.sh relabel --session <session> --dry-run`.
+1. Run `bin/po-theme.sh relabel --session <session> --dry-run`, adding `--hc` (or using it alone) when the home runs on hc.
 2. Report the planned renames to the captain.
 3. Run it without `--dry-run` once the captain agrees.
 

@@ -35,8 +35,17 @@
 # space with one tab each. A --secondmate launch passes the mate's OWN home
 # space instead, the space that home's own crew lands in, so a navigator and
 # its workers group together; its identity labels stay the launching home's,
-# because that home's record owns the endpoint. Naming the space needs the app
-# window and is not done.
+# because that home's record owns the endpoint. Naming a space needs the open
+# app window (`herdr-app`, never launched here); fm_backend_hc_space_rename is
+# the mechanism and the caller chooses the name.
+#
+# Hierarchy: a task terminal's hc parent is the terminal the launching
+# supervisor itself runs in (fm_backend_hc_caller_terminal), which is what the
+# app's Agents panel nests sub-agents by. --outlive-parent keeps the task alive
+# when that supervisor's program ends, --no-notify keeps hc from typing notes
+# into it, and the space and tab labels keep the task in its own pane rather
+# than folded into the parent's tab. With no such terminal on the same core,
+# the task starts with --no-parent, exactly as before.
 #
 # Core identity: `hc server status` reports core.id, which survives a core stop
 # and restart (measured on hc 0.1.20) and differs between cores, while hc never
@@ -53,6 +62,10 @@
 #   - hc reports one foreground process per terminal (`foreground` in
 #     `hc get`), not a process group; when that process is a launcher,
 #     agent_state also reads the rest of its process group from local `ps`.
+#   - A terminal whose program is a wrapper that opens its own terminal for
+#     the real shell (`distrobox enter`, measured on hc 0.1.21) reports that
+#     host-side wrapper as its foreground for good, so its cwd never follows
+#     the shell inside; current_path asks that shell itself instead.
 #   - hc has no event push this adapter consumes; supervision polls like tmux.
 #
 # Binary gate: FM_HC_BIN wins, else `herdr-core`, else `hc` (the release
@@ -294,17 +307,41 @@ fm_backend_hc_container_ensure() {
   printf '%s' "$session"
 }
 
+# fm_backend_hc_caller_terminal: the hc terminal this process itself runs in,
+# when that terminal is live on <session>'s own core; nothing and failure
+# otherwise. hc stamps HC_TERMINAL_ID and HC_TERMINAL_SOCKET into every
+# process a terminal starts, through a container wrapper too. The socket is
+# proven live before any hc call, because hc starts a core on contact, and it
+# must be the session's own socket (fm_backend_detect_hc_core_sock), because
+# addresses count per core: another core's t6 is an unrelated terminal.
+fm_backend_hc_caller_terminal() {  # <session>
+  local session=$1 addr=${HC_TERMINAL_ID:-} sock=${HC_TERMINAL_SOCKET:-} core state
+  [ -n "$addr" ] && [ -n "$sock" ] || return 1
+  fm_backend_hc_address_valid "$addr" || return 1
+  declare -F fm_backend_unix_sock_live >/dev/null 2>&1 || return 1
+  declare -F fm_backend_detect_hc_core_sock >/dev/null 2>&1 || return 1
+  fm_backend_unix_sock_live "$sock" || return 1
+  core=$(HC_SESSION="$session" fm_backend_detect_hc_core_sock)
+  [ "$sock" -ef "$core" ] || return 1
+  state=$(fm_backend_hc_cli "$session" get --json "$addr" 2>/dev/null | jq -r '.state // empty' 2>/dev/null)
+  [ "$state" = live ] || return 1
+  printf '%s' "$addr"
+}
+
 # fm_backend_hc_create_task: start a login shell terminal in <cwd> for
 # <window-label>, refusing a live duplicate in this home. Prints the address.
-# --no-parent and --outlive-parent keep the terminal independent of whichever
-# hc terminal firstmate itself runs in; --no-notify keeps hc from typing notes
-# into any parent. [space] is the herdr.space for a launch into another home's
+# The terminal's parent is the launching supervisor's own terminal when
+# fm_backend_hc_caller_terminal finds one, else none (--no-parent);
+# --outlive-parent keeps it running when that parent's program ends and
+# --no-notify keeps hc from typing notes into the parent. [space] is the
+# herdr.space for a launch into another home's
 # space (a --secondmate launch); FM_HC_SPACE, else fm-<hometag>, otherwise.
 # A finished terminal carrying this exact task and home label can never host
 # an agent again, so it is removed first: a respawn or rebind then leaves one
 # terminal for the task rather than a dead tab beside the new one.
 fm_backend_hc_create_task() {  # <session> <window-label> <cwd> [space]
-  local session=$1 label=$2 cwd=$3 space=${4:-} home scoped dup out address stale
+  local session=$1 label=$2 cwd=$3 space=${4:-} home scoped dup out address stale parent
+  local -a parent_args
   home=$(fm_backend_hometag)
   scoped=$(fm_backend_hc_scoped_label "$label")
   [ -n "$space" ] || space=${FM_HC_SPACE:-fm-$home}
@@ -319,7 +356,12 @@ fm_backend_hc_create_task() {  # <session> <window-label> <cwd> [space]
     fm_backend_hc_kill "$session:$stale" "" "$label" \
       || { echo "error: could not remove the finished hc terminal $session:$stale left by $label" >&2; return 1; }
   done
-  out=$(fm_backend_hc_cli "$session" run --bg --json --no-parent --outlive-parent --no-notify \
+  if parent=$(fm_backend_hc_caller_terminal "$session"); then
+    parent_args=(--parent "$parent")
+  else
+    parent_args=(--no-parent)
+  fi
+  out=$(fm_backend_hc_cli "$session" run --bg --json "${parent_args[@]}" --outlive-parent --no-notify \
     --cwd "$cwd" \
     --label "firstmate.task=$label" --label "firstmate.home=$home" \
     --label "herdr.space=$space" --label "herdr.tab=$scoped" 2>&1) \
@@ -371,11 +413,128 @@ fm_backend_hc_send_text_line() {  # <target> <text> [expected-label]
   fm_backend_hc_cli "$FM_BACKEND_HC_SESSION" send --json "$FM_BACKEND_HC_ADDRESS" -- "$2" >/dev/null 2>&1
 }
 
+# fm_backend_hc_current_path: the folder the terminal's shell is in. A
+# foreground the shared classifier reads as a shell or a harness is that
+# shell's own process (or its harness), so its kernel cwd answers; with no
+# foreground yet, the launch folder answers. Any other foreground sits between
+# hc and the shell: under a wrapper such as `distrobox enter` it is the
+# host-side wrapper for good, and its cwd stays wherever the terminal started,
+# so the shell is asked itself (fm_backend_hc_shell_cwd_probe). The probe types
+# into the terminal, which is why only fm-spawn reads this, and only where no
+# agent runs: before a launch, or on a relaunch's agent-free endpoint.
 fm_backend_hc_current_path() {  # <target> [expected-label]
-  local json
+  local json fields name argv0 args pid cwd
   fm_backend_hc_target_ready "$1" "${2:-}" || return 0
   json=$(fm_backend_hc_get "$1") || return 0
-  printf '%s' "$json" | jq -r '.foreground.cwd // .cwd // empty' 2>/dev/null
+  fields=$(printf '%s' "$json" | jq -r '[.foreground.name // "", .foreground.argv[0] // "",
+    ((.foreground.argv // []) | join(" ")), (.foreground.pid // "" | tostring),
+    (.foreground.cwd // .cwd // "")] | join("\u001f")' 2>/dev/null) || return 0
+  IFS=$'\x1f' read -r name argv0 args pid cwd <<EOF
+$fields
+EOF
+  if [ -n "$name$argv0" ] && [ "$(fm_agent_process_classify "$name" "$argv0" "$args" "$pid")" = other ]; then
+    fm_backend_hc_shell_cwd_probe "$1" "${2:-}"
+    return 0
+  fi
+  printf '%s' "$cwd"
+}
+
+# fm_backend_hc_shell_cwd_probe: ask the shell in <target> for its folder with
+# one submitted `pwd` between two marker lines, then read the answer off the
+# screen. The markers carry a per-call nonce and are assembled by printf, so
+# neither the echoed command line nor an older probe's answer can match them;
+# rows between the markers are joined, which undoes a wrapped long path. A
+# wrapper's shell may still be starting, so the answer is awaited for
+# FM_HC_CWD_PROBE_WAIT seconds (default 3). Prints nothing when none arrives.
+fm_backend_hc_shell_cwd_probe() {  # <target> [expected-label]
+  local target=$1 expected=${2:-} nonce begin end tries out
+  nonce="$$${RANDOM}${RANDOM}"
+  begin="__FM_B${nonce}_CWD__"
+  end="__FM_E${nonce}_CWD__"
+  fm_backend_hc_send_text_line "$target" \
+    "printf '__FM_%s_CWD__\n' B$nonce; pwd; printf '__FM_%s_CWD__\n' E$nonce" "$expected" || return 0
+  tries=$(awk -v w="${FM_HC_CWD_PROBE_WAIT:-3}" 'BEGIN { n = int(w / 0.2); if (n < 1) n = 1; print n }' 2>/dev/null)
+  case "$tries" in ''|*[!0-9]*) tries=15 ;; esac
+  while [ "$tries" -gt 0 ]; do
+    tries=$((tries - 1))
+    sleep 0.2
+    out=$(fm_backend_hc_capture "$target" 200 "$expected") || return 0
+    out=$(printf '%s\n' "$out" | awk -v b="$begin" -v e="$end" '
+      { sub(/[ \t\r]+$/, "") }
+      $0 == b { inb = 1; chunk = ""; next }
+      $0 == e { if (inb && chunk ~ /^\//) last = chunk; inb = 0; next }
+      inb { chunk = chunk $0 }
+      END { printf "%s", last }')
+    [ -z "$out" ] || { printf '%s' "$out"; return 0; }
+  done
+}
+
+# fm_backend_hc_terminal_space: the herdr.space label <target> carries, the id
+# of the Herdr app space it shows in, or failure when it carries none.
+fm_backend_hc_terminal_space() {  # <target>
+  local json space
+  json=$(fm_backend_hc_get "$1") || return 1
+  space=$(printf '%s' "$json" | jq -r '.labels["herdr.space"] // empty' 2>/dev/null)
+  [ -n "$space" ] || return 1
+  printf '%s' "$space"
+}
+
+# fm_backend_hc_app_bin: the Herdr app's CLI, FM_HERDR_APP_BIN (tests pin it)
+# or herdr-app on PATH, or failure.
+fm_backend_hc_app_bin() {
+  if [ -n "${FM_HERDR_APP_BIN:-}" ]; then
+    [ -x "$FM_HERDR_APP_BIN" ] || return 1
+    printf '%s' "$FM_HERDR_APP_BIN"
+    return 0
+  fi
+  command -v herdr-app 2>/dev/null
+}
+
+# fm_backend_hc_app_spaces: the open window's `herdr-app ls`, or failure when
+# no window answers. Only `ls` and `do` are ever run: a bare `herdr-app` opens
+# the window, which naming a space must never do.
+fm_backend_hc_app_spaces() {
+  local bin out
+  bin=$(fm_backend_hc_app_bin) || return 1
+  out=$("$bin" ls 2>/dev/null </dev/null) || return 1
+  printf '%s' "$out" | jq -e '.spaces | type == "array"' >/dev/null 2>&1 || return 1
+  printf '%s' "$out"
+}
+
+# fm_backend_hc_space_name_state: print <space-id>'s current name in
+# <spaces-json> (an fm_backend_hc_app_spaces answer) and say whether it may be
+# renamed. 0: Herdr's automatic name, which names an unnamed space after where
+# its first terminal is (empty, `~`, or the base name of its folder or of that
+# folder's repository), or one of the newline-separated <accept-names>, which
+# the caller's own naming gave it. 1: no such space in the window. 2: a person
+# named it, and that name is never replaced.
+fm_backend_hc_space_name_state() {  # <spaces-json> <space-id> <accept-names>
+  local spaces=$1 id=$2 accept=$3 row name folder top
+  row=$(printf '%s' "$spaces" | jq -c --arg id "$id" 'first(.spaces[]? | select(.id == $id)) // empty' 2>/dev/null)
+  [ -n "$row" ] || return 1
+  name=$(printf '%s' "$row" | jq -r '.name // ""')
+  folder=$(printf '%s' "$row" | jq -r '.folder // ""')
+  printf '%s' "$name"
+  [ -n "$name" ] && [ "$name" != '~' ] || return 0
+  printf '%s\n' "$accept" | grep -qxF -- "$name" && return 0
+  [ -n "$folder" ] || return 2
+  [ "$name" != "${folder##*/}" ] || return 0
+  top=$(git -C "$folder" rev-parse --show-toplevel 2>/dev/null) || return 2
+  [ -n "$top" ] && [ "$name" = "${top##*/}" ] && return 0
+  return 2
+}
+
+# fm_backend_hc_space_rename: rename the open window's <space-id> to <name>,
+# sent as one JSON object so a name is never read as another JSON type. An
+# empty name would hand the space back to its automatic name, so it is refused.
+fm_backend_hc_space_rename() {  # <space-id> <name>
+  local bin out
+  [ -n "${1:-}" ] && [ -n "${2:-}" ] || return 1
+  bin=$(fm_backend_hc_app_bin) || return 1
+  out=$("$bin" 'do' space.rename "$(jq -nc --arg id "$1" --arg name "$2" '{id: $id, name: $name}')" 2>&1 </dev/null) || {
+    echo "error: herdr-app could not rename space $1 to '$2': $out" >&2
+    return 1
+  }
 }
 
 fm_backend_hc_composer_caps() {

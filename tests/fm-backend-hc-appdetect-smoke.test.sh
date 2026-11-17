@@ -10,7 +10,8 @@
 #   A. app-terminal: the spawn env carries HC_TERMINAL_ID/HC_TERMINAL_SOCKET
 #      of a live, herdr.space-labeled lab terminal - the exact claim an
 #      app-created terminal makes. The label is verified through the core and
-#      hc is selected, and meta records backend_detect=app-terminal.
+#      hc is selected, meta records backend_detect=app-terminal, the worker's
+#      hc parent is that terminal, and cleanup leaves the parent live.
 #   B. app-window is not a signal: a live herdr-app.sock under a scratch
 #      HERDR_APP_HOME with a live pinned core keeps a marker-less process on
 #      the default backend - silently - because an open window cannot tell
@@ -80,6 +81,9 @@ export XDG_STATE_HOME="$HC_LAB_DIR/env/xdg-state" \
   XDG_CONFIG_HOME="$HC_LAB_DIR/env/xdg-config" \
   XDG_DATA_HOME="$HC_LAB_DIR/env/xdg-data"
 unset HC_TERMINAL_ID HC_TERMINAL_SOCKET HC_SCOPE HC_SOCKET HERDR_APP_HOME
+# The spawn names Herdr app spaces through herdr-app; a lab never reaches the
+# person's open window, so the app CLI is pinned to a path that does not exist.
+export FM_HERDR_APP_BIN="$TMP_ROOT/no-herdr-app"
 
 FM_HOME_DIR=$TMP_ROOT/home
 PROJ=$TMP_ROOT/scratch-project
@@ -177,8 +181,12 @@ grep -q "^hc_session=$HC_TEST_SES\$" "$META" || fail "meta must record hc_sessio
 WORKER_TERM=$(grep '^hc_terminal=' "$META" | cut -d= -f2-)
 [ -n "$WORKER_TERM" ] || fail "meta must record hc_terminal"
 assert_task_labels "$ID" "$WORKER_TERM"
+PARENT=$("$ROOT/bin/fm-hc-lab.sh" run "$HC_TEST_SES" get "$WORKER_TERM" --json | jq -r '.parent // empty' 2>/dev/null)
+[ "$PARENT" = "$APP_TERM" ] || fail "the worker's hc parent must be the launching terminal $APP_TERM, got '${PARENT:-none}'"
 teardown_one "$ID"
-pass "app-terminal: spawn env claiming a herdr.space-labeled terminal auto-selects hc, notices, records backend_detect=app-terminal, and labels the worker"
+[ "$("$ROOT/bin/fm-hc-lab.sh" run "$HC_TEST_SES" get "$APP_TERM" --json | jq -r '.state // empty' 2>/dev/null)" = live ] \
+  || fail "cleaning up the worker must leave its parent terminal $APP_TERM live"
+pass "app-terminal: spawn env claiming a herdr.space-labeled terminal auto-selects hc, notices, records backend_detect=app-terminal, labels the worker, and parents it to the launching terminal"
 
 # --- Case B: a live app window never selects hc for a marker-less process --
 # The dropped app-window signal: a live herdr-app.sock under the resolved

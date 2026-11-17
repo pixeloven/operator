@@ -54,7 +54,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0032, and 0035 through 0037 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0033, and 0035 through 0037 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -83,6 +83,7 @@ ADR-0029 lets `bin/fm-test-run.sh` carry one measured duration-hint row per Pixe
 ADR-0030 carries upstream's one-line `pendingBashComponents` fake-host field in `tests/fm-calm-pi-extension.test.sh` until an upstream synchronization brings it.
 ADR-0031 carries hc secondmate spawns and recovery-grade hc `exit` and `relaunch` in the spawn, control, liveness, teardown, and herdr-core install scripts, the herdr-core pin assertion in `.github/workflows/ci.yml`, their documentation, and `tests/fm-backend-hc.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0032 moves `fm_trap_exit` to `bin/fm-trap-lib.sh` and carries the remaining Bash 5.2-safe signal traps, including the lock-handoff helper's, in the scripts, test fixtures, and inventory row it lists, until an upstream synchronization brings an equivalent change.
+ADR-0033 carries hc parent linkage, the hc durable worktree lease with identity-based folder checks, the hc space-rename mechanism, and the one spawn line that names Herdr desktop app spaces through `bin/po-theme.sh`, in `bin/backends/hc.sh`, `bin/fm-spawn.sh`, their documentation, `tests/fm-backend-hc.test.sh`, and `tests/fm-backend-hc-appdetect-smoke.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0035 carries `--partition KofN` support in `bin/fm-lint.sh`, its partition regression in `tests/fm-lint.test.sh`, and a third lint partition in the `.github/workflows/ci.yml` matrix, until an upstream synchronization brings partition-count support or a third partition of its own.
 ADR-0036 carries the test harness's signal-before-EXIT trap order in `tests/lib.sh` and its regression case in `tests/fm-test-fixture-cleanup.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0037 lets `bin/fm-test-run.sh` carry operator-CI median duration hints in `portable_serial_weight_hints` for inherited portable serial scripts whose median differs from the inherited hint by more than 30,000 ms, refreshed or retired at each upstream synchronization.

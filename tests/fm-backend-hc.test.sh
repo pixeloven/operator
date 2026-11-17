@@ -14,7 +14,10 @@ TMP_ROOT=$(fm_test_tmproot fm-backend-hc-tests)
 # The stub answers `get` from <dir>/<address>.json (exit from <address>.exit,
 # 3 = not_found when no file exists), `ls` from <dir>/ls.json, `run` with
 # <dir>/run.json, and removes <address>.json on `rm` unless <dir>/rm-sticks
-# exists. Every call is logged with its HC_SESSION and HC_SOCKET.
+# exists. Every call is logged with its HC_SESSION and HC_SOCKET. A folder
+# probe sent to a terminal is answered on its screen with <dir>/probe-cwd,
+# wrapped onto two rows when <dir>/probe-wrap exists, and `read` then prints
+# that screen.
 make_hc_fakebin() {  # <dir> -> echoes fakebin dir
   local fb="$1/fakebin"
   mkdir -p "$fb"
@@ -45,8 +48,24 @@ case "$cmd" in
     cat "$D/$last.json"
     ;;
   rm) [ -e "$D/rm-sticks" ] || rm -f "$D/$last.json"; printf '{}\n' ;;
-  read) printf 'screen of %s\n' "$last" ;;
+  read) if [ -f "$D/screen.$last" ]; then cat "$D/screen.$last"; else printf 'screen of %s\n' "$last"; fi ;;
   send)
+    case "$last" in
+      "printf '__FM_%s_CWD__"*)
+        addr=
+        for a in "$@"; do case "$a" in t[0-9]*) addr=$a ;; esac; done
+        n=${last#*"' B"}; n=${n%%;*}
+        [ -f "$D/probe-cwd" ] || { printf '{}\n'; exit 0; }
+        cwd=$(cat "$D/probe-cwd")
+        {
+          printf '$ %s\n__FM_B%s_CWD__\n' "$last" "$n"
+          if [ -f "$D/probe-wrap" ]; then printf '%s\n%s  \n' "${cwd%/*}" "/${cwd##*/}"; else printf '%s\n' "$cwd"; fi
+          printf '__FM_E%s_CWD__\n$ \n' "$n"
+        } > "$D/screen.$addr"
+        printf '{}\n'
+        exit 0
+        ;;
+    esac
     if [ -f "$D/send.exit" ]; then
       printf '{"error":{"kind":"%s"}}\n' "$(cat "$D/send.kind" 2>/dev/null || echo blocked)" >&2
       exit "$(cat "$D/send.exit")"
@@ -371,6 +390,13 @@ test_required_tool_check_uses_the_adapter_resolver() {
 # terminal's foreground the harness in <dir>/becomes, the harness exit command
 # turns it back into a shell, and `cd -- <path>` moves the foreground cwd. A
 # doorbell is answered on the parent channel when <dir>/answer-inbox is armed.
+# With <dir>/wrapper, `run` models a `distrobox enter` terminal: the
+# foreground is the host-side wrapper for good, `cd` moves only the shell
+# inside (.inner; never when <dir>/inner-stuck exists), and a folder probe is
+# answered from it on the screen `read` prints. `parent` records --parent.
+# The fake treehouse leases <dir>/slot-path, and the fake herdr-app shows one
+# space per herdr.space label while <dir>/app-open exists, named
+# <dir>/app-names/<id> or else after its first terminal's folder.
 make_hc_life_fakebin() {  # <dir> -> echoes fakebin dir
   local fb="$1/fakebin"
   mkdir -p "$fb" "$1/term"
@@ -424,18 +450,25 @@ case "$cmd" in
   run)
     cwd=/
     labels='{}'
+    parent=null
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) cwd=$2; shift ;;
+        --parent) parent="\"$2\""; shift ;;
         --label) labels=$(printf '%s' "$labels" | jq --arg k "${2%%=*}" --arg v "${2#*=}" '. + {($k): $v}'); shift ;;
       esac
       shift
     done
     n=$(cat "$D/next")
     printf '%s' "$((n + 1))" > "$D/next"
-    jq -n --arg a "t$n" --arg c "$cwd" --argjson l "$labels" \
-      '{address: $a, state: "live", labels: $l, cwd: $c, foreground: {name: "zsh", argv: ["/bin/zsh"], cwd: $c, pid: 999999}}' \
+    jq -n --arg a "t$n" --arg c "$cwd" --argjson l "$labels" --argjson p "$parent" \
+      '{address: $a, state: "live", labels: $l, cwd: $c, parent: $p, foreground: {name: "zsh", argv: ["/bin/zsh"], cwd: $c, pid: 999999}}' \
       > "$(term "t$n")"
+    if [ -f "$D/wrapper" ]; then
+      f=$(term "t$n")
+      jq '.inner = .cwd | .foreground = {name: "distrobox", argv: ["/usr/bin/sh", "/usr/bin/distrobox", "enter", "box"], cwd: .cwd, pid: 999998}' \
+        "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    fi
     printf '%s t%s\n' "$cwd" "$n" >> "$D/created"
     printf '{"address":"t%s"}\n' "$n"
     ;;
@@ -456,7 +489,10 @@ case "$cmd" in
     jq '.state = "finished" | .foreground = null' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
     printf '{}\n'
     ;;
-  read) printf '╭────╮\n│    │\n╰────╯\n' ;;
+  read)
+    for a in "$@"; do last=$a; done
+    if [ -f "$D/screen.$last" ]; then cat "$D/screen.$last"; else printf '╭────╮\n│    │\n╰────╯\n'; fi
+    ;;
   keys) printf '{}\n' ;;
   send)
     addr=
@@ -481,7 +517,17 @@ case "$cmd" in
     case "$payload" in
       'cd -- '*)
         eval "set -- $payload"
-        set_fg "$addr" zsh /bin/zsh "$3"
+        if [ -f "$D/wrapper" ]; then
+          f=$(term "$addr")
+          [ -f "$D/inner-stuck" ] || { jq --arg c "$3" '.inner = $c' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
+        else
+          set_fg "$addr" zsh /bin/zsh "$3"
+        fi
+        ;;
+      "printf '__FM_%s_CWD__"*)
+        n=${payload#*"' B"}; n=${n%%;*}
+        printf '$ %s\n__FM_B%s_CWD__\n%s\n__FM_E%s_CWD__\n' "$payload" "$n" \
+          "$(jq -r '.inner // .foreground.cwd // .cwd' "$(term "$addr")")" "$n" > "$D/screen.$addr"
         ;;
       /exit|/quit) set_fg "$addr" zsh /bin/zsh ;;
       *'encode launch-brief'* | *'Firstmate operational input waiting: read'*)
@@ -500,6 +546,43 @@ case "$cmd" in
 esac
 SH
   chmod +x "$fb/hc"
+  cat > "$fb/treehouse" <<'SH'
+#!/usr/bin/env bash
+D="${FAKE_HC_DIR:?}"
+printf '%s\n' "$*" >> "$D/treehouse-log"
+case "$*" in
+  'get --lease '*) cat "$D/slot-path" ;;
+  'return --force '*) : > "$D/returned" ;;
+esac
+exit 0
+SH
+  chmod +x "$fb/treehouse"
+  cat > "$fb/herdr-app" <<'SH'
+#!/usr/bin/env bash
+D="${FAKE_HC_DIR:?}"
+printf '%s\n' "$*" >> "$D/app-log"
+case "${1:-}" in
+  ls)
+    [ -f "$D/app-open" ] || { printf '{"error":"no window"}\n'; exit 1; }
+    for f in "$D"/term/*.json; do [ -e "$f" ] && cat "$f"; done \
+      | jq -s '[.[] | select(.state == "live" and (.labels["herdr.space"] // "") != "")
+               | {id: .labels["herdr.space"], folder: .cwd}] | unique_by(.id)' > "$D/app-spaces.tmp"
+    jq -c '.[]' "$D/app-spaces.tmp" | while IFS= read -r row; do
+      id=$(printf '%s' "$row" | jq -r .id)
+      if [ -f "$D/app-names/$id" ]; then name=$(cat "$D/app-names/$id"); else name=$(basename "$(printf '%s' "$row" | jq -r .folder)"); fi
+      printf '%s' "$row" | jq -c --arg n "$name" '. + {name: $n}'
+    done | jq -s '{spaces: .}'
+    ;;
+  do)
+    [ "${2:-}" = space.rename ] && [ -f "$D/app-open" ] || { printf '{"error":"refused"}\n'; exit 1; }
+    mkdir -p "$D/app-names"
+    printf '%s' "$(printf '%s' "$3" | jq -r .name)" > "$D/app-names/$(printf '%s' "$3" | jq -r .id)"
+    printf '{}\n'
+    ;;
+  *) : > "$D/app-window-opened"; exit 1 ;;
+esac
+SH
+  chmod +x "$fb/herdr-app"
   # Claude's session listing reports no background session, so exit and
   # relaunch never consult a real Claude daemon.
   cat > "$fb/claude" <<'SH'
@@ -532,7 +615,7 @@ life_case() {
 life_env() {
   env -u TMUX -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_SESSION -u HC_TERMINAL_ID \
     -u HC_TERMINAL_SOCKET -u HC_SCOPE -u HC_SOCKET -u FM_HC_SOCKET -u FM_HC_SPACE \
-    FAKE_HC_DIR="$D" PATH="$FB:$PATH" FM_HC_BIN="$FB/hc" HC_SESSION=fmtest \
+    FAKE_HC_DIR="$D" PATH="$FB:$PATH" FM_HC_BIN="$FB/hc" FM_HERDR_APP_BIN="$FB/herdr-app" HC_SESSION=fmtest \
     FM_HOME="$HOMEDIR" FM_ROOT_OVERRIDE='' HOME="$D/user-home" CLAUDE_CONFIG_DIR='' \
     FM_STATE_OVERRIDE="$HOMEDIR/state" FM_DATA_OVERRIDE="$HOMEDIR/data" \
     FM_CONFIG_OVERRIDE="$HOMEDIR/config" FM_PROJECTS_OVERRIDE="$HOMEDIR/projects" \
@@ -864,6 +947,248 @@ hc_life_meta_in() {
   } > "$1/state/$2.meta"
 }
 
+# start_sock: a listening unix socket, the live HC_TERMINAL_SOCKET a caller's
+# own terminal names, under a short private directory because AF_UNIX paths
+# cap near 104 bytes. Sets SOCK and SOCK_PID; stop_sock ends it.
+start_sock() {
+  local dir
+  dir=$(mktemp -d "${TMPDIR:-/tmp}/fmhc.XXXXXX")
+  SOCK="$dir/c.sock"
+  python3 -c 'import socket,sys,time; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); s.listen(5); time.sleep(120)' \
+    "$SOCK" >/dev/null 2>&1 &
+  SOCK_PID=$!
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    [ -S "$SOCK" ] && return 0
+    /bin/sleep 0.1
+  done
+  fail "the test socket $SOCK never started listening"
+}
+stop_sock() {
+  kill "$SOCK_PID" 2>/dev/null
+  wait "$SOCK_PID" 2>/dev/null
+  rm -rf "${SOCK%/*}"
+}
+
+# --- (d) hierarchy: a task terminal's parent is its supervisor's terminal ----
+test_create_task_parents_to_the_supervisor_terminal_on_its_core() {
+  local tag out run_line
+  command -v python3 >/dev/null 2>&1 || { pass "hc: parent linkage (skipped: python3 absent for a live socket)"; return 0; }
+  setup_case parent
+  start_sock
+  printf '{"address":"t9"}\n' > "$D/run.json"
+  tag=$(hometag_of)
+  write_terminal "$D" t3 live "" "" claude claude
+  out=$(HC_TERMINAL_ID=t3 HC_TERMINAL_SOCKET=$SOCK FM_HC_SOCKET=$SOCK hc_shell 'fm_backend_hc_create_task fmtest fm-a1 /proj')
+  assert_equals t9 "$out" "create_task prints the new address"
+  run_line=$(grep $'\x1frun\x1f' "$D/log")
+  assert_contains "$run_line" $'--parent\x1ft3' "a task must name the supervisor terminal it was launched from as its parent"
+  assert_not_contains "$run_line" "--no-parent" "a task with a supervisor terminal must not be started parentless"
+  for want in --outlive-parent --no-notify "herdr.space=fm-$tag" "herdr.tab=$tag-fm-a1"; do
+    assert_contains "$run_line" "$want" "a parented task must still carry $want, so it outlives the parent in its own space and tab"
+  done
+  # A caller terminal that has finished, or one on another core, is no parent.
+  : > "$D/log"
+  write_terminal "$D" t3 finished "" "" "" ""
+  HC_TERMINAL_ID=t3 HC_TERMINAL_SOCKET=$SOCK FM_HC_SOCKET=$SOCK hc_shell 'fm_backend_hc_create_task fmtest fm-a1 /proj' >/dev/null
+  assert_contains "$(grep $'\x1frun\x1f' "$D/log")" "--no-parent" "a finished supervisor terminal must not become the parent"
+  : > "$D/log"
+  write_terminal "$D" t3 live "" "" claude claude
+  HC_TERMINAL_ID=t3 HC_TERMINAL_SOCKET=$SOCK FM_HC_SOCKET="$D/other-core.sock" hc_shell 'fm_backend_hc_create_task fmtest fm-a1 /proj' >/dev/null
+  assert_contains "$(grep $'\x1frun\x1f' "$D/log")" "--no-parent" "a terminal on another core must not become the parent"
+  assert_not_contains "$(cat "$D/log")" $'get\x1f--json\x1ft3' "another core's address must not even be read on this session"
+  : > "$D/log"
+  HC_TERMINAL_ID=t3 HC_TERMINAL_SOCKET="$D/dead.sock" FM_HC_SOCKET="$D/dead.sock" hc_shell 'fm_backend_hc_create_task fmtest fm-a1 /proj' >/dev/null
+  assert_contains "$(grep $'\x1frun\x1f' "$D/log")" "--no-parent" "a dead caller socket must not become the parent"
+  stop_sock
+  pass "hc: a task terminal's parent is its live supervisor terminal on the same core, else none"
+}
+
+# --- (e) current path behind a wrapper ---------------------------------------
+test_current_path_asks_the_shell_behind_a_wrapper() {
+  local tag out
+  setup_case wrapped-path
+  tag=$(hometag_of)
+  # `distrobox enter` is the host-side foreground for good; its cwd is where
+  # the terminal started, never where the shell inside went.
+  write_terminal "$D" t1 live fm-a1 "$tag" distrobox /usr/bin/sh
+  printf '/var/home/u/.treehouse/proj-1234/5/a-rather-long-project-name' > "$D/probe-cwd"
+  : > "$D/probe-wrap"
+  out=$(FM_HC_CWD_PROBE_WAIT=0.2 hc_shell 'fm_backend_hc_current_path fmtest:t1 fm-a1')
+  assert_equals /var/home/u/.treehouse/proj-1234/5/a-rather-long-project-name "$out" \
+    "behind a wrapper the shell itself must answer, with a wrapped long path joined"
+  assert_not_equals /live "$out" "the wrapper's own cwd must never be reported as the shell's"
+  assert_contains "$(cat "$D/log")" $'send\x1f--json\x1ft1\x1f--\x1fprintf' "the probe must be one -- delimited submitted line"
+  # A shell foreground answers from its kernel cwd and types nothing.
+  : > "$D/log"
+  write_terminal "$D" t2 live fm-a2 "$tag" zsh /bin/zsh
+  out=$(hc_shell 'fm_backend_hc_current_path fmtest:t2 fm-a2')
+  assert_equals /live "$out" "a shell foreground's own cwd answers"
+  assert_not_contains "$(cat "$D/log")" $'\x1fsend\x1f' "a shell foreground must not be probed"
+  # A wrapper whose shell never answers yields no path, never the wrapper's folder.
+  rm -f "$D/probe-cwd" "$D/probe-wrap"
+  write_terminal "$D" t3 live fm-a3 "$tag" distrobox /usr/bin/sh
+  out=$(FM_HC_CWD_PROBE_WAIT=0.2 hc_shell 'fm_backend_hc_current_path fmtest:t3 fm-a3' 2>/dev/null)
+  assert_equals "" "$out" "an unanswered probe must report no path"
+  pass "hc: current_path asks the shell behind a wrapper and never reports the wrapper's folder"
+}
+
+# --- (f) Herdr app space names ---------------------------------------------
+test_space_naming_replaces_only_automatic_or_own_names() {
+  local spaces out
+  setup_case spaces
+  cat > "$FB/herdr-app" <<'SH'
+#!/usr/bin/env bash
+D="${FAKE_HC_DIR:?}"
+for a in "$@"; do printf '%s\x1f' "$a"; done >> "$D/app-log"; printf '\n' >> "$D/app-log"
+case "${1:-}" in
+  ls) [ -f "$D/app-open" ] && cat "$D/app-ls.json" ;;
+  do) [ -f "$D/app-open" ] && printf '{}\n' ;;
+  *) : > "$D/app-window-opened"; exit 1 ;;
+esac
+SH
+  chmod +x "$FB/herdr-app"
+  spaces='{"spaces":[
+    {"id":"s-auto","name":"proj","folder":"/x/proj"},
+    {"id":"s-home","name":"~","folder":"/home/u"},
+    {"id":"s-own","name":"firstmate","folder":"/x/y"},
+    {"id":"s-person","name":"Main desk","folder":"/x/y"}]}'
+  printf '%s\n' "$spaces" > "$D/app-ls.json"
+  # shellcheck disable=SC2016 # expands in the child shell.
+  out=$(FM_HERDR_APP_BIN="$FB/herdr-app" SPACES="$spaces" hc_shell '
+    for id in s-auto s-home s-own s-person s-gone; do
+      rc=0; name=$(fm_backend_hc_space_name_state "$SPACES" "$id" "$(printf "firstmate\nhome-label")") || rc=$?
+      echo "$id=$rc:$name"
+    done
+    fm_backend_hc_app_spaces >/dev/null && echo window-open || echo window-closed')
+  assert_contains "$out" "s-auto=0:proj" "a space named after its folder carries the app's automatic name"
+  assert_contains "$out" "s-home=0:~" "a space named ~ carries the app's automatic name"
+  assert_contains "$out" "s-own=0:firstmate" "a space carrying one of the label's words may follow the theme"
+  assert_contains "$out" "s-person=2:Main desk" "a name a person chose must be kept"
+  assert_contains "$out" "s-gone=1:" "a space the window does not show must read absent"
+  assert_contains "$out" "window-closed" "a closed window must read as no window"
+  : > "$D/app-open"
+  : > "$D/app-log"
+  out=$(FM_HERDR_APP_BIN="$FB/herdr-app" hc_shell 'fm_backend_hc_space_rename s-auto home-label && echo renamed; fm_backend_hc_space_rename s-auto "" || echo empty-refused')
+  assert_contains "$out" renamed "the rename must succeed against an open window"
+  assert_contains "$out" empty-refused "an empty name, which hands the space back to the app, must be refused"
+  assert_contains "$(cat "$D/app-log")" $'do\x1fspace.rename\x1f{"id":"s-auto","name":"home-label"}' \
+    "the rename must be one JSON object, so a name is never read as another type"
+  assert_absent "$D/app-window-opened" "naming a space must never run a bare herdr-app, which opens the window"
+  pass "hc: space naming replaces only the app's automatic name or the home's own label words"
+}
+
+# --- (g) a worker behind a wrapper launches in its leased copy ----------------
+# hc_life_project <id>: a project and the pool slot the fake treehouse leases,
+# with a codex crew. Sets PROJ and SLOT.
+hc_life_project() {
+  PROJ="$D/proj-$1"
+  SLOT="$D/slot-$1"
+  fm_git_init_commit "$PROJ" >/dev/null
+  git clone -q "$PROJ" "$SLOT"
+  printf '%s' "$SLOT" > "$D/slot-path"
+  printf 'codex\n' > "$HOMEDIR/config/crew-harness"
+  printf 'codex' > "$D/becomes"
+  mkdir -p "$HOMEDIR/data/$1"
+  printf '# Task\n## Captain'"'"'s intent\nExercise an hc worker for %s.\n\n## Firstmate spec\nKeep the task whole.\n' "$1" \
+    > "$HOMEDIR/data/$1/brief.md"
+}
+
+test_ship_spawn_behind_a_wrapper_launches_in_its_leased_copy() {
+  local out rc=0 term sent
+  life_case wrapped-ship
+  hc_life_project hw1
+  : > "$D/wrapper"
+  out=$(life_env env FM_HC_CWD_PROBE_WAIT=0.2 "$FM_TEST_ROOT/bin/fm-spawn.sh" hw1 "$PROJ" --backend hc --mode no-mistakes --yolo off) || rc=$?
+  expect_code 0 "$rc" "an hc worker behind a wrapper should launch"$'\n'"$out"
+  assert_equals "$SLOT" "$(meta_of hw1 worktree)" "the record must name the leased copy, not the folder the wrapper started in"
+  assert_contains "$(cat "$D/treehouse-log")" "get --lease --lease-holder hw1" "the copy must be leased durably under the task id"
+  grep -qx 'get' "$D/treehouse-log" && fail "the interactive treehouse get must not be typed into an hc terminal"
+  term=$(meta_of hw1 hc_terminal)
+  assert_equals "$PROJ" "$(jq -r .foreground.cwd "$D/term/$term.json")" "the fake must model a wrapper whose cwd never follows the shell"
+  assert_equals "$SLOT" "$(jq -r .inner "$D/term/$term.json")" "the shell inside the wrapper must be moved into the leased copy"
+  sent=$(cat "$D/sent.$term")
+  assert_contains "$sent" "cd -- '$SLOT'" "the shell must be told to enter the leased copy"
+  assert_contains "$sent" "printf '__FM_%s_CWD__" "the shell behind the wrapper must be asked for its folder"
+  assert_contains "$sent" "encode launch-brief" "the worker must be launched once its copy is proven"
+  pass "hc: a worker behind a wrapper leases its copy and launches only once the shell inside reports it"
+}
+
+test_ship_spawn_refuses_when_the_wrapped_shell_never_moves() {
+  local out rc=0 term
+  life_case wrapped-stuck
+  hc_life_project hw2
+  : > "$D/wrapper"
+  : > "$D/inner-stuck"
+  out=$(life_env env FM_HC_CWD_PROBE_WAIT=0.2 "$FM_TEST_ROOT/bin/fm-spawn.sh" hw2 "$PROJ" --backend hc --mode no-mistakes --yolo off) || rc=$?
+  [ "$rc" -ne 0 ] || fail "a worker whose shell never reached its copy must not launch"$'\n'"$out"
+  assert_contains "$out" "not its recorded worktree '$SLOT'" "the refusal must name the copy the shell never reached"
+  assert_absent "$HOMEDIR/state/hw2.meta" "a refused spawn must not publish a record"
+  term=$(sed -n 's/.* \(t[0-9]*\)$/\1/p' "$D/created" | head -1)
+  assert_not_contains "$(cat "$D/sent.$term" 2>/dev/null)" "encode launch-brief" "nothing may launch outside the copy"
+  assert_contains "$out" "stays leased to hw2" "the refusal must name the lease it keeps for inspection"
+  pass "hc: a worker whose wrapped shell never reaches its leased copy is refused before launch"
+}
+
+# --- (h) a secondmate nests under its supervisor and its spaces take labels -
+# This home selects no theme, so the labels are the canonical ones;
+# tests/po-theme-labels.test.sh proves a theme's labels reach the same names.
+test_secondmate_spawn_nests_under_its_supervisor_and_names_spaces() {
+  local sm out rc=0 term smtag
+  command -v python3 >/dev/null 2>&1 || { pass "hc: secondmate hierarchy and space names (skipped: python3 absent for a live socket)"; return 0; }
+  life_case sm-nest
+  start_sock
+  jq -n --arg c "$D/primary-folder" '{address: "t90", state: "live", labels: {"herdr.space": "spc-primary", "herdr.tab": "tb-primary"},
+    cwd: $c, foreground: {name: "claude", argv: ["claude"], cwd: $c, pid: 1}}' > "$D/term/t90.json"
+  : > "$D/app-open"
+  sm=$(seed_life_secondmate nav7)
+  out=$(life_env env HC_TERMINAL_ID=t90 HC_TERMINAL_SOCKET="$SOCK" FM_HC_SOCKET="$SOCK" \
+    "$FM_TEST_ROOT/bin/fm-spawn.sh" nav7 "$sm" claude --secondmate --backend hc) || rc=$?
+  expect_code 0 "$rc" "a secondmate spawn from the primary's terminal should launch"$'\n'"$out"
+  term=$(meta_of nav7 hc_terminal)
+  assert_equals t90 "$(jq -r .parent "$D/term/$term.json")" "the secondmate must be a sub-agent of the primary's terminal"
+  assert_not_contains "$(grep $'\x1frun\x1f' "$D/log")" "--no-parent" "the secondmate must not start parentless"
+  smtag=$(tag_of "$sm" "$sm")
+  assert_equals 2ndmate-nav7 "$(cat "$D/app-names/fm-$smtag" 2>/dev/null)" "the secondmate's space must take the secondmate's home label"
+  assert_equals firstmate "$(cat "$D/app-names/spc-primary" 2>/dev/null)" "the primary's own space must take the primary's home label"
+  assert_absent "$D/app-window-opened" "naming spaces must never open the app window"
+  # A restart, a recovery read, and cleanup still address the same terminal.
+  printf '%s' "$HOMEDIR/state/nav7.inbox" > "$D/answer-inbox"
+  printf '%s' "$HOMEDIR/state/nav7.status" > "$D/answer-status"
+  out=$(life_env env HC_TERMINAL_ID=t90 HC_TERMINAL_SOCKET="$SOCK" FM_HC_SOCKET="$SOCK" \
+    "$FM_TEST_ROOT/bin/fm-secondmate-restart.sh" nav7) || rc=$?
+  expect_code 0 "$rc" "a parented secondmate should restart"$'\n'"$out"
+  assert_equals "fmtest:$term" "$(meta_of nav7 window)" "a restart must keep the secondmate's terminal"
+  assert_equals 1 "$(wc -l < "$D/created" | tr -d ' ')" "a restart must not create another terminal"
+  # shellcheck disable=SC2016 # positional params expand in the child shell.
+  out=$(life_env env FM_ROOT="$FM_TEST_ROOT" STATE="$HOMEDIR/state" bash -c '
+    . "$1/bin/fm-secondmate-liveness-lib.sh"
+    fm_secondmate_liveness_probe "$2" nav7 poll
+    echo "probe=$FM_SM_LIVE_STATUS/$FM_SM_LIVE_STATE"' _ "$FM_TEST_ROOT" "$HOMEDIR/state/nav7.meta")
+  assert_not_contains "$out" "probe=relaunchable" "a live parented secondmate must not read relaunchable"$'\n'"$out"
+  out=$(life_env "$FM_TEST_ROOT/bin/fm-teardown.sh" nav7 --force) || rc=$?
+  expect_code 0 "$rc" "retiring a parented secondmate should succeed"$'\n'"$out"
+  assert_absent "$D/term/$term.json" "cleanup must close the secondmate's own terminal by its address"
+  assert_equals live "$(jq -r .state "$D/term/t90.json")" "cleanup must leave the primary's terminal alone"
+  stop_sock
+  pass "hc: a secondmate nests under the primary's terminal, its spaces take the home labels, and restart, recovery and cleanup keep its terminal"
+}
+
+test_space_names_a_person_chose_are_kept_at_spawn() {
+  local sm out rc=0 smtag
+  life_case sm-named
+  : > "$D/app-open"
+  sm=$(seed_life_secondmate nav8)
+  smtag=$(tag_of "$sm" "$sm")
+  mkdir -p "$D/app-names"
+  printf 'Research lane' > "$D/app-names/fm-$smtag"
+  out=$(life_env "$FM_TEST_ROOT/bin/fm-spawn.sh" nav8 "$sm" claude --secondmate --backend hc) || rc=$?
+  expect_code 0 "$rc" "a secondmate spawn should launch"$'\n'"$out"
+  assert_equals "Research lane" "$(cat "$D/app-names/fm-$smtag")" "a space name a person chose must survive a spawn"
+  assert_not_contains "$(cat "$D/app-log")" "space.rename" "no rename may be sent for a person's name"
+  assert_contains "$(grep $'\x1frun\x1f' "$D/log")" "--no-parent" "with no supervisor terminal the secondmate starts parentless, as before"
+  pass "hc: a spawn keeps a space name a person chose and starts parentless without a supervisor terminal"
+}
+
 fm_test_run \
   test_secondmate_spawn_launches_on_hc_in_its_own_app_space \
   test_control_exit_stops_an_hc_agent_and_keeps_its_terminal \
@@ -892,4 +1217,11 @@ fm_test_run \
   test_endpoint_validation_binds_hc_meta \
   test_container_ensure_gates_binary_version_and_generation \
   test_send_text_submit_confirms_through_send_wait \
-  test_send_delimiters_and_binary_socket_pins
+  test_send_delimiters_and_binary_socket_pins \
+  test_create_task_parents_to_the_supervisor_terminal_on_its_core \
+  test_current_path_asks_the_shell_behind_a_wrapper \
+  test_space_naming_replaces_only_automatic_or_own_names \
+  test_ship_spawn_behind_a_wrapper_launches_in_its_leased_copy \
+  test_ship_spawn_refuses_when_the_wrapped_shell_never_moves \
+  test_secondmate_spawn_nests_under_its_supervisor_and_names_spaces \
+  test_space_names_a_person_chose_are_kept_at_spawn
