@@ -1,0 +1,12 @@
+ok - relabel renames a primary home's secondmate workspaces to their own labels and skips a foreign or unpropagated one
+ok - relabel --hc renames only this home's automatically or self-named Herdr app spaces
+ok - relabel renames only recorded workspaces in a named lab session and retires unused history
+all po-theme-labels tests passed
+ok - hc: a --secondmate spawn launches into its own Herdr app space with the owner's identity labels
+ok - hc: a task terminal's parent is its live supervisor terminal on the same core, else none
+ok - hc: space naming replaces only the app's automatic name or the home's own label words
+ok - hc: a worker behind a wrapper leases its copy and launches only once the shell inside reports it
+ok - hc: a worker whose wrapped shell never reaches its leased copy is refused before launch
+ok - hc: a secondmate nests under the primary's terminal, its spaces take the home labels, and restart, recovery and cleanup keep its terminal
+ok - hc: a spawn keeps a space name a person chose and starts parentless without a supervisor terminal
+FM_TEST_COMPLETE

@@ -1,0 +1,111 @@
+lab core session fm-hclab-hcscen-14862-17247 ready (server pid 14928)
+== S1: crewmate spawned from a supervisor terminal is nested under it and leases its worktree
+supervisor terminal: t1
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest1/launch-brief.md records no ship branch; defaulting to legacy branch fm/hcnest1
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/scratch-project-f3a846/1/scratch-project. Run 'treehouse return ~/.treehouse/scratch-project-f3a846/1/scratch-project' to release it.
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-hcnest1/gitconfig signing=disabled
+spawned hcnest1 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-hcscen-14862-17247:t2 worktree=/Users/brian/.treehouse/scratch-project-f3a846/1/scratch-project
+spawn rc=0
+meta:
+  worktree=/Users/brian/.treehouse/scratch-project-f3a846/1/scratch-project
+  kind=ship
+  backend=hc
+  hc_session=fm-hclab-hcscen-14862-17247
+  hc_terminal=t2
+  hc_core=1c039dbbcee742f500b9315993a811b8
+hc get worker parent: t1
+treehouse status for the copy:
+  A new version of treehouse is available: v3.1.6 → v3.1.8
+  Run "treehouse update" to update
+  
+  base  master  (repository default)
+  1     leased       ~/.treehouse/scratch-project-f3a846/1/scratch-project  (detached)  (held by hcnest1)
+                     zsh (16160), bash (22618), sleep (22625)
+worker screen (pwd inside task):
+  cd -- '/Users/brian/.treehouse/scratch-project-f3a846/1/scratch-project'
+  
+  scratch-project  master
+  ❯ cd -- '/Users/brian/.treehouse/scratch-project-f3a846/1/scratch-project'
+  
+  scratch-project  HEAD
+  ❯ export GOTMPDIR=/tmp/fm-hcnest1/gotmp
+  
+  scratch-project  HEAD
+  ❯ export GIT_CONFIG_NOSYSTEM=1
+  
+  scratch-project  HEAD
+  ❯ export GIT_CONFIG_GLOBAL='/tmp/fm-hcnest1/gitconfig'
+  
+  scratch-project  HEAD
+  ❯ export COMPACT_ADVISER_DISABLE=1
+  
+  scratch-project  HEAD
+  ❯ export FM_TASK_ID=hcnest1
+  
+  scratch-project  HEAD
+  ❯ . '/tmp/fm-hcnest1+0fa09f9480c1b6798bf8863f6d8ddd8878e62ee79df4d0f433c0f4e4a6403bdf/launch.s1794953586.15038.11076.sh'
+  /Users/brian/.treehouse/scratch-project-f3a846/1/scratch-project
+== S2: teardown returns the durable lease and leaves the supervisor live
+teardown rc=0
+treehouse status after teardown:
+  A new version of treehouse is available: v3.1.6 → v3.1.8
+  Run "treehouse update" to update
+  
+  base  master  (repository default)
+  1     available    ~/.treehouse/scratch-project-f3a846/1/scratch-project  (detached)
+supervisor state after teardown: live
+== S3 (adversarial): no supervisor terminal -> --no-parent
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest2/launch-brief.md records no ship branch; defaulting to legacy branch fm/hcnest2
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest2/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/scratch-project-f3a846/1/scratch-project. Run 'treehouse return ~/.treehouse/scratch-project-f3a846/1/scratch-project' to release it.
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-hcnest2/gitconfig signing=disabled
+spawned hcnest2 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-hcscen-14862-17247:t3 worktree=/Users/brian/.treehouse/scratch-project-f3a846/1/scratch-project
+spawn rc=0
+hc get worker parent: none
+== S4 (adversarial): HC_TERMINAL_ID names a terminal that is not live -> --no-parent, spawn still succeeds
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest3/launch-brief.md records no ship branch; defaulting to legacy branch fm/hcnest3
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest3/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/scratch-project-f3a846/2/scratch-project. Run 'treehouse return ~/.treehouse/scratch-project-f3a846/2/scratch-project' to release it.
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-hcnest3/gitconfig signing=disabled
+spawned hcnest3 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-hcscen-14862-17247:t4 worktree=/Users/brian/.treehouse/scratch-project-f3a846/2/scratch-project
+spawn rc=0
+hc get worker parent: none
+== S5 (adversarial): HC_TERMINAL_SOCKET is a foreign socket -> --no-parent
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest4/launch-brief.md records no ship branch; defaulting to legacy branch fm/hcnest4
+warning: /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-hcscen.DY2vrO/data/hcnest4/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+A new version of treehouse is available: v3.1.6 → v3.1.8
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/scratch-project-f3a846/3/scratch-project. Run 'treehouse return ~/.treehouse/scratch-project-f3a846/3/scratch-project' to release it.
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-hcnest4/gitconfig signing=disabled
+spawned hcnest4 harness=sh kind=ship mode=no-mistakes yolo=off window=fm-hclab-hcscen-14862-17247:t5 worktree=/Users/brian/.treehouse/scratch-project-f3a846/3/scratch-project
+spawn rc=0
+hc get worker parent: none
+== S6: po-theme hc-spaces / relabel --hc with the app window closed
+hc-spaces rc=0
+relabel: no open Herdr app window answered; its spaces were not renamed
+relabel --hc rc=0
+po-theme: relabel needs --session <herdr session>, --hc, or both; it never guesses one
+relabel (no flags) rc=1
+teardown hcnest2 rc=0
+teardown hcnest3 rc=0
+teardown hcnest4 rc=0
+teardown rc=0
