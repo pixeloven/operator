@@ -474,6 +474,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0037-operator-ci-serial-duration-hints.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
