@@ -47,6 +47,7 @@ Use [`_template.md`](_template.md).
 | [0034](0034-design-systems-independent-of-themes.md) | Design systems are chosen independently of themes | Accepted | Design-system rows DS1-DS5 and DS7-DS9 of the op-themes-review-ds investigation |
 | [0035](0035-carry-three-lint-partitions.md) | Carry a third CI lint partition until a sync brings one | Accepted | "Lint 1" cancelled at the 30-minute job timeout on main and open pull requests; self-retiring local carry |
 | [0036](0036-carry-test-harness-trap-order.md) | Carry the test harness's signal-before-EXIT trap order until a sync brings it | Accepted | "Behavior portable serial 5" dead-pid case lost its fixtures on Bash 5.2; self-retiring local carry |
+| [0037](0037-operator-ci-serial-duration-hints.md) | The test runner may carry operator-CI duration hints for inherited serial scripts | Accepted | "Behavior portable serial 11" cancelled at the 30-minute job timeout on pull request #67; refreshed or retired at each sync |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).
