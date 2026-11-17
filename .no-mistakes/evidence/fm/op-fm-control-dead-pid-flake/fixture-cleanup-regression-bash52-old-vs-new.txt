@@ -1,0 +1,32 @@
+### NEW trap order (target 5cec6c05), Bash: GNU bash, version 5.2.21(1)-release (aarch64-apple-darwin25.6.0)
+ok - fm_test_tmproot cleans up its fixture root on normal exit
+ok - fm_test_tmproot cleans up its fixture root on SIGTERM
+ok - signalling a fresh background child leaves the live fixture root in place
+ok - the cleanup registry cannot be injected through path precreation
+ok - failed fixture registration rolls back the new root
+ok - the orphan sweep reaps only old fixtures without a live owner
+ok - the orphan sweep reaps read-only package fixtures
+ok - test registries and fixture roots stay out of a git worktree TMPDIR
+ok - fm_test_cleanup stops an orphaned poller that names its fixture root
+exit=0
+
+### OLD trap order (base 871d6f6c lib.sh + new regression case), Bash 5.2.21
+ok - fm_test_tmproot cleans up its fixture root on normal exit
+ok - fm_test_tmproot cleans up its fixture root on SIGTERM
+not ok - signalling a fresh background child ran the suite's EXIT trap and removed its live fixture root (missing: 'root:present')
+--- output ---
+killed:1
+root:missing after 0
+exit=1
+
+### NEW trap order, Bash: GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+ok - fm_test_tmproot cleans up its fixture root on normal exit
+ok - fm_test_tmproot cleans up its fixture root on SIGTERM
+ok - signalling a fresh background child leaves the live fixture root in place
+ok - the cleanup registry cannot be injected through path precreation
+ok - failed fixture registration rolls back the new root
+ok - the orphan sweep reaps only old fixtures without a live owner
+ok - the orphan sweep reaps read-only package fixtures
+ok - test registries and fixture roots stay out of a git worktree TMPDIR
+ok - fm_test_cleanup stops an orphaned poller that names its fixture root
+exit=0

@@ -1,0 +1,10 @@
+Focused run of tests/fm-control.test.sh test_exit_refuses_a_claude_background_session (dead-pid + other-cwd legs), 20 iterations each, Bash 5.2.21 built from GNU source
+old: pass=2 fail=18
+new: pass=20 fail=0
+
+First OLD-order failure (base 871d6f6c tests/lib.sh):
+ok - fm-control exit: OpenCode 2.x retries Ctrl-C exactly once while the agent is still alive
+tests/fm-control-focus.test.sh: line 1006: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-control.ueEjpc/claude-bg-dead-pid-4823/fake/claude-agents.json: No such file or directory
+cat: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-control.ueEjpc/claude-bg-dead-pid-4823/fake/claude-store: No such file or directory
+cat: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-control.ueEjpc/claude-bg-dead-pid-4823/fake/claude-store: No such file or directory
+not ok - dead-pid: an empty CLAUDE_CONFIG_DIR must not reach the listing, got: 
