@@ -50,3 +50,4 @@ wake.vocabulary	-	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	return key &
 wake.vocabulary	-	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	}	
 wake.vocabulary	T	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	const vocabulary = wakeVocabularyTail();	
 wake.vocabulary	-	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	return `${head}FIRSTMATE SUPERVISION WAKE: ${message}\n\nHandle this per your operating procedure and finish with ${reportSurface}.${vocabulary}${postureTail}`;	return `${head}FIRSTMATE SUPERVISION WAKE: ${message}\n\nHandle this per your operating procedure and finish with ${reportSurface}.${postureTail}`;
+str.digest.call	T	bin/po-theme.sh	pixeloven	printf -- '- The %s digest heading `%s` reads `%s`; %s.\n' "$bearings" "$canon_call" "$call" "$others"	
