@@ -466,6 +466,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0036-carry-test-harness-trap-order.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
