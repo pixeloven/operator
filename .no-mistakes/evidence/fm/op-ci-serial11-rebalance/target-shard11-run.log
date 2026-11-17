@@ -1,0 +1,5 @@
+FM_TEST_BEGIN 2026-11-17T21:09:20Z tests/fm-public-followup.test.sh family=standalone expected_gate_skip=none
+ok - the suite's seeding never reaches a backlog named by ambient TASKS_AXI_FILE/BACKEND
+ok - outcome text is collapsed to one line, bounded by codepoint, and never corrupts characters
+ok - restart end-to-end: typed result reconciles from disk and delivers one reply to the original thread
+ok - failed work on a pr-merged promise delivers its honest outcome exactly once

@@ -1,0 +1,38 @@
+== base shard 11 members (hint from refreshed table) ==
+428487 tests/fm-pr-check-security.test.sh
+354828 tests/fm-teardown.test.sh
+279920 tests/fm-watch-arm.test.sh
+75339 tests/fm-turnend-guard.test.sh
+69424 tests/fm-secondmate-safety.test.sh
+56463 tests/fm-calm-pi-extension.test.sh
+45000* tests/fm-usage-warner.test.sh
+45000* tests/fm-remote-job-launchagent.test.sh
+== where the PR-67 slow scripts land on target ==
+tests/fm-pr-check-security.test.sh -> target-shard-6.txt
+tests/fm-teardown.test.sh -> target-shard-9.txt
+tests/fm-watch-arm.test.sh -> target-shard-12.txt
+tests/fm-turnend-guard.test.sh -> target-shard-9.txt
+== target shard 11 members ==
+324334 tests/fm-public-followup.test.sh
+219379 tests/fm-backlog-atomicity.test.sh
+126585 tests/fm-busy-adapter-wiring.test.sh
+82788 tests/fm-worker-account.test.sh
+69845 tests/fm-cursor-primary.test.sh
+58917 tests/fm-kimi-harness.test.sh
+45950 tests/fm-supervision-host-drain.test.sh
+45000* tests/fm-project-capacity.test.sh
+== partition check ==
+serial lane=     303 union=     303 unique=     303
+union == portable-serial lane exactly (no drops, no dupes)
+== adversarial: mismatched shard count ==
+fm-test-run: lane 'portable-serial-11of13' asks for 13 portable serial shards but this runner is configured for 12 (see --list-lanes)
+rc=2
+fm-test-run: lane 'portable-serial-13of12' shard index is outside 1..12 (see --list-lanes)
+rc=2
+== unhinted serial scripts (default weight) ==
+tests/fm-backend-rex.test.sh
+tests/fm-kiro-harness.test.sh
+tests/fm-pr-health.test.sh
+tests/fm-project-capacity.test.sh
+tests/fm-remote-job-launchagent.test.sh
+tests/fm-usage-warner.test.sh

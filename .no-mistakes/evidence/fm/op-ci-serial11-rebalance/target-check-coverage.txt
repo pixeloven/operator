@@ -1,0 +1,2 @@
+FM_TEST_COVERAGE ok total=345 parallel=26 parallel_max_ms=814249 parallel_imbalance_ms=552 parallel_unhinted=0 serial=303 serial_shards=12 serial_unhinted=6 serial_max_ms=1087033 serial_budget_ms=1200000 herdr=16
+target rc=0
