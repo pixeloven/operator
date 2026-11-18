@@ -2,7 +2,7 @@
 // (ADR-0020 stage S3). Under nautical the supervision notes and the /calm description
 // are upstream's own; under a theme the note glyphs and the description follow the
 // values cache `bin/po-theme.sh refresh` writes, and a cache that does not belong to the
-// home's current selection reads as nautical.
+// home's current selection, or lacks a key the bundled schema derives, reads as nautical.
 import { describe, expect, test } from "claude-code/testing";
 import type { On } from "claude-code";
 import { HOME, world } from "./support.ts";
@@ -129,6 +129,38 @@ describe("the values reader", () => {
     expect(parsePoTheme(OPERATOR_VALUES, undefined, true)).toBe(PO_THEME_NAUTICAL);
     const inherited = parsePoTheme(OPERATOR_VALUES.replace("kind\tprimary", "kind\tsecondmate"), undefined, true);
     expect(poThemeGlyph(inherited, "ship")).toBe("▸");
+  });
+
+  test("a cache missing a key the bundled schema derives is stale", () => {
+    const schema = [
+      "# po-theme/2 - nautical",
+      'schema = "po-theme/2"',
+      'label.primary = "firstmate"',
+      'str.calm.command = "Toggle Firstmate\'s Calm transcript presentation and working ship."',
+      'glyph.ship = "⛵"',
+      'glyph.anchor = "⚓"',
+      "",
+    ].join("\n");
+    expect(poThemeGlyph(parsePoTheme(OPERATOR_VALUES, "operator\n", false, schema), "ship")).toBe("▸");
+    const newer = `${schema}str.fleet.title = "Fleet View"\n`;
+    expect(parsePoTheme(OPERATOR_VALUES, "operator\n", false, newer)).toBe(PO_THEME_NAUTICAL);
+    expect(parsePoTheme(OPERATOR_VALUES.replace("kind\tprimary", "kind\tsecondmate"), undefined, true, newer)).toBe(PO_THEME_NAUTICAL);
+    expect(parsePoTheme(`${OPERATOR_VALUES}str.fleet.title\t\n`, "operator\n", false, newer)).toBe(PO_THEME_NAUTICAL);
+    expect(poThemeGlyph(parsePoTheme(`${OPERATOR_VALUES}str.fleet.title\tTask Force View\n`, "operator\n", false, newer), "ship")).toBe("▸");
+
+    const files = new Map([
+      ["/fm/pi/config/po-theme", "operator\n"],
+      ["/fm/pi/state/po-theme/values", OPERATOR_VALUES],
+      ["/code/.agents/skills/po-theme/themes/nautical.theme", newer],
+    ]);
+    const read = (path: string): string => {
+      const text = files.get(path);
+      if (text === undefined) throw new Error(`ENOENT: ${path}`);
+      return text;
+    };
+    expect(poThemeLoadSync(read, { FM_HOME: "/fm/pi" }, "/code")).toBe(PO_THEME_NAUTICAL);
+    files.set("/code/.agents/skills/po-theme/themes/nautical.theme", schema);
+    expect(poThemeGlyph(poThemeLoadSync(read, { FM_HOME: "/fm/pi" }, "/code"), "anchor")).toBe("⚑");
   });
 
   test("Pi's synchronous loader reads the same home files and never throws", () => {

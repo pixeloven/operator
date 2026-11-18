@@ -51,6 +51,9 @@
 #     selection or format reads as nautical; the validator refuses a glyph off
 #     the allow-list, shared or swapped note glyphs, and an over-long menu
 #     description
+#   - a cache in the current format that lacks a key the bundled schema
+#     derives is rebuilt by the bash consumer and read as nautical by the Calm
+#     and Pi reader
 #   - the registry check refuses an unregistered changed line, and anchors fail
 #     when a registered hook line is lost
 #   - A11: routing names, hometags, session names, and the worker role contract
@@ -698,6 +701,33 @@ Arm operator watcher supervision through the Pi extension instead of foreground 
   pass "supervision notes and Calm text: nautical keeps upstream's, operator themes glyphs and descriptions, and stored upstream notes render with the theme's glyph"
 }
 
+# A cache written in the current format by a checkout that predated a key -
+# the S3/S4 cache an update to S5 left behind, still tagged po-theme-values/3 -
+# is stale to both readers: the bash consumer rebuilds it rather than falling
+# back to nautical for the missing key, and the Calm and Pi reader, which never
+# rebuilds it, reads it as nautical until something does.
+test_cache_missing_a_key_is_stale() {
+  local op ship want
+  if ! command -v node >/dev/null 2>&1; then
+    echo "skip: node not found for the theme values reader"
+    return 0
+  fi
+  ship=$(printf '\342\233\265')
+  op=$(new_home missing-key operator)
+  FM_HOME="$op" "$PT" refresh >/dev/null || fail "refresh failed under operator"
+  want=$(awk -F '\t' '$1 == "str.fleet.title" { print $2 }' "$op/state/po-theme/values")
+  [ -n "$want" ] || fail "a fresh operator cache has no str.fleet.title"
+  assert_equals "▸" "$(reader "$op" | head -n 1)" "the reader did not trust a fresh operator cache"
+  grep -v '^str\.\(board\|fleet\|inbox\|doctor\)\.' "$op/state/po-theme/values" > "$op/state/po-theme/values.old"
+  mv "$op/state/po-theme/values.old" "$op/state/po-theme/values"
+  grep -q $'^cache\tpo-theme-values/3$' "$op/state/po-theme/values" || fail "the stripped cache lost its format line"
+  assert_equals "$ship" "$(reader "$op" | head -n 1)" "the reader trusted a cache missing a current key"
+  assert_equals "$want" "$(lib "$op" 'po_str fleet.title')" "the bash consumer fell back to nautical instead of rebuilding a cache missing a current key"
+  grep -q '^str\.fleet\.title	' "$op/state/po-theme/values" || fail "the bash consumer did not rebuild the cache"
+  assert_equals "▸" "$(reader "$op" | head -n 1)" "the reader did not trust the rebuilt cache"
+  pass "a cache missing a key the schema derives is rebuilt by the bash consumer and read as nautical by the Calm and Pi reader"
+}
+
 # fixture_repo <name>: a throwaway repository whose first commit carries the
 # registered upstream files at the pin and whose working tree carries this
 # tree's hooks, so `registry check-diff HEAD` sees exactly the theme hunks.
@@ -888,6 +918,7 @@ test_label_validation
 test_display_strings
 test_string_validation
 test_supervision_notes_and_calm
+test_cache_missing_a_key_is_stale
 test_registry_gates
 test_anchors_name_a_lost_hook
 test_a11_architectural_invariance

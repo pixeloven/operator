@@ -333,6 +333,7 @@ if [ -f "$SECONDMATES_MD" ]; then
   done < "$SECONDMATES_MD"
 fi
 
+FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" heal --push 2>/dev/null || true
 # --- caller action summary -------------------------------------------------
 
 # claim_settled_secondmate puts each live settled mate in exactly one set, so the

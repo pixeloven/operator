@@ -752,6 +752,7 @@ if [ "$READ_ONLY" -eq 0 ]; then
     --locked "$NETWORK_STAGE_LOCKED" --harvest-pid $$ >/dev/null 2>&1 || true
 fi
 
+[ "$READ_ONLY" -eq 1 ] || FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" heal 2>/dev/null || true
 # --- 2. bootstrap --------------------------------------------------------
 # FM_BOOTSTRAP_NETWORK=skip on every path: bootstrap's own network half is what
 # the deferred stage above is running right now, and running it twice would both
