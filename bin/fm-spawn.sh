@@ -6344,7 +6344,12 @@ mkdir -p "$TASK_TMP/gotmp"
 # commit signing without changing the captain's global Git settings. The helper
 # also performs the signing preflight and emits actionable diagnostics on failure.
 DELIVERY_GIT_CONFIG="$TASK_TMP/gitconfig"
-"$FM_ROOT/bin/fm-delivery-lane.sh" prepare "$DELIVERY_GIT_CONFIG" >/dev/null || {
+# A secondmate supervises from its own home, so its lane keeps this firstmate's
+# https://github.com credential helpers that GIT_CONFIG_NOSYSTEM=1 would hide
+# (ADR-0038); ship and scout lanes are unchanged.
+DELIVERY_LANE_PREPARE_ARGS=()
+[ "$KIND" != secondmate ] || DELIVERY_LANE_PREPARE_ARGS=(--carry-github-credential-helper)
+"$FM_ROOT/bin/fm-delivery-lane.sh" prepare "$DELIVERY_GIT_CONFIG" ${DELIVERY_LANE_PREPARE_ARGS[@]+"${DELIVERY_LANE_PREPARE_ARGS[@]}"} >/dev/null || {
   echo "error: autonomous delivery-lane Git configuration could not be prepared at $DELIVERY_GIT_CONFIG" >&2
   exit 1
 }

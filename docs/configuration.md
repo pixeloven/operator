@@ -1774,6 +1774,11 @@ The file holds a command, never a credential: keep the secret in the store the h
 Firstmate never prints the helper or anything it returns, and the credential exists only in the Git process that asked for it.
 Changes apply to tasks launched afterward, the file is local to each home rather than inherited into secondmate homes, and [`bin/fm-delivery-lane.sh`](../bin/fm-delivery-lane.sh) owns the mechanics.
 
+A secondmate launch also runs under that isolation, yet its home must reach GitHub the way the launching firstmate does, for example to fetch before a landed-work check.
+When this file is absent or blank, a secondmate's task configuration therefore carries the credential helpers the launching firstmate's own Git configuration applies to `https://github.com`, such as macOS `osxkeychain` wired by a system-level Git file, as `credential.https://github.com.helper` entries.
+Only those helpers are carried: the rest of the system and human configuration stays hidden, signing stays disabled, and the helpers answer for no other host.
+Ship and scout tasks never carry them, the file above still wins as the single entry when present, and the carried helpers apply to secondmates launched afterward ([ADR-0038](adr/0038-navigator-lane-carries-github-credential-helper.md)).
+
 ## Home branch prompt include (config/branch-prompt-include.md)
 
 The optional local, gitignored `config/branch-prompt-include.md` adds standing home rules to the supervision branch's system prompt, the way `config/brief-include.md` extends worker briefs.
@@ -1846,7 +1851,7 @@ An Orca home can opt in to taking allowlisted values from one named tmux session
 Create the local, gitignored `config/launch-env-tmux-session` containing that session's name, and keep the session running for subsequent Orca spawns.
 The source requires `config/launch-env-allowlist` and reads only its names from the session's local environment (`tmux set-environment -t <session>`), so tmux's automatic values such as `SSH_AUTH_SOCK` are never forwarded unless listed.
 A listed name missing from the session, an unreadable session, or a malformed selector stops the spawn before Orca creates the worktree or terminal; a name removed with `tmux set-environment -r` stays deliberately unset.
-Source mode also sets `GIT_CONFIG_NOSYSTEM=1`, so a system Git credential helper cannot answer with personal credentials.
+Source mode also sets `GIT_CONFIG_NOSYSTEM=1`, so for ship and scout tasks a system Git credential helper cannot answer with personal credentials; a secondmate lane carries the launcher's `https://github.com` credential helper ([ADR-0038](adr/0038-navigator-lane-carries-github-credential-helper.md)).
 Values travel only in the owner-only staged launch file, never terminal input, and the pane deletes that file before the worker starts.
 If the pane has not run the launch command and deleted the file within 30 seconds, or the spawn is interrupted before then, Firstmate removes the file unless the pane already did, leaves the Orca terminal open, and reports the spawn as failed rather than leaving credentials on disk.
 The source applies to fresh Orca spawns; `--relaunch` is refused on Orca because it has no recovery-grade agent-state classifier.
