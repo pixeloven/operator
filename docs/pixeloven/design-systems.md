@@ -95,7 +95,7 @@ A home adds one as `config/po-designs/<name>/`, which shadows a bundled one of t
 
 ## Not covered here
 
-The Bearings board does not change: its template stays upstream-identical, and injecting the selected design system into it is a later stage.
+The Bearings board takes the applied design system without any change to its template: `bin/po-theme.sh render-board` adds the design system's stylesheet as one style element right after the template's own, so its role values override the board's tokens, and under the Firstmate Default it adds nothing and the board stays byte-identical ([ADR-0034](../adr/0034-design-systems-independent-of-themes.md), DS6).
 Terminal surfaces, such as Calm, notes, and the herdr sidebar, are not CSS and take their words from the theme.
 Markdown reports stay plain.
 Pictures and icons belong to the theme's asset slots, not to a design system.

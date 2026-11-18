@@ -14,7 +14,11 @@
 # `anchors` checks in the bearings skill. The str.calm, str.branch, and
 # str.watch values are the Calm and supervision menu descriptions and the Calm
 # notice name, and the glyph values the supervision-note glyphs, which the Calm
-# mod's lib/po-theme-values.ts also falls back to. No picture key
+# mod's lib/po-theme-values.ts also falls back to. The str.board values are the
+# Bearings board's literals that `render-board` replaces, the str.fleet values
+# the fleet view's headings, and the str.inbox values the words of the human
+# inbox commands, and str.doctor.submate the remote doctor's not-ready
+# verdict; `anchors` checks each in its registered upstream line. No picture key
 # (sprite.calm, icon.*, image.*) appears here: nautical's pictures are
 # upstream's own drawings, which an absent key keeps in every theme.
 schema = "po-theme/2"
@@ -55,6 +59,16 @@ str.calm.command = "Toggle Firstmate's Calm transcript presentation and working 
 str.calm.pi_command = "Toggle Firstmate's supported conversation-only transcript presentation."
 str.branch.model_command = "Pick the model and reasoning effort Firstmate's Pi supervision branch uses, or follow main's."
 str.watch.arm_command = "Arm firstmate watcher supervision through the Pi extension instead of foreground bash."
+str.board.title = "Bearings - fleet board"
+str.board.brand = "bearings"
+str.board.user = "captain"
+str.board.self = "firstmate"
+str.fleet.title = "Fleet View"
+str.fleet.underway = "Under Way"
+str.fleet.secondmates = "Secondmates"
+str.inbox.agent = "firstmate"
+str.inbox.idle = "no workers on deck"
+str.doctor.submate = "remote second mate"
 
 glyph.ship = "⛵"
 glyph.anchor = "⚓"

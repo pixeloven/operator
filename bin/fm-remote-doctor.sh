@@ -101,6 +101,8 @@ FM_ROOT="${FM_ROOT_OVERRIDE:-$(CDPATH='' cd "$SCRIPT_DIR/.." && pwd -P)}"
 . "$SCRIPT_DIR/fm-remote-herdr-owner-lib.sh"
 # shellcheck source=bin/fm-remote-herdr-identity-lib.sh
 . "$SCRIPT_DIR/fm-remote-herdr-identity-lib.sh"
+# shellcheck source=bin/po-theme-lib.sh
+if [ -f "$SCRIPT_DIR/po-theme-lib.sh" ]; then . "$SCRIPT_DIR/po-theme-lib.sh"; else po_str() { printf 'remote second mate'; }; fi
 # The shared remote toolchain plus the selected backend's CLI; the backend slot
 # is filled once the backend is resolved below, keeping the probe's six-fact
 # shape (five tools plus the at-least-one harness) for explicit and resolved
@@ -1409,7 +1411,7 @@ if [ "${#MISSING[@]}" -gt 0 ] || [ "${#GAPS[@]}" -gt 0 ]; then
   for i in ${GAPS[@]+"${GAPS[@]}"}; do
     NAMES="${NAMES:+$NAMES }${CHECK_NAMES[$i]}"
   done
-  printf 'error: this host is not ready for a remote second mate%s\n' "${NAMES:+; unresolved: $NAMES}" >&2
+  printf 'error: this host is not ready for a %s%s\n' "$(po_str doctor.submate)" "${NAMES:+; unresolved: $NAMES}" >&2
   exit 1
 fi
 printf 'ok: remote second-mate readiness confirmed on this host\n'

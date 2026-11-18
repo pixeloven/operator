@@ -7,10 +7,13 @@
 # the fixed no-op reply, the vocabulary workers use in prose a person reads, the
 # slash commands a person types, the herdr and Paseo workspace labels, and the
 # registered display strings (the herdr sidebar state, the wedge-alarm title,
-# the /bearings digest section names the Persona block maps, and the Calm and
-# supervision menu descriptions and Calm notice), the supervision-note
-# glyphs, and the pictures a theme names as validated data assets (the Calm
-# working animation, and the board icons and docs pictures later stages draw).
+# the /bearings digest section names the Persona block maps, the Calm and
+# supervision menu descriptions and Calm notice, the Bearings board's words, the
+# fleet view's headings, and the human inbox commands' words), the
+# supervision-note glyphs, the voice relay's spoken words, the alias skills'
+# menu descriptions, and the pictures a theme names as validated data assets
+# (the Calm working animation, the board icons, and the docs pictures a later
+# stage draws).
 # It never renames an identifier (script, path, environment variable,
 # skill directory, status verb, board payload key, or a brief heading that code
 # parses) and never changes what a rule means.
@@ -72,6 +75,20 @@
 #                                     per-wake prompt, so its outcome notes use the
 #                                     theme's words (empty for nautical; the system
 #                                     prompt never carries it)
+#   po-theme.sh voice-line            one-line vocabulary bin/fm-voice-relay.py adds
+#                                     after the voice model's system text, so its
+#                                     spoken answers use the theme's words (empty
+#                                     for nautical)
+#   po-theme.sh render-board <template>
+#                                     print the Bearings board template in this
+#                                     home's theme and design system for
+#                                     bin/fm-bearings-board.sh: the registered
+#                                     template lines with the theme's strings and
+#                                     validated icons from the values cache, and a
+#                                     design system other than the Firstmate Default
+#                                     as one style element after the template's
+#                                     own; byte for byte under nautical and the
+#                                     Firstmate Default, and unthemed on any failure
 #   po-theme.sh label <role>          the workspace label for primary, submate, or
 #                                     afk (bin/po-theme-lib.sh po_label)
 #   po-theme.sh refresh               rebuild state/po-theme/values for this home,
@@ -382,13 +399,23 @@ resolve_active() {
 # Call", the other digest sections keep their nautical names, and the Calm and
 # supervision menu descriptions and the Calm notice name the product (capitalized
 # where upstream capitalizes it) and call the Calm figure the working animation.
+# The Bearings board names itself after the /bearings alias ("<Alias> - <fleet>
+# board", wordmark "<alias>") and uses the user and self words where upstream
+# says "captain" and "firstmate"; the fleet view's title and second-mate
+# heading title-case the fleet and submate_plural words, and its Under Way
+# heading keeps its name; the human inbox commands use the self word where
+# upstream says "firstmate" and say "no <workers> active" for an idle home;
+# the remote doctor's not-ready verdict says "remote <submate>".
 strs_of() {
   awk -F '\t' '
     function d(k, def) { return (k in v) ? v[k] : def }
+    function cap(w) { return toupper(substr(w, 1, 1)) substr(w, 2) }
+    function title(w,   n, i, part, out) { n = split(w, part, " "); out = ""; for (i = 1; i <= n; i++) out = out (i > 1 ? " " : "") cap(part[i]); return out }
     { v[$1] = $2 }
     END {
       u = tolower(v["user"]); gsub(/ /, "-", u)
-      p = v["product"]; P = toupper(substr(p, 1, 1)) substr(p, 2)
+      p = v["product"]; P = cap(p)
+      b = v["alias.bearings"]
       printf "str.sidebar.needs\t%s\n", d("str.sidebar.needs", "needs-" u)
       printf "str.alert.wedge_title\t%s\n", d("str.alert.wedge_title", v["product"] ": away-mode escalations WEDGED")
       printf "str.digest.call\t%s\n", d("str.digest.call", v["user_address"] "\047s Call")
@@ -400,15 +427,28 @@ strs_of() {
       printf "str.calm.pi_command\t%s\n", d("str.calm.pi_command", "Toggle " P "\047s supported conversation-only transcript presentation.")
       printf "str.branch.model_command\t%s\n", d("str.branch.model_command", "Pick the model and reasoning effort " P "\047s Pi supervision branch uses, or follow main\047s.")
       printf "str.watch.arm_command\t%s\n", d("str.watch.arm_command", "Arm " p " watcher supervision through the Pi extension instead of foreground bash.")
+      printf "str.board.title\t%s\n", d("str.board.title", cap(b) " - " v["fleet"] " board")
+      printf "str.board.brand\t%s\n", d("str.board.brand", b)
+      printf "str.board.user\t%s\n", d("str.board.user", v["user"])
+      printf "str.board.self\t%s\n", d("str.board.self", v["self"])
+      printf "str.fleet.title\t%s\n", d("str.fleet.title", title(v["fleet"]) " View")
+      printf "str.fleet.underway\t%s\n", d("str.fleet.underway", "Under Way")
+      printf "str.fleet.secondmates\t%s\n", d("str.fleet.secondmates", title(v["submate_plural"]))
+      printf "str.inbox.agent\t%s\n", d("str.inbox.agent", v["self"])
+      printf "str.inbox.idle\t%s\n", d("str.inbox.idle", "no " v["worker_plural"] " active")
+      printf "str.doctor.submate\t%s\n", d("str.doctor.submate", "remote " v["submate"])
     }
   ' "$1"
 }
 
 # check_strs <kv>: ADR-0020 decision 8 for every str.* string, given or
 # derived: at most 80 characters, no architectural token (a status verb,
-# FIRSTMATE_OP, a brief heading, or an fm- prefix), a sidebar state that is
-# a herdr token value distinct from the other group states, and digest section
-# names that are short headings, distinct from each other. A slash-command menu
+# FIRSTMATE_OP, a brief heading, or an fm- prefix), no % or & (inbox strings
+# sit in a printf format, board strings in a page), a sidebar state that is
+# a herdr token value distinct from the other group states, digest and fleet
+# view section names that are short headings, distinct from each other within
+# their surface, and board strings of plain words that can close no quote,
+# comment, or tag of the page they are written into. A slash-command menu
 # description (a key ending in "command") is a sentence no code reads back, so
 # it may run to 120 characters and use a status verb as an English word
 # ("working"), as upstream's own descriptions do.
@@ -422,16 +462,18 @@ check_strs() {
       s = " " v " "; gsub(/[^A-Za-z0-9_-]/, " ", s)
       for (j = 1; j <= nt; j++) if (!menu && index(s, " " T[j] " ")) bad(k ": '"'"'" v "'"'"' contains the status verb " T[j])
       if (index(v, "FIRSTMATE_OP") || index(v, "##") || index(s, " fm-")) bad(k ": '"'"'" v "'"'"' contains an architectural token")
+      if (index(v, "%") || index(v, "&")) bad(k ": '"'"'" v "'"'"' contains % or &")
       if (k == "str.sidebar.needs") {
         if (v !~ /^[a-z0-9][a-z0-9-]*[a-z0-9]$/ || length(v) > 24) bad(k ": '"'"'" v "'"'"' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit")
         else if (v == "running" || v == "problem" || v == "done") bad(k ": '"'"'" v "'"'"' equals another herdr group state")
       }
-      if (k ~ /^str\.digest\./) {
+      if (k ~ /^str\.(digest|fleet)\./) {
         if (v !~ /^[A-Za-z0-9]/ || v ~ /[^A-Za-z0-9 '"'"'-]/ || v ~ /[ ]$/ || length(v) > 32) bad(k ": '"'"'" v "'"'"' must be a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes, starting with a letter or digit")
-        lv = tolower(v)
-        if (lv in digest) bad(k " and " digest[lv] " share the section name '"'"'" v "'"'"'")
-        else digest[lv] = k
+        sec = k; sub(/\.[^.]*$/, "", sec); lv = sec SUBSEP tolower(v)
+        if (lv in heading) bad(k " and " heading[lv] " share the section name '"'"'" v "'"'"'")
+        else heading[lv] = k
       }
+      if (k ~ /^str\.board\./ && (v !~ /^[A-Za-z0-9]/ || v ~ /[^A-Za-z0-9 .'"'"'-]/ || v ~ /[ ]$/ || length(v) > 48)) bad(k ": '"'"'" v "'"'"' must be at most 48 letters, digits, spaces, periods, hyphens, or apostrophes, starting with a letter or digit")
     }
     END { exit failed }
   '
@@ -916,6 +958,37 @@ expected_aliases() {  # <kv>: "<alias> <target>" lines
   done < "$1"
 }
 
+# alias_summary <kv> <target>: the slash-menu sentence for an alias of
+# <target> in the theme's own words (ADR-0020 G6); empty for a command with no
+# summary yet, whose alias then reads only as an alias.
+alias_summary() {
+  local kv=$1
+  case "$2" in
+    afk) printf 'Hand supervision to the %s while the %s is away. ' "$(get "$kv" self)" "$(get "$kv" user)" ;;
+    ahoy) printf 'Recap this session and walk the %s through its unanswered decisions. ' "$(get "$kv" user)" ;;
+    bearings) printf 'Pick up where you left off: the %s digest in chat, a file, or a live board. ' "$(get "$kv" fleet)" ;;
+    lavish-url) printf 'Capture a web page as an annotatable Lavish review. ' ;;
+    quiet) printf 'Quiet supervision with fewer routine updates while the %s stays in the session. ' "$(get "$kv" user)" ;;
+    stow) printf 'Save what the %s learned this session and file its open work. ' "$(get "$kv" self)" ;;
+    updatefirstmate) printf 'Update this %s home and its %s to the latest version. ' "$(get "$kv" product)" "$(get "$kv" submate_plural)" ;;
+  esac
+}
+
+# alias_skill <name> <kv> <alias> <target>: the generated SKILL.md of one alias.
+alias_skill() {
+  cat <<EOF
+---
+name: $3
+description: "$(alias_summary "$2" "$4")Alias of /$4 in the $1 theme. Use when the user invokes /$3."
+user-invocable: true
+metadata:
+  internal: true
+---
+
+Load the \`$4\` skill and follow it exactly as if the user had invoked /$4 with the same arguments.
+EOF
+}
+
 write_aliases() {  # <name> <kv>
   local name=$1 kv=$2 a target exclude
   for a in $(generated_aliases); do rm -rf "${SKILLS:?}/$a"; done
@@ -924,17 +997,7 @@ write_aliases() {  # <name> <kv>
   while read -r a target; do
     mkdir -p "$SKILLS/$a"
     : > "$SKILLS/$a/$ALIAS_MARKER"
-    cat > "$SKILLS/$a/SKILL.md" <<EOF
----
-name: $a
-description: Alias of /$target in the $name theme. Use when the user invokes /$a.
-user-invocable: true
-metadata:
-  internal: true
----
-
-Load the \`$target\` skill and follow it exactly as if the user had invoked /$target with the same arguments.
-EOF
+    alias_skill "$name" "$kv" "$a" "$target" > "$SKILLS/$a/SKILL.md"
     printf '/.agents/skills/%s/\n' "$a" >> "$TMPD/excl"
     echo "alias: /$a -> /$target"
   done < "$TMPD/expected-aliases"
@@ -1528,6 +1591,105 @@ relabel() {
   [ "$dry" -eq 1 ] || cat "$TMPD/history" > "$STATE/po-theme/history"
 }
 
+# BOARD_TEMPLATE: the registry's file name for the Bearings board template.
+# Its rows register template lines whose hook equals the upstream line, because
+# the template stays upstream-identical and render-board themes it at build time.
+BOARD_TEMPLATE=.agents/skills/bearings/assets/board-template.html
+
+# board_subs <out>: render-board's substitutions, one
+# "<hook><TAB><kind><TAB><from><TAB><to>" line per registered template row the
+# active theme changes: kind str replaces the nautical value with the theme's
+# string from the values cache, and kind icon puts the theme's validated icon
+# fragment inside the line's <svg> element. Reads the cache through
+# bin/po-theme-lib.sh, so a theme that cannot be resolved changes nothing.
+board_subs() {
+  local out=$1 k file hook canon v f
+  : > "$out"
+  # shellcheck source=bin/po-theme-lib.sh
+  . "$SCRIPT_DIR/po-theme-lib.sh"
+  po__nautical && return 0
+  parse "$BUNDLED/nautical.theme" > "$TMPD/board.canon" || die "bundled nautical theme is malformed"
+  while IFS="$TAB" read -r k _ file _ hook _; do
+    [ "$file" = "$BOARD_TEMPLATE" ] || continue
+    case "$k" in
+      str.*)
+        canon=$(get "$TMPD/board.canon" "$k") || continue
+        v=$(po__value "$k") || continue
+        [ "$v" = "$canon" ] || printf '%s\tstr\t%s\t%s\n' "$hook" "$canon" "$v" >> "$out" ;;
+      icon.*)
+        v=$(po__value "$k") || continue
+        f="$(po__state)/assets/$v"
+        if [ -f "$f" ] && icon_check "$f" > "$TMPD/board.icon.err"; then
+          printf '%s\ticon\t\t%s\n' "$hook" "$(tr '\n\r\t' '   ' < "$f" | sed 's/  */ /g; s/^ //; s/ $//')" >> "$out"
+        else
+          echo "warn: $k: icon $v is missing or invalid, so the board keeps nautical's icon" >&2
+        fi ;;
+    esac
+  done < <(registry_rows)
+}
+
+# board_css <out>: the stylesheet of the design system in force, or nothing for
+# the Firstmate Default, the board's own look (ADR-0034, DS6). A design system
+# this home cannot resolve, or a sheet that could close the page's style
+# element, injects nothing.
+board_css() {
+  local out=$1
+  : > "$out"
+  pd_in_force
+  [ "$PD_NAME" != "$PD_DEFAULT" ] || return 0
+  if ( pd_dir "$PD_NAME" ) >/dev/null 2>&1 && ( pd_css ) > "$TMPD/board.css.raw" 2> "$TMPD/board.css.err" \
+    && ! LC_ALL=C grep -qi '</' "$TMPD/board.css.raw"; then
+    cat "$TMPD/board.css.raw" > "$out"
+  else
+    echo "warn: design system $PD_NAME could not be resolved for the board, so the board keeps its own look" >&2
+  fi
+}
+
+# render_board <template>: the Bearings board template in this home's theme and
+# design system, on stdout, for bin/fm-bearings-board.sh to inject its payload
+# into. Only registered template lines change, each matched whole; the design
+# system's stylesheet follows the template's own style element, after its
+# tokens, so its role values win. Under nautical words and the Firstmate
+# Default the template is printed byte for byte, and any failure to theme
+# prints it unthemed rather than stopping the build.
+render_board() {
+  local tpl=$1 subs="$TMPD/board.subs" css="$TMPD/board.css"
+  [ -f "$tpl" ] || die "board template not found: $tpl"
+  ( board_subs "$subs" ) 2> "$TMPD/board.subs.err" || { echo "warn: the board's theme strings could not be resolved, so it keeps nautical's words" >&2; : > "$subs"; }
+  grep '^warn: ' "$TMPD/board.subs.err" >&2 || true
+  ( board_css "$css" ) || { echo "warn: the board's design system could not be resolved, so it keeps its own look" >&2; : > "$css"; }
+  if [ ! -s "$subs" ] && [ ! -s "$css" ]; then
+    cat "$tpl"
+    return 0
+  fi
+  registry_rows | awk -F '\t' -v t="$BOARD_TEMPLATE" '$3 == t && $1 == "design.css" { print $5 }' > "$TMPD/board.cssat"
+  LC_ALL=C awk -v subs="$subs" -v css="$css" -v cssat="$TMPD/board.cssat" '
+    function lit(s, a, b,   i, out) {
+      out = ""
+      while (a != "" && (i = index(s, a)) > 0) { out = out substr(s, 1, i - 1) b; s = substr(s, i + length(a)) }
+      return out s
+    }
+    BEGIN {
+      FS = "\t"
+      while ((getline l < subs) > 0) { split(l, f, "\t"); n++; h[n] = f[1]; kind[n] = f[2]; from[n] = f[3]; to[n] = f[4] }
+      while ((getline l < cssat) > 0) at[l] = 1
+      while ((getline l < css) > 0) sheet = sheet l "\n"
+    }
+    {
+      line = $0; t = line; sub(/^[[:space:]]+/, "", t)
+      for (i = 1; i <= n; i++) {
+        if (h[i] != t) continue
+        if (kind[i] == "str") line = lit(line, from[i], to[i])
+        else if ((a = index(line, "<svg")) > 0 && (e = index(line, "</svg>")) > a) {
+          o = index(substr(line, a), ">"); line = substr(line, 1, a + o - 1) to[i] substr(line, e)
+        } else { match(line, /^[[:space:]]*/); line = substr(line, 1, RLENGTH) to[i] }
+      }
+      print line
+      if (sheet != "" && (t in at)) { printf "<style id=\"po-design\">\n%s</style>\n", sheet; sheet = "" }
+    }
+  ' "$tpl"
+}
+
 # registry_rows: the registry without comments or blank lines.
 registry_rows() {
   [ -f "$REGISTRY" ] || die "no hook registry at $REGISTRY"
@@ -1558,12 +1720,12 @@ registry_check_diff() {
     registry_rows | awk -F '\t' -v f="$f" '$3 == f { print $5 "\t" $6 }' > "$TMPD/rows"
     awk -F '\t' -v f="$f" -v rows="$TMPD/rows" -v removed="$TMPD/removed" '
       BEGIN {
-        while ((getline l < rows) > 0) { n = index(l, "\t"); h = substr(l, 1, n - 1); hook[h] = 1; up[h] = substr(l, n + 1) }
+        while ((getline l < rows) > 0) { n = index(l, "\t"); h = substr(l, 1, n - 1); hook[h]++; up[h] = substr(l, n + 1) }
         while ((getline l < removed) > 0) rem[l]++
       }
       {
         if (!($0 in hook)) { printf "A9: %s: unregistered changed line: %s\n", f, $0; bad = 1; next }
-        if (used[$0]++) { printf "A9: %s: hook line appears more than once: %s\n", f, $0; bad = 1; next }
+        if (++used[$0] > hook[$0]) { printf "A9: %s: hook line appears more times than it is registered: %s\n", f, $0; bad = 1; next }
         if (up[$0] != "") {
           if (rem[up[$0]] > 0) rem[up[$0]]--
           else { printf "A9: %s: hook does not replace its registered upstream line: %s\n", f, $0; bad = 1 }
@@ -1643,6 +1805,14 @@ case "$cmd" in
     resolve_active
     [ "$ACTIVE_NAME" = nautical ] && exit 0
     printf 'Vocabulary for the outcome summaries a person reads: %s; tool names, verdict values, identifiers, and every rule above keep their exact words and meaning.\n' "$(vocabulary "$ACTIVE_KV")" ;;
+  voice-line)
+    active_is_nautical && exit 0
+    resolve_active
+    [ "$ACTIVE_NAME" = nautical ] && exit 0
+    printf 'Vocabulary for everything you say aloud: %s; tool names keep their exact words, and every rule above keeps its meaning.\n' "$(vocabulary "$ACTIVE_KV")" ;;
+  render-board)
+    [ $# -eq 1 ] || die "usage: render-board <template>"
+    render_board "$1" ;;
   ds-resolve)
     pd_in_force
     printf '%s %s\n' "$PD_NAME" "$PD_ORIGIN" ;;

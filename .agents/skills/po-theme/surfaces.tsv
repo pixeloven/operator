@@ -2,8 +2,17 @@
 # theme key is used. One tab-separated row per hook line:
 # key, class (T themed, D dual, - plumbing), file, owner (upstream or
 # pixeloven), the hook line exactly as written (leading whitespace ignored), and
-# the upstream line it replaces (empty for an added line).
-# bin/po-theme.sh reads it for `registry` (gates A4 and A9) and `anchors` (A10).
+# the upstream line it replaces (empty for an added line). A hook line that
+# occurs more than once in a file has one row per occurrence. A row whose hook
+# line equals the line it replaces registers an upstream line that stays
+# byte-identical and is themed at render time: the Bearings board template's
+# rows name the lines `bin/po-theme.sh render-board` changes (a str.* key's
+# nautical value inside the line, an icon.* key's <svg> content, and the line
+# design.css injects the design system after).
+# A registered file that also carries an accepted non-theme fork patch lists
+# those lines as `lib` plumbing rows, so A9 still holds it to its pin diff.
+# bin/po-theme.sh reads it for `registry` (gates A4 and A9), `anchors` (A10),
+# and `render-board`.
 lib	-	bin/backends/herdr.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
 lib	-	bin/backends/herdr.sh	upstream	. "$FM_BACKEND_HERDR_ROOT/bin/po-theme-lib.sh"	
 label.submate	D	bin/backends/herdr.sh	upstream	po_home_label "2ndmate-$id"	printf '2ndmate-%s' "$id"
@@ -80,3 +89,47 @@ lib	-	.pi/extensions/lib/fm-calm-working-ship.ts	upstream	import { poThemedSprit
 sprite.calm	T	.pi/extensions/lib/fm-calm-working-ship.ts	upstream	const sprite = poThemedSprite(createCalmWorkingShipSprite());	const sprite = createCalmWorkingShipSprite();
 lib	-	tests/fm-pi-primary-live-e2e.test.sh	upstream	cp "$ROOT/.pi/extensions/lib/po-theme-calm.ts" "$PROJECT/.pi/extensions/lib/po-theme-calm.ts"	
 lib	-	tests/fm-pi-primary-types.test.sh	upstream	cp "$ROOT/.pi/extensions/lib/po-theme-calm.ts" "$TMP_ROOT/lib/po-theme-calm.ts"	
+render-board	T	bin/fm-bearings-board.sh	upstream	if ! "$SCRIPT_DIR/po-theme.sh" render-board "$TEMPLATE" | BOARD_JSON="$json" perl -pe "s/^\\Q$PLACEHOLDER\\E\$/\$ENV{BOARD_JSON}/" > "$tmp"; then	if ! BOARD_JSON="$json" perl -pe "s/^\\Q$PLACEHOLDER\\E\$/\$ENV{BOARD_JSON}/" "$TEMPLATE" > "$tmp"; then
+lib	-	bin/fm-fleet-view.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/fm-fleet-view.sh	upstream	. "$SCRIPT_DIR/po-theme-lib.sh"	
+str.fleet	-	bin/fm-fleet-view.sh	upstream	printf '%s\n' "$SNAPSHOT" | jq -r --argjson po "$(po_jq_strs fleet)" '	printf '%s\n' "$SNAPSHOT" | jq -r '
+str.fleet.title	T	bin/fm-fleet-view.sh	upstream	"# \($po.title)",	"# Fleet View",
+str.fleet.underway	T	bin/fm-fleet-view.sh	upstream	"## \($po.underway)",	"## Under Way",
+str.fleet.secondmates	T	bin/fm-fleet-view.sh	upstream	"## \($po.secondmates)",	"## Secondmates",
+lib	-	bin/fm-inbox.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/fm-inbox.sh	upstream	if [ -f "$SELF_DIR/po-theme-lib.sh" ]; then . "$SELF_DIR/po-theme-lib.sh"; else po_str() { case "$1" in inbox.idle) printf 'no workers on deck' ;; *) printf 'firstmate' ;; esac; }; fi	
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	printf '  %s will pick this up at its next check.\n' "$(po_str inbox.agent)"	printf '  firstmate will pick this up at its next check.\n'
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	printf '  %s has already acknowledged this note.\n' "$(po_str inbox.agent)"	printf '  firstmate has already acknowledged this note.\n'
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	printf "fm-inbox: note %s is saved at %s but $(po_str inbox.agent) was NOT woken\n" \	printf 'fm-inbox: note %s is saved at %s but firstmate was NOT woken\n' \
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	die "note $id is saved at $path but $(po_str inbox.agent) was NOT woken"	die "note $id is saved at $path but firstmate was NOT woken"
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	printf "fm-inbox: note %s is saved at %s but $(po_str inbox.agent) was NOT woken\n" \	printf 'fm-inbox: note %s is saved at %s but firstmate was NOT woken\n' \
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	die "note $id is saved at $path but $(po_str inbox.agent) was NOT woken"	die "note $id is saved at $path but firstmate was NOT woken"
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	printf '=== %s status (read-only, no wake sent) ===\n' "$(po_str inbox.agent)"	printf '=== firstmate status (read-only, no wake sent) ===\n'
+str.inbox.agent	T	bin/fm-inbox.sh	upstream	printf 'inbox    %s note(s) waiting for %s\n' "$pending" "$(po_str inbox.agent)"	printf 'inbox    %s note(s) waiting for firstmate\n' "$pending"
+str.inbox.idle	T	bin/fm-inbox.sh	upstream	[ "$any" -eq 1 ] || printf '\n(%s)\n' "$(po_str inbox.idle)"	[ "$any" -eq 1 ] || printf '\n(no workers on deck)\n'
+voice.vocabulary	T	bin/fm-voice-relay.py	upstream	"content": SYSTEM_PROMPT + "".join("\n\n" + line for line in subprocess.run(["bash", os.path.join(os.path.dirname(os.path.abspath(__file__)), "po-theme.sh"), "voice-line"], env=dict(os.environ, FM_HOME=self.home), stdin=subprocess.DEVNULL, capture_output=True, text=True, errors="replace", check=False).stdout.splitlines()[:1] if line)}})	"content": SYSTEM_PROMPT}})
+str.board.title	T	.agents/skills/bearings/assets/board-template.html	upstream	<title>Bearings - fleet board</title>	<title>Bearings - fleet board</title>
+str.digest.call	T	.agents/skills/bearings/assets/board-template.html	upstream	/* ---- Captain's Call: one card at a time, dealt off a visible stack ---- */	/* ---- Captain's Call: one card at a time, dealt off a visible stack ---- */
+design.css	T	.agents/skills/bearings/assets/board-template.html	upstream	</style>	</style>
+icon.brand	T	.agents/skills/bearings/assets/board-template.html	upstream	<path d="M12 6v16"/><path d="m19 13 2-1a9 9 0 0 1-18 0l2 1"/><path d="M9 11h6"/><circle cx="12" cy="4" r="2"/>	<path d="M12 6v16"/><path d="m19 13 2-1a9 9 0 0 1-18 0l2 1"/><path d="M9 11h6"/><circle cx="12" cy="4" r="2"/>
+str.board.brand	T	.agents/skills/bearings/assets/board-template.html	upstream	<span class="bb-brand__wm">bearings</span>	<span class="bb-brand__wm">bearings</span>
+str.digest.call	T	.agents/skills/bearings/assets/board-template.html	upstream	Captain's Call	Captain's Call
+str.digest.charted	T	.agents/skills/bearings/assets/board-template.html	upstream	Charted Next	Charted Next
+icon.underway	T	.agents/skills/bearings/assets/board-template.html	upstream	<svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10.189V14"/><path d="M12 2v3"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-8.188-3.639a2 2 0 0 0-1.624 0L3 14a11.6 11.6 0 0 0 2.81 7.76"/><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>	<svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10.189V14"/><path d="M12 2v3"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-8.188-3.639a2 2 0 0 0-1.624 0L3 14a11.6 11.6 0 0 0 2.81 7.76"/><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+str.digest.underway	T	.agents/skills/bearings/assets/board-template.html	upstream	Underway	Underway
+str.digest.landed	T	.agents/skills/bearings/assets/board-template.html	upstream	Recently Landed	Recently Landed
+str.board.self	T	.agents/skills/bearings/assets/board-template.html	upstream	d.textContent = msg + " - ask firstmate to rebuild the board.";	d.textContent = msg + " - ask firstmate to rebuild the board.";
+str.board.user	T	.agents/skills/bearings/assets/board-template.html	upstream	callTotal ? callTotal + " item" + (callTotal === 1 ? "" : "s") + " wait on you, captain" : "nothing needs you, captain";	callTotal ? callTotal + " item" + (callTotal === 1 ? "" : "s") + " wait on you, captain" : "nothing needs you, captain";
+str.digest.call	T	.agents/skills/bearings/assets/board-template.html	upstream	/* Captain's Call deck: every item renders as the same full card */	/* Captain's Call deck: every item renders as the same full card */
+str.digest.call	T	.agents/skills/bearings/assets/board-template.html	upstream	"Captain's Call answer - " + item.title + ": " + displayAnswer,	"Captain's Call answer - " + item.title + ": " + displayAnswer,
+str.board.user	T	.agents/skills/bearings/assets/board-template.html	upstream	/* captain-facing rows name the repo; the internal task id shows only when	/* captain-facing rows name the repo; the internal task id shows only when
+str.board.self	T	.agents/skills/bearings/assets/board-template.html	upstream	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreQueued + " more queued - ask firstmate for the full chart"));	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreQueued + " more queued - ask firstmate for the full chart"));
+str.board.self	T	.agents/skills/bearings/assets/board-template.html	upstream	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreWarnings + " more repair warning" + (chartedMoreWarnings === 1 ? "" : "s") + " - ask firstmate for the full chart"));	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreWarnings + " more repair warning" + (chartedMoreWarnings === 1 ? "" : "s") + " - ask firstmate for the full chart"));
+lib	-	bin/fm-remote-doctor.sh	upstream	# shellcheck source=bin/fm-trap-lib.sh	
+lib	-	bin/fm-remote-doctor.sh	upstream	. "$SCRIPT_DIR/fm-trap-lib.sh"	
+lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 129 HUP	trap 'exit 129' HUP
+lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 130 INT	trap 'exit 130' INT
+lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 143 TERM	trap 'exit 143' TERM
+lib	-	bin/fm-remote-doctor.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/fm-remote-doctor.sh	upstream	if [ -f "$SCRIPT_DIR/po-theme-lib.sh" ]; then . "$SCRIPT_DIR/po-theme-lib.sh"; else po_str() { printf 'remote second mate'; }; fi	
+str.doctor.submate	T	bin/fm-remote-doctor.sh	upstream	printf 'error: this host is not ready for a %s%s\n' "$(po_str doctor.submate)" "${NAMES:+; unresolved: $NAMES}" >&2	printf 'error: this host is not ready for a remote second mate%s\n' "${NAMES:+; unresolved: $NAMES}" >&2

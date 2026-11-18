@@ -261,7 +261,7 @@ changed bin/fm-dod-lib.sh | sort | uniq -d
 git diff --summary "$PIN" -- AGENTS.md bin/fm-dod-lib.sh | grep 'mode change'
 ```
 
-In each upstream-owned file `bin/po-theme.sh registry files` lists, every added line must be exactly one row's hook line, at most once, and every removed line must be the upstream line a row says its hook replaces; `registry check-diff` reports an affirmative line when they all match:
+In each upstream-owned file `bin/po-theme.sh registry files` lists, every added line must be a row's hook line, occurring at most as many times as rows register it, and every removed line must be the upstream line a row says its hook replaces; `registry check-diff` reports an affirmative line when they all match:
 
 ```sh
 bin/po-theme.sh registry check-diff "$PIN"

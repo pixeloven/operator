@@ -568,7 +568,7 @@ class Session:
             "textInputConfiguration": {"mediaType": "text/plain"}}})
         await self._send({"textInput": {
             "promptName": self.prompt, "contentName": content,
-            "content": SYSTEM_PROMPT}})
+            "content": SYSTEM_PROMPT + "".join("\n\n" + line for line in subprocess.run(["bash", os.path.join(os.path.dirname(os.path.abspath(__file__)), "po-theme.sh"), "voice-line"], env=dict(os.environ, FM_HOME=self.home), stdin=subprocess.DEVNULL, capture_output=True, text=True, errors="replace", check=False).stdout.splitlines()[:1] if line)}})
         await self._send({"contentEnd": {
             "promptName": self.prompt, "contentName": content}})
         log(self.verbose, "session up in {}s, read scope {}".format(

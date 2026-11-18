@@ -38,7 +38,11 @@
 #                                    accepted secondmate label prefixes}
 #   po_str <surface.name>            the themed display string for a registered
 #                                    str.<surface.name> key (sidebar.needs,
-#                                    alert.wedge_title); fails for any other key
+#                                    alert.wedge_title, fleet.*, inbox.*,
+#                                    doctor.submate); fails for any other key
+#   po_jq_strs <surface>             JSON for jq --argjson: {"<name>": string} for
+#                                    every registered str.<surface>.<name> key
+#                                    (fleet); fails for any other surface
 
 PO_THEME_LIB_ROOT="$(d=${BASH_SOURCE[0]%/*}; [ "$d" != "${BASH_SOURCE[0]}" ] || d=.; cd "${d:-/}/.." && pwd)"
 
@@ -72,6 +76,12 @@ po__str_canonical() {
   case "$1" in
     sidebar.needs) printf 'needs-captain' ;;
     alert.wedge_title) printf 'firstmate: away-mode escalations WEDGED' ;;
+    fleet.title) printf 'Fleet View' ;;
+    fleet.underway) printf 'Under Way' ;;
+    fleet.secondmates) printf 'Secondmates' ;;
+    inbox.agent) printf 'firstmate' ;;
+    inbox.idle) printf 'no workers on deck' ;;
+    doctor.submate) printf 'remote second mate' ;;
     *) return 1 ;;
   esac
 }
@@ -229,4 +239,20 @@ po_jq_labels() {
 po_str() {  # <surface.name>
   po__str_canonical "${1:-}" >/dev/null || return 1
   po__value "str.$1" || po__str_canonical "$1"
+}
+
+# po_jq_strs <surface>: one surface's display strings as a JSON object. Theme
+# values cannot carry a double quote or backslash (bin/po-theme.sh parse), so
+# each string is safe between JSON quotes as it stands.
+po_jq_strs() {  # <surface>
+  local names n sep='' out='{'
+  case "${1:-}" in
+    fleet) names='title underway secondmates' ;;
+    *) return 1 ;;
+  esac
+  for n in $names; do
+    out="$out$sep\"$n\":\"$(po_str "$1.$n")\""
+    sep=,
+  done
+  printf '%s}' "$out"
 }
