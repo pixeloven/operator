@@ -125,6 +125,8 @@ DATA="${FM_DATA_OVERRIDE:-$FM_HOME/data}"
 INBOX="$STATE/inbox"
 
 CONFIG="${FM_CONFIG_OVERRIDE:-$FM_HOME/config}"
+# shellcheck source=bin/po-theme-lib.sh
+if [ -f "$SELF_DIR/po-theme-lib.sh" ]; then . "$SELF_DIR/po-theme-lib.sh"; else po_str() { case "$1" in inbox.idle) printf 'no workers on deck' ;; *) printf 'firstmate' ;; esac; }; fi
 
 die() { printf 'fm-inbox: %s\n' "$*" >&2; exit 1; }
 
@@ -381,20 +383,20 @@ finish_note_result() {  # <outcome> <id> <request-id> <json> <strict-exit> <summ
     fi
     printf '  %s\n' "$summary"
     if [ "$announced" -eq 1 ]; then
-      printf '  firstmate will pick this up at its next check.\n'
+      printf '  %s will pick this up at its next check.\n' "$(po_str inbox.agent)"
     elif [ "$acknowledged" -eq 1 ]; then
-      printf '  firstmate has already acknowledged this note.\n'
+      printf '  %s has already acknowledged this note.\n' "$(po_str inbox.agent)"
     fi
   fi
   if [ "$announced" -eq 1 ] || [ "$acknowledged" -eq 1 ]; then
     return 0
   fi
   if [ "$strict" -eq 1 ]; then
-    printf 'fm-inbox: note %s is saved at %s but firstmate was NOT woken\n' \
+    printf "fm-inbox: note %s is saved at %s but $(po_str inbox.agent) was NOT woken\n" \
       "$id" "$path" >&2
     return 3
   fi
-  die "note $id is saved at $path but firstmate was NOT woken"
+  die "note $id is saved at $path but $(po_str inbox.agent) was NOT woken"
 }
 
 claim_request_id() {  # <request-id> <note-id>  -> 0 claimed, 1 already exists
@@ -551,11 +553,11 @@ cmd_announce() {
   fi
   if [ "$json" -eq 1 ]; then
     emit_note_json created "$id" "" 1 0 "$path"
-    printf 'fm-inbox: note %s is saved at %s but firstmate was NOT woken\n' \
+    printf "fm-inbox: note %s is saved at %s but $(po_str inbox.agent) was NOT woken\n" \
       "$id" "$path" >&2
     return 3
   fi
-  die "note $id is saved at $path but firstmate was NOT woken"
+  die "note $id is saved at $path but $(po_str inbox.agent) was NOT woken"
 }
 
 # Claim the next reply sequence. The caller holds REPLY_SEQ_LOCK across the
@@ -1042,10 +1044,10 @@ cmd_status() {
   local pending=0
   [ -d "$INBOX" ] && pending=$(find "$INBOX" -maxdepth 1 -name '*.note' 2>/dev/null | wc -l | tr -d ' ')
 
-  printf '=== firstmate status (read-only, no wake sent) ===\n'
+  printf '=== %s status (read-only, no wake sent) ===\n' "$(po_str inbox.agent)"
   printf 'home     %s\n' "$FM_HOME"
   printf 'time     %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  printf 'inbox    %s note(s) waiting for firstmate\n' "$pending"
+  printf 'inbox    %s note(s) waiting for %s\n' "$pending" "$(po_str inbox.agent)"
 
   if [ -f "$DATA/backlog.md" ]; then
     printf '\n--- in flight ---\n'
@@ -1067,7 +1069,7 @@ cmd_status() {
     [ -f "$STATE/$id.status" ] && last=$(tail -1 "$STATE/$id.status" 2>/dev/null | cut -c1-100)
     printf '  %-42s %-6s %-10s %s\n' "$id" "${kind:-?}" "${mode:--}" "${last:-(no events yet)}"
   done
-  [ "$any" -eq 1 ] || printf '\n(no workers on deck)\n'
+  [ "$any" -eq 1 ] || printf '\n(%s)\n' "$(po_str inbox.idle)"
 
   printf '\nNote: the last event line is history, not current state.\n'
 }

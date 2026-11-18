@@ -7,6 +7,8 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/po-theme-lib.sh
+. "$SCRIPT_DIR/po-theme-lib.sh"
 
 usage() {
   cat <<'EOF'
@@ -28,7 +30,7 @@ command -v jq >/dev/null 2>&1 || { echo "fm-fleet-view: jq not found" >&2; exit 
 
 SNAPSHOT=$("$SCRIPT_DIR/fm-fleet-snapshot.sh" --json) || exit $?
 
-printf '%s\n' "$SNAPSHOT" | jq -r '
+printf '%s\n' "$SNAPSHOT" | jq -r --argjson po "$(po_jq_strs fleet)" '
   def dash($v): if $v == null or $v == "" then "-" else $v end;
   def endpoint_exists($t):
     if $t.endpoint.exists == null then "unknown"
@@ -59,12 +61,12 @@ printf '%s\n' "$SNAPSHOT" | jq -r '
   def backlog_row($r):
     "| \($r.id // "-") | \(dash($r.title // $r.raw)) | \(dash($r.repo)) | \(dash($r.kind)) | \(blocker($r)) | \(dash($r.pr_url // $r.report_path // $r.local_note)) |";
 
-  "# Fleet View",
+  "# \($po.title)",
   "",
   "Schema: \(.schema)",
   "Home: \(.fm_home)",
   "",
-  "## Under Way",
+  "## \($po.underway)",
   (if (.tasks | length) == 0 then
     "No live task metadata found."
    else
@@ -91,6 +93,6 @@ printf '%s\n' "$SNAPSHOT" | jq -r '
     (.backlog.records[] | select(.state == "done") | backlog_row(.))
    end),
   "",
-  "## Secondmates",
+  "## \($po.secondmates)",
   .secondmate_guidance.note
 '

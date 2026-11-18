@@ -17,6 +17,11 @@ The look of generated pages is a separate, independent choice, which [design sys
 | Herdr and Paseo workspace labels | the home workspace a person sees in the sidebar, such as `spotter` and `navigator-gfm`, and the away-mode daemon's herdr workspace; matching also accepts the nautical names and every label this home applied earlier, so a live workspace is never orphaned |
 | Herdr desktop app space names | the same labels on the spaces the hc backend's terminals show in, while the app window is open; a name a person chose is kept |
 | The Calm working animation in Claude Code and Pi | a `po-sprite/1` asset the theme names, drawn in place of the sailboat; with none, upstream's sailboat frame for frame |
+| The Bearings board (`/bearings lavish`) | its title, wordmark, section names, call-answer text, and the words for the user and the agent, plus the theme's brand and Underway icons, through `bin/po-theme.sh render-board`; the template stays upstream-identical |
+| The fleet view (`bin/fm-fleet-view.sh`) | its title and its Under Way and second-mate headings |
+| The human inbox commands (`bin/fm-inbox.sh` note and status) | the agent's name and the idle-home line |
+| The voice relay's spoken answers | one vocabulary paragraph after the voice model's system text, so it says the theme's words aloud |
+| Alias-skill menu descriptions | one sentence per alias saying what the command does in the theme's words |
 
 Rules, identifiers, and record formats never change: an instruction that names the captain still binds the same person with exactly the same limits.
 
@@ -70,9 +75,16 @@ With Herdr project groups on, a task waiting on the user shows the theme's `str.
 The away-mode wedge alarm's macOS and herdr notifications carry the theme's `str.alert.wedge_title`, `operator: away-mode escalations WEDGED` under the operator theme.
 Nothing matches either string, so a switch needs no relabel.
 
+### The Bearings board
+
+`bin/fm-bearings-board.sh` builds the board from `bin/po-theme.sh render-board`'s output, which changes only the template lines `surfaces.tsv` registers for it: the `str.board.*` and `str.digest.*` strings replace their nautical words inside each line, so the page reads, for example, `Operator's Call`, `Sitrep - task force board`, and `ask spotter to rebuild the board` under the operator theme, and the theme's `icon.brand` and `icon.underway` pictures replace the anchor and the ship.
+It reads the strings and pictures from the values cache, revalidates each icon, and prints the template byte for byte under nautical words and the Firstmate Default, or whenever the theme cannot be resolved.
+The board's payload keys and its answer context (`fm-bearings-answer.v1`) never change, so an answer from a themed board closes a held call exactly as before.
+A design system other than the Firstmate Default is injected after the template's styles, as [design systems](design-systems.md) describes.
+
 ### Digest section names
 
-The `str.digest.*` strings name the four `/bearings` digest sections the agent copies into chat: `Captain's Call`, `Underway`, `Recently Landed`, and `Charted Next` under nautical.
+The `str.digest.*` strings name the four `/bearings` digest sections the agent copies into chat, and the board's sections: `Captain's Call`, `Underway`, `Recently Landed`, and `Charted Next` under nautical.
 The Persona block adds one table row for each name the theme changes, such as `Captain's Call (the /bearings section)` mapped to the theme's `{User}'s Call` heading built from its user word, so a themed chat heading survives a compaction.
 Because the block's identifiers rule keeps brief headings as written, a model can read `Captain's Call` as a fixed title, so when the call heading changes the block also states it outright in one sentence, in the form "The Bearings/sitrep digest heading `Captain's Call` reads `{User}'s Call`; other digest headings stay as written."
 That sentence is a registered `str.digest.call` hook in `surfaces.tsv`, so `anchors` fails if it is lost.
@@ -107,7 +119,10 @@ The picture keys (`sprite.calm`, `icon.*`, `image.*`) are optional too and also 
 | `str.calm.name`, `str.calm.command`, `str.calm.pi_command`, `str.branch.model_command`, `str.watch.arm_command` | the name in Pi Calm's notice, and the menu descriptions of Claude Code's and Pi's `/calm`, Pi's `/supervision-model`, and Pi's `/fm-watch-arm-pi`; the defaults name the product, capitalized where upstream capitalizes it, and call the Calm figure the working animation |
 | `glyph.ship`, `glyph.anchor` | the glyph before a routine supervision note and before an outcome for the user; one code point each from a curated allow-list, distinct, and never the other's upstream glyph; the defaults are upstream's ⛵ and ⚓ |
 | `sprite.calm` | the `.sprite` asset that draws the Calm working animation in both harnesses in place of the sailboat |
-| `icon.brand`, `icon.underway` | the `.svg` icon assets for the Bearings board's brand mark and Underway heading, validated and copied now and drawn once the board is themed |
+| `str.board.title`, `str.board.brand`, `str.board.user`, `str.board.self` | the Bearings board's page title, its wordmark, and the words it uses for the user and the agent; the defaults are `<Alias> - <fleet> board` from the `/bearings` alias, that alias, and the `user` and `self` words |
+| `str.fleet.title`, `str.fleet.underway`, `str.fleet.secondmates` | the fleet view's title and headings; the defaults are the `fleet` word title-cased plus ` View`, `Under Way`, and the `submate_plural` word title-cased |
+| `str.inbox.agent`, `str.inbox.idle` | the agent's name in the inbox commands' note and status output, and the status line for a home with no workers; the defaults are the `self` word and `no <worker_plural> active` |
+| `icon.brand`, `icon.underway` | the `.svg` icon assets for the Bearings board's brand mark and Underway heading |
 | `image.banner`, `image.poster` | the `.png` or `.svg` picture assets for the README banner and the supervision-branch poster, validated and copied now and shown once the docs view exists |
 
 ### Pictures
@@ -140,7 +155,7 @@ An asset that is missing or fails its validator when the harness reads it draws 
 - two roles sharing a term, a role taking another role's nautical word, or a role named after a status verb, harness, or Relay;
 - an alias that names no upstream skill, shadows an existing skill, or repeats;
 - a label, given or derived, that is not 2-24 lowercase letters, digits, or hyphens starting and ending with a letter or digit, starts with `fm-`, makes the primary and second-mate labels equal or prefix each other or the other role's nautical label, or makes the away-daemon label equal a home label, read as a second-mate label, or prefix a home label;
-- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`), or a digest section name that is not a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes starting with a letter or digit, or repeats another section name; a menu description (a `str.*command` key) may run to 120 characters and use a status verb as an ordinary word, since no code reads it back;
+- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, an `fm-` token, `%`, or `&`, a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`), a digest or fleet-view section name that is not a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes starting with a letter or digit, or repeats another section name of its surface, or a board string that is not at most 48 letters, digits, spaces, periods, hyphens, or apostrophes starting with a letter or digit, so it can close no quote, comment, or tag of the page; a menu description (a `str.*command` key) may run to 120 characters and use a status verb as an ordinary word, since no code reads it back;
 - a glyph that is not one code point from the allow-list in `bin/po-theme.sh`, or note glyphs that are shared or swap upstream's;
 - a picture key outside the listed set, an asset name that is not a plain file name of the key's kind, or an asset that is missing or fails its format's rules above.
 
@@ -160,11 +175,11 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, Pi Calm's notice, and the Calm working animation when the theme names a sprite, as listed above.
+Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases and their menu descriptions, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, Pi Calm's notice, the Calm working animation when the theme names a sprite, the Bearings board and its icons, the fleet view's headings, the inbox commands' note and status words, and the voice relay's spoken words, as listed above.
 The note glyphs change only on screen: the outcome store and the notes the agent reads keep upstream's glyphs, so Pi shows a note written before a theme was applied with the theme's glyph, while Claude Code keeps a line it already logged as it was.
 The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
 The bundled `operator` theme names no pictures yet, so it keeps nautical's sailboat, board icons, and docs pictures.
-Not yet themed, and scheduled by later ADR-0020 stages: the Bearings board and its icons, the fleet view, the output of human-run commands, and the docs view and its pictures.
+Not yet themed, and scheduled by a later ADR-0020 stage: the docs view and its pictures.
 
 ## Residue: person-visible strings that stay canonical
 
@@ -190,6 +205,7 @@ Gate A10 runs `bin/po-theme.sh anchors` and validates every bundled theme on eve
 `anchors` fails when upstream changes a literal the nautical theme mirrors, adds a user-invocable skill with no `alias.<skill>` key, adds a person-facing nautical string the surface canary below does not know, or a merge drops one of ADR-0016's hook lines.
 The fix belongs in the same merge PR: update `nautical.theme` and the matching key of every other bundled theme, which is exactly when a reviewer should notice that upstream changed its voice.
 Gate A9 keeps the three hook hunks exactly as ADR-0016 lists them and holds every other upstream-owned file to the hook lines `.agents/skills/po-theme/surfaces.tsv` registers, which `anchors` also checks against upstream at the pin.
+A board template row registers a line that stays upstream-identical, so `anchors` catches an upstream rewording of any line `render-board` themes.
 Gate A11 proves the routing names and generated brief text identical under every bundled theme.
 
 ### The surface canary
@@ -201,7 +217,7 @@ Backend label functions are not scanned: every themed label is a registered hook
 
 The canary's residue list is `.agents/skills/po-theme/residue.tsv`, beside the hook registry.
 Each tab-separated row names a file, a fixed substring of the producer line (it covers every line of that file containing it), and why the line stays nautical.
-The reason opens with the ADR-0020 rule that keeps the string canonical (`R1`-`R5`) or the stage that will theme it (`S1`-`S7`), then a colon, such as `S5: board page title; the board is themed by stage S5`; a row without one is a finding.
+The reason opens with the ADR-0020 rule that keeps the string canonical (`R1`-`R5`) or the stage that will theme it (`S1`-`S7`), then a colon, such as `S6: README banner alt text; the docs view themes it`; a row without one is a finding.
 When the canary fails in a merge PR, decide in that PR: theme the string through a registered hook, or add a residue row whose reason says why it stays nautical for now.
 A stage that themes a surface removes its rows, and `anchors` prints a note for any row that no longer matches a producer line so the list shrinks with the tree.
 [`identity.md`](identity.md#5-assertions--the-grep-evidence) documents the gates.
