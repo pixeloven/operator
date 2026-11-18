@@ -87,7 +87,7 @@ ADR-0033 carries hc parent linkage, the hc durable worktree lease with identity-
 ADR-0035 carries `--partition KofN` support in `bin/fm-lint.sh`, its partition regression in `tests/fm-lint.test.sh`, and a third lint partition in the `.github/workflows/ci.yml` matrix, until an upstream synchronization brings partition-count support or a third partition of its own.
 ADR-0036 carries the test harness's signal-before-EXIT trap order in `tests/lib.sh` and its regression case in `tests/fm-test-fixture-cleanup.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0037 lets `bin/fm-test-run.sh` carry operator-CI median duration hints in `portable_serial_weight_hints` for inherited portable serial scripts whose median differs from the inherited hint by more than 30,000 ms, refreshed or retired at each upstream synchronization.
-ADR-0038 lets a secondmate launch carry its launcher's `https://github.com` credential helpers into its delivery lane through one `bin/fm-spawn.sh` hunk and one paragraph in ADR-0022's `docs/configuration.md` section, while ship and scout lanes stay unchanged.
+ADR-0038 lets a secondmate launch carry its launcher's `https://github.com` credential helpers into its delivery lane through one `bin/fm-spawn.sh` hunk and one paragraph in ADR-0022's `docs/configuration.md` section with a qualifying clause on that file's Orca source-mode `GIT_CONFIG_NOSYSTEM=1` sentence, while ship and scout lanes stay unchanged.
 
 ## Taking upstream changes
 

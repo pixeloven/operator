@@ -21,7 +21,7 @@ Each surviving helper is written as a `credential.https://github.com.helper` ent
 Nothing else from the system or human configuration is carried, signing stays disabled, the autonomous identity is unchanged, and `GIT_CONFIG_NOSYSTEM=1` stays exported.
 An operator-configured ADR-0022 setting still wins as the lane's single entry, a launch with nothing to carry writes a lane byte-identical to the plain one, and an unreadable host configuration stops the launch.
 
-ADR-0001 remains the default, and the upstream files this exception touches are one spawn hunk in `bin/fm-spawn.sh` and a paragraph in ADR-0022's "Worker GitHub credential helper" section of `docs/configuration.md`.
+ADR-0001 remains the default, and the upstream files this exception touches are one spawn hunk in `bin/fm-spawn.sh`, a paragraph in ADR-0022's "Worker GitHub credential helper" section of `docs/configuration.md`, and a qualifying clause on the source-mode `GIT_CONFIG_NOSYSTEM=1` sentence in that file's "Orca environment source" section.
 `bin/fm-delivery-lane.sh`, `tests/po-delivery-lane-credential.test.sh`, and `docs/verification/delivery-lane.md` are PixelOven's own files.
 
 ## Consequences
@@ -30,7 +30,7 @@ A navigator can fetch, push, and run landed-work checks against private GitHub r
 That credential is the operator's personal one wherever the launcher's helper reads it, which ADR-0022 deliberately avoided for task workers; ship and scout workers keep the ADR-0008 and ADR-0022 behavior unchanged.
 A secondmate's own crewmates do not inherit the helper, because their lanes are prepared without the flag.
 A navigator launched before this change keeps its old lane until it is relaunched.
-Future upstream merges have one more `bin/fm-spawn.sh` hunk and one more `docs/configuration.md` paragraph to review.
+Future upstream merges have one more `bin/fm-spawn.sh` hunk and two more `docs/configuration.md` hunks to review.
 
 ## Alternatives considered
 
