@@ -1,0 +1,26 @@
+## D1 reproduction: operator selected, values cache stripped of S5 keys (S3/S4-era), still tagged po-theme-values/3
+cache	po-theme-values/3
+str.inbox.* present: 0
+
+### BASE 767dc49e: fm-inbox.sh status
+=== firstmate status (read-only, no wake sent) ===
+home     /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.MryypF/home
+time     2026-11-18T23:35:48Z
+inbox    0 note(s) waiting for firstmate
+
+(no backlog at /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.MryypF/home/data/backlog.md)
+
+(no workers on deck)
+str.inbox.* after base run: 0
+
+### FIX 24961ed3: fm-inbox.sh status (same stale cache)
+str.inbox.* before: 0
+=== spotter status (read-only, no wake sent) ===
+home     /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.MryypF/home
+time     2026-11-18T23:35:48Z
+inbox    0 note(s) waiting for spotter
+
+(no backlog at /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.MryypF/home/data/backlog.md)
+
+(no specialists active)
+str.inbox.* after fix run: 2

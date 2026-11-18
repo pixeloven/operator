@@ -1,0 +1,12 @@
+## Session start heal, primary home = its own code root (stale S3/S4-shaped cache, block in sync)
+verify before: exit=0; str.fleet.* keys: 0
+TS reader before:
+  glyph.ship=⛵  str.fleet.title=Fleet View  str.inbox.agent=firstmate  calm.name=Firstmate Calm
+fm-session-start.sh exit=0
+persona lines in session-start output:
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, all systems green.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+## Persona: operator
+str.fleet.* keys after: 3
+TS reader after:
+  glyph.ship=▸  str.fleet.title=Task Force View  str.inbox.agent=spotter  calm.name=Operator Calm
+

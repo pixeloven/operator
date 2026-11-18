@@ -1,0 +1,23 @@
+## N1 via bin/fm-update.sh in a primary home that is its own code root (lab clone at 24961ed3)
+cache stripped to S3/S4 shape (format line kept): cache	po-theme-values/3; str.fleet.* keys: 0
+Calm/Pi TS reader BEFORE update:
+  glyph.ship=⛵  str.fleet.title=Fleet View  str.inbox.agent=firstmate  calm.name=Firstmate Calm
+upstream origin/main now: 6244bbb2 operator theme: noop reply says green
+
+### $ bin/fm-update.sh
+firstmate: updated 24961ed3..6244bbb2 (instructions changed: .agents/skills)
+no watches registered
+persona: re-applied the operator theme after drift
+persona: pushed the re-applied block to the inheriting homes
+reread-firstmate: yes
+restart-secondmates: none
+nudge-secondmates: none
+exit=0
+
+HEAD after: 6244bbb2 operator theme: noop reply says green
+block noop reply now: Operator, all systems green
+verify after: exit=0
+str.fleet.* keys after: 3
+Calm/Pi TS reader AFTER update:
+  glyph.ship=▸  str.fleet.title=Task Force View  str.inbox.agent=spotter  calm.name=Operator Calm
+git status --porcelain of code root: ''
