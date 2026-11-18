@@ -102,7 +102,7 @@ FM_ROOT="${FM_ROOT_OVERRIDE:-$(CDPATH='' cd "$SCRIPT_DIR/.." && pwd -P)}"
 # shellcheck source=bin/fm-remote-herdr-identity-lib.sh
 . "$SCRIPT_DIR/fm-remote-herdr-identity-lib.sh"
 # shellcheck source=bin/po-theme-lib.sh
-. "$SCRIPT_DIR/po-theme-lib.sh"
+if [ -f "$SCRIPT_DIR/po-theme-lib.sh" ]; then . "$SCRIPT_DIR/po-theme-lib.sh"; else po_str() { printf 'remote second mate'; }; fi
 # The shared remote toolchain plus the selected backend's CLI; the backend slot
 # is filled once the backend is resolved below, keeping the probe's six-fact
 # shape (five tools plus the at-least-one harness) for explicit and resolved

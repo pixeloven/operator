@@ -131,5 +131,5 @@ lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 129 HUP	trap 'exit 129' HUP
 lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 130 INT	trap 'exit 130' INT
 lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 143 TERM	trap 'exit 143' TERM
 lib	-	bin/fm-remote-doctor.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
-lib	-	bin/fm-remote-doctor.sh	upstream	. "$SCRIPT_DIR/po-theme-lib.sh"	
+lib	-	bin/fm-remote-doctor.sh	upstream	if [ -f "$SCRIPT_DIR/po-theme-lib.sh" ]; then . "$SCRIPT_DIR/po-theme-lib.sh"; else po_str() { printf 'remote second mate'; }; fi	
 str.doctor.submate	T	bin/fm-remote-doctor.sh	upstream	printf 'error: this host is not ready for a %s%s\n' "$(po_str doctor.submate)" "${NAMES:+; unresolved: $NAMES}" >&2	printf 'error: this host is not ready for a remote second mate%s\n' "${NAMES:+; unresolved: $NAMES}" >&2
