@@ -1,0 +1,29 @@
+## real lab secondmate spawn (fm-spawn.sh labnav <seeded-home> --harness claude --secondmate)
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.LH44G3
+warning: secondmate labnav sync skipped before launch: primary default-branch commit cannot be resolved
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-labnav/gitconfig signing=disabled
+spawned labnav harness=claude kind=secondmate mode=secondmate yolo=off window=primary:fm-labnav worktree=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-labsm.mLbW0E/nav
+SPAWN_EXIT=0
+
+## navigator lane config /tmp/fm-labnav/gitconfig credential + signing entries
+commit.gpgsign false
+tag.gpgsign false
+user.name Firstmate Autonomous Worker
+user.email firstmate-autonomous@localhost
+credential.https://github.com.helper osxkeychain
+
+## live navigator pane process tree env (pane pid 14479) - git-relevant vars
+14479 -zsh
+16898 claude
+GIT_CONFIG_GLOBAL=/tmp/fm-labnav/gitconfig
+GIT_CONFIG_NOSYSTEM=1
+
+## git credential fill for https://github.com under the navigator's env (GIT_CONFIG_NOSYSTEM=1, GIT_CONFIG_GLOBAL=lane); secrets redacted
+06:17:30.461371 run-command.c:673       trace: run_command: 'git credential-osxkeychain get'
+06:17:30.478964 run-command.c:673       trace: run_command: git-credential-osxkeychain get
+protocol=https
+host=github.com
+username=<redacted-present>
+password=<redacted>
+exit=0

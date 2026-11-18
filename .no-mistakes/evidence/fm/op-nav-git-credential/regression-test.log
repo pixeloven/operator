@@ -1,0 +1,8 @@
+ok - an absent, empty, or whitespace-only credential-helper setting leaves the lane config unchanged
+ok - the credential helper round-trips through git config and answers only for https://github.com
+ok - a multi-line or unreadable credential-helper setting refuses before any lane config is written
+ok - a spawn writes the configured helper into the task lane without leaking the credential
+ok - the carry flag scopes the effective host helper to https://github.com and carries nothing else
+ok - the carry flag is inert with nothing to carry, yields to the operator setting, and refuses an unreadable host configuration
+ok - a secondmate spawn carries the host's github.com helper into its isolated lane, and a ship spawn does not
+# all po-delivery-lane-credential tests passed

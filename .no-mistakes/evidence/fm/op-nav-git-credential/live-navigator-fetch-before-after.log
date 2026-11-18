@@ -1,0 +1,11 @@
+## navigator env (GIT_CONFIG_NOSYSTEM=1) git ls-remote of private repo
+-- BEFORE lane (base 4b513d9e):
+4b513d9e27f381b11b62337bbff52ca08b6821e0	refs/heads/main
+exit=0
+-- AFTER lane (865ae563, --carry-github-credential-helper):
+4b513d9e27f381b11b62337bbff52ca08b6821e0	refs/heads/main
+exit=0
+-- adversarial: AFTER lane, non-github host must not be answered by carried helper:
+06:16:07.225562 run-command.c:673       trace: run_command: /bin/false 'Username for '\''https://example.invalid'\'': '
+fatal: cannot exec '/bin/false': No such file or directory
+fatal: could not read Username for 'https://example.invalid': terminal prompts disabled
