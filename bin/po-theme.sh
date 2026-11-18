@@ -598,7 +598,7 @@ image_check() {
       [ "$size" -le 262144 ] || { echo "error: $f: larger than 256 KiB"; return 1; }
       LC_ALL=C tr '[:upper:]' '[:lower:]' < "$f" | LC_ALL=C tr '\n\t\r' '   ' > "$TMPD/image.svg"
       grep -q '<svg' "$TMPD/image.svg" || { echo "error: $f: not an SVG document"; return 1; }
-      if grep -Eq '<(script|style|foreignobject|iframe|object|embed|!entity|!doctype|[?]xml-stylesheet)|javascript:|@import|url[(]|on[a-z]+[[:space:]]*=|href[[:space:]]*=[[:space:]]*([^"'"'"'#[:space:]]|["'"'"'][^#])' "$TMPD/image.svg"; then
+      if grep -Eq '<([a-z0-9_.-]+:)?(script|style|foreignobject|iframe|object|embed)|<(!entity|!doctype|[?]xml-stylesheet)|javascript:|@import|url[(]|on[a-z]+[[:space:]]*=|href[[:space:]]*=[[:space:]]*([^"'"'"'#[:space:]]|["'"'"'][^#])' "$TMPD/image.svg"; then
         echo "error: $f: an SVG image may not carry script, style, an embedded document, an entity, an event handler, or an outside reference"; return 1
       fi ;;
     *) echo "error: $f: an image is a .png or .svg file"; return 1 ;;
