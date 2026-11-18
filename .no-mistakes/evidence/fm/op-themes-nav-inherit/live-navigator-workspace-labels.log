@@ -1,0 +1,31 @@
+lab session: fm-lab-navtheme-85763-17884
+== FIXED: fresh operator primary -> new navigator 'strategy'
+inherited values line: name="operator" lavish-url key present: yes
+workspace_ensure -> w1
+real herdr workspace label: navigator-strategy
+== FIXED: older-apply operator block (no alias.lavish-url) -> new navigator 'strat2'
+inherited values line: name="operator" lavish-url key present: no
+workspace_ensure -> w2
+real herdr workspace label: navigator-strat2
+-- verify in that navigator home:
+persona drift: inherited block predates this checkout's theme keys (alias.lavish-url); rerun apply in the primary home
+verify exit=1
+-- headline in that navigator home:
+PERSONA (operator theme, chat words only): address the user as "Operator,"; the exact no-op reply is `Operator, all systems nominal.`; say operator for captain, spotter for first mate, specialist for crewmate, squad for crew, navigator for second mate, task force for fleet, deploy for ship, recon for scout.
+The full Persona block is in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-navlive.AZPYoF/strat2/data/captain-shared.md, printed under CONTEXT below; if this output was cut off, read that file before your next reply.
+persona drift: inherited block predates this checkout's theme keys (alias.lavish-url); rerun apply in the primary home
+== BASE (pre-fix): older-apply operator block -> new navigator 'strat3'
+inherited values line: name="operator" lavish-url key present: no
+workspace_ensure -> w3
+real herdr workspace label: 2ndmate-strat3
+== FIXED: unthemed (nautical) primary -> new navigator 'plain'
+inherited values line:  lavish-url key present: no
+workspace_ensure -> w4
+real herdr workspace label: 2ndmate-plain
+-- nautical navigator wrote theme state? no
+-- final lab workspace list:
+w1	navigator-strategy
+w2	navigator-strat2
+w3	2ndmate-strat3
+w4	2ndmate-plain
+teardown ok: fm-lab-navtheme-85763-17884
