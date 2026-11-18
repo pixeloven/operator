@@ -495,6 +495,24 @@ wedge_argv() {
   cat "$TMP_ROOT/wedge-argv"
 }
 
+# usage_argv <home>: the argv the usage warner's macOS notifier hands to a
+# recording osascript fake, items joined by "|"; no real notification is posted.
+usage_argv() {
+  local fake="$TMP_ROOT/usage-fakes"
+  mkdir -p "$fake"
+  # shellcheck disable=SC2016  # expanded by the fake at run time.
+  printf '#!/usr/bin/env bash\n{ printf osascript; printf "|%%s" "$@"; printf "\\n"; } >> "$USAGE_ARGV_LOG"\n' > "$fake/osascript"
+  chmod +x "$fake/osascript"
+  : > "$TMP_ROOT/usage-argv"
+  # shellcheck disable=SC2016  # expanded by the child shell.
+  USAGE_ARGV_LOG="$TMP_ROOT/usage-argv" FM_HOME="$1" PATH="$fake:$PATH" bash -c '
+    . "$0/bin/fm-usage-warner.sh" --help >/dev/null
+    [ "$(command -v osascript)" = "$1/osascript" ] || exit 99
+    usage_warner_notify "5h window at 80%"
+  ' "$ROOT" "$fake" >/dev/null 2>&1 || fail "the usage notifier did not reach the recording fake"
+  cat "$TMP_ROOT/usage-argv"
+}
+
 test_display_strings() {
   local home op mate out
   home=$(new_home strings-nautical)
@@ -507,6 +525,8 @@ test_display_strings() {
   out=$(wedge_argv "$home")
   assert_equals "osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv) sound name \"Basso\"|-e|end run|escalations stuck 900s|firstmate: away-mode escalations WEDGED
 herdr|notification|show|firstmate: away-mode escalations WEDGED|--body|escalations stuck 900s|--sound|request" "$out" "the nautical wedge notifiers' argv"
+  assert_equals "osascript|-e|on run argv|-e|display notification (item 1 of argv) with title (item 2 of argv)|-e|end run|5h window at 80%|Firstmate: Claude usage" \
+    "$(usage_argv "$home")" "the nautical usage notifier's argv"
   assert_absent "$home/state/po-theme" "a nautical home wrote theme state"
   # shellcheck disable=SC2016  # the string calls run in lib's shell.
   assert_equals "needs-operator|operator: away-mode escalations WEDGED" \
@@ -515,13 +535,14 @@ herdr|notification|show|firstmate: away-mode escalations WEDGED|--body|escalatio
   out=$(wedge_argv "$op")
   assert_contains "$out" "|end run|escalations stuck 900s|operator: away-mode escalations WEDGED" "the macOS title did not travel as argv item 2"
   assert_contains "$out" "herdr|notification|show|operator: away-mode escalations WEDGED|--body" "the herdr notification title is not themed"
+  assert_contains "$(usage_argv "$op")" "|end run|5h window at 80%|Operator: Claude usage" "the usage-alert title is not themed"
   assert_equals "needs-operator" "$(lib "$mate" 'po_str sidebar.needs')" "an inheriting secondmate's group state is wrong"
   # An S1-era cache has labels but no strings and no cache format line.
   grep -v '^cache\|^str\.' "$op/state/po-theme/values" > "$op/state/po-theme/values.old"
   mv "$op/state/po-theme/values.old" "$op/state/po-theme/values"
   assert_equals "needs-operator" "$(lib "$op" 'po_str sidebar.needs')" "an S1-era values cache was not rebuilt"
   lib "$op" 'po_str sidebar.unknown' >/dev/null 2>&1 && fail "po_str accepted an unregistered key"
-  pass "nautical keeps needs-captain and the firstmate wedge title; operator gives needs-operator and the operator title as macOS argv item 2"
+  pass "nautical keeps needs-captain and the firstmate wedge and usage titles; operator gives needs-operator and the operator titles as macOS argv item 2"
 }
 
 test_string_validation() {
@@ -548,6 +569,7 @@ digestdupe|str.digest.landed = "underway"|str.digest.landed and str.digest.under
 digestverb|str.digest.landed = "Recently done"|contains the status verb done
 menulong|str.calm.command = "Toggle the Calm transcript presentation and working animation, which hides tool rows and operational input in the transcript"|str.calm.command: longer than 120 characters
 glyphoff|glyph.ship = "x"|glyph.ship: 'x' is not one glyph from the allow-list
+glyphpair|glyph.ship = "▸ ▹"|glyph.ship: '▸ ▹' is not one glyph from the allow-list
 glyphsame|glyph.anchor = "⛵"|glyph.ship and glyph.anchor share the glyph
 EOF
   sed -e 's/^name = .*/name = "derived"/' -e '/^str\./d' -e 's/^user = .*/user = "field boss"/' -e 's/^product = .*/product = "ops"/' \
@@ -555,6 +577,7 @@ EOF
   printf 'derived\n' > "$home/config/po-theme"
   assert_equals "needs-field-boss" "$(lib "$home" 'po_str sidebar.needs')" "an absent sidebar state did not derive from the user word"
   assert_equals "ops: away-mode escalations WEDGED" "$(lib "$home" 'po_str alert.wedge_title')" "an absent wedge title did not derive from the product word"
+  assert_equals "Ops: Claude usage" "$(lib "$home" 'po_str alert.usage_title')" "an absent usage-alert title did not derive from the product word"
   assert_contains "$(FM_HOME="$home" "$PT" persona derived)" "| Captain's Call (the /bearings section) | Operator's Call |" "an absent digest call did not derive from the address word"
   { sed -e 's/^name = .*/name = "swapped"/' -e '/^glyph\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme"; printf 'glyph.ship = "\342\232\223"\nglyph.anchor = "\342\233\265"\n'; } \
     > "$home/config/po-themes/swapped.theme"
@@ -620,6 +643,10 @@ Arm operator watcher supervision through the Pi extension instead of foreground 
   mate=$(new_mate notes-mate gfm operator)
   lib "$mate" 'po_str sidebar.needs' >/dev/null
   assert_equals "▸" "$(reader "$mate" | head -n 1)" "an inheriting secondmate does not use its block's glyph"
+  # The primary went back to nautical: the pushed block is gone, so the bash
+  # readers never rebuild the secondmate's cache, and the reader must not trust it.
+  "$PT" persona nautical > "$mate/data/captain-shared.md"
+  assert_equals "$ship" "$(reader "$mate" | head -n 1)" "a secondmate without an inherited block trusted its stale cache"
   # A cache the bash readers would rebuild, or one left by another selection,
   # is never trusted.
   sed 's#^cache\tpo-theme-values/3#cache\tpo-theme-values/2#' "$op/state/po-theme/values" > "$op/state/po-theme/values.old"

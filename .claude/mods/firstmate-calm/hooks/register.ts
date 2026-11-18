@@ -374,7 +374,7 @@ export const register: Register = (on) => {
   on("session.start", async ($, e, next) => {
     if (!(await isActivated($))) return next(e);
     await resetSession($);
-    poTheme = await poThemeLoad((path) => readText($, path), { FM_HOME: await $.env.get("FM_HOME"), FM_ROOT_OVERRIDE: await $.env.get("FM_ROOT_OVERRIDE"), FM_CONFIG_OVERRIDE: await $.env.get("FM_CONFIG_OVERRIDE"), FM_STATE_OVERRIDE: await $.env.get("FM_STATE_OVERRIDE") }, $.plugin.root);
+    poTheme = await poThemeLoad((path) => readText($, path), { FM_HOME: await $.env.get("FM_HOME"), FM_ROOT_OVERRIDE: await $.env.get("FM_ROOT_OVERRIDE"), FM_CONFIG_OVERRIDE: await $.env.get("FM_CONFIG_OVERRIDE"), FM_DATA_OVERRIDE: await $.env.get("FM_DATA_OVERRIDE"), FM_STATE_OVERRIDE: await $.env.get("FM_STATE_OVERRIDE") }, $.plugin.root);
     // Notes that cannot start leave Calm and the transcript exactly as they were.
     await startNotes($).catch(() => undefined);
     await $.command.register({

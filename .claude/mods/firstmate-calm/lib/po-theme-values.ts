@@ -32,6 +32,7 @@ export type PoThemeEnvironment = {
   readonly FM_HOME?: string | undefined;
   readonly FM_ROOT_OVERRIDE?: string | undefined;
   readonly FM_CONFIG_OVERRIDE?: string | undefined;
+  readonly FM_DATA_OVERRIDE?: string | undefined;
   readonly FM_STATE_OVERRIDE?: string | undefined;
 };
 
@@ -42,6 +43,8 @@ export type PoThemeFiles = {
   readonly selection: string;
   /** The secondmate-home marker, whose presence makes the inherited Persona block authoritative. */
   readonly secondmate: string;
+  /** data/captain-shared.md, which carries a secondmate home's inherited Persona block. */
+  readonly persona: string;
 };
 
 export const PO_THEME_NAUTICAL: PoTheme = { values: new Map() };
@@ -53,6 +56,7 @@ export function poThemeFiles(env: PoThemeEnvironment, codeRoot: string): PoTheme
     values: `${env.FM_STATE_OVERRIDE || `${home}/state`}/po-theme/values`,
     selection: `${env.FM_CONFIG_OVERRIDE || `${home}/config`}/po-theme`,
     secondmate: `${home}/.fm-secondmate-home`,
+    persona: `${env.FM_DATA_OVERRIDE || `${home}/data`}/captain-shared.md`,
   };
 }
 
@@ -90,10 +94,10 @@ export function poThemeLoadSync(read: (path: string) => string, env: PoThemeEnvi
       return undefined;
     }
   };
-  // The selection decides first, so a nautical primary home reads nothing more.
+  // The selection or the inherited Persona block decides first, so a nautical home reads nothing more.
   const secondmate = text(files.secondmate) !== undefined;
   const selection = secondmate ? undefined : text(files.selection);
-  if (!secondmate && !poThemeSelected(selection)) return PO_THEME_NAUTICAL;
+  if (secondmate ? !poThemeInherited(text(files.persona)) : !poThemeSelected(selection)) return PO_THEME_NAUTICAL;
   return parsePoTheme(text(files.values), selection, secondmate);
 }
 
@@ -116,13 +120,17 @@ export async function poThemeLoad(
   };
   const secondmate = (await text(files.secondmate)) !== undefined;
   const selection = secondmate ? undefined : await text(files.selection);
-  if (!secondmate && !poThemeSelected(selection)) return PO_THEME_NAUTICAL;
+  if (secondmate ? !poThemeInherited(await text(files.persona)) : !poThemeSelected(selection)) return PO_THEME_NAUTICAL;
   return parsePoTheme(await text(files.values), selection, secondmate);
 }
 
 function poThemeSelected(selection: string | undefined): boolean {
   const selected = (selection ?? "").split("\n")[0]!.replace(/\s/g, "");
   return selected !== "" && selected !== "nautical";
+}
+
+function poThemeInherited(persona: string | undefined): boolean {
+  return (persona ?? "").split("\n").includes("<!-- po-theme:persona:start -->");
 }
 
 function codeRootOfPlugin(pluginRoot: string): string {

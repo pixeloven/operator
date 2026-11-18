@@ -8,7 +8,7 @@
 # the label.* and str.* keys are optional elsewhere and derive from the role
 # words. The label values mirror upstream's herdr, Paseo, and away-daemon
 # workspace labels, and the str values upstream's herdr sidebar state and
-# wedge-alarm title, which bin/po-theme-lib.sh also compiles in for the
+# wedge-alarm and usage-alert titles, which bin/po-theme-lib.sh also compiles in for the
 # nautical fast path; `anchors` checks the upstream lines through the hook
 # registry. The str.digest values are the /bearings digest section names, which
 # `anchors` checks in the bearings skill. The str.calm, str.branch, and
@@ -44,6 +44,7 @@ label.afk = "firstmate-afk-daemon"
 
 str.sidebar.needs = "needs-captain"
 str.alert.wedge_title = "firstmate: away-mode escalations WEDGED"
+str.alert.usage_title = "Firstmate: Claude usage"
 str.digest.call = "Captain's Call"
 str.digest.underway = "Underway"
 str.digest.landed = "Recently Landed"

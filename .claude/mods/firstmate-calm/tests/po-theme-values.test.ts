@@ -144,4 +144,22 @@ describe("the values reader", () => {
     expect(poThemeGlyph(poThemeLoadSync(read, { FM_HOME: "/fm/pi" }, "/code"), "anchor")).toBe("⚑");
     expect(poThemeLoadSync(read, {}, "/code")).toBe(PO_THEME_NAUTICAL);
   });
+
+  test("a secondmate home trusts its cache only while it inherits a Persona block", () => {
+    const files = new Map([
+      ["/fm/mate/.fm-secondmate-home", "gfm\n"],
+      ["/fm/mate/state/po-theme/values", OPERATOR_VALUES.replace("kind\tprimary", "kind\tsecondmate")],
+      ["/fm/mate/data/captain-shared.md", "# Shared\n<!-- po-theme:persona:start -->\n## Persona\n<!-- po-theme:persona:end -->\n"],
+      ["/fm/shared/captain-shared.md", "# Shared\n"],
+    ]);
+    const read = (path: string): string => {
+      const text = files.get(path);
+      if (text === undefined) throw new Error(`ENOENT: ${path}`);
+      return text;
+    };
+    expect(poThemeGlyph(poThemeLoadSync(read, { FM_HOME: "/fm/mate" }, "/code"), "ship")).toBe("▸");
+    expect(poThemeLoadSync(read, { FM_HOME: "/fm/mate", FM_DATA_OVERRIDE: "/fm/shared" }, "/code")).toBe(PO_THEME_NAUTICAL);
+    files.set("/fm/mate/data/captain-shared.md", "# Shared\n");
+    expect(poThemeLoadSync(read, { FM_HOME: "/fm/mate" }, "/code")).toBe(PO_THEME_NAUTICAL);
+  });
 });

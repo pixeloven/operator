@@ -342,7 +342,7 @@ resolve_active() {
 # strs_of <kv>: "<key><TAB><string>" for every registered str.* key, using the
 # derived default for an absent key: the needs state is "needs-" and the user
 # word lowercased with spaces as hyphens, the wedge title opens with the
-# product word, the digest's call section is the address word's "<Address>'s
+# product word, the usage-alert title with the capitalized product word, the digest's call section is the address word's "<Address>'s
 # Call", the other digest sections keep their nautical names, and the Calm and
 # supervision menu descriptions and the Calm notice name the product (capitalized
 # where upstream capitalizes it) and call the Calm figure the working animation.
@@ -355,6 +355,7 @@ strs_of() {
       p = v["product"]; P = toupper(substr(p, 1, 1)) substr(p, 2)
       printf "str.sidebar.needs\t%s\n", d("str.sidebar.needs", "needs-" u)
       printf "str.alert.wedge_title\t%s\n", d("str.alert.wedge_title", v["product"] ": away-mode escalations WEDGED")
+      printf "str.alert.usage_title\t%s\n", d("str.alert.usage_title", P ": Claude usage")
       printf "str.digest.call\t%s\n", d("str.digest.call", v["user_address"] "\047s Call")
       printf "str.digest.underway\t%s\n", d("str.digest.underway", "Underway")
       printf "str.digest.landed\t%s\n", d("str.digest.landed", "Recently Landed")
@@ -417,12 +418,11 @@ glyphs_of() {
 # point from GLYPH_ALLOW, and the routine and captain notes stay distinguishable
 # (their glyphs differ, and neither takes the other's upstream glyph).
 check_glyphs() {
-  local k v ship anchor err=0
+  local k v g ok ship anchor err=0
   while IFS="$TAB" read -r k v; do
-    case " $GLYPH_ALLOW " in
-      *" $v "*) ;;
-      *) echo "error: $k: '$v' is not one glyph from the allow-list ($GLYPH_ALLOW)"; err=1 ;;
-    esac
+    ok=0
+    for g in $GLYPH_ALLOW; do [ "$v" = "$g" ] && ok=1; done
+    [ "$ok" = 1 ] || { echo "error: $k: '$v' is not one glyph from the allow-list ($GLYPH_ALLOW)"; err=1; }
   done < <(glyphs_of "$1")
   ship=$(glyphs_of "$1" | get /dev/stdin glyph.ship) anchor=$(glyphs_of "$1" | get /dev/stdin glyph.anchor)
   if [ "$ship" = "$anchor" ]; then
@@ -539,6 +539,7 @@ corpus_collisions() {
     [ "$lv" = "$canon" ] && continue
     n=$(git -C "$CODE_ROOT" grep -i -w -o -F -e "$lv" -- . \
           ':!.agents/skills/po-*' ':!bin/po-*' ':!tests/po-*' ':!docs/adr/' ':!docs/pixeloven/' \
+          ':!.claude/mods/firstmate-calm/lib/po-*' ':!.claude/mods/firstmate-calm/tests/po-*' ':!.pi/extensions/lib/po-*' \
           2>/dev/null | wc -l | tr -d ' ')
     [ "$n" -gt 0 ] || continue
     if get "$kv" "avoid.$lv" >/dev/null 2>&1; then
