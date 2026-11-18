@@ -353,7 +353,9 @@ JS
            '<svg onclick="x"></svg>' '<svg><rect fill="url(#p)"/></svg>' '<svg><use xlink:href="data:image/png;base64,AA"/></svg>' \
            $'<svg><rect\nonload="x"/></svg>' '<svg><image href="//example.invalid/a.png"/></svg>' \
            '<svg><use href="../x.svg#a"/></svg>' '<?xml-stylesheet href="x.css"?><svg/>' \
-           '<svg xmlns:s="http://www.w3.org/2000/svg"><s:script>x</s:script></svg>' '<svg><rect x:onload="x"/><use s:href="x.svg"/></svg>'; do
+           '<svg xmlns:s="http://www.w3.org/2000/svg"><s:script>x</s:script></svg>' '<svg><rect x:onload="x"/></svg>' \
+           '<svg><use s:href="x.svg"/></svg>' '<svg><image><set attributeName="href" to="//x"/></image></svg>' \
+           '<svg><rect><animate attributeName="width" values="1;2"/></rect></svg>'; do
     printf '%s' "$f" > "$home/config/po-themes/assets/poster.svg"
     out=$(FM_HOME="$home" "$PT" validate art 2>&1) && fail "an unsafe SVG image was accepted: $f"
     assert_contains "$out" "may not carry script" "the image refusal for $f does not say why"

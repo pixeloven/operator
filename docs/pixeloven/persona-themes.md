@@ -124,7 +124,7 @@ Assets are data in strict formats, never code:
   - `kind = "frames"` gives `tick_ms` (a whole number from 120 to 1000) and 1-16 frames numbered from 1 without gaps, each with a `frame.<n>.base` and an optional `frame.<n>.top` of 1-12 cells.
     The frames loop at `tick_ms` in Calm's own scheduler time (220 ms per step), the figure sits at the left edge with low water after it, and a row narrower than the widest frame shows water only.
 - An icon is a 24×24 SVG fragment of self-closing `path`, `circle`, `line`, `polyline`, and `rect` elements, at most 32 of them and 8 KiB, whose attributes are path data or numbers from 0 to 24, so it can carry no script, style, or link.
-- An image is a PNG of at most 1 MiB, or an SVG document of at most 256 KiB with no script, style, embedded document, entity, event handler, or reference outside itself.
+- An image is a PNG of at most 1 MiB, or an SVG document of at most 256 KiB with no script, style, embedded document, entity, event handler, animation, or reference outside itself.
 
 An asset that is missing or fails its validator when the harness reads it draws nautical's picture instead, with a warning.
 
