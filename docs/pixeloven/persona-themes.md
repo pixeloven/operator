@@ -180,6 +180,7 @@ The note glyphs change only on screen: the outcome store and the notes the agent
 The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
 The bundled `operator` theme names no pictures yet, so it keeps nautical's sailboat, board icons, and docs pictures.
 Not yet themed, and scheduled by a later ADR-0020 stage: the docs view and its pictures.
+The readiness output of `bin/fm-remote-doctor.sh` is not themed and stays canonical, as the residue table below records.
 
 ## Residue: person-visible strings that stay canonical
 
@@ -194,6 +195,7 @@ Each entry names the ADR-0020 rule that keeps it canonical.
 | Operational input, including the away-mode escalation text, and the steering doorbell line | R2, R4 |
 | Original command names and skill descriptions beside their aliases, and the original command names in a second-mate home, where alias skills are not generated | R3, R4 |
 | Script help, diagnostics, and other output of scripts the agent runs, which the agent translates before speaking | R4 |
+| The readiness output of `bin/fm-remote-doctor.sh`: it carries no persona wording (captain, crewmate, ship, and so on) to theme, only the `Firstmate` owner of the files it installs and the wrapper marker it reads back; the two lines ADR-0020 stage S5 planned to theme drifted upstream | R1, R5 |
 | The text of supervision-branch health notes delivered to the main conversation for action (their glyph is themed), and Pi Calm's stderr diagnostics | R4 |
 | Plugin manifests and third-party product names such as `crew` and `no-mistakes` | R5 |
 

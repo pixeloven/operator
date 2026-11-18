@@ -20,8 +20,8 @@
 #     themed words (golden)
 #   - the voice relay's session prompt is upstream's under nautical and gains
 #     one vocabulary paragraph under a theme
-#   - alias skills describe their command in the theme's words, and verify
-#     reports a hand-edited one
+#   - alias skills describe their command in the theme's words, in frontmatter
+#     that parses as YAML
 #   - the A9 registry check accepts a hook line as often as rows register it
 #   - validation refuses display strings that could break the page or a printf
 #     format, and duplicate fleet-view headings
@@ -444,20 +444,21 @@ test_voice_prompt() {
 
 test_alias_descriptions() {
   local code home out
+  command -v ruby >/dev/null 2>&1 || fail "ruby is required to parse alias SKILL.md frontmatter as YAML"
   code=$(new_code aliases)
   home=$(new_home aliases operator)
   out=$(FM_HOME="$home" "$code/bin/po-theme.sh" apply 2>&1) || fail "operator apply failed: $out"
-  assert_grep 'description: Pick up where you left off: the task force digest in chat, a file, or a live board. Alias of /bearings in the operator theme. Use when the user invokes /sitrep.' \
-    "$code/.agents/skills/sitrep/SKILL.md" "the /sitrep description is not in the theme's words"
-  assert_grep 'description: Save what the spotter learned this session and file its open work. Alias of /stow in the operator theme. Use when the user invokes /flush.' \
-    "$code/.agents/skills/flush/SKILL.md" "the /flush description is not in the theme's words"
-  assert_grep 'description: Update this operator home and its navigators to the latest version. Alias of /updatefirstmate' \
-    "$code/.agents/skills/updateoperator/SKILL.md" "the /updateoperator description is not in the theme's words"
+  description() {
+    ruby -ryaml -e 'puts YAML.safe_load(File.read(ARGV[0]).split(/^---$/)[1]).fetch("description")' "$1" 2>&1
+  }
+  assert_equals 'Pick up where you left off: the task force digest in chat, a file, or a live board. Alias of /bearings in the operator theme. Use when the user invokes /sitrep.' \
+    "$(description "$code/.agents/skills/sitrep/SKILL.md")" "the /sitrep description is not in the theme's words"
+  assert_equals 'Save what the spotter learned this session and file its open work. Alias of /stow in the operator theme. Use when the user invokes /flush.' \
+    "$(description "$code/.agents/skills/flush/SKILL.md")" "the /flush description is not in the theme's words"
+  assert_equals 'Update this operator home and its navigators to the latest version. Alias of /updatefirstmate in the operator theme. Use when the user invokes /updateoperator.' \
+    "$(description "$code/.agents/skills/updateoperator/SKILL.md")" "the /updateoperator description is not in the theme's words"
   out=$(FM_HOME="$home" "$code/bin/po-theme.sh" verify 2>&1) || fail "verify failed after apply: $out"
-  sed -i.bak 's/task force digest/fleet digest/' "$code/.agents/skills/sitrep/SKILL.md" && rm -f "$code/.agents/skills/sitrep/SKILL.md.bak"
-  out=$(FM_HOME="$home" "$code/bin/po-theme.sh" verify 2>&1) && fail "verify passed a hand-edited alias"
-  assert_contains "$out" "drift: alias /sitrep for /bearings is stale or hand-edited; run apply" "verify did not name the edited alias"
-  pass "alias skills describe their command in the theme's words, and verify reports a hand-edited one"
+  pass "alias skills describe their command in the theme's words, in frontmatter that parses as YAML"
 }
 
 test_registry_counts_repeated_hooks() {

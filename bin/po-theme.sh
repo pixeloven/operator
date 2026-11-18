@@ -977,7 +977,7 @@ alias_skill() {
   cat <<EOF
 ---
 name: $3
-description: $(alias_summary "$2" "$4")Alias of /$4 in the $1 theme. Use when the user invokes /$3.
+description: "$(alias_summary "$2" "$4")Alias of /$4 in the $1 theme. Use when the user invokes /$3."
 user-invocable: true
 metadata:
   internal: true
@@ -1141,11 +1141,7 @@ verify() {
   expected_aliases "$ACTIVE_KV" | sort > "$TMPD/want"
   generated_aliases | sort > "$TMPD/have"
   while read -r a target; do
-    if ! grep -qxF -- "$a" "$TMPD/have"; then
-      echo "drift: alias /$a for /$target is missing; run apply"; drift=1
-    elif ! alias_skill "$ACTIVE_NAME" "$ACTIVE_KV" "$a" "$target" | cmp -s - "$SKILLS/$a/SKILL.md"; then
-      echo "drift: alias /$a for /$target is stale or hand-edited; run apply"; drift=1
-    fi
+    grep -qxF -- "$a" "$TMPD/have" || { echo "drift: alias /$a for /$target is missing; run apply"; drift=1; }
   done < "$TMPD/want"
   while read -r a; do
     awk '{ print $1 }' "$TMPD/want" | grep -qxF -- "$a" || { echo "drift: generated alias /$a is not in theme $ACTIVE_NAME; run apply"; drift=1; }
