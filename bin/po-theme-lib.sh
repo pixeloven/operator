@@ -84,7 +84,7 @@ po__fresh() {
   while IFS="$(printf '\t')" read -r k v; do
     case "$k" in name) name=$v ;; source) src=$v ;; kind) kind=$v ;; cache) cache=$v ;; esac
   done < "$vals"
-  [ "$cache" = po-theme-values/2 ] || return 1
+  [ "$cache" = po-theme-values/3 ] || return 1
   home=$(po__home)
   if [ -e "$home/.fm-secondmate-home" ]; then
     [ "$kind" = secondmate ] || return 1

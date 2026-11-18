@@ -46,6 +46,7 @@ import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { Box, Container, Text, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { registerFirstmateTool } from "./lib/fm-native-contract.ts";
+import { poThemeLoadSync, poThemeStr } from "./lib/po-theme-values.ts";
 import {
   afkPostureRecordPresent,
   branchOfferForWake,
@@ -165,6 +166,7 @@ const fmHome = process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root;
 const fmRoot = process.env.FM_ROOT_OVERRIDE || root;
 const state = process.env.FM_STATE_OVERRIDE || `${fmHome}/state`;
 const config = process.env.FM_CONFIG_OVERRIDE || `${fmHome}/config`;
+const poTheme = poThemeLoadSync((path) => readFileSync(path, "utf8"), process.env, root);
 const armScript = `${fmRoot}/bin/fm-watch-arm.sh`;
 const marker = `${state}/.pi-watch-extension-loaded`;
 const handoffDir = `${state}/extensions/pi-primary-watch`;
@@ -1368,7 +1370,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand?.("fm-watch-arm-pi", {
-    description: "Arm firstmate watcher supervision through the Pi extension instead of foreground bash.",
+    description: poThemeStr(poTheme, "watch.arm_command", "Arm firstmate watcher supervision through the Pi extension instead of foreground bash."),
     handler: async (_args, ctx) => {
       const result = activateOwnedWatch(generation);
       ctx.ui.notify(result.message, result.ok ? "info" : "warning");

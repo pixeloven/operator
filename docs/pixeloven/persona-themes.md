@@ -102,20 +102,23 @@ The `label.*` and `str.*` keys are the exception: they are optional, allowed onl
 | `label.primary`, `label.submate`, `label.afk` | the primary home's workspace label, the prefix of a second mate's `<label>-<id>`, and the away-mode daemon workspace; the defaults are `self` and `submate` lowercased with spaces as hyphens, and `<label.primary>-afk-daemon` |
 | `str.sidebar.needs`, `str.alert.wedge_title` | the herdr group state of a task waiting on the user, and the away-mode wedge-alarm notification title; the defaults are `needs-` and `user` lowercased with spaces as hyphens, and `<product>: away-mode escalations WEDGED` |
 | `str.digest.call`, `str.digest.underway`, `str.digest.landed`, `str.digest.charted` | the `/bearings` digest section names; the defaults are `<user_address>'s Call`, `Underway`, `Recently Landed`, and `Charted Next` |
+| `str.calm.name`, `str.calm.command`, `str.calm.pi_command`, `str.branch.model_command`, `str.watch.arm_command` | the name in Pi Calm's notice, and the menu descriptions of Claude Code's and Pi's `/calm`, Pi's `/supervision-model`, and Pi's `/fm-watch-arm-pi`; the defaults name the product, capitalized where upstream capitalizes it, and call the Calm figure the working animation |
+| `glyph.ship`, `glyph.anchor` | the glyph before a routine supervision note and before an outcome for the user; one code point each from a curated allow-list, distinct, and never the other's upstream glyph; the defaults are upstream's ⛵ and ⚓ |
 
 ## Validation
 
 `validate` and every resolution refuse a theme with:
 
 - a missing or unknown key, or a wrong `schema` or `name`;
-- a backtick, `$`, angle bracket, brace, square bracket, pipe, URL, non-printable, or non-ASCII character in any value;
+- a backtick, `$`, angle bracket, brace, square bracket, pipe, URL, non-printable, or non-ASCII character in any value other than a glyph;
 - an authority word such as merge, approve, override, force, discard, delete, never, always, permission, or token in any value, except that a role title may use the noun "force";
 - a role term or product name that is not 1-24 lowercase letters, spaces, or hyphens, a vocative that is not one capitalized word, or seasoning that is not 1-6 comma-separated lowercase words;
 - a no-op reply or bad-news example longer than 60 characters or not opening with the vocative and a comma;
 - two roles sharing a term, a role taking another role's nautical word, or a role named after a status verb, harness, or Relay;
 - an alias that names no upstream skill, shadows an existing skill, or repeats;
 - a label, given or derived, that is not 2-24 lowercase letters, digits, or hyphens starting and ending with a letter or digit, starts with `fm-`, makes the primary and second-mate labels equal or prefix each other or the other role's nautical label, or makes the away-daemon label equal a home label, read as a second-mate label, or prefix a home label;
-- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`), or a digest section name that is not a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes starting with a letter or digit, or repeats another section name.
+- a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`), or a digest section name that is not a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes starting with a letter or digit, or repeats another section name; a menu description (a `str.*command` key) may run to 120 characters and use a status verb as an ordinary word, since no code reads it back;
+- a glyph that is not one code point from the allow-list in `bin/po-theme.sh`, or note glyphs that are shared or swap upstream's.
 
 `validate` also counts each role word's existing uses in the upstream text.
 A user or self word that already appears with another meaning is an error until the theme declares `avoid.<word>`; any other role word is a warning.
@@ -133,8 +136,10 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the words of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, and the wedge-alarm notification title, as listed above.
-Not yet themed, and scheduled by later ADR-0020 stages: supervision-note glyphs, Calm text and animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
+Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, and Pi Calm's notice, as listed above.
+The note glyphs change only on screen: the outcome store and the notes the agent reads keep upstream's glyphs, so Pi shows a note written before a theme was applied with the theme's glyph, while Claude Code keeps a line it already logged as it was.
+The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
+Not yet themed, and scheduled by later ADR-0020 stages: the Calm animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
 
 ## Residue: person-visible strings that stay canonical
 
@@ -149,6 +154,7 @@ Each entry names the ADR-0020 rule that keeps it canonical.
 | Operational input, including the away-mode escalation text, and the steering doorbell line | R2, R4 |
 | Original command names and skill descriptions beside their aliases, and the original command names in a second-mate home, where alias skills are not generated | R3, R4 |
 | Script help, diagnostics, and other output of scripts the agent runs, which the agent translates before speaking | R4 |
+| The text of supervision-branch health notes delivered to the main conversation for action (their glyph is themed), and Pi Calm's stderr diagnostics | R4 |
 | Plugin manifests and third-party product names such as `crew` and `no-mistakes` | R5 |
 
 The agent still reads nautical text and speaks themed words, so occasional leakage is possible and is not mechanically enforced.
