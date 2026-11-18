@@ -31,6 +31,7 @@ import {
   type CalmWorkingShipRun,
   type CalmWorkingShipSprite,
 } from "./fm-calm-working-ship-sprite.ts";
+import { poThemedSprite } from "./po-theme-calm.ts";
 
 export { CALM_WORKING_SHIP_TICK_MS, CALM_WORKING_SHIP_TICKS_PER_MOVE };
 
@@ -63,7 +64,7 @@ function paintRun(run: CalmWorkingShipRun): string {
 }
 
 export function createCalmWorkingShipAnimation(): CalmWorkingShipAnimation {
-  const sprite = createCalmWorkingShipSprite();
+  const sprite = poThemedSprite(createCalmWorkingShipSprite());
   return {
     position: sprite.position,
     direction: sprite.direction,

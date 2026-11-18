@@ -17,6 +17,14 @@
 // store, and every message the model reads keep upstream's ⛵ and ⚓, so a note written
 // under any theme, or before a theme was applied, still renders styled with the glyph
 // of the theme in force.
+//
+// A theme's sprite assets (ADR-0020 decision 10) are read beside the cache, from the
+// assets/ folder `apply` copies them into, and handed out as text: the module that
+// draws one (po-theme-calm.ts) parses and validates it before drawing it. Each load
+// also becomes the theme in force for display code a harness builds before or apart
+// from its load, such as the Calm sprite; it is kept on globalThis because Pi loads
+// each extension without a shared module cache, so a module-level variable could be
+// one copy among several.
 
 /** The cache format this reader accepts; `bin/po-theme.sh refresh` writes it. */
 export const PO_THEME_VALUES_CACHE = "po-theme-values/3";
@@ -26,7 +34,11 @@ export const PO_THEME_NAUTICAL_GLYPHS = { ship: "⛵", anchor: "⚓" } as const;
 
 export type PoThemeGlyph = keyof typeof PO_THEME_NAUTICAL_GLYPHS;
 
-export type PoTheme = { readonly values: ReadonlyMap<string, string> };
+export type PoTheme = {
+  readonly values: ReadonlyMap<string, string>;
+  /** Asset text by theme key, for the `sprite.*` keys whose copied asset could be read. */
+  readonly assets?: ReadonlyMap<string, string>;
+};
 
 export type PoThemeEnvironment = {
   readonly FM_HOME?: string | undefined;
@@ -39,6 +51,8 @@ export type PoThemeEnvironment = {
 export type PoThemeFiles = {
   /** state/po-theme/values. */
   readonly values: string;
+  /** state/po-theme/assets, where `apply` copies the theme's assets. */
+  readonly assets: string;
   /** config/po-theme, the primary home's selection. */
   readonly selection: string;
   /** The secondmate-home marker, whose presence makes the inherited Persona block authoritative. */
@@ -54,6 +68,7 @@ export function poThemeFiles(env: PoThemeEnvironment, codeRoot: string): PoTheme
   const home = env.FM_HOME || env.FM_ROOT_OVERRIDE || codeRoot;
   return {
     values: `${env.FM_STATE_OVERRIDE || `${home}/state`}/po-theme/values`,
+    assets: `${env.FM_STATE_OVERRIDE || `${home}/state`}/po-theme/assets`,
     selection: `${env.FM_CONFIG_OVERRIDE || `${home}/config`}/po-theme`,
     secondmate: `${home}/.fm-secondmate-home`,
     persona: `${env.FM_DATA_OVERRIDE || `${home}/data`}/captain-shared.md`,
@@ -97,8 +112,14 @@ export function poThemeLoadSync(read: (path: string) => string, env: PoThemeEnvi
   // The selection or the inherited Persona block decides first, so a nautical home reads nothing more.
   const secondmate = text(files.secondmate) !== undefined;
   const selection = secondmate ? undefined : text(files.selection);
-  if (secondmate ? !poThemeInherited(text(files.persona)) : !poThemeSelected(selection)) return PO_THEME_NAUTICAL;
-  return parsePoTheme(text(files.values), selection, secondmate);
+  if (secondmate ? !poThemeInherited(text(files.persona)) : !poThemeSelected(selection)) return poThemePublish(PO_THEME_NAUTICAL);
+  const theme = parsePoTheme(text(files.values), selection, secondmate);
+  const assets = new Map<string, string>();
+  for (const [key, path] of poThemeAssetPaths(theme, files)) {
+    const asset = text(path);
+    if (asset !== undefined) assets.set(key, asset);
+  }
+  return poThemePublish(assets.size > 0 ? { ...theme, assets } : theme);
 }
 
 /**
@@ -120,8 +141,48 @@ export async function poThemeLoad(
   };
   const secondmate = (await text(files.secondmate)) !== undefined;
   const selection = secondmate ? undefined : await text(files.selection);
-  if (secondmate ? !poThemeInherited(await text(files.persona)) : !poThemeSelected(selection)) return PO_THEME_NAUTICAL;
-  return parsePoTheme(await text(files.values), selection, secondmate);
+  if (secondmate ? !poThemeInherited(await text(files.persona)) : !poThemeSelected(selection)) return poThemePublish(PO_THEME_NAUTICAL);
+  const theme = parsePoTheme(await text(files.values), selection, secondmate);
+  const assets = new Map<string, string>();
+  for (const [key, path] of poThemeAssetPaths(theme, files)) {
+    const asset = await text(path);
+    if (asset !== undefined) assets.set(key, asset);
+  }
+  return poThemePublish(assets.size > 0 ? { ...theme, assets } : theme);
+}
+
+/**
+ * The copied asset file of each `sprite.*` key the cache names. A name that is not a
+ * plain `.sprite` file name is never read, so a cache cannot point outside assets/.
+ */
+function poThemeAssetPaths(theme: PoTheme, files: PoThemeFiles): [string, string][] {
+  const paths: [string, string][] = [];
+  for (const [key, name] of theme.values) {
+    if (key.startsWith("sprite.") && /^[a-z0-9][a-z0-9-]*\.sprite$/.test(name)) paths.push([key, `${files.assets}/${name}`]);
+  }
+  return paths;
+}
+
+const PO_THEME_IN_FORCE = Symbol.for("pixeloven.po-theme.in-force");
+
+function poThemePublish(theme: PoTheme): PoTheme {
+  try {
+    (globalThis as Record<symbol, unknown>)[PO_THEME_IN_FORCE] = theme;
+  } catch {
+    // A host that freezes its globals keeps nautical display code nautical.
+  }
+  return theme;
+}
+
+/** The theme this process's harness last loaded; nautical before any load. */
+export function poThemeInForce(): PoTheme {
+  const theme = (globalThis as Record<symbol, unknown>)[PO_THEME_IN_FORCE] as PoTheme | undefined;
+  return theme ?? PO_THEME_NAUTICAL;
+}
+
+/** The text of the asset a `sprite.*` key names, when the theme's load could read it. */
+export function poThemeAsset(theme: PoTheme, key: string): string | undefined {
+  return theme.assets?.get(key);
 }
 
 function poThemeSelected(selection: string | undefined): boolean {

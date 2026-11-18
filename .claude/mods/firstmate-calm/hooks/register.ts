@@ -77,6 +77,7 @@ import {
   type HostHealth,
 } from "../lib/fm-branch-notes.ts";
 import { PO_THEME_NAUTICAL, poThemeLoad, poThemeNoteLine, poThemeStr } from "../lib/po-theme-values.ts";
+import { poThemedSprite } from "../lib/po-theme-calm.ts";
 
 /** The slash command the mod serves, the same name as Pi's `/calm`. */
 const CALM_COMMAND = "calm";
@@ -93,7 +94,7 @@ const finalReplies = new Set<string>();
 // Each doorbell's record verdict, by record path. Records are immutable once published
 // but pruned after seven days, so every invalidation drops the cache and rechecks.
 const doorbellVerdicts = new Map<string, Promise<boolean>>();
-const sprite = createCalmWorkingShipSprite();
+const sprite = poThemedSprite(createCalmWorkingShipSprite(), () => poTheme);
 let palette: CalmShipRasterPalette = CALM_SHIP_RASTER_PALETTES.light;
 // Every Spinner site currently drawing the boat, by its requestId, with the mounted
 // Raster size a blit must repeat exactly.
