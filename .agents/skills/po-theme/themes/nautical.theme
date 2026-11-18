@@ -14,7 +14,9 @@
 # `anchors` checks in the bearings skill. The str.calm, str.branch, and
 # str.watch values are the Calm and supervision menu descriptions and the Calm
 # notice name, and the glyph values the supervision-note glyphs, which the Calm
-# mod's lib/po-theme-values.ts also falls back to.
+# mod's lib/po-theme-values.ts also falls back to. No picture key
+# (sprite.calm, icon.*, image.*) appears here: nautical's pictures are
+# upstream's own drawings, which an absent key keeps in every theme.
 schema = "po-theme/2"
 name = "nautical"
 description = "Upstream firstmate's nautical voice"

@@ -41,6 +41,7 @@ cp "$ROOT/.pi/extensions/lib/fm-calm-visibility.ts" "$TMP_ROOT/lib/fm-calm-visib
 cp "$ROOT/.pi/extensions/lib/fm-calm-working-ship.ts" "$TMP_ROOT/lib/fm-calm-working-ship.ts"
 cp "$ROOT/.pi/extensions/lib/fm-calm-working-ship-sprite.ts" "$TMP_ROOT/lib/fm-calm-working-ship-sprite.ts"
 cp "$ROOT/.pi/extensions/lib/po-theme-values.ts" "$TMP_ROOT/lib/po-theme-values.ts"
+cp "$ROOT/.pi/extensions/lib/po-theme-calm.ts" "$TMP_ROOT/lib/po-theme-calm.ts"
 cp "$ROOT/.pi/extensions/lib/fm-operational-input.ts" "$TMP_ROOT/lib/fm-operational-input.ts"
 node - "$TMP_ROOT" "$version" <<'JS'
 const { writeFileSync } = require("node:fs");

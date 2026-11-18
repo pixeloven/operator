@@ -74,3 +74,9 @@ lib	-	tests/fm-pi-primary-live-e2e.test.sh	upstream	cp "$ROOT/.pi/extensions/lib
 lib	-	tests/fm-pi-primary-types.test.sh	upstream	cp "$ROOT/.pi/extensions/lib/po-theme-values.ts" "$TMP_ROOT/lib/po-theme-values.ts"	
 lib	-	tests/fm-watch-recovery-loop.test.sh	upstream	cp "$ROOT/.pi/extensions/lib/po-theme-values.ts" "$repo/.pi/extensions/lib/po-theme-values.ts"	
 lib	-	tests/fm-pi-branch-responsiveness-live-e2e.test.sh	upstream	for lib in fm-async-exec fm-branch-dispatch fm-branch-model-picker fm-calm-visibility fm-native-contract fm-operational-input po-theme-values; do	for lib in fm-async-exec fm-branch-dispatch fm-branch-model-picker fm-calm-visibility fm-native-contract fm-operational-input; do
+lib	-	.claude/mods/firstmate-calm/hooks/register.ts	upstream	import { poThemedSprite } from "../lib/po-theme-calm.ts";	
+sprite.calm	T	.claude/mods/firstmate-calm/hooks/register.ts	upstream	const sprite = poThemedSprite(createCalmWorkingShipSprite(), () => poTheme);	const sprite = createCalmWorkingShipSprite();
+lib	-	.pi/extensions/lib/fm-calm-working-ship.ts	upstream	import { poThemedSprite } from "./po-theme-calm.ts";	
+sprite.calm	T	.pi/extensions/lib/fm-calm-working-ship.ts	upstream	const sprite = poThemedSprite(createCalmWorkingShipSprite());	const sprite = createCalmWorkingShipSprite();
+lib	-	tests/fm-pi-primary-live-e2e.test.sh	upstream	cp "$ROOT/.pi/extensions/lib/po-theme-calm.ts" "$PROJECT/.pi/extensions/lib/po-theme-calm.ts"	
+lib	-	tests/fm-pi-primary-types.test.sh	upstream	cp "$ROOT/.pi/extensions/lib/po-theme-calm.ts" "$TMP_ROOT/lib/po-theme-calm.ts"	

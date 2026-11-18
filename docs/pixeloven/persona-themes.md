@@ -16,6 +16,7 @@ The look of generated pages is a separate, independent choice, which [design sys
 | Slash commands | generated alias skills such as `/sitrep` for `/bearings`, hidden from `git status` through `.git/info/exclude`; primary home only |
 | Herdr and Paseo workspace labels | the home workspace a person sees in the sidebar, such as `spotter` and `navigator-gfm`, and the away-mode daemon's herdr workspace; matching also accepts the nautical names and every label this home applied earlier, so a live workspace is never orphaned |
 | Herdr desktop app space names | the same labels on the spaces the hc backend's terminals show in, while the app window is open; a name a person chose is kept |
+| The Calm working animation in Claude Code and Pi | a `po-sprite/1` asset the theme names, drawn in place of the sailboat; with none, upstream's sailboat frame for frame |
 
 Rules, identifiers, and record formats never change: an instruction that names the captain still binds the same person with exactly the same limits.
 
@@ -86,6 +87,7 @@ A theme is a strict TOML subset, one `key = "value"` per line with `#` comments 
 Bundled themes live in `.agents/skills/po-theme/themes/`; a home may add its own as `config/po-themes/<name>.theme`, which shadows a bundled theme of the same name except `nautical`.
 The bundled `nautical.theme` is the schema: every theme defines exactly its keys, plus any number of `avoid.<word>` entries.
 The `label.*` and `str.*` keys are the exception: they are optional, allowed only under schema `po-theme/2`, and derive from the role words when absent.
+The picture keys (`sprite.calm`, `icon.*`, `image.*`) are optional too and also need `po-theme/2`; an absent one keeps nautical's built-in picture, which is upstream's own drawing.
 
 | Key | Meaning |
 |---|---|
@@ -104,6 +106,27 @@ The `label.*` and `str.*` keys are the exception: they are optional, allowed onl
 | `str.digest.call`, `str.digest.underway`, `str.digest.landed`, `str.digest.charted` | the `/bearings` digest section names; the defaults are `<user_address>'s Call`, `Underway`, `Recently Landed`, and `Charted Next` |
 | `str.calm.name`, `str.calm.command`, `str.calm.pi_command`, `str.branch.model_command`, `str.watch.arm_command` | the name in Pi Calm's notice, and the menu descriptions of Claude Code's and Pi's `/calm`, Pi's `/supervision-model`, and Pi's `/fm-watch-arm-pi`; the defaults name the product, capitalized where upstream capitalizes it, and call the Calm figure the working animation |
 | `glyph.ship`, `glyph.anchor` | the glyph before a routine supervision note and before an outcome for the user; one code point each from a curated allow-list, distinct, and never the other's upstream glyph; the defaults are upstream's ⛵ and ⚓ |
+| `sprite.calm` | the `.sprite` asset that draws the Calm working animation in both harnesses in place of the sailboat |
+| `icon.brand`, `icon.underway` | the `.svg` icon assets for the Bearings board's brand mark and Underway heading, validated and copied now and drawn once the board is themed |
+| `image.banner`, `image.poster` | the `.png` or `.svg` picture assets for the README banner and the supervision-branch poster, validated and copied now and shown once the docs view exists |
+
+### Pictures
+
+A picture key names an asset file: a lowercase name of letters, digits, and hyphens with the kind's extension, at most 64 characters.
+A bundled theme's assets live in `.agents/skills/po-theme/assets/`; a home's own theme looks in `config/po-themes/assets/` first.
+`apply` validates every asset, and `refresh` copies each valid one into `state/po-theme/assets/` beside the values cache, which names it; the harnesses read only that copy, so a picture changes at the next session or load after `apply`.
+A second mate home rebuilds its cache from its inherited values line and finds assets the same way in its own checkout, so a picture that exists only in the primary home's `config/po-themes/assets/` keeps nautical's picture there, with a warning from `refresh`.
+Assets are data in strict formats, never code:
+
+- A sprite is a `po-sprite/1` file in the theme syntax, with `schema = "po-sprite/1"` and a `kind`.
+  Every cell is one terminal column under both harnesses: printable ASCII, U+2500-U+25FF (box drawing, blocks, geometric shapes), or U+2800-U+28FF (braille), at most 4096 bytes in all.
+  - `kind = "glyphs"` gives `top`, exactly 3 cells, and `base`, exactly 5 cells, which replace the sail and the hull while upstream's motion, swell, freeze, and resume carry on unchanged.
+  - `kind = "frames"` gives `tick_ms` (a whole number from 120 to 1000) and 1-16 frames numbered from 1 without gaps, each with a `frame.<n>.base` and an optional `frame.<n>.top` of 1-12 cells.
+    The frames loop at `tick_ms` in Calm's own scheduler time (220 ms per step), the figure sits at the left edge with low water after it, and a row narrower than the widest frame shows water only.
+- An icon is a 24×24 SVG fragment of self-closing `path`, `circle`, `line`, `polyline`, and `rect` elements, at most 32 of them and 8 KiB, whose attributes are path data or numbers from 0 to 24, so it can carry no script, style, or link.
+- An image is a PNG of at most 1 MiB, or an SVG document of at most 256 KiB with no script, style, embedded document, entity, event handler, or reference outside itself.
+
+An asset that is missing or fails its validator when the harness reads it draws nautical's picture instead, with a warning.
 
 ## Validation
 
@@ -118,7 +141,8 @@ The `label.*` and `str.*` keys are the exception: they are optional, allowed onl
 - an alias that names no upstream skill, shadows an existing skill, or repeats;
 - a label, given or derived, that is not 2-24 lowercase letters, digits, or hyphens starting and ending with a letter or digit, starts with `fm-`, makes the primary and second-mate labels equal or prefix each other or the other role's nautical label, or makes the away-daemon label equal a home label, read as a second-mate label, or prefix a home label;
 - a display string, given or derived, longer than 80 characters or containing a status verb, `FIRSTMATE_OP`, a brief heading, or an `fm-` token, a sidebar state that is not label-shaped or equals another group state (`running`, `problem`, `done`), or a digest section name that is not a heading of at most 32 letters, digits, spaces, hyphens, or apostrophes starting with a letter or digit, or repeats another section name; a menu description (a `str.*command` key) may run to 120 characters and use a status verb as an ordinary word, since no code reads it back;
-- a glyph that is not one code point from the allow-list in `bin/po-theme.sh`, or note glyphs that are shared or swap upstream's.
+- a glyph that is not one code point from the allow-list in `bin/po-theme.sh`, or note glyphs that are shared or swap upstream's;
+- a picture key outside the listed set, an asset name that is not a plain file name of the key's kind, or an asset that is missing or fails its format's rules above.
 
 `validate` also counts each role word's existing uses in the upstream text.
 A user or self word that already appears with another meaning is an error until the theme declares `avoid.<word>`; any other role word is a warning.
@@ -136,10 +160,11 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, and Pi Calm's notice, as listed above.
+Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, Pi Calm's notice, and the Calm working animation when the theme names a sprite, as listed above.
 The note glyphs change only on screen: the outcome store and the notes the agent reads keep upstream's glyphs, so Pi shows a note written before a theme was applied with the theme's glyph, while Claude Code keeps a line it already logged as it was.
 The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
-Not yet themed, and scheduled by later ADR-0020 stages: the Calm animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.
+The bundled `operator` theme names no pictures yet, so it keeps nautical's sailboat, board icons, and docs pictures.
+Not yet themed, and scheduled by later ADR-0020 stages: the Bearings board and its icons, the fleet view, the output of human-run commands, and the docs view and its pictures.
 
 ## Residue: person-visible strings that stay canonical
 

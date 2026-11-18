@@ -35,6 +35,9 @@ str.alert.wedge_title = "operator: away-mode escalations WEDGED"
 glyph.ship = "▸"
 glyph.anchor = "⚑"
 
+# No sprite.calm, icon.*, or image.* keys yet: the operator's pictures are
+# still being chosen, so this theme keeps nautical's built-in pictures.
+
 alias.afk = "afk"
 alias.ahoy = "debrief"
 alias.bearings = "sitrep"

@@ -113,7 +113,7 @@ Measured cost of the hooks this record permits: replaying upstream's weekly wind
     - The sailboat, the ⛵ and ⚓ glyphs, and the board's anchor and ship icons are the nautical theme's built-in assets.
 
 11. **Namespaces.**
-    This record extends ADR-0016's claims with `bin/po-theme-lib.sh`, `.agents/skills/po-theme/surfaces.tsv`, `.agents/skills/po-theme/assets/`, `.claude/mods/firstmate-calm/lib/po-*.ts`, `.claude/mods/firstmate-calm/tests/po-*.test.ts`, and the symlink `.pi/extensions/lib/po-theme-values.ts`.
+    This record extends ADR-0016's claims with `bin/po-theme-lib.sh`, `.agents/skills/po-theme/surfaces.tsv`, `.agents/skills/po-theme/assets/`, `.claude/mods/firstmate-calm/lib/po-*.ts`, `.claude/mods/firstmate-calm/tests/po-*.test.ts`, and their symlinks `.pi/extensions/lib/po-*.ts`.
     For an upstream offer, the `po-` prefix becomes upstream's own prefix; no other change is needed.
 
 ## Consequences

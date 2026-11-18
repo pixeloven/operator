@@ -8,8 +8,10 @@
 # slash commands a person types, the herdr and Paseo workspace labels, and the
 # registered display strings (the herdr sidebar state, the wedge-alarm title,
 # the /bearings digest section names the Persona block maps, and the Calm and
-# supervision menu descriptions and Calm notice), and the supervision-note
-# glyphs. It never renames an identifier (script, path, environment variable,
+# supervision menu descriptions and Calm notice), the supervision-note
+# glyphs, and the pictures a theme names as validated data assets (the Calm
+# working animation, and the board icons and docs pictures later stages draw).
+# It never renames an identifier (script, path, environment variable,
 # skill directory, status verb, board payload key, or a brief heading that code
 # parses) and never changes what a rule means.
 #
@@ -72,9 +74,13 @@
 #                                     prompt never carries it)
 #   po-theme.sh label <role>          the workspace label for primary, submate, or
 #                                     afk (bin/po-theme-lib.sh po_label)
-#   po-theme.sh refresh               rebuild state/po-theme/values for this home and
+#   po-theme.sh refresh               rebuild state/po-theme/values for this home,
+#                                     copy the theme's valid picture assets into
+#                                     state/po-theme/assets (warning on an invalid
+#                                     one, which keeps nautical's picture), and
 #                                     record its labels in state/po-theme/history;
-#                                     nautical removes the values file and keeps history
+#                                     nautical removes the values file and assets
+#                                     and keeps history
 #   po-theme.sh relabel [--session S] [--hc] [--dry-run]
 #                                     needs --session, --hc, or both.
 #                                     herdr: rename this home's recorded workspaces in
@@ -161,6 +167,13 @@ ROLE_KEYS='user self worker crew submate fleet scout_task ship_task'
 GLYPH_SHIP=$(printf '\342\233\265')    # U+26F5 sailboat
 GLYPH_ANCHOR=$(printf '\342\232\223')  # U+2693 anchor
 GLYPH_ALLOW="$GLYPH_SHIP $GLYPH_ANCHOR $(printf '\342\227\206 \342\227\207 \342\227\217 \342\227\213 \342\227\211 \342\227\216 \342\226\240 \342\226\241 \342\226\262 \342\226\263 \342\226\266 \342\226\267 \342\226\270 \342\226\271 \342\227\210 \342\232\221 \342\232\220 \342\230\205 \342\230\206 \342\234\246 \342\234\247 \342\214\226')"
+# The picture keys (ADR-0020 decision 10): each names an asset file; absent
+# keeps nautical's built-in picture, which is upstream's own drawing. Bundled
+# assets live in ASSETS; a local theme's own assets in LOCAL_THEMES/assets come
+# first. docs/pixeloven/persona-themes.md owns the asset formats.
+ASSET_KEYS='sprite.calm icon.brand icon.underway image.banner image.poster'
+ASSETS="$SKILLS/po-theme/assets"
+SPRITE_KEY_RE='[a-z][a-z0-9_]*([.][a-z0-9][a-z0-9_-]*)*'
 STATUS_TOKENS='working done blocked paused failed needs-decision resolved note captain-held'
 HARNESS_TOKENS='claude codex opencode pi pi-signed grok kimi cursor omp muse gemini rovo agy devin commandcode polytoken'
 DENY_WORDS='merge approve approval override ignore instruction instructions force discard delete yolo authority permission rule rules must never always sudo token secret password'
@@ -197,13 +210,15 @@ theme_file() {  # <name>: a local theme shadows a bundled one, except nautical
   fi
 }
 
-# parse <file>: key<TAB>value lines; malformed or duplicate lines are errors.
+# parse <file> [<key-regex>]: key<TAB>value lines; malformed or duplicate lines
+# are errors. Theme keys are the default shape; a sprite asset passes its own,
+# whose segments may start with a digit (frame.1.top).
 parse() {
-  awk '
+  awk -v keyre="${2:-[a-z][a-z0-9_]*([.][a-z][a-z0-9_-]*)*}" '
     /^[[:space:]]*(#|$)/ { next }
     {
       line = $0
-      if (line !~ /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_-]*)*[[:space:]]*=[[:space:]]*"[^"\\]*"[[:space:]]*(#.*)?$/) {
+      if (line !~ ("^" keyre "[[:space:]]*=[[:space:]]*\"[^\"\\\\]*\"[[:space:]]*(#.*)?$")) {
         printf "line %d: malformed (expected key = \"value\"): %s\n", NR, line > "/dev/stderr"; bad = 1; next
       }
       key = line; sub(/[[:space:]]*=.*/, "", key)
@@ -453,6 +468,171 @@ check_glyphs() {
   return $err
 }
 
+# asset_file <file-name> <origin>: the asset file a theme names, from a local
+# theme's own config/po-themes/assets first, then the bundled assets; fails
+# when neither has it.
+asset_file() {
+  if [ "$2" = local ] && [ -f "$LOCAL_THEMES/assets/$1" ]; then
+    printf '%s\n' "$LOCAL_THEMES/assets/$1"
+  elif [ -f "$ASSETS/$1" ]; then
+    printf '%s\n' "$ASSETS/$1"
+  else
+    return 1
+  fi
+}
+
+# sprite_cells <text>: the cell count of a sprite row, failing on any glyph
+# outside the sprite allow-list (printable ASCII, U+2500-U+25FF, U+2800-U+28FF),
+# all of which are one terminal column under both harnesses. Bytes are matched
+# in the C locale, so it needs no Unicode-aware awk.
+sprite_cells() {
+  local e2 rest
+  e2=$(printf '\342')
+  rest=$(printf '%s' "$1" | LC_ALL=C sed "s/${e2}[$(printf '\224')-$(printf '\227')][$(printf '\200')-$(printf '\277')]/x/g; s/${e2}[$(printf '\240')-$(printf '\243')][$(printf '\200')-$(printf '\277')]/x/g")
+  if printf '%s' "$rest" | LC_ALL=C grep -q '[^ -~]'; then return 1; fi
+  printf '%s\n' "${#rest}"
+}
+
+# sprite_check <file>: the po-sprite/1 validator; prints "error:" lines.
+# .claude/mods/firstmate-calm/lib/po-theme-calm.ts parses with the same rules
+# before every use.
+sprite_check() {
+  local f=$1 kv="$TMPD/sprite.kv" kind k v n cells err=0 frames=0 tick
+  [ "$(wc -c < "$f" | tr -d ' ')" -le 4096 ] || { echo "error: $f: larger than 4096 bytes"; return 1; }
+  parse "$f" "$SPRITE_KEY_RE" > "$kv" 2> "$TMPD/sprite.err" || { sed "s|^|error: $f: |" "$TMPD/sprite.err"; return 1; }
+  [ "$(get "$kv" schema 2>/dev/null || true)" = po-sprite/1 ] || { echo "error: $f: schema must be \"po-sprite/1\""; return 1; }
+  kind=$(get "$kv" kind 2>/dev/null || true)
+  case "$kind" in
+    glyphs)
+      while IFS="$TAB" read -r k v; do
+        case "$k" in schema|kind|top|base) ;; *) echo "error: $f: unknown key for kind glyphs: $k"; err=1 ;; esac
+      done < "$kv"
+      for k in top:3 base:5; do
+        v=$(get "$kv" "${k%:*}" 2>/dev/null || true)
+        if ! cells=$(sprite_cells "$v"); then echo "error: $f: ${k%:*} has a glyph outside the sprite allow-list"; err=1
+        elif [ "$cells" != "${k#*:}" ]; then echo "error: $f: ${k%:*} must be exactly ${k#*:} cells"; err=1; fi
+      done ;;
+    frames)
+      : > "$TMPD/sprite.frames"
+      while IFS="$TAB" read -r k v; do
+        case "$k" in schema|kind|tick_ms) continue ;; esac
+        n=$(printf '%s\n' "$k" | awk -F . 'NF == 3 && $1 == "frame" && $2 ~ /^[1-9][0-9]?$/ && ($3 == "top" || $3 == "base") { print $2 " " $3 }')
+        [ -n "$n" ] || { echo "error: $f: unknown key for kind frames: $k"; err=1; continue; }
+        printf '%s\n' "$n" >> "$TMPD/sprite.frames"
+        if ! cells=$(sprite_cells "$v"); then echo "error: $f: $k has a glyph outside the sprite allow-list"; err=1
+        elif [ "$cells" -lt 1 ] || [ "$cells" -gt 12 ]; then echo "error: $f: $k must be 1-12 cells"; err=1; fi
+      done < "$kv"
+      tick=$(get "$kv" tick_ms 2>/dev/null || true)
+      case "$tick" in ''|0*|*[!0-9]*) tick=0 ;; esac
+      if [ "${#tick}" -gt 4 ] || [ "$tick" -lt 120 ] || [ "$tick" -gt 1000 ]; then
+        echo "error: $f: tick_ms must be a whole number of milliseconds from 120 to 1000"; err=1
+      fi
+      frames=$(awk '{ print $1 }' "$TMPD/sprite.frames" | sort -un | wc -l | tr -d ' ')
+      if [ "$frames" -lt 1 ] || [ "$frames" -gt 16 ]; then
+        echo "error: $f: needs 1-16 frames"; err=1
+      else
+        n=1
+        while [ "$n" -le "$frames" ]; do
+          grep -qx "$n base" "$TMPD/sprite.frames" || { awk '{ print $1 }' "$TMPD/sprite.frames" | grep -qx "$n" \
+            && echo "error: $f: frame.$n.base is missing" || echo "error: $f: frames must be numbered 1-$frames without gaps"; err=1; }
+          n=$((n + 1))
+        done
+      fi ;;
+    *) echo "error: $f: kind must be \"glyphs\" or \"frames\""; err=1 ;;
+  esac
+  return $err
+}
+
+# icon_check <file>: a 24x24 SVG fragment of self-closing path, circle, line,
+# polyline, and rect elements whose attributes are numbers from 0 to 24 (path
+# data for path); nothing else, so no script, style, or link can ride along.
+icon_check() {
+  local f=$1
+  [ "$(wc -c < "$f" | tr -d ' ')" -le 8192 ] || { echo "error: $f: larger than 8192 bytes"; return 1; }
+  tr '\n\r\t' '   ' < "$f" | LC_ALL=C awk -v file="$f" '
+    function bad(m) { print "error: " file ": " m; failed = 1 }
+    function inbox(v) { return v ~ /^-?[0-9]+([.][0-9]+)?$/ && v + 0 >= 0 && v + 0 <= 24 }
+    { s = s $0 }
+    END {
+      allow["path"] = " d "; allow["circle"] = " cx cy r "; allow["line"] = " x1 y1 x2 y2 "
+      allow["polyline"] = " points "; allow["rect"] = " x y width height rx ry "
+      while (!failed) {
+        sub(/^ +/, "", s); if (s == "") break
+        if (!match(s, /^<[a-z]+( +[a-z0-9-]+="[^"]*")* *\/>/)) { bad("not a fragment of self-closing path, circle, line, polyline, and rect elements"); break }
+        el = substr(s, 2, RLENGTH - 3); s = substr(s, RLENGTH + 1)
+        name = el; sub(/ .*$/, "", name)
+        if (!(name in allow)) { bad("element <" name "> is not allowed"); break }
+        if (++n > 32) { bad("more than 32 elements"); break }
+        rest = substr(el, length(name) + 1); split("", seen)
+        while (match(rest, /[a-z0-9-]+="[^"]*"/)) {
+          pair = substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH)
+          eq = index(pair, "="); a = substr(pair, 1, eq - 1); v = substr(pair, eq + 2); v = substr(v, 1, length(v) - 1)
+          if (!index(allow[name], " " a " ")) { bad("<" name "> may not carry " a); continue }
+          if (a in seen) bad("<" name "> repeats " a)
+          seen[a] = 1
+          if (a == "d") { if (v !~ /^[MmLlHhVvCcSsQqTtAaZz0-9 .,-]+$/) bad("<path> d is not path data") }
+          else if (a == "points") {
+            p = v; gsub(/,/, " ", p); np = split(p, P, " ")
+            if (np < 4 || np % 2) bad("<polyline> points must be coordinate pairs")
+            for (j = 1; j <= np; j++) if (!inbox(P[j])) { bad("<polyline> points must be numbers from 0 to 24"); break }
+          }
+          else if (!inbox(v)) bad("<" name "> " a " must be a number from 0 to 24")
+        }
+      }
+      if (!failed && n == 0) bad("holds no element")
+      exit failed
+    }'
+}
+
+# image_check <file>: a docs-view picture: a PNG of at most 1 MiB, or an SVG
+# document of at most 256 KiB with no script, style, embedded document, entity,
+# event handler, or reference to anything outside itself.
+image_check() {
+  local f=$1 size
+  size=$(wc -c < "$f" | tr -d ' ')
+  case "$f" in
+    *.png)
+      [ "$size" -le 1048576 ] || { echo "error: $f: larger than 1 MiB"; return 1; }
+      [ "$(head -c 8 "$f" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a ] || { echo "error: $f: not a PNG file"; return 1; } ;;
+    *.svg)
+      [ "$size" -le 262144 ] || { echo "error: $f: larger than 256 KiB"; return 1; }
+      LC_ALL=C tr '[:upper:]' '[:lower:]' < "$f" > "$TMPD/image.svg"
+      grep -q '<svg' "$TMPD/image.svg" || { echo "error: $f: not an SVG document"; return 1; }
+      if grep -Eq '<(script|style|foreignobject|iframe|object|embed|!entity|!doctype)|javascript:|@import|url[(]|[[:space:]]on[a-z]+[[:space:]]*=|href[[:space:]]*=[[:space:]]*["'"'"']?[a-z][a-z0-9+.-]*:' "$TMPD/image.svg"; then
+        echo "error: $f: an SVG image may not carry script, style, an embedded document, an entity, an event handler, or an outside reference"; return 1
+      fi ;;
+    *) echo "error: $f: an image is a .png or .svg file"; return 1 ;;
+  esac
+}
+
+# asset_check <key> <file>: the validator for the key's asset kind.
+asset_check() {
+  case "$1" in
+    sprite.*) sprite_check "$2" ;;
+    icon.*) icon_check "$2" ;;
+    image.*) image_check "$2" ;;
+  esac
+}
+
+# asset_rows <kv>: "<key><TAB><file-name>" for every picture key the theme sets
+# with a well-formed name (check_values reports the others).
+asset_rows() {
+  awk -F '\t' -v assets=" $ASSET_KEYS " 'index(assets, " " $1 " ") && $2 ~ /^[a-z0-9][a-z0-9-]*[.](sprite|svg|png)$/' "$1"
+}
+
+# check_assets <kv> <origin>: every picture the theme names exists and passes
+# its validator.
+check_assets() {
+  local k v f err=0
+  while IFS="$TAB" read -r k v; do
+    if ! f=$(asset_file "$v" "$2"); then
+      echo "error: $k: no asset named $v in ${2:+$LOCAL_THEMES/assets or }$ASSETS"; err=1; continue
+    fi
+    asset_check "$k" "$f" | sed "s/^error: /error: $k: /" | grep . && err=1
+  done < <(asset_rows "$1")
+  return $err
+}
+
 # check_values <name> <kv>: schema, shape, and safety findings that need no
 # corpus, in one awk pass so per-spawn resolution stays cheap. Regexes avoid
 # interval expressions, which mawk and older BSD awk do not support. Prints
@@ -461,7 +641,7 @@ check_values() {
   local name=$1 kv=$2 schema_kv="$TMPD/schema.kv" k v canon err=0
   [ -s "$schema_kv" ] || parse "$BUNDLED/nautical.theme" > "$schema_kv" || die "bundled nautical theme is malformed"
   LC_ALL=C awk -F '\t' -v name="$name" -v roles="$ROLE_KEYS" -v tokens="$STATUS_TOKENS $HARNESS_TOKENS relay" \
-    -v deny="$DENY_WORDS" -v roledeny="$ROLE_DENY_WORDS" '
+    -v deny="$DENY_WORDS" -v roledeny="$ROLE_DENY_WORDS" -v assets="$ASSET_KEYS" '
     function bad(m) { print "error: " m; failed = 1 }
     function isrole(k) { return (k in R) || k == "product" || k ~ /_plural$/ }
     function dashed(v) { v = tolower(v); gsub(/ /, "-", v); return v }
@@ -479,11 +659,12 @@ check_values() {
     { val[$1] = $2; keys[++m] = $1 }
     END {
       nr = split(roles, ra, " "); for (i = 1; i <= nr; i++) R[ra[i]] = 1
+      na = split(assets, aa, " "); for (i = 1; i <= na; i++) A[aa[i]] = 1
       nd = split(deny, D, " "); nrd = split(roledeny, RD, " "); nt = split(tokens, T, " ")
       if (val["schema"] != "po-theme/1" && val["schema"] != "po-theme/2") bad("schema must be \"po-theme/1\" or \"po-theme/2\"")
       if (val["name"] != name) bad("name must equal the theme name (" name ")")
       for (i = 1; i <= n; i++) if (!(order[i] in val) && order[i] !~ /^(label|str|glyph)\./) bad("missing key: " order[i])
-      for (i = 1; i <= m; i++) { k = keys[i]; if (k !~ /^avoid\./ && !(k in canon)) bad("unknown key: " k) }
+      for (i = 1; i <= m; i++) { k = keys[i]; if (k !~ /^avoid\./ && !(k in canon) && !(k in A)) bad("unknown key: " k) }
       for (i = 1; i <= m; i++) {
         k = keys[i]; v = val[k]
         if (v ~ /[`$<>{}|]/ || v ~ /\[/ || v ~ /\]/ || index(v, "://")) bad(k ": forbidden character or URL in value")
@@ -505,6 +686,11 @@ check_values() {
         }
         else if (k ~ /^alias\./) { if (v !~ /^[a-z][a-z0-9-]+$/ || length(v) > 31) bad(k ": alias must be 2-31 lowercase letters, digits, or hyphens") }
         else if (k ~ /^avoid\./) { if (length(v) > 120) bad(k ": longer than 120 characters") }
+        else if (k in A) {
+          if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2")
+          ext = (k ~ /^sprite\./) ? "sprite" : (k ~ /^icon\./) ? "svg" : "(png|svg)"
+          if (v !~ ("^[a-z0-9][a-z0-9-]*[.]" ext "$") || length(v) > 64) bad(k ": '"'"'" v "'"'"' must be an asset file name of at most 64 lowercase letters, digits, or hyphens ending in ." (ext == "(png|svg)" ? "png or .svg" : ext))
+        }
         else if (k ~ /^(label|str|glyph)\./) { if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2") }
       }
       lp = ("label.primary" in val) ? val["label.primary"] : dashed(val["self"])
@@ -578,6 +764,7 @@ validate_named() {  # <name>
   f=$(theme_file "$name")
   parse "$f" > "$TMPD/v.kv" 2> "$TMPD/parse.err" || { sed 's/^/error: /' "$TMPD/parse.err"; return 1; }
   check_values "$name" "$TMPD/v.kv" || rc=1
+  check_assets "$TMPD/v.kv" "$(src_of "$f")" || rc=1
   if [ "$(get "$TMPD/v.kv" product 2>/dev/null || true)" = "$(get "$TMPD/v.kv" user 2>/dev/null || true)" ] && [ "$name" != nautical ]; then
     echo "note: product and user share '$(get "$TMPD/v.kv" user)': chat must code-style the product (ADR-0004, G-7)"
   fi
@@ -788,28 +975,48 @@ labels_of() {
 }
 
 # refresh: the values cache bin/po-theme-lib.sh and the Calm mod's
-# lib/po-theme-values.ts read (labels, str.* strings, and glyph.* glyphs,
-# tagged with the cache format both readers require), plus the history of
-# labels this home applied, which keeps older workspace names matchable.
+# lib/po-theme-values.ts read (labels, str.* strings, glyph.* glyphs, and the
+# file names of the theme's pictures, tagged with the cache format both readers
+# require), the pictures themselves copied into assets/ beside it, plus the
+# history of labels this home applied, which keeps older workspace names
+# matchable. A picture that is missing or fails its validator is left out with
+# a warning, so that surface keeps nautical's built-in picture.
 refresh() {
-  local dir="$STATE/po-theme" kind=primary src role v canon
+  local dir="$STATE/po-theme" kind=primary src role v canon k f
   is_secondmate_home && kind=secondmate
   resolve_active
   if [ "$ACTIVE_NAME" = nautical ]; then
     rm -f "$dir/values"
+    rm -rf "$dir/assets"
     echo "values: nautical - no cache"
     return 0
   fi
-  mkdir -p "$dir"
+  mkdir -p "$dir/assets"
   src=${ACTIVE_SRC#inherited:}
   labels_of "$ACTIVE_KV" > "$TMPD/labels"
+  # Assets land before the cache that names them, each replaced atomically.
+  : > "$TMPD/asset.rows"
+  while IFS="$TAB" read -r k v; do
+    if f=$(asset_file "$v" "$ACTIVE_ORIGIN") && asset_check "$k" "$f" > "$TMPD/asset.err"; then
+      cp "$f" "$dir/assets/$v.$$" && mv "$dir/assets/$v.$$" "$dir/assets/$v"
+      printf '%s\t%s\n' "$k" "$v" >> "$TMPD/asset.rows"
+    else
+      echo "warn: $k: asset $v is missing or invalid, so nautical's built-in picture stays" >&2
+    fi
+  done < <(asset_rows "$ACTIVE_KV")
   {
     printf 'cache\tpo-theme-values/3\nkind\t%s\nname\t%s\nsource\t%s\n' "$kind" "$ACTIVE_NAME" "$src"
     sed 's/^/label./' "$TMPD/labels"
     strs_of "$ACTIVE_KV"
     glyphs_of "$ACTIVE_KV"
+    cat "$TMPD/asset.rows"
   } > "$dir/values.$$"
   mv "$dir/values.$$" "$dir/values"
+  # Prune pictures the theme no longer names; another refresh's temporary copy is not one.
+  for f in "$dir/assets"/*; do
+    case "${f##*/}" in *.sprite|*.svg|*.png) ;; *) continue ;; esac
+    awk -F '\t' '{ print $2 }' "$TMPD/asset.rows" | grep -qxF -- "${f##*/}" || rm -f "$f"
+  done
   while IFS="$TAB" read -r role v; do
     case "$role" in primary) canon=firstmate ;; submate) canon=2ndmate ;; *) continue ;; esac
     [ "$v" != "$canon" ] || continue

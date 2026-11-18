@@ -17,7 +17,7 @@ It never renames an identifier (script, path, environment variable, skill direct
 ## Selection
 
 - The selection is the first line of `config/po-theme` in the primary home; absent means `nautical`, which writes nothing and is byte-for-byte upstream behavior.
-- Bundled themes live in `themes/` beside this file; a home may add its own as `config/po-themes/<name>.theme`, copied from a bundled theme and edited, since the bundled nautical theme is the key schema.
+- Bundled themes live in `themes/` beside this file; a home may add its own as `config/po-themes/<name>.theme`, copied from a bundled theme and edited, since the bundled nautical theme is the key schema; its picture assets go in `config/po-themes/assets/`.
 
 ## Switch, add, or edit a theme
 
