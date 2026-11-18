@@ -342,7 +342,7 @@ resolve_active() {
 # strs_of <kv>: "<key><TAB><string>" for every registered str.* key, using the
 # derived default for an absent key: the needs state is "needs-" and the user
 # word lowercased with spaces as hyphens, the wedge title opens with the
-# product word, the usage-alert title with the capitalized product word, the digest's call section is the address word's "<Address>'s
+# product word, the digest's call section is the address word's "<Address>'s
 # Call", the other digest sections keep their nautical names, and the Calm and
 # supervision menu descriptions and the Calm notice name the product (capitalized
 # where upstream capitalizes it) and call the Calm figure the working animation.
@@ -355,7 +355,6 @@ strs_of() {
       p = v["product"]; P = toupper(substr(p, 1, 1)) substr(p, 2)
       printf "str.sidebar.needs\t%s\n", d("str.sidebar.needs", "needs-" u)
       printf "str.alert.wedge_title\t%s\n", d("str.alert.wedge_title", v["product"] ": away-mode escalations WEDGED")
-      printf "str.alert.usage_title\t%s\n", d("str.alert.usage_title", P ": Claude usage")
       printf "str.digest.call\t%s\n", d("str.digest.call", v["user_address"] "\047s Call")
       printf "str.digest.underway\t%s\n", d("str.digest.underway", "Underway")
       printf "str.digest.landed\t%s\n", d("str.digest.landed", "Recently Landed")

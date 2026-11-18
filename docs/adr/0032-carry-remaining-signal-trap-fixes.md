@@ -24,7 +24,7 @@ ADR-0001 remains the default, and inherited files may carry these bounded change
 
 - New `bin/fm-trap-lib.sh`: `fm_trap_exit` moves here unchanged in behavior, gains `--run <action>` to run a cleanup action before the exit, and has no source-time side effects.
 - `bin/fm-wake-lib.sh`: sourcing `bin/fm-trap-lib.sh` in place of its own `fm_trap_exit` definition, and installing the lock-handoff helper's TERM and INT trap through `fm_trap_exit --run`.
-- Signal traps whose action ends the shell, installed through `fm_trap_exit` with the same action and status, plus one line sourcing `bin/fm-trap-lib.sh` where the script does not already load `bin/fm-wake-lib.sh` first: `bin/fm-backlog-handoff.sh`, `bin/fm-claude-stop-autoarm.sh`, `bin/fm-codex-stop-park.sh`, `bin/fm-contributions.sh`, `bin/fm-home-summary-refresh.sh`, `bin/fm-lock.sh`, `bin/fm-mail-check.sh`, `bin/fm-osc7501.sh`, `bin/fm-pr-check.sh`, `bin/fm-pr-health.sh`, `bin/fm-remote-delta-read.sh`, `bin/fm-remote-doctor.sh`, `bin/fm-remote-entrypoint.sh`, `bin/fm-remote-home-provision.sh`, `bin/fm-remote-inherit-push.sh`, `bin/fm-remote-job-worker.sh`, `bin/fm-review-check.sh`, `bin/fm-secondmate-reconcile.sh`, `bin/fm-spawn.sh`, `bin/fm-startup-growth-check.sh`, `bin/fm-supervision-handoff.sh`, `bin/fm-supervision-host.sh`, `bin/fm-tool-update-check.sh`, `bin/fm-wake-grant.sh`, `bin/fm-watch-arm.sh`, `bin/fm-watch.sh`, and `bin/fm-x-lib.sh`.
+- Signal traps whose action ends the shell, installed through `fm_trap_exit` with the same action and status, plus one line sourcing `bin/fm-trap-lib.sh` where the script does not already load `bin/fm-wake-lib.sh` first: `bin/fm-backlog-handoff.sh`, `bin/fm-claude-stop-autoarm.sh`, `bin/fm-codex-stop-park.sh`, `bin/fm-contributions.sh`, `bin/fm-home-summary-refresh.sh`, `bin/fm-lock.sh`, `bin/fm-mail-check.sh`, `bin/fm-osc7501.sh`, `bin/fm-pr-check.sh`, `bin/fm-pr-health.sh`, `bin/fm-remote-delta-read.sh`, `bin/fm-remote-doctor.sh`, `bin/fm-remote-entrypoint.sh`, `bin/fm-remote-home-provision.sh`, `bin/fm-remote-inherit-push.sh`, `bin/fm-remote-job-worker.sh`, `bin/fm-review-check.sh`, `bin/fm-secondmate-reconcile.sh`, `bin/fm-spawn.sh`, `bin/fm-startup-growth-check.sh`, `bin/fm-supervision-handoff.sh`, `bin/fm-supervision-host.sh`, `bin/fm-tool-update-check.sh`, `bin/fm-usage-warner.sh`, `bin/fm-wake-grant.sh`, `bin/fm-watch-arm.sh`, `bin/fm-watch.sh`, and `bin/fm-x-lib.sh`.
 - `bin/fm-lint.sh`: the same trap change, sourcing `bin/fm-trap-lib.sh` only when it is beside the script, and otherwise defining a plain-trap `fm_trap_exit` so a lone copy still runs.
 - `bin/fm-teardown.sh`: `fm-trap-lib.sh` in its list of sources it requires before sourcing them.
 - `docs/scripts.md`: the inventory row for `bin/fm-trap-lib.sh`.
@@ -33,15 +33,15 @@ ADR-0001 remains the default, and inherited files may carry these bounded change
 
 A signal trap whose action can return instead of ending the shell stays a plain trap, because the line that closes the phantom `$(` is a syntax error when it is read.
 That leaves the flag-setting and signal-forwarding traps in `bin/fm-spawn.sh`, `bin/fm-timeout-lib.sh`, and `bin/fm-watch.sh`, `worker_shutdown` in `bin/fm-remote-job-worker.sh`, and the cleanup-only HUP, INT, and TERM traps in `bin/fm-check-register.sh`, `bin/fm-pr-reviewers.sh`, `bin/fm-pr-state.sh`, and `bin/fm-record-export.sh` exposed on Bash 5.2.
-The exiting traps in `bin/fm-afk-launch.sh`, `bin/fm-supervise-daemon.sh`, and `bin/fm-usage-warner.sh` (registered when ADR-0020 stage S3 themed its usage-alert title) also stay plain, because ADR-0020's theme-hook registry holds those upstream files to their registered hook lines and gate A9 rejects any other change.
+The exiting traps in `bin/fm-afk-launch.sh` and `bin/fm-supervise-daemon.sh` also stay plain, because ADR-0020's theme-hook registry holds those upstream files to their registered hook lines and gate A9 rejects any other change.
 
 The change is kept minimal so it can be offered upstream together with ADR-0028's.
 When an upstream synchronization brings an equivalent change, that merge takes upstream's version of these files, the A4 allowlist drops the ones no other ADR still needs, and this ADR and ADR-0028 are superseded by that merge.
 
 ## Consequences
 
-Every signal trap in `bin/` whose action ends the shell, including the lock-handoff helper's, apart from the three theme-registered files, now runs its action and exits on Bash 5.2 when the signal is pending at a `$(` scan, and behaves as before on Bash 3.2 and 5.3.
-The traps whose action can return, and the exiting traps in the three theme-registered files, keep the Bash 5.2 exposure until Bash 5.3 or a different change removes it.
+Every signal trap in `bin/` whose action ends the shell, including the lock-handoff helper's, apart from the two theme-registered files, now runs its action and exits on Bash 5.2 when the signal is pending at a `$(` scan, and behaves as before on Bash 3.2 and 5.3.
+The traps whose action can return, and the exiting traps in the two theme-registered files, keep the Bash 5.2 exposure until Bash 5.3 or a different change removes it.
 `bin/fm-trap-lib.sh` is one more file that any scratch root copying `bin/fm-wake-lib.sh` or a script above must include.
 Until an upstream synchronization brings an equivalent change, every synchronization has these files as an explicit contact surface to review.
 

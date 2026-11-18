@@ -65,7 +65,7 @@ Both rename a space only while it carries the app's automatic name or one of its
 ### Sidebar state and alert title
 
 With Herdr project groups on, a task waiting on the user shows the theme's `str.sidebar.needs` state in the herdr sidebar, `needs-operator` under the bundled operator theme, from the next sync after `apply`.
-The away-mode wedge alarm's macOS and herdr notifications carry the theme's `str.alert.wedge_title`, `operator: away-mode escalations WEDGED` under the operator theme, and the usage warner's macOS notification its `str.alert.usage_title`, `Operator: Claude usage`.
+The away-mode wedge alarm's macOS and herdr notifications carry the theme's `str.alert.wedge_title`, `operator: away-mode escalations WEDGED` under the operator theme.
 Nothing matches either string, so a switch needs no relabel.
 
 ### Digest section names
@@ -99,7 +99,7 @@ The `label.*` and `str.*` keys are the exception: they are optional, allowed onl
 | `alias.<skill>` | the command a person types for each user-invocable upstream skill; the skill's own name means no alias |
 | `avoid.<word>` | for a theme word upstream already uses with another meaning, the plain words to use in chat for that other meaning |
 | `label.primary`, `label.submate`, `label.afk` | the primary home's workspace label, the prefix of a second mate's `<label>-<id>`, and the away-mode daemon workspace; the defaults are `self` and `submate` lowercased with spaces as hyphens, and `<label.primary>-afk-daemon` |
-| `str.sidebar.needs`, `str.alert.wedge_title`, `str.alert.usage_title` | the herdr group state of a task waiting on the user, the away-mode wedge-alarm notification title, and the macOS usage-alert notification title; the defaults are `needs-` and `user` lowercased with spaces as hyphens, `<product>: away-mode escalations WEDGED`, and `<Product>: Claude usage` (the product word capitalized) |
+| `str.sidebar.needs`, `str.alert.wedge_title` | the herdr group state of a task waiting on the user, and the away-mode wedge-alarm notification title; the defaults are `needs-` and `user` lowercased with spaces as hyphens, and `<product>: away-mode escalations WEDGED` |
 | `str.digest.call`, `str.digest.underway`, `str.digest.landed`, `str.digest.charted` | the `/bearings` digest section names; the defaults are `<user_address>'s Call`, `Underway`, `Recently Landed`, and `Charted Next` |
 | `str.calm.name`, `str.calm.command`, `str.calm.pi_command`, `str.branch.model_command`, `str.watch.arm_command` | the name in Pi Calm's notice, and the menu descriptions of Claude Code's and Pi's `/calm`, Pi's `/supervision-model`, and Pi's `/fm-watch-arm-pi`; the defaults name the product, capitalized where upstream capitalizes it, and call the Calm figure the working animation |
 | `glyph.ship`, `glyph.anchor` | the glyph before a routine supervision note and before an outcome for the user; one code point each from a curated allow-list, distinct, and never the other's upstream glyph; the defaults are upstream's ⛵ and ⚓ |
@@ -135,7 +135,7 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm and usage-alert notification titles, Calm's and the supervision commands' menu descriptions, and Pi Calm's notice, as listed above.
+Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, and Pi Calm's notice, as listed above.
 The note glyphs change only on screen: the outcome store and the notes the agent reads keep upstream's glyphs, so Pi shows a note written before a theme was applied with the theme's glyph, while Claude Code keeps a line it already logged as it was.
 The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
 Not yet themed, and scheduled by later ADR-0020 stages: the Calm animation, the Bearings board, the fleet view, the output of human-run commands, and the docs view.

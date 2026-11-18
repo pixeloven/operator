@@ -38,8 +38,7 @@
 #                                    accepted secondmate label prefixes}
 #   po_str <surface.name>            the themed display string for a registered
 #                                    str.<surface.name> key (sidebar.needs,
-#                                    alert.wedge_title, alert.usage_title); fails
-#                                    for any other key
+#                                    alert.wedge_title); fails for any other key
 
 PO_THEME_LIB_ROOT="$(d=${BASH_SOURCE[0]%/*}; [ "$d" != "${BASH_SOURCE[0]}" ] || d=.; cd "${d:-/}/.." && pwd)"
 
@@ -73,7 +72,6 @@ po__str_canonical() {
   case "$1" in
     sidebar.needs) printf 'needs-captain' ;;
     alert.wedge_title) printf 'firstmate: away-mode escalations WEDGED' ;;
-    alert.usage_title) printf 'Firstmate: Claude usage' ;;
     *) return 1 ;;
   esac
 }

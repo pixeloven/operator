@@ -84,6 +84,8 @@ MAX_LINE=1000
 
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-trap-lib.sh
+. "$SCRIPT_DIR/fm-trap-lib.sh"
 # shellcheck source=bin/fm-pr-lib.sh
 . "$SCRIPT_DIR/fm-pr-lib.sh"
 # shellcheck source=bin/fm-line-cap-lib.sh
@@ -92,8 +94,6 @@ MAX_LINE=1000
 . "$SCRIPT_DIR/fm-check-lib.sh"
 # shellcheck source=bin/fm-quota-axi-lib.sh
 . "$SCRIPT_DIR/fm-quota-axi-lib.sh"
-# shellcheck source=bin/po-theme-lib.sh
-. "$SCRIPT_DIR/po-theme-lib.sh"
 
 usage() {
   cat <<'EOF'
@@ -236,8 +236,8 @@ usage_warner_notify() {  # <summary>
     return 1
   }
   osascript -e 'on run argv' \
-    -e 'display notification (item 1 of argv) with title (item 2 of argv)' \
-    -e 'end run' "$summary" "$(po_str alert.usage_title)" >/dev/null 2>&1
+    -e 'display notification (item 1 of argv) with title "Firstmate: Claude usage"' \
+    -e 'end run' "$summary" >/dev/null 2>&1
 }
 
 # --- de-dupe record -------------------------------------------------------
@@ -486,7 +486,7 @@ action_arm() {
   fi
   # The shim exists unbound from the rename until the register returns, so a
   # signal in that window rolls back the same way a failure does.
-  trap arm_interrupted HUP INT TERM
+  fm_trap_exit --run arm_interrupted 1 HUP INT TERM
   if ! shim_write "$want"; then
     trap - HUP INT TERM
     arm_rollback

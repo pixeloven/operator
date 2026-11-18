@@ -12,3 +12,4 @@
 .agents/skills/bearings/assets/board-template.html	wait on you, captain	S5: board summary line, including its "nothing needs you" branch; themed by stage S5
 .agents/skills/bearings/assets/board-template.html	ask firstmate for the full chart	S5: board "more" chips; themed by stage S5
 .omp/extensions/fm-primary-omp-watch.ts	Arm firstmate watcher supervision through the omp extension	S3: omp /fm-watch-arm-omp command description, the sibling of the Pi one stage S3 themes
+bin/fm-usage-warner.sh	with title "Firstmate: Claude usage"	S3: macOS usage-alert title, person-facing notification text that S3 leaves nautical; it stays residue until the A9 theme hook registry can carry ADR-0032's signal-trap lines in this file, a follow-up rather than part of S3
