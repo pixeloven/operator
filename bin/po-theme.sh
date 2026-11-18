@@ -404,7 +404,8 @@ resolve_active() {
 # says "captain" and "firstmate"; the fleet view's title and second-mate
 # heading title-case the fleet and submate_plural words, and its Under Way
 # heading keeps its name; the human inbox commands use the self word where
-# upstream says "firstmate" and say "no <workers> active" for an idle home.
+# upstream says "firstmate" and say "no <workers> active" for an idle home;
+# the remote doctor's not-ready verdict says "remote <submate>".
 strs_of() {
   awk -F '\t' '
     function d(k, def) { return (k in v) ? v[k] : def }
@@ -435,6 +436,7 @@ strs_of() {
       printf "str.fleet.secondmates\t%s\n", d("str.fleet.secondmates", title(v["submate_plural"]))
       printf "str.inbox.agent\t%s\n", d("str.inbox.agent", v["self"])
       printf "str.inbox.idle\t%s\n", d("str.inbox.idle", "no " v["worker_plural"] " active")
+      printf "str.doctor.submate\t%s\n", d("str.doctor.submate", "remote " v["submate"])
     }
   ' "$1"
 }

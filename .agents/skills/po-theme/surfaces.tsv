@@ -9,6 +9,8 @@
 # rows name the lines `bin/po-theme.sh render-board` changes (a str.* key's
 # nautical value inside the line, an icon.* key's <svg> content, and the line
 # design.css injects the design system after).
+# A registered file that also carries an accepted non-theme fork patch lists
+# those lines as `lib` plumbing rows, so A9 still holds it to its pin diff.
 # bin/po-theme.sh reads it for `registry` (gates A4 and A9), `anchors` (A10),
 # and `render-board`.
 lib	-	bin/backends/herdr.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
@@ -123,3 +125,11 @@ str.digest.call	T	.agents/skills/bearings/assets/board-template.html	upstream	"C
 str.board.user	T	.agents/skills/bearings/assets/board-template.html	upstream	/* captain-facing rows name the repo; the internal task id shows only when	/* captain-facing rows name the repo; the internal task id shows only when
 str.board.self	T	.agents/skills/bearings/assets/board-template.html	upstream	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreQueued + " more queued - ask firstmate for the full chart"));	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreQueued + " more queued - ask firstmate for the full chart"));
 str.board.self	T	.agents/skills/bearings/assets/board-template.html	upstream	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreWarnings + " more repair warning" + (chartedMoreWarnings === 1 ? "" : "s") + " - ask firstmate for the full chart"));	ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreWarnings + " more repair warning" + (chartedMoreWarnings === 1 ? "" : "s") + " - ask firstmate for the full chart"));
+lib	-	bin/fm-remote-doctor.sh	upstream	# shellcheck source=bin/fm-trap-lib.sh	
+lib	-	bin/fm-remote-doctor.sh	upstream	. "$SCRIPT_DIR/fm-trap-lib.sh"	
+lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 129 HUP	trap 'exit 129' HUP
+lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 130 INT	trap 'exit 130' INT
+lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 143 TERM	trap 'exit 143' TERM
+lib	-	bin/fm-remote-doctor.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
+lib	-	bin/fm-remote-doctor.sh	upstream	. "$SCRIPT_DIR/po-theme-lib.sh"	
+str.doctor.submate	T	bin/fm-remote-doctor.sh	upstream	printf 'error: this host is not ready for a %s%s\n' "$(po_str doctor.submate)" "${NAMES:+; unresolved: $NAMES}" >&2	printf 'error: this host is not ready for a remote second mate%s\n' "${NAMES:+; unresolved: $NAMES}" >&2

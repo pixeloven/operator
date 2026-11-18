@@ -18,6 +18,9 @@
 #   - the fleet view and the inbox note and status output are upstream's at the
 #     pin under nautical (golden), and differ under operator in exactly the
 #     themed words (golden)
+#   - the remote doctor's output is upstream's at the pin under nautical
+#     (golden), and its not-ready verdict names a remote navigator under
+#     operator
 #   - the voice relay's session prompt is upstream's under nautical and gains
 #     one vocabulary paragraph under a theme
 #   - alias skills describe their command in the theme's words, in frontmatter
@@ -389,6 +392,29 @@ test_inbox_golden() {
   pass "the inbox note and status output is upstream's under nautical and themes only its words under operator"
 }
 
+remote_doctor() {  # <bin> <home>: the readiness report of a host with no remote tools
+  local run="$TMP_ROOT/remote-doctor-host"
+  mkdir -p "$run"
+  env -i HOME="$run" FM_HOME="$2" PATH=/usr/bin:/bin /bin/bash "$1/fm-remote-doctor.sh" 2>&1
+}
+
+test_remote_doctor_golden() {
+  local naut op up out
+  naut=$(new_home doctor-nautical)
+  op=$(new_home doctor-operator operator)
+  out=$(remote_doctor "$ROOT/bin" "$naut")
+  up=$(upstream_bin fm-remote-doctor.sh)
+  if [ -n "$up" ]; then
+    assert_equals "$(remote_doctor "$up" "$naut")" "$out" "the nautical remote doctor output differs from upstream's at the pin"
+  else
+    printf 'note: upstream pin %s is not in this clone; nautical remote doctor compared to the golden verdict only\n' "${PIN:-?}"
+  fi
+  assert_contains "$out" "error: this host is not ready for a remote second mate; unresolved: " "the nautical verdict is not upstream's"
+  assert_equals "$(printf '%s\n' "$out" | sed 's/not ready for a remote second mate;/not ready for a remote navigator;/')" \
+    "$(remote_doctor "$ROOT/bin" "$op")" "the operator remote doctor output differs from the nautical one in more than its verdict"
+  pass "the remote doctor is upstream's under nautical and themes only its verdict under operator"
+}
+
 # session_prompt <home>: the system text the voice relay sends a new model
 # session from that home, with the Bedrock client faked out.
 session_prompt() {
@@ -511,6 +537,7 @@ test_board_icons
 test_board_design_injection
 test_fleet_view_golden
 test_inbox_golden
+test_remote_doctor_golden
 test_voice_prompt
 test_alias_descriptions
 test_registry_counts_repeated_hooks

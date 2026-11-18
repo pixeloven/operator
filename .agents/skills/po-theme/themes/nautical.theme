@@ -17,7 +17,8 @@
 # mod's lib/po-theme-values.ts also falls back to. The str.board values are the
 # Bearings board's literals that `render-board` replaces, the str.fleet values
 # the fleet view's headings, and the str.inbox values the words of the human
-# inbox commands; `anchors` checks each in its registered upstream line. No picture key
+# inbox commands, and str.doctor.submate the remote doctor's not-ready
+# verdict; `anchors` checks each in its registered upstream line. No picture key
 # (sprite.calm, icon.*, image.*) appears here: nautical's pictures are
 # upstream's own drawings, which an absent key keeps in every theme.
 schema = "po-theme/2"
@@ -67,6 +68,7 @@ str.fleet.underway = "Under Way"
 str.fleet.secondmates = "Secondmates"
 str.inbox.agent = "firstmate"
 str.inbox.idle = "no workers on deck"
+str.doctor.submate = "remote second mate"
 
 glyph.ship = "⛵"
 glyph.anchor = "⚓"

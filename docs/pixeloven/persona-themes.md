@@ -20,6 +20,7 @@ The look of generated pages is a separate, independent choice, which [design sys
 | The Bearings board (`/bearings lavish`) | its title, wordmark, section names, call-answer text, and the words for the user and the agent, plus the theme's brand and Underway icons, through `bin/po-theme.sh render-board`; the template stays upstream-identical |
 | The fleet view (`bin/fm-fleet-view.sh`) | its title and its Under Way and second-mate headings |
 | The human inbox commands (`bin/fm-inbox.sh` note and status) | the agent's name and the idle-home line |
+| The remote doctor's verdict (`bin/fm-remote-doctor.sh`) | the second-mate words of its not-ready verdict line |
 | The voice relay's spoken answers | one vocabulary paragraph after the voice model's system text, so it says the theme's words aloud |
 | Alias-skill menu descriptions | one sentence per alias saying what the command does in the theme's words |
 
@@ -122,6 +123,7 @@ The picture keys (`sprite.calm`, `icon.*`, `image.*`) are optional too and also 
 | `str.board.title`, `str.board.brand`, `str.board.user`, `str.board.self` | the Bearings board's page title, its wordmark, and the words it uses for the user and the agent; the defaults are `<Alias> - <fleet> board` from the `/bearings` alias, that alias, and the `user` and `self` words |
 | `str.fleet.title`, `str.fleet.underway`, `str.fleet.secondmates` | the fleet view's title and headings; the defaults are the `fleet` word title-cased plus ` View`, `Under Way`, and the `submate_plural` word title-cased |
 | `str.inbox.agent`, `str.inbox.idle` | the agent's name in the inbox commands' note and status output, and the status line for a home with no workers; the defaults are the `self` word and `no <worker_plural> active` |
+| `str.doctor.submate` | the words for a remote second mate in `bin/fm-remote-doctor.sh`'s not-ready verdict, `error: this host is not ready for a remote second mate`; the default is `remote <submate>` |
 | `icon.brand`, `icon.underway` | the `.svg` icon assets for the Bearings board's brand mark and Underway heading |
 | `image.banner`, `image.poster` | the `.png` or `.svg` picture assets for the README banner and the supervision-branch poster, validated and copied now and shown once the docs view exists |
 
@@ -175,12 +177,12 @@ The Persona block tells the agent to capitalize a role word only where a sentenc
 Architectural text never changes under any theme: file, directory, script, and skill directory names, environment variables and config keys, identifiers and parsed formats, routing keys, canonical command and skill names, text whose primary reader is an agent, and attribution or third-party product names.
 Everything else a person sees or hears without an agent in between is themed.
 
-Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases and their menu descriptions, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, Pi Calm's notice, the Calm working animation when the theme names a sprite, the Bearings board and its icons, the fleet view's headings, the inbox commands' note and status words, and the voice relay's spoken words, as listed above.
+Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases and their menu descriptions, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, Pi Calm's notice, the Calm working animation when the theme names a sprite, the Bearings board and its icons, the fleet view's headings, the inbox commands' note and status words, the remote doctor's not-ready verdict, and the voice relay's spoken words, as listed above.
 The note glyphs change only on screen: the outcome store and the notes the agent reads keep upstream's glyphs, so Pi shows a note written before a theme was applied with the theme's glyph, while Claude Code keeps a line it already logged as it was.
 The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
 The bundled `operator` theme names no pictures yet, so it keeps nautical's sailboat, board icons, and docs pictures.
 Not yet themed, and scheduled by a later ADR-0020 stage: the docs view and its pictures.
-The readiness output of `bin/fm-remote-doctor.sh` is not themed and stays canonical, as the residue table below records.
+In `bin/fm-remote-doctor.sh` only the not-ready verdict line is themed; the rest of its readiness output stays canonical, as the residue table below records.
 
 ## Residue: person-visible strings that stay canonical
 
@@ -195,7 +197,7 @@ Each entry names the ADR-0020 rule that keeps it canonical.
 | Operational input, including the away-mode escalation text, and the steering doorbell line | R2, R4 |
 | Original command names and skill descriptions beside their aliases, and the original command names in a second-mate home, where alias skills are not generated | R3, R4 |
 | Script help, diagnostics, and other output of scripts the agent runs, which the agent translates before speaking | R4 |
-| The readiness output of `bin/fm-remote-doctor.sh`: it carries no persona wording (captain, crewmate, ship, and so on) to theme, only the `Firstmate` owner of the files it installs and the wrapper marker it reads back; the two lines ADR-0020 stage S5 planned to theme drifted upstream | R1, R5 |
+| The rest of `bin/fm-remote-doctor.sh`'s readiness output beside its themed not-ready verdict: the `check`, `fix`, and `action` lines the agent reads, the `docs/remote-secondmates.md` path, the `Firstmate` owner of the files it installs, and the wrapper marker it reads back | R1, R4, R5 |
 | The text of supervision-branch health notes delivered to the main conversation for action (their glyph is themed), and Pi Calm's stderr diagnostics | R4 |
 | Plugin manifests and third-party product names such as `crew` and `no-mistakes` | R5 |
 

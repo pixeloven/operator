@@ -38,8 +38,8 @@
 #                                    accepted secondmate label prefixes}
 #   po_str <surface.name>            the themed display string for a registered
 #                                    str.<surface.name> key (sidebar.needs,
-#                                    alert.wedge_title, fleet.*, inbox.*); fails
-#                                    for any other key
+#                                    alert.wedge_title, fleet.*, inbox.*,
+#                                    doctor.submate); fails for any other key
 #   po_jq_strs <surface>             JSON for jq --argjson: {"<name>": string} for
 #                                    every registered str.<surface>.<name> key
 #                                    (fleet); fails for any other surface
@@ -81,6 +81,7 @@ po__str_canonical() {
     fleet.secondmates) printf 'Secondmates' ;;
     inbox.agent) printf 'firstmate' ;;
     inbox.idle) printf 'no workers on deck' ;;
+    doctor.submate) printf 'remote second mate' ;;
     *) return 1 ;;
   esac
 }
