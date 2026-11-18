@@ -78,7 +78,7 @@ Nothing matches either string, so a switch needs no relabel.
 
 ### The Bearings board
 
-`bin/fm-bearings-board.sh` builds the board from `bin/po-theme.sh render-board`'s output, which changes only the template lines `surfaces.tsv` registers for it: the `str.board.*` and `str.digest.*` strings replace their nautical words inside each line, so the page reads, for example, `Operator's Call`, `Sitrep - task force board`, and `ask spotter to rebuild the board` under the operator theme, and the theme's `icon.brand` and `icon.underway` pictures replace the anchor and the ship.
+`bin/fm-bearings-board.sh` builds the board from `bin/po-theme.sh render-board`'s output, which changes only the template lines `surfaces.tsv` registers for it: the `str.board.*` and `str.digest.*` strings replace their nautical words inside each line, so the page reads, for example, `Sitrep - task force board` and `ask spotter to rebuild the board` under the operator theme, and the theme's `icon.brand` and `icon.underway` pictures replace the anchor and the ship.
 It reads the strings and pictures from the values cache, revalidates each icon, and prints the template byte for byte under nautical words and the Firstmate Default, or whenever the theme cannot be resolved.
 The board's payload keys and its answer context (`fm-bearings-answer.v1`) never change, so an answer from a themed board closes a held call exactly as before.
 A design system other than the Firstmate Default is injected after the template's styles, as [design systems](design-systems.md) describes.
