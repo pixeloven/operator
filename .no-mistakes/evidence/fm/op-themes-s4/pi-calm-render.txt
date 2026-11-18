@@ -1,0 +1,53 @@
+=== nautical (no asset) (Pi createCalmWorkingShipAnimation, width 40) ===
+-- frame 0
+ ◿│◣
+╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄▄▄
+-- frame 1
+  ◿│◣
+▁╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄▄
+-- frame 2
+   ◿│◣
+▁▁╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄
+-- frame 3
+    ◿│◣
+▁▁▁╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃
+=== art theme, glyphs asset top=/#+ base=[===] (Pi createCalmWorkingShipAnimation, width 40) ===
+-- frame 0
+ /#+
+[===]▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄▄▄
+-- frame 1
+  /#+
+▁[===]▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄▄
+-- frame 2
+   /#+
+▁▁[===]▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄
+-- frame 3
+    /#+
+▁▁▁[===]▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃
+=== art theme, frames asset (2 frames, 440ms) (Pi createCalmWorkingShipAnimation, width 40) ===
+-- frame 0
+<>
+AB▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+-- frame 1
+<>
+AB▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+-- frame 2
+<>
+AB▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+-- frame 3
+<>
+AB▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+warn: sprite.calm: asset boat.sprite is missing or invalid, so nautical's built-in picture stays
+=== art theme, invalid asset -> sailboat (Pi createCalmWorkingShipAnimation, width 40) ===
+-- frame 0
+ ◿│◣
+╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄▄▄
+-- frame 1
+  ◿│◣
+▁╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄▄
+-- frame 2
+   ◿│◣
+▁▁╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃▄
+-- frame 3
+    ◿│◣
+▁▁▁╲▁▁▁╱▁▁▁▁▁▂▂▃▃▃▄▄▄▄▄▃▃▃▂▂▁▁▁▁▁▁▂▂▂▃▃▃

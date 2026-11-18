@@ -1,0 +1,110 @@
+### validate image.banner = ok-gradient
+svg: <svg xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g"/></defs><pattern patternContentUnits="objectBoundingBox"/><rect fill="url(#g)" width="4" height="4"/><text>Tom &amp; Jerry &lt;3</text></svg>
+error: icon.brand: $LAB/ok-gradient/config/po-themes/assets/brand.svg: not a fragment of self-closing path, circle, line, polyline, and rect elements
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-charref-name
+svg: <svg><rect fill="&#117;rl(https://e.invalid/p)"/></svg>
+error: image.banner: $LAB/bad-charref-name/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-charref-paren
+svg: <svg><rect fill="url&#40;https://e.invalid/p)"/></svg>
+error: image.banner: $LAB/bad-charref-paren/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-hex-charref
+svg: <svg><rect fill="&#X75;rl(https://e.invalid/p)"/></svg>
+error: image.banner: $LAB/bad-hex-charref/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-css-escape
+svg: <svg><rect style="fill:\75 rl(https://e.invalid/p)"/></svg>
+error: image.banner: $LAB/bad-css-escape/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-named-entity
+svg: <svg><text>&ext;</text></svg>
+error: image.banner: $LAB/bad-named-entity/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-outside-url
+svg: <svg><rect fill="url(https://e.invalid/p)"/></svg>
+error: image.banner: $LAB/bad-outside-url/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-href
+svg: <svg><use href="//evil.invalid/x.svg"/></svg>
+error: image.banner: $LAB/bad-href/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-script
+svg: <svg xmlns:s="http://www.w3.org/2000/svg"><s:script>x</s:script></svg>
+error: image.banner: $LAB/bad-script/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### validate image.banner = bad-animate-href
+svg: <svg><image><set attributeName="href" to="https://e.invalid/a.png"/></image></svg>
+error: image.banner: $LAB/bad-animate-href/config/po-themes/assets/b.svg: an SVG image may not carry script, style, an embedded document, an entity, a character reference, an escape, an event handler, an animation, or an outside reference
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+
+### bad sprite (emoji, double-width) in sprite.calm
+error: icon.brand: $LAB/ok-gradient/config/po-themes/assets/brand.svg: not a fragment of self-closing path, circle, line, polyline, and rect elements
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 647 times upstream; avoid.operator covers it
+exit=1
+### accepted: harmless gradient/pattern SVG image + valid icon + glyphs sprite
+validate: art ok
+exit=0
+
+### refused: icon with <script>
+error: icon.brand: $LAB/ok-gradient/config/po-themes/assets/brand.svg: not a fragment of self-closing path, circle, line, polyline, and rect elements
+exit=1
+
+### refused: sprite with a double-width emoji
+cp: /boat.bak: Read-only file system
+error: sprite.calm: $LAB/ok-gradient/config/po-themes/assets/boat.sprite: top has a glyph outside the sprite allow-list
+exit=1
+
+### refresh after the broken sprite: left out with a warning
+warn: sprite.calm: asset boat.sprite is missing or invalid, so nautical's built-in picture stays
+values: art labels and strings written to $LAB/ok-gradient/state/po-theme/values
+exit=0
+assets:
+b.svg
+brand.svg
+cp: /boat.bak: No such file or directory
+
+### refresh with valid assets
+warn: sprite.calm: asset boat.sprite is missing or invalid, so nautical's built-in picture stays
+values: art labels and strings written to $LAB/ok-gradient/state/po-theme/values
+exit=0
+b.svg
+brand.svg
+image.banner	b.svg
+icon.brand	brand.svg
+
+### switch to nautical: assets removed
+values: nautical - no cache
+exit=0
+ls: $LAB/ok-gradient/state/po-theme/assets: No such file or directory

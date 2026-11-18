@@ -1,0 +1,8 @@
+ok - nautical: the wrapper's frame stream and motion match upstream's sprite for 1,000 ticks at widths 8-120, and Pi's animation paints exactly upstream's frames
+ok - a glyphs asset keeps upstream's motion, swell, rows, and column counts, and redraws only the sail and hull
+ok - a frames asset loops at its tick in scheduler time, freezes, resumes, resets, and falls back to water when too narrow
+ok - an asset that does not parse draws upstream's sailboat, with exactly one warning
+ok - Pi loads the theme and its copied asset from the home refresh wrote, picks it up on the next frame, and never reads outside assets/
+ok - the sprite validator and the TypeScript parser agree on a corpus; icon, image, and picture-key checks refuse what they must, naming why
+ok - refresh copies valid assets beside the cache, leaves out and prunes an invalid one with a warning, and nautical removes them
+ok - apply copies the theme's sprite beside the values cache and refuses an invalid one without touching the copy

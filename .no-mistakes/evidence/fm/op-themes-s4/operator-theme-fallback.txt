@@ -1,0 +1,4 @@
+### bundled operator theme (art deferred -> nautical fallback)
+validate: operator ok
+values: operator labels and strings written to $LAB/op/state/po-theme/values
+0
