@@ -10,6 +10,10 @@
 #     written to the home
 #   - operator: the primary labels `spotter` and `spotter-afk-daemon`, and a
 #     secondmate home inheriting the block labels itself `navigator-<id>`
+#   - provisioning: a new navigator home receives the primary's block through
+#     the spawn-time inheritance propagation and creates its workspace as
+#     `navigator-<id>`, also from an older apply's block lacking newer keys
+#     (verify then names them); an unthemed primary provisions `2ndmate-<id>`
 #   - accept-set: an operator home adopts a live `2ndmate-gfm` workspace without
 #     creating one, resolves a live `2ndmate-gfm` or `firstmate` workspace as
 #     the projection parent of a worker spawned with no launcher pane, and
@@ -184,6 +188,64 @@ test_operator_labels() {
   assert_contains "$(cat "$TMP_ROOT/calls")" "--title navigator-gfm" "the Paseo workspace was not titled navigator-gfm"
   assert_equals "primary	spotter" "$(grep '^primary' "$home/state/po-theme/history")" "the primary label was not recorded in history"
   pass "operator gives spotter and spotter-afk-daemon, and an inheriting secondmate names itself navigator-gfm"
+}
+
+# provision <primary> <id> <home-name>: a fresh secondmate home that received
+# the primary's inherited local material through the same propagation a
+# --secondmate spawn runs before it ensures the home's workspace.
+provision() {
+  local mate
+  mate=$(new_mate "$3" "$2")
+  FM_CONFIG_INHERIT_REPORT="$TMP_ROOT/$3.report" bash -c '. "$0/bin/fm-config-inherit-lib.sh"; propagate_secondmate_inheritance "$1" "$2"' \
+    "$ROOT" "$1" "$mate" >/dev/null 2>&1 || fail "inheritance propagation into $3 failed"
+  printf '%s\n' "$mate"
+}
+
+# shared_file <home> [<theme>]: the primary's data/captain-shared.md as apply
+# leaves it, with <theme>'s Persona block when one is given.
+shared_file() {
+  {
+    printf '# Shared captain preferences\n\nThis file is main-authoritative in the main firstmate home.\n'
+    printf 'It is read-only in secondmate homes and must not be edited there.\n'
+    printf 'Route new captain-preference discoveries to the main firstmate through marked status or a document pointer.\n\n'
+    [ -z "${2:-}" ] || "$PT" persona "$2"
+  } > "$1/data/captain-shared.md"
+}
+
+test_new_navigator_inherits_theme() {
+  local home mate out probe
+  # shellcheck disable=SC2016  # the probe is evaluated by adapter's shell.
+  probe='fm_backend_herdr_workspace_label; echo; fm_backend_herdr_workspace_ensure fmtest /tmp other-home'
+  home=$(new_home nav-primary operator)
+  shared_file "$home" operator
+  mate=$(provision "$home" strategy nav-mate)
+  assert_contains "$(cat "$mate/data/captain-shared.md")" 'name="operator"' "a new navigator home did not receive the operator Persona block"
+  out=$(adapter "$ROOT/bin" "$mate" "$(ws spotter)" "$probe")
+  assert_equals $'navigator-strategy\nwNEW' "$out" "a new navigator home's workspace label is not themed"
+  assert_contains "$(cat "$TMP_ROOT/calls")" "workspace create --cwd /tmp --label navigator-strategy --no-focus" "a new navigator workspace was not created as navigator-strategy"
+  # A block an older apply wrote lacks keys this checkout added since; the
+  # navigator still resolves the theme and verify asks for a fresh apply.
+  home=$(new_home nav-stale-primary operator)
+  shared_file "$home" operator
+  sed 's/ alias\.lavish-url="[^"]*"//' "$home/data/captain-shared.md" > "$home/data/captain-shared.md.new"
+  mv "$home/data/captain-shared.md.new" "$home/data/captain-shared.md"
+  assert_not_contains "$(cat "$home/data/captain-shared.md")" 'alias.lavish-url=' "the stale block still carries the newer key"
+  mate=$(provision "$home" strategy nav-stale-mate)
+  out=$(adapter "$ROOT/bin" "$mate" "$(ws)" "$probe")
+  assert_equals $'navigator-strategy\nwNEW' "$out" "a navigator inheriting an older apply's block fell back to the nautical label"
+  out=$(FM_HOME="$mate" "$PT" verify 2>&1) && fail "verify passed on an inherited block that predates this checkout's keys"
+  assert_contains "$out" "persona drift: inherited block predates this checkout's theme keys (alias.lavish-url); rerun apply in the primary home" "verify did not name the missing key"
+  assert_contains "$(FM_HOME="$mate" "$PT" headline 2>&1)" 'say operator for captain' "the navigator headline lost the inherited persona"
+  # A primary with no theme provisions exactly today's nautical navigator.
+  home=$(new_home nav-nautical-primary)
+  shared_file "$home"
+  mate=$(provision "$home" strategy nav-nautical-mate)
+  out=$(adapter "$ROOT/bin" "$mate" "$(ws firstmate)" "$probe")
+  assert_equals $'2ndmate-strategy\nwNEW' "$out" "a navigator of an unthemed primary is not labeled 2ndmate-<id>"
+  assert_contains "$(cat "$TMP_ROOT/calls")" "workspace create --cwd /tmp --label 2ndmate-strategy --no-focus" "a nautical navigator workspace was not created as 2ndmate-strategy"
+  [ -z "$(upstream_bin)" ] || assert_equals "$(adapter "$(upstream_bin)" "$mate" "$(ws firstmate)" "$probe")" "$out" "a nautical navigator's label differs from upstream's adapter"
+  assert_absent "$mate/state/po-theme" "a nautical navigator home wrote theme state"
+  pass "a new navigator home inherits the primary's theme and labels its workspace navigator-<id>, even from an older apply's block"
 }
 
 test_accept_set_adopts_and_groups() {
@@ -730,6 +792,7 @@ if [ "${1:-}" = a11 ]; then
 fi
 test_nautical_matches_upstream
 test_operator_labels
+test_new_navigator_inherits_theme
 test_accept_set_adopts_and_groups
 test_accept_set_resolves_projection_parent
 test_switch_and_back_never_duplicates
