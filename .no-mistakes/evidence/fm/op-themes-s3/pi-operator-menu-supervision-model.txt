@@ -1,0 +1,50 @@
+
+ pi v0.87.1
+ escape interrupt · ctrl+c/ctrl+d clear/exit · / commands · ! bash · ctrl+o more
+ Press ctrl+o to show full startup help and loaded resources.
+
+ Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.
+
+[Extensions]
+  fm-branch-supervision.ts, fm-calm.ts, fm-primary-pi-watch.ts
+
+
+ Warning: ripgrep not found. Offline mode enabled, skipping download.
+
+ Warning: No models available. Use /login to log into a provider via OAuth or API key. See:
+   /Users/brian/.nvm/versions/node/v22.23.2/lib/node_modules/@earendil-works/pi-coding-agent/docs/providers.md
+   /Users/brian/.nvm/versions/node/v22.23.2/lib/node_modules/@earendil-works/pi-coding-agent/docs/models.md
+
+ Warning: tmux extended-keys is off. Modified Enter keys may not work. Add `set -g extended-keys on` to ~/.tmux.conf and restart tmux.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+/supervision-model
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+→ supervision-model  [p] Pick the model and reasoning effort Operator's Pi supervision branch uses, or follow main's.
+/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-lab.IHgP8H/project
+0.0%/0 (auto)                                                                                                                                                                unknown
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,28 @@
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/.pi/extensions/lib/fm-branch-dispatch.ts: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/.claude/mods/firstmate-calm/hooks/register.ts: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/.pi/extensions/fm-branch-supervision.ts: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/.pi/extensions/fm-calm.ts: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/.pi/extensions/fm-primary-pi-watch.ts: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/tests/fm-pi-branch-live-e2e.test.sh: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/tests/fm-pi-primary-live-e2e.test.sh: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/tests/fm-pi-primary-types.test.sh: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/tests/fm-watch-recovery-loop.test.sh: No such file or directory
+tests/po-theme-labels.test.sh: line 136: /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-theme-labels-tests.C4pYhU/upstream/bin/tests/fm-pi-branch-responsiveness-live-e2e.test.sh: No such file or directory
+ok - nautical labels and every herdr and Paseo matcher answer exactly as upstream's adapters do
+ok - operator gives spotter and spotter-afk-daemon, and an inheriting secondmate names itself navigator-gfm
+ok - the accept-set adopts a live 2ndmate-gfm and keeps legacy children grouped under a renamed parent
+ok - the accept-set resolves a projection parent that still carries its canonical or relabeled label
+ok - switching themes and back adopts the live workspace and never mints a duplicate
+ok - the validator refuses bad, overlapping, colliding, and misplaced labels
+ok - nautical keeps needs-captain and the firstmate wedge title; operator gives needs-operator and the operator title as macOS argv item 2
+ok - absent strings derive from the role words and the address word, and the validator refuses bad or misplaced strings
+ok - supervision notes and Calm text: nautical keeps upstream's, operator themes glyphs and descriptions, and stored upstream notes render with the theme's glyph
+ok - the registry check refuses an unregistered added or removed line
+ok - anchors fail when a registered hook line is lost in a merge
+ok - A11: routing names, session names, and the worker role contract are identical under every bundled theme
+ok - relabel renames only recorded workspaces and keeps history labels any listed container uses
+ok - relabel renames a primary home's secondmate workspaces to their own labels and skips a foreign or unpropagated one
+ok - relabel --hc renames only this home's automatically or self-named Herdr app spaces
+ok - relabel renames only recorded workspaces in a named lab session and retires unused history
+all po-theme-labels tests passed
+EXIT=0

@@ -1,0 +1,1 @@
+Firstmate Calm: skipped claiming built-in "read" because another extension already owns it.

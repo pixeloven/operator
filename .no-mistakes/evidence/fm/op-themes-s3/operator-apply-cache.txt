@@ -1,0 +1,20 @@
+$ printf operator > $LAB/config/po-theme && FM_HOME=$LAB bin/po-theme.sh apply
+persona: operator block written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.IHgP8H/data/captain-shared.md
+alias: /debrief -> /ahoy
+alias: /sitrep -> /bearings
+alias: /flush -> /stow
+alias: /updateoperator -> /updatefirstmate
+values: operator labels and strings written to /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.IHgP8H/state/po-theme/values
+design: firstmate - nothing to write
+rc=0
+$ cat $LAB/state/po-theme/values (glyph/str rows)
+cache	po-theme-values/3
+kind	primary
+name	operator
+str.calm.name	Operator Calm
+str.calm.command	Toggle Operator's Calm transcript presentation and working animation.
+str.calm.pi_command	Toggle Operator's supported conversation-only transcript presentation.
+str.branch.model_command	Pick the model and reasoning effort Operator's Pi supervision branch uses, or follow main's.
+str.watch.arm_command	Arm operator watcher supervision through the Pi extension instead of foreground bash.
+glyph.ship	▸
+glyph.anchor	⚑

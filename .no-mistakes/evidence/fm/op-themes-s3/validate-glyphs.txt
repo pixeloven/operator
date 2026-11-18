@@ -1,0 +1,15 @@
+$ bin/po-theme.sh validate pair
+error: glyph.ship: '▸ ▹' is not one glyph from the allow-list (⛵ ⚓ ◆ ◇ ● ○ ◉ ◎ ■ □ ▲ △ ▶ ▷ ▸ ▹ ◈ ⚑ ⚐ ★ ☆ ✦ ✧ ⌖)
+rc=1
+$ bin/po-theme.sh validate swap
+error: glyph.ship and glyph.anchor must not swap upstream's note glyphs
+rc=1
+$ bin/po-theme.sh validate same
+error: glyph.ship and glyph.anchor share the glyph '▸'
+rc=1
+$ bin/po-theme.sh validate emoji
+error: glyph.ship: '🚀' is not one glyph from the allow-list (⛵ ⚓ ◆ ◇ ● ○ ◉ ◎ ■ □ ▲ △ ▶ ▷ ▸ ▹ ◈ ⚑ ⚐ ★ ☆ ✦ ✧ ⌖)
+rc=1
+$ bin/po-theme.sh validate good
+validate: good ok
+rc=0
