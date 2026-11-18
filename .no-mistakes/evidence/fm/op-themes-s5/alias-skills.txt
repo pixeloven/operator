@@ -1,0 +1,16 @@
+== sitrep
+sed: 1: "1,/^---$/{p}
+": extra characters at the end of p command
+YAML OK: {'name': 'sitrep', 'description': 'Pick up where you left off: the task force digest in chat, a file, or a live board. Alias of /bearings in the iconic theme. Use when the user invokes /sitrep.', 'user-invocable': True, 'metadata': {'internal': True}}
+== debrief
+sed: 1: "1,/^---$/{p}
+": extra characters at the end of p command
+YAML OK: {'name': 'debrief', 'description': 'Recap this session and walk the operator through its unanswered decisions. Alias of /ahoy in the iconic theme. Use when the user invokes /debrief.', 'user-invocable': True, 'metadata': {'internal': True}}
+== flush
+sed: 1: "1,/^---$/{p}
+": extra characters at the end of p command
+YAML OK: {'name': 'flush', 'description': 'Save what the spotter learned this session and file its open work. Alias of /stow in the iconic theme. Use when the user invokes /flush.', 'user-invocable': True, 'metadata': {'internal': True}}
+== updateoperator
+sed: 1: "1,/^---$/{p}
+": extra characters at the end of p command
+YAML OK: {'name': 'updateoperator', 'description': 'Update this operator home and its navigators to the latest version. Alias of /updatefirstmate in the iconic theme. Use when the user invokes /updateoperator.', 'user-invocable': True, 'metadata': {'internal': True}}

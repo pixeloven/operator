@@ -1,0 +1,12 @@
+$ po-theme.sh voice-line (nautical)
+[end, rc=0]
+$ po-theme.sh voice-line (operator)
+Vocabulary for everything you say aloud: this home calls the captain "operator", firstmate "spotter", crewmates "specialists", the crew "squad", second mates "navigators", the fleet "task force", ship tasks "deploy", and scout tasks "recon"; tool names keep their exact words, and every rule above keeps its meaning.
+[rc=0]
+$ po-theme.sh anchors
+anchors: ok
+[rc=0]
+$ po-theme.sh verify (iconic+pixeloven lab home)
+verify: ok (iconic)
+design: ok (pixeloven)
+[rc=0]

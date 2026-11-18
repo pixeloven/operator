@@ -1,0 +1,52 @@
+######## theme=nautical
+$ fm-fleet-view.sh | grep "^#"
+# Fleet View
+## Under Way
+## Queued
+## Done
+## Secondmates
+$ fm-inbox.sh status
+=== firstmate status (read-only, no wake sent) ===
+home     /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.lJehNb
+time     2026-11-18T19:37:36Z
+inbox    0 note(s) waiting for firstmate
+
+(no backlog at /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.lJehNb/data/backlog.md)
+
+(no workers on deck)
+
+Note: the last event line is history, not current state.
+$ fm-inbox.sh note (no live session to wake)
+queued <id>
+  hello from S5 test
+  firstmate will pick this up at its next check.
+rc=0
+$ fm-remote-doctor.sh (verdict)
+error: this host is not ready for a remote second mate; unresolved: remote-job-worker remote-job-worker-loaded remote-job-probe launchagent launchagent-loaded herdr-server
+
+######## theme=operator
+$ fm-fleet-view.sh | grep "^#"
+# Task Force View
+## Under Way
+## Queued
+## Done
+## Navigators
+$ fm-inbox.sh status
+=== spotter status (read-only, no wake sent) ===
+home     /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.BwuZAX
+time     2026-11-18T19:37:37Z
+inbox    0 note(s) waiting for spotter
+
+(no backlog at /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T//fm-lab.BwuZAX/data/backlog.md)
+
+(no specialists active)
+
+Note: the last event line is history, not current state.
+$ fm-inbox.sh note (no live session to wake)
+queued <id>
+  hello from S5 test
+  spotter will pick this up at its next check.
+rc=0
+$ fm-remote-doctor.sh (verdict)
+error: this host is not ready for a remote navigator; unresolved: remote-job-worker remote-job-worker-loaded remote-job-probe launchagent launchagent-loaded herdr-server
+

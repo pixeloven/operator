@@ -1,0 +1,12 @@
+ok - the nautical board is byte-identical to the template, also under the Firstmate Default
+ok - the operator board names no captain and an answer from it closes a held call through fm-bearings-answer.v1
+ok - theme icons replace the board's anchor and ship, and an invalid one keeps nautical's
+ok - an applied design system is injected after the template's tokens under any theme
+ok - the fleet view is upstream's under nautical and themes only its headings under operator
+ok - the inbox note and status output is upstream's under nautical and themes only its words under operator
+ok - the remote doctor is upstream's under nautical and themes only its verdict under operator
+ok - the voice prompt is upstream's under nautical and gains one vocabulary paragraph under a theme
+ok - alias skills describe their command in the theme's words, in frontmatter that parses as YAML
+ok - the registry check accepts a hook line as often as rows register it, and no more
+ok - validation refuses unsafe board and inbox strings and repeated fleet-view headings
+bash tests/po-theme-surfaces.test.sh  8.87s user 11.69s system 65% cpu 31.566 total
