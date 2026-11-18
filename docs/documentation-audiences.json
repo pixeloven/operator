@@ -482,6 +482,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0038-navigator-lane-carries-github-credential-helper.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

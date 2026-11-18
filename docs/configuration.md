@@ -1774,6 +1774,11 @@ The file holds a command, never a credential: keep the secret in the store the h
 Firstmate never prints the helper or anything it returns, and the credential exists only in the Git process that asked for it.
 Changes apply to tasks launched afterward, the file is local to each home rather than inherited into secondmate homes, and [`bin/fm-delivery-lane.sh`](../bin/fm-delivery-lane.sh) owns the mechanics.
 
+A secondmate launch also runs under that isolation, yet its home must reach GitHub the way the launching firstmate does, for example to fetch before a landed-work check.
+When this file is absent or blank, a secondmate's task configuration therefore carries the credential helpers the launching firstmate's own Git configuration applies to `https://github.com`, such as macOS `osxkeychain` wired by a system-level Git file, as `credential.https://github.com.helper` entries.
+Only those helpers are carried: the rest of the system and human configuration stays hidden, signing stays disabled, and the helpers answer for no other host.
+Ship and scout tasks never carry them, the file above still wins as the single entry when present, and the carried helpers apply to secondmates launched afterward ([ADR-0038](adr/0038-navigator-lane-carries-github-credential-helper.md)).
+
 ## Home branch prompt include (config/branch-prompt-include.md)
 
 The optional local, gitignored `config/branch-prompt-include.md` adds standing home rules to the supervision branch's system prompt, the way `config/brief-include.md` extends worker briefs.

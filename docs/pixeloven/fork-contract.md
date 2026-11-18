@@ -54,7 +54,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0033, and 0035 through 0037 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0033, and 0035 through 0038 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -87,6 +87,7 @@ ADR-0033 carries hc parent linkage, the hc durable worktree lease with identity-
 ADR-0035 carries `--partition KofN` support in `bin/fm-lint.sh`, its partition regression in `tests/fm-lint.test.sh`, and a third lint partition in the `.github/workflows/ci.yml` matrix, until an upstream synchronization brings partition-count support or a third partition of its own.
 ADR-0036 carries the test harness's signal-before-EXIT trap order in `tests/lib.sh` and its regression case in `tests/fm-test-fixture-cleanup.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0037 lets `bin/fm-test-run.sh` carry operator-CI median duration hints in `portable_serial_weight_hints` for inherited portable serial scripts whose median differs from the inherited hint by more than 30,000 ms, refreshed or retired at each upstream synchronization.
+ADR-0038 lets a secondmate launch carry its launcher's `https://github.com` credential helpers into its delivery lane through one `bin/fm-spawn.sh` hunk and one paragraph in ADR-0022's `docs/configuration.md` section, while ship and scout lanes stay unchanged.
 
 ## Taking upstream changes
 
