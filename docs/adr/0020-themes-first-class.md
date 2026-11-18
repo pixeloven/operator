@@ -89,8 +89,8 @@ Measured cost of the hooks this record permits: replaying upstream's weekly wind
 8. **Validation.**
    Every value is validated before every use, as in ADR-0016, plus these rules:
    - `label.*` is 2-24 lowercase letters, digits, or hyphens that start and end with a letter or digit, so nautical's own `2ndmate` and `firstmate-afk-daemon` qualify; it does not start with `fm-`, and the primary and secondmate labels do not equal or prefix each other or the other role's canonical label;
-   - `str.*` follows ADR-0016's character and authority-word rules (at most 80 characters, placeholders only from the fixed set) and may not contain an architectural token: a status verb, `FIRSTMATE_OP`, a brief heading, an `fm-` prefix, or a payload key;
-   - `glyph.*` is one code point from the allow-list;
+   - `str.*` follows ADR-0016's character and authority-word rules (at most 80 characters, placeholders only from the fixed set) and may not contain an architectural token: a status verb, `FIRSTMATE_OP`, a brief heading, an `fm-` prefix, or a payload key; a slash-command menu description, which no code reads back, may run to 120 characters and use a status verb as an ordinary word, as upstream's own descriptions do;
+   - `glyph.*` is one code point from the allow-list, and the two supervision-note glyphs stay distinct;
    - every asset passes its own format validator (decision 10).
 
 9. **Gates** (identity.md section 5; each runs on every pull request):

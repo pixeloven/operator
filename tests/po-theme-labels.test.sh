@@ -39,6 +39,14 @@
 #     item 2), an S1-era values cache is rebuilt, absent keys derive from the
 #     role words (the digest call section from the address word), and the
 #     validator refuses bad strings, including digest section names
+#   - supervision notes and Calm text (stage S3), through the Calm mod's values
+#     reader over a cache `refresh` wrote: nautical gives upstream's glyphs and
+#     menu descriptions, operator its own glyphs and product-word descriptions,
+#     a note stored with upstream's glyph renders with the theme's, an
+#     inheriting secondmate follows its block, and a cache left by another
+#     selection or format reads as nautical; the validator refuses a glyph off
+#     the allow-list, shared or swapped note glyphs, and an over-long menu
+#     description
 #   - the registry check refuses an unregistered changed line, and anchors fail
 #     when a registered hook line is lost
 #   - A11: routing names, hometags, session names, and the worker role contract
@@ -443,7 +451,7 @@ canonprefix|label.primary = "2ndmate-x"|overlap as prefixes
 afkhome|label.afk = "spotter"|label.afk: 'spotter' equals a home label
 afksub|label.afk = "navigator-afk"|would read as a secondmate label
 EOF
-  sed -e 's/^name = .*/name = "oldschema"/' -e 's#^schema = .*#schema = "po-theme/1"#' -e '/^str\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldschema.theme"
+  sed -e 's/^name = .*/name = "oldschema"/' -e 's#^schema = .*#schema = "po-theme/1"#' -e '/^str\./d' -e '/^glyph\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldschema.theme"
   FM_HOME="$home" "$PT" validate oldschema >/dev/null 2>&1 || fail "a po-theme/1 theme without label keys was refused"
   printf 'label.primary = "spotter"\n' >> "$home/config/po-themes/oldschema.theme"
   out=$(FM_HOME="$home" "$PT" validate oldschema 2>&1) && fail "a po-theme/1 theme accepted a label key"
@@ -521,7 +529,7 @@ test_string_validation() {
   home=$(new_home str-validation)
   mkdir -p "$home/config/po-themes"
   while IFS='|' read -r name edit want; do
-    { sed -e "s/^name = .*/name = \"$name\"/" -e '/^str\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme"; printf '%s\n' "$edit"; } \
+    { sed -e "s/^name = .*/name = \"$name\"/" -e '/^str\./d' -e '/^glyph\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme"; printf '%s\n' "$edit"; } \
       > "$home/config/po-themes/$name.theme"
     rc=0
     out=$(FM_HOME="$home" "$PT" validate "$name" 2>&1) || rc=$?
@@ -538,6 +546,9 @@ digestshape|str.digest.call = "Ops: Call"|str.digest.call: 'Ops: Call' must be a
 digestlong|str.digest.charted = "Charted Next and Everything After"|str.digest.charted: 'Charted Next and Everything After' must be a heading
 digestdupe|str.digest.landed = "underway"|str.digest.landed and str.digest.underway share the section name 'underway'
 digestverb|str.digest.landed = "Recently done"|contains the status verb done
+menulong|str.calm.command = "Toggle the Calm transcript presentation and working animation, which hides tool rows and operational input in the transcript"|str.calm.command: longer than 120 characters
+glyphoff|glyph.ship = "x"|glyph.ship: 'x' is not one glyph from the allow-list
+glyphsame|glyph.anchor = "⛵"|glyph.ship and glyph.anchor share the glyph
 EOF
   sed -e 's/^name = .*/name = "derived"/' -e '/^str\./d' -e 's/^user = .*/user = "field boss"/' -e 's/^product = .*/product = "ops"/' \
     "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/derived.theme"
@@ -545,10 +556,79 @@ EOF
   assert_equals "needs-field-boss" "$(lib "$home" 'po_str sidebar.needs')" "an absent sidebar state did not derive from the user word"
   assert_equals "ops: away-mode escalations WEDGED" "$(lib "$home" 'po_str alert.wedge_title')" "an absent wedge title did not derive from the product word"
   assert_contains "$(FM_HOME="$home" "$PT" persona derived)" "| Captain's Call (the /bearings section) | Operator's Call |" "an absent digest call did not derive from the address word"
+  { sed -e 's/^name = .*/name = "swapped"/' -e '/^glyph\./d' "$ROOT/.agents/skills/po-theme/themes/operator.theme"; printf 'glyph.ship = "\342\232\223"\nglyph.anchor = "\342\233\265"\n'; } \
+    > "$home/config/po-themes/swapped.theme"
+  out=$(FM_HOME="$home" "$PT" validate swapped 2>&1) && fail "validate accepted swapped note glyphs"
+  assert_contains "$out" "must not swap upstream's note glyphs" "swapped note glyphs were refused for the wrong reason"
   sed -e 's/^name = .*/name = "oldstr"/' -e 's#^schema = .*#schema = "po-theme/1"#' "$ROOT/.agents/skills/po-theme/themes/operator.theme" > "$home/config/po-themes/oldstr.theme"
   out=$(FM_HOME="$home" "$PT" validate oldstr 2>&1) && fail "a po-theme/1 theme accepted a str key"
   assert_contains "$out" "str.sidebar.needs: needs schema po-theme/2" "a str key under po-theme/1 was refused for the wrong reason"
   pass "absent strings derive from the role words and the address word, and the validator refuses bad or misplaced strings"
+}
+
+# reader <home>: the Calm mod's theme values reader, loaded the way the Pi
+# extensions load it, printing the note glyphs, the registered descriptions
+# with upstream's literals as fallbacks, and a stored upstream note as shown.
+reader() {
+  FM_HOME="$1" node --input-type=module - "$ROOT/.pi/extensions/lib/po-theme-values.ts" "$ROOT" 2>&1 <<'JS'
+import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+const [values, root] = process.argv.slice(2);
+const po = await import(pathToFileURL(values).href);
+const theme = po.poThemeLoadSync((path) => readFileSync(path, "utf8"), process.env, root);
+console.log([
+  po.poThemeGlyph(theme, "ship"),
+  po.poThemeGlyph(theme, "anchor"),
+  po.poThemeNoteLine(theme, "\u26f5 fm-a: stored before"),
+  po.poThemeStr(theme, "calm.name", "Firstmate Calm"),
+  po.poThemeStr(theme, "calm.command", "Toggle Firstmate's Calm transcript presentation and working ship."),
+  po.poThemeStr(theme, "calm.pi_command", "Toggle Firstmate's supported conversation-only transcript presentation."),
+  po.poThemeStr(theme, "branch.model_command", "Pick the model and reasoning effort Firstmate's Pi supervision branch uses, or follow main's."),
+  po.poThemeStr(theme, "watch.arm_command", "Arm firstmate watcher supervision through the Pi extension instead of foreground bash."),
+].join("\n"));
+JS
+}
+
+test_supervision_notes_and_calm() {
+  local home op mate out ship anchor
+  if ! command -v node >/dev/null 2>&1; then
+    echo "skip: node not found for the theme values reader"
+    return 0
+  fi
+  ship=$(printf '\342\233\265') anchor=$(printf '\342\232\223')
+  home=$(new_home notes-nautical)
+  assert_equals "$ship
+$anchor
+$ship fm-a: stored before
+Firstmate Calm
+Toggle Firstmate's Calm transcript presentation and working ship.
+Toggle Firstmate's supported conversation-only transcript presentation.
+Pick the model and reasoning effort Firstmate's Pi supervision branch uses, or follow main's.
+Arm firstmate watcher supervision through the Pi extension instead of foreground bash." "$(reader "$home")" "a nautical home's notes and descriptions are not upstream's"
+  assert_absent "$home/state/po-theme" "a nautical home wrote theme state"
+  op=$(new_home notes-operator operator)
+  FM_HOME="$op" "$PT" refresh >/dev/null || fail "refresh failed under operator"
+  out=$(reader "$op")
+  assert_equals "▸
+⚑
+▸ fm-a: stored before
+Operator Calm
+Toggle Operator's Calm transcript presentation and working animation.
+Toggle Operator's supported conversation-only transcript presentation.
+Pick the model and reasoning effort Operator's Pi supervision branch uses, or follow main's.
+Arm operator watcher supervision through the Pi extension instead of foreground bash." "$out" "the operator notes and descriptions are wrong"
+  mate=$(new_mate notes-mate gfm operator)
+  lib "$mate" 'po_str sidebar.needs' >/dev/null
+  assert_equals "▸" "$(reader "$mate" | head -n 1)" "an inheriting secondmate does not use its block's glyph"
+  # A cache the bash readers would rebuild, or one left by another selection,
+  # is never trusted.
+  sed 's#^cache\tpo-theme-values/3#cache\tpo-theme-values/2#' "$op/state/po-theme/values" > "$op/state/po-theme/values.old"
+  mv "$op/state/po-theme/values.old" "$op/state/po-theme/values"
+  assert_equals "$ship" "$(reader "$op" | head -n 1)" "a cache in an older format was trusted"
+  FM_HOME="$op" "$PT" refresh >/dev/null || fail "refresh failed under operator"
+  printf 'nautical\n' > "$op/config/po-theme"
+  assert_equals "$ship" "$(reader "$op" | head -n 1)" "a cache left by the operator selection was trusted under nautical"
+  pass "supervision notes and Calm text: nautical keeps upstream's, operator themes glyphs and descriptions, and stored upstream notes render with the theme's glyph"
 }
 
 # fixture_repo <name>: a throwaway repository whose first commit carries the
@@ -561,7 +641,7 @@ fixture_repo() {
   cp "$PT" "$ROOT/bin/po-design-lib.sh" "$ROOT/bin/po-theme-lib.sh" "$repo/bin/"
   printf '%s\n' "$PIN" > "$repo/docs/pixeloven/upstream-pin"
   git init -q -b main "$repo"
-  for f in $("$PT" registry files); do git -C "$ROOT" show "$PIN:$f" > "$repo/$f"; done
+  for f in $("$PT" registry files); do mkdir -p "$repo/$(dirname "$f")"; git -C "$ROOT" show "$PIN:$f" > "$repo/$f"; done
   git -C "$repo" add -A
   git -C "$repo" commit -q -m upstream
   for f in $("$PT" registry files); do cp "$ROOT/$f" "$repo/$f"; done
@@ -595,6 +675,9 @@ test_anchors_name_a_lost_hook() {
     "$ROOT/bin/fm-herdr-groups.sh" "$ROOT/bin/fm-supervise-daemon.sh" "$ROOT/bin/fm-session-start.sh" "$code/bin/"
   cp "$ROOT/bin/backends/herdr.sh" "$ROOT/bin/backends/paseo.sh" "$code/bin/backends/"
   cp "$ROOT/.pi/extensions/lib/fm-branch-dispatch.ts" "$code/.pi/extensions/lib/"
+  for s in $("$PT" registry files); do mkdir -p "$code/$(dirname "$s")"; cp "$ROOT/$s" "$code/$s"; done
+  mkdir -p "$code/.claude/mods/firstmate-calm/lib"
+  cp "$ROOT/.claude/mods/firstmate-calm/lib/fm-branch-notes.ts" "$code/.claude/mods/firstmate-calm/lib/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"
   for s in afk ahoy bearings lavish-url quiet stow updatefirstmate; do
@@ -736,6 +819,7 @@ test_switch_and_back_never_duplicates
 test_label_validation
 test_display_strings
 test_string_validation
+test_supervision_notes_and_calm
 test_registry_gates
 test_anchors_name_a_lost_hook
 test_a11_architectural_invariance

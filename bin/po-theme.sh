@@ -7,10 +7,11 @@
 # the fixed no-op reply, the vocabulary workers use in prose a person reads, the
 # slash commands a person types, the herdr and Paseo workspace labels, and the
 # registered display strings (the herdr sidebar state, the wedge-alarm title,
-# and the /bearings digest section names the Persona block maps). It never
-# renames an identifier (script, path, environment variable, skill directory,
-# status verb, board payload key, or a brief heading that code parses) and never
-# changes what a rule means.
+# the /bearings digest section names the Persona block maps, and the Calm and
+# supervision menu descriptions and Calm notice), and the supervision-note
+# glyphs. It never renames an identifier (script, path, environment variable,
+# skill directory, status verb, board payload key, or a brief heading that code
+# parses) and never changes what a rule means.
 #
 # Theme files are a strict TOML subset: one `key = "value"` per line, `#`
 # comments, no tables, no escapes, so they parse with awk under Bash 3.2.
@@ -153,6 +154,12 @@ TAB=$(printf '\t')
 RSQUO=$(printf '\342\200\231')  # U+2019, the curly apostrophe a model may typeset
 
 ROLE_KEYS='user self worker crew submate fleet scout_task ship_task'
+# Upstream's supervision-note glyphs and the curated glyph.* allow-list (ADR-0020
+# decision 8): single code points with no directive meaning, from Geometric
+# Shapes and a few symbols.
+GLYPH_SHIP=$(printf '\342\233\265')    # U+26F5 sailboat
+GLYPH_ANCHOR=$(printf '\342\232\223')  # U+2693 anchor
+GLYPH_ALLOW="$GLYPH_SHIP $GLYPH_ANCHOR $(printf '\342\227\206 \342\227\207 \342\227\217 \342\227\213 \342\227\211 \342\227\216 \342\226\240 \342\226\241 \342\226\262 \342\226\263 \342\226\266 \342\226\267 \342\226\270 \342\226\271 \342\227\210 \342\232\221 \342\232\220 \342\230\205 \342\230\206 \342\234\246 \342\234\247 \342\214\226')"
 STATUS_TOKENS='working done blocked paused failed needs-decision resolved note captain-held'
 HARNESS_TOKENS='claude codex opencode pi pi-signed grok kimi cursor omp muse gemini rovo agy devin commandcode polytoken'
 DENY_WORDS='merge approve approval override ignore instruction instructions force discard delete yolo authority permission rule rules must never always sudo token secret password'
@@ -336,19 +343,27 @@ resolve_active() {
 # derived default for an absent key: the needs state is "needs-" and the user
 # word lowercased with spaces as hyphens, the wedge title opens with the
 # product word, the digest's call section is the address word's "<Address>'s
-# Call", and the other digest sections keep their nautical names.
+# Call", the other digest sections keep their nautical names, and the Calm and
+# supervision menu descriptions and the Calm notice name the product (capitalized
+# where upstream capitalizes it) and call the Calm figure the working animation.
 strs_of() {
   awk -F '\t' '
     function d(k, def) { return (k in v) ? v[k] : def }
     { v[$1] = $2 }
     END {
       u = tolower(v["user"]); gsub(/ /, "-", u)
+      p = v["product"]; P = toupper(substr(p, 1, 1)) substr(p, 2)
       printf "str.sidebar.needs\t%s\n", d("str.sidebar.needs", "needs-" u)
       printf "str.alert.wedge_title\t%s\n", d("str.alert.wedge_title", v["product"] ": away-mode escalations WEDGED")
       printf "str.digest.call\t%s\n", d("str.digest.call", v["user_address"] "\047s Call")
       printf "str.digest.underway\t%s\n", d("str.digest.underway", "Underway")
       printf "str.digest.landed\t%s\n", d("str.digest.landed", "Recently Landed")
       printf "str.digest.charted\t%s\n", d("str.digest.charted", "Charted Next")
+      printf "str.calm.name\t%s\n", d("str.calm.name", P " Calm")
+      printf "str.calm.command\t%s\n", d("str.calm.command", "Toggle " P "\047s Calm transcript presentation and working animation.")
+      printf "str.calm.pi_command\t%s\n", d("str.calm.pi_command", "Toggle " P "\047s supported conversation-only transcript presentation.")
+      printf "str.branch.model_command\t%s\n", d("str.branch.model_command", "Pick the model and reasoning effort " P "\047s Pi supervision branch uses, or follow main\047s.")
+      printf "str.watch.arm_command\t%s\n", d("str.watch.arm_command", "Arm " p " watcher supervision through the Pi extension instead of foreground bash.")
     }
   ' "$1"
 }
@@ -357,16 +372,19 @@ strs_of() {
 # derived: at most 80 characters, no architectural token (a status verb,
 # FIRSTMATE_OP, a brief heading, or an fm- prefix), a sidebar state that is
 # a herdr token value distinct from the other group states, and digest section
-# names that are short headings, distinct from each other.
+# names that are short headings, distinct from each other. A slash-command menu
+# description (a key ending in "command") is a sentence no code reads back, so
+# it may run to 120 characters and use a status verb as an English word
+# ("working"), as upstream's own descriptions do.
 check_strs() {
   strs_of "$1" | LC_ALL=C awk -F '\t' -v tokens="$STATUS_TOKENS" '
     function bad(m) { print "error: " m; failed = 1 }
     BEGIN { nt = split(tokens, T, " ") }
     {
-      k = $1; v = $2
-      if (length(v) > 80) bad(k ": longer than 80 characters")
+      k = $1; v = $2; menu = (k ~ /command$/)
+      if (length(v) > (menu ? 120 : 80)) bad(k ": longer than " (menu ? 120 : 80) " characters")
       s = " " v " "; gsub(/[^A-Za-z0-9_-]/, " ", s)
-      for (j = 1; j <= nt; j++) if (index(s, " " T[j] " ")) bad(k ": '"'"'" v "'"'"' contains the status verb " T[j])
+      for (j = 1; j <= nt; j++) if (!menu && index(s, " " T[j] " ")) bad(k ": '"'"'" v "'"'"' contains the status verb " T[j])
       if (index(v, "FIRSTMATE_OP") || index(v, "##") || index(s, " fm-")) bad(k ": '"'"'" v "'"'"' contains an architectural token")
       if (k == "str.sidebar.needs") {
         if (v !~ /^[a-z0-9][a-z0-9-]*[a-z0-9]$/ || length(v) > 24) bad(k ": '"'"'" v "'"'"' must be 2-24 lowercase letters, digits, or hyphens, starting and ending with a letter or digit")
@@ -381,6 +399,38 @@ check_strs() {
     }
     END { exit failed }
   '
+}
+
+# glyphs_of <kv>: "<key><TAB><glyph>" for every glyph.* key, upstream's
+# supervision-note glyph when the theme leaves it out.
+glyphs_of() {
+  awk -F '\t' -v ship="$GLYPH_SHIP" -v anchor="$GLYPH_ANCHOR" '
+    { v[$1] = $2 }
+    END {
+      printf "glyph.ship\t%s\n", ("glyph.ship" in v) ? v["glyph.ship"] : ship
+      printf "glyph.anchor\t%s\n", ("glyph.anchor" in v) ? v["glyph.anchor"] : anchor
+    }
+  ' "$1"
+}
+
+# check_glyphs <kv>: ADR-0020 decision 8 for glyph.* values: each is one code
+# point from GLYPH_ALLOW, and the routine and captain notes stay distinguishable
+# (their glyphs differ, and neither takes the other's upstream glyph).
+check_glyphs() {
+  local k v ship anchor err=0
+  while IFS="$TAB" read -r k v; do
+    case " $GLYPH_ALLOW " in
+      *" $v "*) ;;
+      *) echo "error: $k: '$v' is not one glyph from the allow-list ($GLYPH_ALLOW)"; err=1 ;;
+    esac
+  done < <(glyphs_of "$1")
+  ship=$(glyphs_of "$1" | get /dev/stdin glyph.ship) anchor=$(glyphs_of "$1" | get /dev/stdin glyph.anchor)
+  if [ "$ship" = "$anchor" ]; then
+    echo "error: glyph.ship and glyph.anchor share the glyph '$ship'"; err=1
+  elif [ "$ship" = "$GLYPH_ANCHOR" ] || [ "$anchor" = "$GLYPH_SHIP" ]; then
+    echo "error: glyph.ship and glyph.anchor must not swap upstream's note glyphs"; err=1
+  fi
+  return $err
 }
 
 # check_values <name> <kv>: schema, shape, and safety findings that need no
@@ -412,12 +462,12 @@ check_values() {
       nd = split(deny, D, " "); nrd = split(roledeny, RD, " "); nt = split(tokens, T, " ")
       if (val["schema"] != "po-theme/1" && val["schema"] != "po-theme/2") bad("schema must be \"po-theme/1\" or \"po-theme/2\"")
       if (val["name"] != name) bad("name must equal the theme name (" name ")")
-      for (i = 1; i <= n; i++) if (!(order[i] in val) && order[i] !~ /^(label|str)\./) bad("missing key: " order[i])
+      for (i = 1; i <= n; i++) if (!(order[i] in val) && order[i] !~ /^(label|str|glyph)\./) bad("missing key: " order[i])
       for (i = 1; i <= m; i++) { k = keys[i]; if (k !~ /^avoid\./ && !(k in canon)) bad("unknown key: " k) }
       for (i = 1; i <= m; i++) {
         k = keys[i]; v = val[k]
         if (v ~ /[`$<>{}|]/ || v ~ /\[/ || v ~ /\]/ || index(v, "://")) bad(k ": forbidden character or URL in value")
-        if (v ~ /[^ -~]/) bad(k ": non-printable or non-ASCII character")
+        if (v ~ /[^ -~]/ && k !~ /^glyph\./) bad(k ": non-printable or non-ASCII character")
         if (isrole(k)) { for (j = 1; j <= nrd; j++) if (hasword(v, RD[j])) bad(k ": value contains the authority word '"'"'" RD[j] "'"'"'") }
         else { for (j = 1; j <= nd; j++) if (hasword(v, D[j])) bad(k ": value contains the authority word '"'"'" D[j] "'"'"'") }
         if (k == "schema" || k == "name") continue
@@ -435,7 +485,7 @@ check_values() {
         }
         else if (k ~ /^alias\./) { if (v !~ /^[a-z][a-z0-9-]+$/ || length(v) > 31) bad(k ": alias must be 2-31 lowercase letters, digits, or hyphens") }
         else if (k ~ /^avoid\./) { if (length(v) > 120) bad(k ": longer than 120 characters") }
-        else if (k ~ /^(label|str)\./) { if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2") }
+        else if (k ~ /^(label|str|glyph)\./) { if (val["schema"] == "po-theme/1") bad(k ": needs schema po-theme/2") }
       }
       lp = ("label.primary" in val) ? val["label.primary"] : dashed(val["self"])
       ls = ("label.submate" in val) ? val["label.submate"] : dashed(val["submate"])
@@ -461,6 +511,7 @@ check_values() {
     }
   ' "$schema_kv" "$kv" || err=1
   check_strs "$kv" || err=1
+  check_glyphs "$kv" || err=1
 
   : > "$TMPD/aliases"
   while IFS="$TAB" read -r k v; do
@@ -715,8 +766,9 @@ labels_of() {
   ' "$1"
 }
 
-# refresh: the values cache bin/po-theme-lib.sh reads (labels and str.* strings,
-# tagged with the cache format po__fresh requires), plus the history of
+# refresh: the values cache bin/po-theme-lib.sh and the Calm mod's
+# lib/po-theme-values.ts read (labels, str.* strings, and glyph.* glyphs,
+# tagged with the cache format both readers require), plus the history of
 # labels this home applied, which keeps older workspace names matchable.
 refresh() {
   local dir="$STATE/po-theme" kind=primary src role v canon
@@ -731,9 +783,10 @@ refresh() {
   src=${ACTIVE_SRC#inherited:}
   labels_of "$ACTIVE_KV" > "$TMPD/labels"
   {
-    printf 'cache\tpo-theme-values/2\nkind\t%s\nname\t%s\nsource\t%s\n' "$kind" "$ACTIVE_NAME" "$src"
+    printf 'cache\tpo-theme-values/3\nkind\t%s\nname\t%s\nsource\t%s\n' "$kind" "$ACTIVE_NAME" "$src"
     sed 's/^/label./' "$TMPD/labels"
     strs_of "$ACTIVE_KV"
+    glyphs_of "$ACTIVE_KV"
   } > "$dir/values.$$"
   mv "$dir/values.$$" "$dir/values"
   while IFS="$TAB" read -r role v; do
@@ -835,6 +888,9 @@ anchors() {
       str.digest.*)
         grep -qF -- "**$(printf '%s' "$v" | sed "s/'/$RSQUO/g")**" "$CODE_ROOT/.agents/skills/bearings/SKILL.md" 2>/dev/null \
           || chk .agents/skills/bearings/SKILL.md "**$v**" ;;
+      # Upstream's note glyphs are the Claude mod's note constants, which the
+      # theme reader replaces at display time.
+      glyph.*) chk .claude/mods/firstmate-calm/lib/fm-branch-notes.ts "\"$v\"" ;;
       str.*)
         registry_rows | awk -F '\t' -v k="$k" -v v="$v" '$1 == k && index($6, v) { found = 1 } END { exit !found }' \
           || { printf 'anchor missing: nautical %s is not in the upstream line of any registered %s hook\n' "$k" "$k"; miss=1; } ;;

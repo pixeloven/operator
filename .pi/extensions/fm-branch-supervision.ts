@@ -134,6 +134,7 @@ import {
   classifyFirstmateOperationalText,
   encodeFirstmateOperationalInputWith,
 } from "./lib/fm-operational-input.ts";
+import { poThemeGlyph, poThemeLoadSync, poThemeStr } from "./lib/po-theme-values.ts";
 
 const extensionFile = fileURLToPath(import.meta.url);
 const extensionDir = dirname(extensionFile);
@@ -142,6 +143,7 @@ const fmHome = process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root;
 const fmRoot = process.env.FM_ROOT_OVERRIDE || root;
 const state = process.env.FM_STATE_OVERRIDE || `${fmHome}/state`;
 const config = process.env.FM_CONFIG_OVERRIDE || `${fmHome}/config`;
+const poTheme = poThemeLoadSync((path) => readFileSync(path, "utf8"), process.env, root);
 const sessionsDir = join(state, "branch-session");
 const sessionPointer = join(state, ".branch-session");
 const mirrorCursorFile = join(state, ".branch-mirror-cursor");
@@ -165,7 +167,7 @@ const branchCacheKey = `fm-branch-${createHash("sha256").update(fmHome).digest("
 
 const MIRROR_MESSAGE_CAP = 4000;
 const MERGE_NOTE_BOAT = "⛵";
-const VISIBLE_OUTCOME_ANCHOR = "⚓";
+const VISIBLE_OUTCOME_ANCHOR = poThemeGlyph(poTheme, "anchor");
 const VISIBLE_OUTCOME_ENTRY_TYPE = "fm-branch-visible-outcome";
 // The processing half of the captain-outcome contract. The visible entry
 // above is the DISPLAY: crash-safe and exact-once. This hidden, typed request
@@ -1929,7 +1931,7 @@ ${context.command}
   // and stays on Pi's generic selector dialog. The effort step follows the
   // model step because the model decides which levels exist.
   pi.registerCommand?.("supervision-model", {
-    description: "Pick the model and reasoning effort Firstmate's Pi supervision branch uses, or follow main's.",
+    description: poThemeStr(poTheme, "branch.model_command", "Pick the model and reasoning effort Firstmate's Pi supervision branch uses, or follow main's."),
     handler: async (_args, ctx) => {
       rememberMainModel(ctx);
       const pin = readModelPin();
@@ -2459,7 +2461,7 @@ ${context.command}
     const rest = hasGlyph ? note.slice(MERGE_NOTE_BOAT.length) : note;
     const outputPad = 1;
     return new Text(
-      `${hasGlyph ? theme.fg("customMessageText", MERGE_NOTE_BOAT) : ""}${theme.fg("dim", rest)}`,
+      `${hasGlyph ? theme.fg("customMessageText", poThemeGlyph(poTheme, "ship")) : ""}${theme.fg("dim", rest)}`,
       outputPad,
       0,
     );

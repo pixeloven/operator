@@ -2,7 +2,8 @@
 # Terms are the operator's decisions of 2026-10-21 (ADR-0016); role words are
 # lowercase common nouns since 2026-10-26 (ADR-0020). The workspace labels are
 # derived from self and submate: spotter, navigator-<id>, and
-# spotter-afk-daemon. The display strings name the user and the product.
+# spotter-afk-daemon. The display strings name the user and the product; the
+# Calm and supervision menu descriptions derive from the product word.
 schema = "po-theme/2"
 name = "operator"
 description = "Military ops voice for the operator distro"
@@ -28,6 +29,11 @@ bad_news_example = "Operator, the build broke - ..."
 
 str.sidebar.needs = "needs-operator"
 str.alert.wedge_title = "operator: away-mode escalations WEDGED"
+
+# Supervision notes: a routine outcome is a pointer, an outcome for the
+# operator a flag.
+glyph.ship = "▸"
+glyph.anchor = "⚑"
 
 alias.afk = "afk"
 alias.ahoy = "debrief"

@@ -76,6 +76,7 @@ import {
   sessionShownThrough,
   type HostHealth,
 } from "../lib/fm-branch-notes.ts";
+import { PO_THEME_NAUTICAL, poThemeLoad, poThemeNoteLine, poThemeStr } from "../lib/po-theme-values.ts";
 
 /** The slash command the mod serves, the same name as Pi's `/calm`. */
 const CALM_COMMAND = "calm";
@@ -126,6 +127,7 @@ type NotesState = {
 let notes: NotesState | undefined;
 let notesTimer: { cancel(): void } | undefined;
 let notesPolling = false;
+let poTheme = PO_THEME_NAUTICAL;
 
 function isActivated($: EngineInterface): Promise<boolean> {
   if (activation === undefined) {
@@ -316,7 +318,7 @@ async function followTail($: EngineInterface, current: NotesState): Promise<void
     lines = fresh.lines;
     current.lastSeen = fresh.lastSeen;
   }
-  for (const line of lines) $.ui.log(line);
+  for (const line of lines) $.ui.log(poThemeNoteLine(poTheme, line));
   await rememberShown($, current);
 }
 
@@ -355,7 +357,7 @@ async function pollNotes($: EngineInterface): Promise<void> {
       const next = parseHostHealth(health.text);
       const note = hostHealthNote(current.health, next);
       if (next !== undefined) current.health = next;
-      if (note !== undefined) $.ui.log(note);
+      if (note !== undefined) $.ui.log(poThemeNoteLine(poTheme, note));
     }
   } finally {
     notesPolling = false;
@@ -372,11 +374,12 @@ export const register: Register = (on) => {
   on("session.start", async ($, e, next) => {
     if (!(await isActivated($))) return next(e);
     await resetSession($);
+    poTheme = await poThemeLoad((path) => readText($, path), { FM_HOME: await $.env.get("FM_HOME"), FM_ROOT_OVERRIDE: await $.env.get("FM_ROOT_OVERRIDE"), FM_CONFIG_OVERRIDE: await $.env.get("FM_CONFIG_OVERRIDE"), FM_STATE_OVERRIDE: await $.env.get("FM_STATE_OVERRIDE") }, $.plugin.root);
     // Notes that cannot start leave Calm and the transcript exactly as they were.
     await startNotes($).catch(() => undefined);
     await $.command.register({
       name: CALM_COMMAND,
-      description: "Toggle Firstmate's Calm transcript presentation and working ship.",
+      description: poThemeStr(poTheme, "calm.command", "Toggle Firstmate's Calm transcript presentation and working ship."),
     });
     return next(e);
   });

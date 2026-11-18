@@ -48,6 +48,7 @@ import {
 import { Box, Container, getKeybindings, type Component } from "@earendil-works/pi-tui";
 import type { TSchema } from "typebox";
 import { installCalmAssistantLayout } from "./lib/fm-calm-assistant-layout.ts";
+import { poThemeLoadSync, poThemeStr } from "./lib/po-theme-values.ts";
 import { installCalmOperationalUserLayout } from "./lib/fm-calm-operational-user-layout.ts";
 import {
   installCalmPendingOperationalLayout,
@@ -175,6 +176,7 @@ export default function (pi: ExtensionAPI) {
 
   const fmHome = process.env.FM_HOME || process.env.FM_ROOT_OVERRIDE || root;
   const configDirectory = process.env.FM_CONFIG_OVERRIDE || resolve(fmHome, "config");
+  const poTheme = poThemeLoadSync((path) => readFileSync(path, "utf8"), process.env, root);
   const calmPreferencePath = resolve(configDirectory, "calm");
   // "max" is the legacy value written by the removed third presentation level, whose
   // behavior is now ordinary Calm; a home upgraded from it restores as on rather than
@@ -391,7 +393,7 @@ export default function (pi: ExtensionAPI) {
     const names = contested.map((tool) => `"${tool.name}"`).join(", ");
     const plural = contested.length > 1;
     ui.notify(
-      `Firstmate Calm: the ${names} built-in tool${plural ? "s are" : " is"} already provided by another extension, so Calm may not fully function for ${plural ? "them" : "it"} this session.`,
+      `${poThemeStr(poTheme, "calm.name", "Firstmate Calm")}: the ${names} built-in tool${plural ? "s are" : " is"} already provided by another extension, so Calm may not fully function for ${plural ? "them" : "it"} this session.`,
       "warning",
     );
     for (const tool of contested) {
@@ -492,7 +494,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("calm", {
-    description: "Toggle Firstmate's supported conversation-only transcript presentation.",
+    description: poThemeStr(poTheme, "calm.pi_command", "Toggle Firstmate's supported conversation-only transcript presentation."),
     handler: async (_args, ctx) => {
       const active = !calmPresentationIsActive();
       persistCalmPreference(active);
