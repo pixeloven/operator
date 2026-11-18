@@ -355,13 +355,15 @@ JS
            '<svg><use href="../x.svg#a"/></svg>' '<?xml-stylesheet href="x.css"?><svg/>' \
            '<svg xmlns:s="http://www.w3.org/2000/svg"><s:script>x</s:script></svg>' '<svg><rect x:onload="x"/></svg>' \
            '<svg><use s:href="x.svg"/></svg>' '<svg><image><set attributeName="href" to="//x"/></image></svg>' \
-           '<svg><rect><animate attributeName="width" values="1;2"/></rect></svg>'; do
+           '<svg><rect><animate attributeName="width" values="1;2"/></rect></svg>' \
+           $'<svg><rect fill=\'url(" https://e.invalid/p")\'/></svg>' '<svg><rect fill="url(\68ttps://e.invalid/p)"/></svg>'; do
     printf '%s' "$f" > "$home/config/po-themes/assets/poster.svg"
     out=$(FM_HOME="$home" "$PT" validate art 2>&1) && fail "an unsafe SVG image was accepted: $f"
     assert_contains "$out" "may not carry script" "the image refusal for $f does not say why"
   done
   for f in '<svg><defs><pattern id="p" patternContentUnits="objectBoundingBox"><rect width="1" height="1"/></pattern></defs><rect fill="url(#p)"/></svg>' \
-           '<svg><mask id="m" maskContentUnits="userSpaceOnUse"><rect width="2" height="2"/></mask><rect mask="url( #m)" clip-path="url(#c)"/></svg>'; do
+           '<svg><mask id="m" maskContentUnits="userSpaceOnUse"><rect width="2" height="2"/></mask><rect mask="url( #m)" clip-path="url(#c)"/></svg>' \
+           $'<svg><linearGradient id="grad"/><rect fill=\'url( #grad )\'/></svg>'; do
     printf '%s' "$f" > "$home/config/po-themes/assets/poster.svg"
     out=$(FM_HOME="$home" "$PT" validate art 2>&1) || fail "a harmless SVG image was refused: $f: $out"
   done
