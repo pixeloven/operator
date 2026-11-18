@@ -45,7 +45,8 @@
 #   po-theme.sh verify                exit 1 when the Persona block or aliases drifted
 #                                     from the selected theme (stale, hand-edited,
 #                                     missing, or unexpected); in a secondmate home,
-#                                     when the inherited block is hand-edited or
+#                                     when the inherited block is hand-edited,
+#                                     lacks keys this checkout's schema added, or
 #                                     differs from the bundled theme of its name
 #   po-theme.sh headline              the session-start head lines: the applied
 #                                     block's address word, no-op reply, and role
@@ -282,17 +283,37 @@ shared_address() {
 
 # load_block <block-file> <out-kv>: the values line of a Persona block, role
 # words read in lowercase, safety-checked into a kv file; sets BLOCK_NAME.
+# A block written by an older apply lacks keys this checkout's schema added
+# since; each missing key is filled from this checkout's bundled theme of the
+# block's name (nautical for a custom or unknown theme) so the inherited theme
+# still resolves, and BLOCK_FILLED names the filled keys for verify to report.
 load_block() {
-  local n
+  local n src
+  BLOCK_FILLED=''
   values_to_theme "$1" > "$TMPD/block.raw" \
     || die "the Persona block in $SHARED has no values line; rerun apply in the primary home"
+  parse "$TMPD/block.raw" > "$TMPD/block.rawkv" 2>/dev/null || die "the Persona values line in $SHARED is malformed"
+  n=$(get "$TMPD/block.rawkv" name 2>/dev/null || true)
+  valid_name "$n" || die "the Persona values line in $SHARED has no valid name"
+  src="$BUNDLED/nautical.theme"
+  [ -n "$(block_src "$1")" ] || [ ! -f "$BUNDLED/$n.theme" ] || src="$BUNDLED/$n.theme"
+  parse "$BUNDLED/nautical.theme" > "$TMPD/block.schema" || die "bundled nautical theme is malformed"
+  parse "$src" > "$TMPD/block.fill" || die "$src is malformed"
+  BLOCK_FILLED=$(awk -F '\t' '
+    FILENAME == ARGV[1] { have[$1] = 1; next }
+    FILENAME == ARGV[2] { fill[$1] = $2; next }
+    $1 !~ /^(label|str)\./ && !($1 in have) && ($1 in fill) { print $1 }
+  ' "$TMPD/block.rawkv" "$TMPD/block.fill" "$TMPD/block.schema")
+  if [ -n "$BLOCK_FILLED" ]; then
+    printf '%s\n' "$BLOCK_FILLED" | while IFS= read -r k; do
+      printf '%s = "%s"\n' "$k" "$(get "$TMPD/block.fill" "$k")"
+    done >> "$TMPD/block.raw"
+    BLOCK_FILLED=$(printf '%s' "$BLOCK_FILLED" | paste -sd ' ' -)
+  fi
   awk -v roles="$ROLE_KEYS" '
     BEGIN { n = split(roles, ra, " "); for (i = 1; i <= n; i++) R[ra[i]] = 1 }
     { k = $1; if ((k in R) || k == "product" || k ~ /_plural$/) $0 = tolower($0); print }
   ' "$TMPD/block.raw" > "$TMPD/block.theme"
-  parse "$TMPD/block.theme" > "$TMPD/block.kv" 2>/dev/null || die "the Persona values line in $SHARED is malformed"
-  n=$(get "$TMPD/block.kv" name 2>/dev/null || true)
-  valid_name "$n" || die "the Persona values line in $SHARED has no valid name"
   load_file "$n" "$TMPD/block.theme" "$2"
   BLOCK_NAME=$n
 }
@@ -749,7 +770,10 @@ verify() {
   resolve_active
   block_of "$SHARED" > "$TMPD/actual"
   if is_secondmate_home; then
-    if [ -s "$TMPD/actual" ]; then
+    if [ -s "$TMPD/actual" ] && [ -n "${BLOCK_FILLED:-}" ]; then
+      echo "persona drift: inherited block predates this checkout's theme keys ($BLOCK_FILLED); rerun apply in the primary home"
+      drift=1
+    elif [ -s "$TMPD/actual" ]; then
       persona "$ACTIVE_NAME" "$ACTIVE_KV" "$ACTIVE_ORIGIN" > "$TMPD/expected"
       cmp -s "$TMPD/expected" "$TMPD/actual" || { echo "drift: the inherited Persona block does not match its own values line (hand-edited)"; drift=1; }
       # A block from a bundled theme should match this checkout's bundled theme
