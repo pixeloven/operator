@@ -396,9 +396,17 @@ test_session_start_prints_persona() {
   run_in "$code" "$home" apply >/dev/null 2>&1 || fail "operator apply failed before session start"
   strip_cache "$home"
   tree_before=$(git -C "$ROOT" status --porcelain --ignored -- .agents/skills)
+  # A fixture harness ancestor lets the lock verify on a harness-free CI runner,
+  # so the start is not read-only and runs heal; the trailing ':' keeps bash
+  # from exec-ing the script in place of the harness process.
+  mkdir -p "$TMP_ROOT/session/harness"
+  ln -sf /bin/bash "$TMP_ROOT/session/harness/codex"
+  # shellcheck disable=SC2016 # Expand in the fixture shell, not this parent.
   out=$(env -u CLAUDECODE -u PI_CODING_AGENT -u FM_PI_HARNESS -u GROK_AGENT \
-    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" "$ROOT/bin/fm-session-start.sh" 2>&1) \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" \
+    "$TMP_ROOT/session/harness/codex" -c '"$@"; rc=$?; :; exit "$rc"' _ "$ROOT/bin/fm-session-start.sh" 2>&1) \
     || fail "fm-session-start.sh failed: $out"
+  assert_contains "$out" "lock acquired: harness pid" "the fixture harness did not let session start verify its lock"
   cache_complete "$home" || fail "session start did not rebuild a values cache missing a current key"
   assert_equals "$tree_before" "$(git -C "$ROOT" status --porcelain --ignored -- .agents/skills)" \
     "session start wrote alias skills into this checkout for a home that is not its code root"
