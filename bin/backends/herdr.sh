@@ -1698,10 +1698,12 @@ fm_backend_herdr_projection_order_best_effort() {  # <session> <created-workspac
 # new-format "└ ... · p:<token>" projection is ever moved: nothing is
 # discovered by label, and no other home's workspace is touched.
 # When the live recorded children already form the run directly after the
-# parent nothing is probed or moved. Otherwise every live recorded child, in
-# list order, takes one workspace.move straight to its final slot (directly
-# after the parent and the children already placed), verified against the
-# exact expected order.
+# parent nothing is probed or moved. Otherwise every live recorded child not
+# yet in its slot, in list order, takes only the two verified workspace.move
+# forms: to the list end (insert_index equal to the full list length), then,
+# unless its slot is the end, backward from last to its slot directly after
+# the parent and the children already placed. Each move is verified against
+# the exact expected order.
 #
 # Presentation-only and always returns success: every unavailable, ambiguous,
 # failed, or unverifiable step prints a warning and stops, leaving every agent
@@ -1777,7 +1779,9 @@ fm_backend_herdr_projection_regroup_children_best_effort() {  # <session> <paren
       | select(($p | length) == 1)
       | ($p[0] + 1 + $k) as $at
       | ($rest[:$at] + [$ws] + $rest[$at:]) as $expected
-      | {at: $at, expected: $expected, unchanged: ($expected == $ids)}
+      | {at: $at, expected: $expected, unchanged: ($expected == $ids),
+         steps: ([{index: ($ids | length), expected: ($rest + [$ws])}]
+           + (if $at < ($rest | length) then [{index: $at, expected: $expected}] else [] end))}
     ' 2>/dev/null) || plan=
     at=$(printf '%s' "$plan" | jq -r '.at // empty' 2>/dev/null) || at=
     case "$at" in
@@ -1788,25 +1792,28 @@ fm_backend_herdr_projection_regroup_children_best_effort() {  # <session> <paren
     esac
     placed=$((placed + 1))
     [ "$(printf '%s' "$plan" | jq -r '.unchanged')" != true ] || continue
-    expected=$(printf '%s' "$plan" | jq -c '.expected')
-    focus_before=$(fm_backend_herdr_projection_focus_snapshot "$session") || {
-      echo "warning: herdr presentation regrouping could not capture exact active workspace and tab; leaving workers in Herdr's current order" >&2
-      return 0
-    }
-    if response=$("$mover" "$socket" "$child" "$at" 2>/dev/null); then
-      move_status=0
-    else
-      move_status=$?
-    fi
-    fm_backend_herdr_projection_focus_restore "$session" "$focus_before" "workspace move" || true
-    if [ "$move_status" -ne 0 ] \
-      || ! printf '%s' "$response" | jq -e --argjson expected "$expected" '
-        .result.type == "workspace_list"
-        and ([.result.workspaces[].workspace_id] == $expected)
-      ' >/dev/null 2>&1; then
-      echo "warning: herdr presentation regrouping could not verify a workspace move; leaving workers running in Herdr's current order" >&2
-      return 0
-    fi
+    while IFS=$'\t' read -r at expected; do
+      focus_before=$(fm_backend_herdr_projection_focus_snapshot "$session") || {
+        echo "warning: herdr presentation regrouping could not capture exact active workspace and tab; leaving workers in Herdr's current order" >&2
+        return 0
+      }
+      if response=$("$mover" "$socket" "$child" "$at" </dev/null 2>/dev/null); then
+        move_status=0
+      else
+        move_status=$?
+      fi
+      fm_backend_herdr_projection_focus_restore "$session" "$focus_before" "workspace move" || true
+      if [ "$move_status" -ne 0 ] \
+        || ! printf '%s' "$response" | jq -e --argjson expected "$expected" '
+          .result.type == "workspace_list"
+          and ([.result.workspaces[].workspace_id] == $expected)
+        ' >/dev/null 2>&1; then
+        echo "warning: herdr presentation regrouping could not verify a workspace move; leaving workers running in Herdr's current order" >&2
+        return 0
+      fi
+    done <<FMSTEPS
+$(printf '%s' "$plan" | jq -r '.steps[] | "\(.index)\t\(.expected | tojson)"')
+FMSTEPS
   done <<FMEOF
 $pending
 FMEOF

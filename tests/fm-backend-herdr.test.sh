@@ -3613,9 +3613,10 @@ SH
 
 # run_regroup_case <dir> <workspaces-json-array>: run the secondmate crew
 # regroup against a STATEFUL fake. $dir/workspaces holds the live order; the
-# stub CLI serves it and logs every call, and the fake mover applies Herdr's
-# workspace.move to it (insert_index clamped to the remaining list, so the
-# list length is move-to-last) unless $dir/mover-fails exists. The parent is
+# stub CLI serves it and logs every call, and the fake mover applies only the
+# two verified workspace.move forms (insert_index equal to the full list
+# length moves to last; the last workspace moves backward to a smaller index)
+# and fails on any other use or when $dir/mover-fails exists. The parent is
 # 2ndmate-alpha (w9) and its home's records live in $dir/home/state.
 # Prints the function's combined output; the final order is in $dir/workspaces.
 run_regroup_case() {
@@ -3631,8 +3632,10 @@ printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$D/mover.log"
 next=$(jq -c --arg ws "$2" --argjson i "$3" '
   (map(select(.workspace_id != $ws))) as $rest
   | ([.[] | select(.workspace_id == $ws)][0]) as $moved
-  | ([$i, ($rest | length)] | min) as $at
-  | $rest[:$at] + [$moved] + $rest[$at:]
+  | if $i == length then $rest + [$moved]
+    elif (.[-1].workspace_id == $ws) and ($i < length - 1) then $rest[:$i] + [$moved] + $rest[$i:]
+    else error("unverified workspace.move form")
+    end
 ' "$D/workspaces") || exit 4
 printf '%s\n' "$next" > "$D/workspaces"
 jq -c '{id: "fm-workspace-move", result: {type: "workspace_list", workspaces: .}}' "$D/workspaces"
@@ -3689,7 +3692,7 @@ test_projection_regroup_brings_recorded_children_under_relaunched_secondmate() {
   assert_not_contains "$out" "warning" "a clean regroup must not warn"
   [ "$(regroup_order "$dir")" = "w1,w3,w4,w5,w9,w2,w6" ] \
     || fail "the relaunched secondmate must be followed by exactly its own recorded children in order: $(regroup_order "$dir")"
-  [ "$(cut -f2,3 "$dir/mover.log" | tr '\n' ' ')" = $'w2\t6 w6\t6 ' ] \
+  [ "$(cut -f2,3 "$dir/mover.log" | tr '\n' ' ')" = $'w2\t7 w6\t7 ' ] \
     || fail "only the secondmate's own recorded children may move: $(cat "$dir/mover.log")"
   assert_not_contains "$(cat "$dir/cli.log")" "close" "regroup closed a workspace or pane"
   assert_not_contains "$(cat "$dir/cli.log")" "rename" "regroup renamed a workspace"
@@ -3725,7 +3728,8 @@ test_projection_regroup_never_strands_child_past_unrelated_spaces() {
   assert_not_contains "$out" "warning" "a clean regroup must not warn"
   [ "$(regroup_order "$dir")" = "w1,w9,w2,w8,w7" ] \
     || fail "the child must land under its parent, never past a scratch space and orphan: $(regroup_order "$dir")"
-  [ "$(wc -l < "$dir/mover.log" | tr -d ' ')" = 1 ] || fail "each child takes exactly one move: $(cat "$dir/mover.log")"
+  [ "$(cut -f2,3 "$dir/mover.log" | tr '\n' ' ')" = $'w2\t5 w2\t2 ' ] \
+    || fail "the child must move to last, then back to its slot: $(cat "$dir/mover.log")"
   pass "herdr presentation regroup: a child is never stranded past unrelated spaces"
 }
 
