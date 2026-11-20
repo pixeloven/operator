@@ -1,0 +1,41 @@
+lab session: fm-lab-regroupspawn-66993-30948
+
+=== Scenario E: fresh secondmate launch via fm-spawn.sh --secondmate --backend herdr ===
+before: firstmate , └ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1 , └ op-second-task · p:AbCdEfGhIjKlMnOpQrStU2 , └ another-homes-task · p:AbCdEfGhIjKlMnOpQrStU9
+fm-spawn exit=0
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-rgnav66965/gitconfig signing=disabled
+spawned rgnav66965 harness=sh kind=secondmate mode=secondmate yolo=off window=fm-lab-regroupspawn-66993-30948:w5:p2 worktree=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-regroup-spawn.doIj9i/home-2ndmate-rgnav66965
+warning: secondmate rgnav66965 sync skipped before launch: primary default-branch commit cannot be resolved
+after:  firstmate , └ another-homes-task · p:AbCdEfGhIjKlMnOpQrStU9 , 2ndmate-rgnav66965 , └ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1 , └ op-second-task · p:AbCdEfGhIjKlMnOpQrStU2
+E RESULT: PASS
+
+=== Scenario F: navigator workspace gone; secondmate respawn (fm-spawn.sh <id> --secondmate --backend herdr, as the liveness sweep does) into a fresh workspace ===
+closed old navigator workspace w5
+before relaunch: firstmate , └ another-homes-task · p:AbCdEfGhIjKlMnOpQrStU9 , └ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1 , └ op-second-task · p:AbCdEfGhIjKlMnOpQrStU2 , scratch
+fm-spawn <id> <home> <cmd> --secondmate --backend herdr (respawn) exit=0
+diagnostic=human-signing-config-not-used
+preflight=ok config=/tmp/fm-rgnav66965/gitconfig signing=disabled
+spawned rgnav66965 harness=sh kind=secondmate mode=secondmate yolo=off window=fm-lab-regroupspawn-66993-30948:w7:p2 worktree=/private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-regroup-spawn.doIj9i/home-2ndmate-rgnav66965
+warning: secondmate rgnav66965 sync skipped before launch: primary default-branch commit cannot be resolved
+new navigator workspace: w7
+after relaunch:  w1=firstmate  |  w4=└ another-homes-task · p:AbCdEfGhIjKlMnOpQrStU9  |  w6=scratch  |  w7=2ndmate-rgnav66965  |  w2=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w3=└ op-second-task · p:AbCdEfGhIjKlMnOpQrStU2
+F RESULT: PASS
+close/rename calls during respawn (all herdr calls in order, lifecycle ones marked):
+  4:workspace create --cwd /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-regroup-spawn.doIj9i/home-2ndmate-rgnav66965 --label 2ndmate-rgnav66965 --no-focus
+  6:tab create --workspace w7 --cwd /private/var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/fm-regroup-spawn.doIj9i/home-2ndmate-rgnav66965 --label fm-rgnav66965 --no-focus
+  10:pane close w7:p1
+  regroup-phase calls (after last pane/agent start):
+    api schema --json
+    session list --json
+    workspace list
+    workspace list
+    tab list --workspace w1
+    workspace list
+    tab list --workspace w1
+    workspace list
+    workspace list
+    tab list --workspace w1
+    workspace list
+    tab list --workspace w1
+children workspaces still present: 2 (labels unchanged: └ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1)

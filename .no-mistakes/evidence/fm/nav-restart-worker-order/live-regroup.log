@@ -1,0 +1,47 @@
+lab session: fm-lab-regroup-52526-3698
+
+=== Scenario A: navigator relaunched into a fresh workspace appended at the end ===
+before: w1=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w2=└ op-other-task · p:AbCdEfGhIjKlMnOpQrStU2  |  w3=2ndmate-bravo  |  w4=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU3  |  w5=2ndmate-pixeloven
+rc=0
+real workspace.move calls:
+  workspace.move ws=w1 insert_index=5
+  workspace.move ws=w2 insert_index=5
+after:  w3=2ndmate-bravo  |  w4=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU3  |  w5=2ndmate-pixeloven  |  w1=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w2=└ op-other-task · p:AbCdEfGhIjKlMnOpQrStU2
+focused before=["w1"] after=["w1"]
+lifecycle calls (close/rename/stop): 0
+A RESULT: PASS
+
+=== Scenario A2: rerun with children already in place (idempotent, no move) ===
+rc=0
+real workspace.move calls: none
+A2 RESULT: PASS
+
+=== Scenario B: non-last parent, child stranded above it, scratch + foreign orphan below (backward-move form) ===
+before: w3=2ndmate-bravo  |  w4=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU3  |  w5=2ndmate-pixeloven  |  w1=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w2=└ op-other-task · p:AbCdEfGhIjKlMnOpQrStU2  |  w6=└ alpha-task · p:AbCdEfGhIjKlMnOpQrStU5  |  w7=2ndmate-alpha  |  w8=scratch  |  w9=└ x · p:AbCdEfGhIjKlMnOpQrStU7
+rc=0
+real workspace.move calls:
+  workspace.move ws=w6 insert_index=9
+  workspace.move ws=w6 insert_index=6
+after:  w3=2ndmate-bravo  |  w4=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU3  |  w5=2ndmate-pixeloven  |  w1=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w2=└ op-other-task · p:AbCdEfGhIjKlMnOpQrStU2  |  w7=2ndmate-alpha  |  w6=└ alpha-task · p:AbCdEfGhIjKlMnOpQrStU5  |  w8=scratch  |  w9=└ x · p:AbCdEfGhIjKlMnOpQrStU7
+lifecycle calls (close/rename/stop): 0
+B RESULT: PASS
+
+=== Scenario C: mixed layout [c0, P, c1, X, c2] keeps relative order c0,c1,c2 ===
+before: w3=2ndmate-bravo  |  w4=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU3  |  w5=2ndmate-pixeloven  |  w1=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w2=└ op-other-task · p:AbCdEfGhIjKlMnOpQrStU2  |  w7=2ndmate-alpha  |  w6=└ alpha-task · p:AbCdEfGhIjKlMnOpQrStU5  |  w8=scratch  |  w9=└ x · p:AbCdEfGhIjKlMnOpQrStU7  |  wA=└ c0 · p:AbCdEfGhIjKlMnOpQrStUa  |  wB=2ndmate-charlie  |  wC=└ c1 · p:AbCdEfGhIjKlMnOpQrStUb  |  wD=scratch-2  |  wE=└ c2 · p:AbCdEfGhIjKlMnOpQrStUc
+rc=0
+real workspace.move calls:
+  workspace.move ws=wA insert_index=14
+  workspace.move ws=wA insert_index=10
+  workspace.move ws=wE insert_index=14
+  workspace.move ws=wE insert_index=12
+after:  w3=2ndmate-bravo  |  w4=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU3  |  w5=2ndmate-pixeloven  |  w1=└ op-themes-cache-format-fix · p:AbCdEfGhIjKlMnOpQrStU1  |  w2=└ op-other-task · p:AbCdEfGhIjKlMnOpQrStU2  |  w7=2ndmate-alpha  |  w6=└ alpha-task · p:AbCdEfGhIjKlMnOpQrStU5  |  w8=scratch  |  w9=└ x · p:AbCdEfGhIjKlMnOpQrStU7  |  wB=2ndmate-charlie  |  wA=└ c0 · p:AbCdEfGhIjKlMnOpQrStUa  |  wC=└ c1 · p:AbCdEfGhIjKlMnOpQrStUb  |  wE=└ c2 · p:AbCdEfGhIjKlMnOpQrStUc  |  wD=scratch-2
+C RESULT: PASS
+
+=== Scenario D: move failure (mover exits nonzero) warns, rc=0, order unchanged, no cleanup ===
+warning: herdr presentation regrouping could not verify a workspace move; leaving workers running in Herdr's current order
+rc=0
+real workspace.move calls: none
+lifecycle calls (close/rename/stop): 0
+D RESULT: PASS (order unchanged, all workspaces still present)
+
+final workspace count: 16
