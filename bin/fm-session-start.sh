@@ -54,7 +54,10 @@
 #                       state/.afk daemon flag), and a cheap per-task
 #                       endpoint-liveness read, each bounded and crash-
 #                       isolated so one task's read can never abort the
-#                       digest: read-only, always runs. The per-task reads
+#                       digest: read-only, always runs. A present local
+#                       secondmate endpoint also gets a bounded occupant-
+#                       identity read, so a foreign occupant reads
+#                       `endpoint: mismatch` instead of alive. The per-task reads
 #                       run serially, so with a wedged backend the stage's
 #                       ceiling is tasks x the per-read bound
 #                       (FM_SESSION_START_ENDPOINT_TIMEOUT, default 10s) and
