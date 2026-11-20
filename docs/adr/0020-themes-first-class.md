@@ -114,6 +114,7 @@ Measured cost of the hooks this record permits: replaying upstream's weekly wind
 
 11. **Namespaces.**
     This record extends ADR-0016's claims with `bin/po-theme-lib.sh`, `.agents/skills/po-theme/surfaces.tsv`, `.agents/skills/po-theme/assets/`, `.claude/mods/firstmate-calm/lib/po-*.ts`, `.claude/mods/firstmate-calm/tests/po-*.test.ts`, and their symlinks `.pi/extensions/lib/po-*.ts`.
+    It also claims the lines in `tests/fm-calm-pi-extension.test.sh` that copy those `po-*.ts` modules into its Pi fixtures.
     For an upstream offer, the `po-` prefix becomes upstream's own prefix; no other change is needed.
 
 ## Consequences

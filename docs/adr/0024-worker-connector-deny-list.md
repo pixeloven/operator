@@ -1,6 +1,6 @@
 # ADR-0024: Claude workers honor config/crew-exclude-tools
 
-- **Status:** Proposed
+- **Status:** Retired 2026-11-20 by the seventh upstream synchronization, which brought upstream #8223's own Claude support for `config/crew-exclude-tools` through `--disallowedTools`; the synchronization took upstream's version, removed the deny-rule hunks, the example list, and their tests, and the A4 allowlist drops `bin/fm-exclude-tools-lib.sh` and `docs/examples/crew-exclude-tools`
 - **Date:** 2026-10-28
 - **Deciders:** The operator
 - **Source:** Worker tooling investigation, sections 4 and 6; operator review choosing one local list for every runtime
