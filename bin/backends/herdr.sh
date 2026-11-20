@@ -1687,7 +1687,7 @@ fm_backend_herdr_projection_order_best_effort() {  # <session> <created-workspac
 
 # fm_backend_herdr_projection_regroup_children_best_effort: bring a parent's
 # own recorded projected child workspaces back directly under that parent,
-# keeping their relative order.
+# keeping their relative list order.
 # bin/fm-spawn.sh calls it after every Herdr secondmate launch, because a
 # navigator respawned into a fresh workspace lands at the end of Herdr's list
 # while its crew's workspaces keep their old positions under another parent.
@@ -1697,21 +1697,19 @@ fm_backend_herdr_projection_order_best_effort() {  # <session> <created-workspac
 # records name for <session>, and only a candidate whose live label is a
 # new-format "└ ... · p:<token>" projection is ever moved: nothing is
 # discovered by label, and no other home's workspace is touched.
-# Children already forming the run directly after the parent stay put, so with
-# no live recorded child out of place nothing is probed or moved.
-# Each out-of-place child takes the two verified forms the presentation path
-# already uses: workspace.move to the list end (insert_index equal to the list
-# length), verified against the returned order, then
-# fm_backend_herdr_projection_order_best_effort, which places that last
-# workspace at the end of the parent's contiguous child block.
+# When the live recorded children already form the run directly after the
+# parent nothing is probed or moved. Otherwise every live recorded child, in
+# list order, takes one workspace.move straight to its final slot (directly
+# after the parent and the children already placed), verified against the
+# exact expected order.
 #
 # Presentation-only and always returns success: every unavailable, ambiguous,
 # failed, or unverifiable step prints a warning and stops, leaving every agent
 # running in Herdr's current order. It never closes, renames, restarts, or
 # re-parents any agent or workspace.
-fm_backend_herdr_projection_regroup_children_best_effort() {  # <session> <parent-workspace-id> <parent-label> <home-state-dir>
-  local session=$1 parent_ws=$2 parent=$3 state_dir=$4 meta ws children list pending child
-  local move_capable socket mover focus_before response move_status before len
+fm_backend_herdr_projection_regroup_children_best_effort() {  # <session> <parent-workspace-id> <home-state-dir>
+  local session=$1 parent_ws=$2 state_dir=$3 meta ws children list pending child
+  local move_capable socket mover focus_before response move_status plan at expected placed
   [ -n "$parent_ws" ] && [ -d "$state_dir" ] || return 0
   children=
   for meta in "$state_dir"/*.meta; do
@@ -1742,11 +1740,7 @@ fm_backend_herdr_projection_regroup_children_best_effort() {  # <session> <paren
         | select(. != $pidx)
         | select($s[.].workspace_id as $id | any($children[]; . == $id))
         | select($s[.] | is_new_child)] as $live
-    | (reduce range($pidx + 1; $s | length) as $i (
-        {run: 0, open: true};
-        if .open and any($live[]; . == $i) then .run += 1 else .open = false end
-      )).run as $run
-    | "ok", ($live[] | select(. < $pidx or . > $pidx + $run) | $s[.].workspace_id)
+    | "ok", (if $live == [range($pidx + 1; $pidx + 1 + ($live | length))] then empty else ($live[] | $s[.].workspace_id) end)
   ' 2>/dev/null) || pending=
   case "$pending" in
     ok) return 0 ;;
@@ -1771,36 +1765,48 @@ fm_backend_herdr_projection_regroup_children_best_effort() {  # <session> <paren
     return 0
   }
   mover=${FM_BACKEND_HERDR_WORKSPACE_MOVER:-$FM_BACKEND_HERDR_ROOT/bin/backends/herdr-workspace-move.py}
+  placed=0
   while IFS= read -r child; do
     [ -n "$child" ] || continue
     list=$(fm_backend_herdr_cli "$session" workspace list 2>/dev/null) || list=
-    before=$(printf '%s' "$list" | jq -c '[.result.workspaces[].workspace_id]' 2>/dev/null) || before=
-    len=$(printf '%s' "$before" | jq -r 'length' 2>/dev/null) || len=
-    case "$len" in
+    plan=$(printf '%s' "$list" | jq -c --arg ws "$child" --arg parent "$parent_ws" --argjson k "$placed" '
+      [.result.workspaces[].workspace_id] as $ids
+      | select(($ids | map(select(. == $ws)) | length) == 1)
+      | ($ids | map(select(. != $ws))) as $rest
+      | ([range(0; $rest | length) | select($rest[.] == $parent)]) as $p
+      | select(($p | length) == 1)
+      | ($p[0] + 1 + $k) as $at
+      | ($rest[:$at] + [$ws] + $rest[$at:]) as $expected
+      | {at: $at, expected: $expected, unchanged: ($expected == $ids)}
+    ' 2>/dev/null) || plan=
+    at=$(printf '%s' "$plan" | jq -r '.at // empty' 2>/dev/null) || at=
+    case "$at" in
       ''|*[!0-9]*)
         echo "warning: herdr presentation regrouping could not re-read the workspace order; leaving workers in Herdr's current order" >&2
         return 0
         ;;
     esac
+    placed=$((placed + 1))
+    [ "$(printf '%s' "$plan" | jq -r '.unchanged')" != true ] || continue
+    expected=$(printf '%s' "$plan" | jq -c '.expected')
     focus_before=$(fm_backend_herdr_projection_focus_snapshot "$session") || {
       echo "warning: herdr presentation regrouping could not capture exact active workspace and tab; leaving workers in Herdr's current order" >&2
       return 0
     }
-    if response=$("$mover" "$socket" "$child" "$len" 2>/dev/null); then
+    if response=$("$mover" "$socket" "$child" "$at" 2>/dev/null); then
       move_status=0
     else
       move_status=$?
     fi
     fm_backend_herdr_projection_focus_restore "$session" "$focus_before" "workspace move" || true
     if [ "$move_status" -ne 0 ] \
-      || ! printf '%s' "$response" | jq -e --arg ws "$child" --argjson before "$before" '
+      || ! printf '%s' "$response" | jq -e --argjson expected "$expected" '
         .result.type == "workspace_list"
-        and ([.result.workspaces[].workspace_id] == ($before | map(select(. != $ws)) + [$ws]))
+        and ([.result.workspaces[].workspace_id] == $expected)
       ' >/dev/null 2>&1; then
       echo "warning: herdr presentation regrouping could not verify a workspace move; leaving workers running in Herdr's current order" >&2
       return 0
     fi
-    fm_backend_herdr_projection_order_best_effort "$session" "$child" "$parent" "$parent_ws" ""
   done <<FMEOF
 $pending
 FMEOF

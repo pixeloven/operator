@@ -8418,8 +8418,7 @@ SPAWN_ACCOUNT=
 # (bin/backends/herdr.sh fm_backend_herdr_projection_regroup_children_best_effort).
 if [ "$KIND" = secondmate ] && [ "$BACKEND" = herdr ] && [ -n "${HERDR_SES:-}" ] && [ -n "${HERDR_WORKSPACE_ID:-}" ]; then
   if spawn_herdr_presentation_order_lock_acquire "$HERDR_SES"; then
-    fm_backend_herdr_projection_regroup_children_best_effort "$HERDR_SES" "$HERDR_WORKSPACE_ID" \
-      "$(FM_HOME="$PROJ_ABS" fm_backend_herdr_workspace_label)" "$PROJ_ABS/state" || true
+    fm_backend_herdr_projection_regroup_children_best_effort "$HERDR_SES" "$HERDR_WORKSPACE_ID" "$PROJ_ABS/state" || true
     spawn_herdr_presentation_order_lock_release
   else
     echo "warning: herdr presentation lock unavailable; leaving secondmate $ID's crew workspaces in Herdr's current order" >&2

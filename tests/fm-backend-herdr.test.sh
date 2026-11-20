@@ -3654,7 +3654,7 @@ SH
       }
       fm_backend_herdr_projection_focus_snapshot() { printf "w1\tw1:t1"; }
       fm_backend_herdr_projection_focus_restore() { return 0; }
-      fm_backend_herdr_projection_regroup_children_best_effort fmtest w9 2ndmate-alpha "$D/home/state"
+      fm_backend_herdr_projection_regroup_children_best_effort fmtest w9 "$D/home/state"
       echo "rc=$?"' "$ROOT" 2>&1
 }
 
@@ -3689,14 +3689,14 @@ test_projection_regroup_brings_recorded_children_under_relaunched_secondmate() {
   assert_not_contains "$out" "warning" "a clean regroup must not warn"
   [ "$(regroup_order "$dir")" = "w1,w3,w4,w5,w9,w2,w6" ] \
     || fail "the relaunched secondmate must be followed by exactly its own recorded children in order: $(regroup_order "$dir")"
-  [ "$(cut -f2,3 "$dir/mover.log" | tr '\n' ' ')" = $'w2\t7 w6\t7 ' ] \
+  [ "$(cut -f2,3 "$dir/mover.log" | tr '\n' ' ')" = $'w2\t6 w6\t6 ' ] \
     || fail "only the secondmate's own recorded children may move: $(cat "$dir/mover.log")"
   assert_not_contains "$(cat "$dir/cli.log")" "close" "regroup closed a workspace or pane"
   assert_not_contains "$(cat "$dir/cli.log")" "rename" "regroup renamed a workspace"
   pass "herdr presentation regroup: a relaunched secondmate is followed by its own recorded children only"
 }
 
-test_projection_regroup_reuses_parent_block_placement_when_parent_is_not_last() {
+test_projection_regroup_places_children_directly_under_non_last_parent() {
   local dir out
   dir="$TMP_ROOT/projection-regroup-not-last"; mkdir -p "$dir/home/state"
   regroup_meta "$dir" own-a ship fmtest w2
@@ -3709,7 +3709,42 @@ test_projection_regroup_reuses_parent_block_placement_when_parent_is_not_last() 
   assert_not_contains "$out" "warning" "a clean regroup must not warn"
   [ "$(regroup_order "$dir")" = "w1,w9,w2,w4,w5" ] \
     || fail "the child must land directly under its parent ahead of the next parent's block: $(regroup_order "$dir")"
-  pass "herdr presentation regroup: placement under a non-last parent reuses the parent-block ordering"
+  pass "herdr presentation regroup: children land directly under a non-last parent"
+}
+
+test_projection_regroup_never_strands_child_past_unrelated_spaces() {
+  local dir out
+  dir="$TMP_ROOT/projection-regroup-no-strand"; mkdir -p "$dir/home/state"
+  regroup_meta "$dir" own-a ship fmtest w2
+  out=$(run_regroup_case "$dir" '[{"workspace_id":"w1","label":"firstmate"},
+    {"workspace_id":"w2","label":"└ own-a · p:AbCdEfGhIjKlMnOpQrStU1"},
+    {"workspace_id":"w9","label":"2ndmate-alpha"},
+    {"workspace_id":"w8","label":"scratch"},
+    {"workspace_id":"w7","label":"└ x · p:AbCdEfGhIjKlMnOpQrStU7"}]')
+  assert_contains "$out" "rc=0" "regroup must succeed"
+  assert_not_contains "$out" "warning" "a clean regroup must not warn"
+  [ "$(regroup_order "$dir")" = "w1,w9,w2,w8,w7" ] \
+    || fail "the child must land under its parent, never past a scratch space and orphan: $(regroup_order "$dir")"
+  [ "$(wc -l < "$dir/mover.log" | tr -d ' ')" = 1 ] || fail "each child takes exactly one move: $(cat "$dir/mover.log")"
+  pass "herdr presentation regroup: a child is never stranded past unrelated spaces"
+}
+
+test_projection_regroup_keeps_children_relative_order() {
+  local dir out
+  dir="$TMP_ROOT/projection-regroup-relative-order"; mkdir -p "$dir/home/state"
+  regroup_meta "$dir" c0 ship fmtest w2
+  regroup_meta "$dir" c1 ship fmtest w3
+  regroup_meta "$dir" c2 ship fmtest w4
+  out=$(run_regroup_case "$dir" '[{"workspace_id":"w2","label":"└ c0 · p:AbCdEfGhIjKlMnOpQrStU1"},
+    {"workspace_id":"w9","label":"2ndmate-alpha"},
+    {"workspace_id":"w3","label":"└ c1 · p:AbCdEfGhIjKlMnOpQrStU2"},
+    {"workspace_id":"w8","label":"scratch"},
+    {"workspace_id":"w4","label":"└ c2 · p:AbCdEfGhIjKlMnOpQrStU3"}]')
+  assert_contains "$out" "rc=0" "regroup must succeed"
+  assert_not_contains "$out" "warning" "a clean regroup must not warn"
+  [ "$(regroup_order "$dir")" = "w9,w2,w3,w4,w8" ] \
+    || fail "children must follow the parent in their existing relative order: $(regroup_order "$dir")"
+  pass "herdr presentation regroup: children keep their existing relative order"
 }
 
 test_projection_regroup_move_failure_warns_and_succeeds() {
@@ -6804,7 +6839,9 @@ test_projection_order_secondmate_parent_block
 test_projection_order_group_key_places_new_task_inside_its_group
 test_projection_order_foreign_legacy_child_is_read_only
 test_projection_regroup_brings_recorded_children_under_relaunched_secondmate
-test_projection_regroup_reuses_parent_block_placement_when_parent_is_not_last
+test_projection_regroup_places_children_directly_under_non_last_parent
+test_projection_regroup_never_strands_child_past_unrelated_spaces
+test_projection_regroup_keeps_children_relative_order
 test_projection_regroup_move_failure_warns_and_succeeds
 test_projection_regroup_no_children_or_in_place_never_moves
 test_projection_order_allows_intervening_parent_child_block
