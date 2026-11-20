@@ -293,6 +293,9 @@ Projected children are placed in one contiguous block immediately after their ow
 Existing legacy child labels may extend an already adjacent block read-only but are never renamed or migrated.
 A foreign, ambiguous, detached, or manually interleaved child makes ordering skip with a warning rather than rewriting the layout.
 
+Every Herdr secondmate launch, including a respawn into a fresh workspace that Herdr appends at the end of the list, regroups that home's own projected children directly after the secondmate's workspace in their existing relative order.
+Its only candidates are the exact workspace ids in that home's own task records, and it moves only new-format projected children, never another home's workspace.
+
 Ordering failure never fails the task spawn.
 Firstmate does not retry, adopt, reuse, close, delete, or rename anything in response to an unavailable method, lock contention, ambiguous socket, lost response, failed move, or verification mismatch.
 The worker remains on the ordinary flat or Herdr-current-order path.
