@@ -1,0 +1,13 @@
+### BEFORE (767dc49e) - same lab panes
+sm-own: status=alive state=alive
+  reason=
+  line=secondmate sm-own already live (backend=herdr)
+sm-nested: status=alive state=alive
+  reason=
+  line=secondmate sm-nested already live (backend=herdr)
+sm-foreign: status=alive state=alive
+  reason=
+  line=secondmate sm-foreign already live (backend=herdr)
+sm-prefix: status=alive state=alive
+  reason=
+  line=secondmate sm-prefix already live (backend=herdr)
