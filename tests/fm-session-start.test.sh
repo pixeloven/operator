@@ -1441,6 +1441,87 @@ EOF
   pass "herdr endpoint liveness is reported per task: alive, dead for exit 1, dead for any other probe status"
 }
 
+# make_fake_herdr_occupant <fakebin> <map-file>: a herdr whose `pane get <pane>`
+# answers with the pane JSON's foreground_cwd taken from <map-file> lines of
+# `<pane> <cwd>`; the cwd `-` answers with no foreground_cwd at all (an
+# unreadable occupant), and an unlisted pane is gone. Every other call fails, so
+# the deferred recovery sweep reads every listed pane as unreadable and never
+# acts on it.
+make_fake_herdr_occupant() {
+  local fakebin=$1 map=$2
+  cat > "$fakebin/herdr" <<SH
+#!/usr/bin/env bash
+set -u
+if [ "\${1:-}" = pane ] && [ "\${2:-}" = get ]; then
+  while read -r pane cwd; do
+    [ "\$pane" = "\${3:-}" ] || continue
+    if [ "\$cwd" = - ]; then
+      printf '{"result":{"pane":{"pane_id":"%s"}}}\n' "\$pane"
+    else
+      printf '{"result":{"pane":{"pane_id":"%s","foreground_cwd":"%s"}}}\n' "\$pane" "\$cwd"
+    fi
+    exit 0
+  done < "$map"
+  exit 1
+fi
+exit 1
+SH
+  chmod +x "$fakebin/herdr"
+}
+
+# The reported false-alive: a secondmate's recorded pane still exists, but the
+# agent occupying it is a different session (here, one running in the primary
+# home). Pane presence alone must not read alive; an occupant in the recorded
+# home still does, and an occupant whose cwd the backend cannot report keeps the
+# old presence verdict while saying it is presence only.
+test_endpoint_liveness_secondmate_occupant_identity() {
+  local rec root home fakebin out mate_home
+  rec=$(new_world liveness-occupant)
+  IFS='|' read -r root home fakebin <<EOF
+$rec
+EOF
+  make_fake_toolchain "$fakebin"
+  make_fake_ps_claude "$fakebin"
+  mate_home="$(cd -P "$home/.." && pwd -P)/mate-home"
+  mkdir -p "$mate_home/projects/app"
+  {
+    printf 'p-own %s\n' "$mate_home"
+    printf 'p-nested %s\n' "$mate_home/projects/app"
+    printf 'p-foreign %s\n' "$(cd -P "$home" && pwd -P)"
+    printf 'p-blind -\n'
+    printf 'p-ship %s\n' "$(cd -P "$home" && pwd -P)"
+  } > "$fakebin/occupants"
+  make_fake_herdr_occupant "$fakebin" "$fakebin/occupants"
+
+  for pane in own nested foreign blind; do
+    printf 'window=sess:p-%s\nkind=secondmate\nbackend=herdr\nharness=claude\nhome=%s\n' \
+      "$pane" "$mate_home" > "$home/state/sm-$pane.meta"
+  done
+  printf 'window=sess:p-ship\nkind=ship\nbackend=herdr\nworktree=%s\n' "$mate_home" > "$home/state/task-ship.meta"
+
+  out=$(run_session_start "$home" "$root" "$fakebin:$BASE_PATH")
+  assert_contains "$out" "endpoint: alive (backend=herdr window=sess:p-own)" \
+    "a secondmate pane occupied by an agent in its recorded home was not alive"
+  assert_contains "$out" "endpoint: alive (backend=herdr window=sess:p-nested)" \
+    "an occupant working inside the recorded home was not alive"
+  assert_not_contains "$out" "window=sess:p-own) - occupant identity unreadable" \
+    "an occupant in the recorded home was not positively identified"
+  assert_not_contains "$out" "window=sess:p-nested) - occupant identity unreadable" \
+    "an occupant inside the recorded home was not positively identified"
+  assert_contains "$out" \
+    "endpoint: mismatch (backend=herdr window=sess:p-foreign - a different agent occupies the recorded pane: its cwd $(cd -P "$home" && pwd -P) is outside the recorded secondmate home $mate_home; not relaunched automatically)" \
+    "a secondmate pane hosting a different agent was not reported as a mismatch"
+  assert_not_contains "$out" "endpoint: alive (backend=herdr window=sess:p-foreign)" \
+    "a secondmate pane hosting a different agent still read alive"
+  assert_contains "$out" \
+    "endpoint: alive (backend=herdr window=sess:p-blind) - occupant identity unreadable, so this is pane presence only" \
+    "an unreadable occupant did not keep the presence verdict with its caveat"
+  assert_contains "$out" "endpoint: alive (backend=herdr window=sess:p-ship)" \
+    "an ordinary task endpoint changed verdict under the secondmate occupant check"
+
+  pass "secondmate endpoint liveness: own occupant alive, different agent mismatch, unreadable identity unchanged"
+}
+
 test_endpoint_read_death_is_isolated_and_reported() {
   local rec root home fakebin out status=0
   [ -r /proc/self/stat ] || { echo "skip: /proc not readable (the read-death shape needs process ancestry)"; return 0; }
@@ -3118,6 +3199,7 @@ test_status_tail_line_cap
 test_orphan_status_logs_are_printed
 test_endpoint_liveness_tmux
 test_endpoint_liveness_herdr
+test_endpoint_liveness_secondmate_occupant_identity
 test_endpoint_read_death_is_isolated_and_reported
 test_endpoint_read_hang_is_bounded_and_reported
 test_endpoint_bound_rejects_padded_zero

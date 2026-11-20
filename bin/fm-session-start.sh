@@ -596,6 +596,19 @@ fm_session_start_endpoint_read() {  # <backend> <target> [expected-label]
   ' _ "$SCRIPT_DIR/fm-backend.sh" "$backend" "$target" "$label"
 }
 
+# fm_session_start_endpoint_occupant <backend> <target> <home>: the occupant
+# identity verdict (bin/fm-backend.sh's fm_backend_endpoint_occupant_verdict)
+# for a secondmate endpoint that already read present, under the same bound and
+# crash isolation as the presence read. A read that dies or times out prints
+# nothing, which the caller treats as unknown identity.
+fm_session_start_endpoint_occupant() {  # <backend> <target> <home>
+  # shellcheck disable=SC2016  # Positional parameters expand inside the child bash, not here.
+  fm_run_timed "$ENDPOINT_TIMEOUT" bash -c '
+    . "$1"
+    fm_backend_endpoint_occupant_verdict "$2" "$3" "$4"
+  ' _ "$SCRIPT_DIR/fm-backend.sh" "$1" "$2" "$3" 2>/dev/null || true
+}
+
 hash_file_sha256() {
   local file=$1 digest
   [ -f "$file" ] || return 1
@@ -941,10 +954,24 @@ for meta in "$STATE"/*.meta; do
     backend=$(fm_backend_of_meta "$meta")
     endpoint_rc=0
     fm_session_start_endpoint_read "$backend" "${target:-$window}" "fm-$id" || endpoint_rc=$?
+    # A secondmate's pane can outlive its agent and host a different one, so
+    # presence reads alive only when the occupant runs in the recorded home; a
+    # mismatch is reported, never repaired here (remote routes are not local
+    # panes and keep the presence verdict).
+    occupant=match
+    if [ "$endpoint_rc" -eq 0 ] && [ "$(fm_meta_get "$meta" kind)" = secondmate ] \
+      && [ -z "$(fm_meta_get "$meta" remote_host)" ]; then
+      occupant=$(fm_session_start_endpoint_occupant "$backend" "${target:-$window}" "$(fm_meta_get "$meta" home)")
+    fi
     # Only the timeout owner's own statuses mean the read itself failed: 124 is
     # the bound firing and >=128 is a signal death. Every other nonzero status
     # is the probe's own verdict that the endpoint is gone.
-    if [ "$endpoint_rc" -eq 0 ]; then
+    if [ "$endpoint_rc" -eq 0 ] && [ "${occupant%%$'\t'*}" = mismatch ]; then
+      printf 'endpoint: mismatch (backend=%s window=%s - a different agent occupies the recorded pane: its cwd %s is outside the recorded secondmate home %s; not relaunched automatically)\n' \
+        "$backend" "$window" "${occupant#*$'\t'}" "$(fm_meta_get "$meta" home)"
+    elif [ "$endpoint_rc" -eq 0 ] && [ "$occupant" != match ]; then
+      printf 'endpoint: alive (backend=%s window=%s) - occupant identity unreadable, so this is pane presence only\n' "$backend" "$window"
+    elif [ "$endpoint_rc" -eq 0 ]; then
       printf 'endpoint: alive (backend=%s window=%s)\n' "$backend" "$window"
     elif [ "$endpoint_rc" -eq 124 ] || [ "$endpoint_rc" -ge 128 ]; then
       printf 'endpoint: error (backend=%s window=%s - the endpoint read died or hit its %ss bound; the digest continued past it)\n' \

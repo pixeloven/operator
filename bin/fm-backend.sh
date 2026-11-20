@@ -1506,6 +1506,52 @@ fm_backend_target_exists() {  # <backend> <target> [expected-label]
   esac
 }
 
+# fm_backend_endpoint_occupant_cwd: READ-ONLY cwd of the process occupying
+# <target>'s pane, or nothing when the backend cannot report one. Like
+# fm_backend_target_exists it never starts a server or session. Herdr answers
+# with `pane get`'s live foreground_cwd (never the frozen creation-time `cwd`;
+# see fm_backend_herdr_current_path) and tmux with #{pane_current_path}; every
+# other backend reports nothing, which callers must read as unknown identity.
+fm_backend_endpoint_occupant_cwd() {  # <backend> <target>
+  local backend=$1 target=$2
+  case "$backend" in
+    tmux)
+      fm_backend_source tmux || return 0
+      fm_backend_tmux_current_path "$target"
+      ;;
+    herdr)
+      fm_backend_source herdr || return 0
+      fm_backend_herdr_parse_target "$target" || return 0
+      fm_backend_herdr_cli "$FM_BACKEND_HERDR_SESSION" pane get "$FM_BACKEND_HERDR_PANE" 2>/dev/null \
+        | jq -r '.result.pane.foreground_cwd // empty' 2>/dev/null
+      ;;
+  esac
+  return 0
+}
+
+# fm_backend_endpoint_occupant_verdict: does the agent occupying <target>
+# belong to the endpoint recorded with <expected-home>? Pane presence alone
+# cannot answer that: a pane can outlive its agent and be reused by a different
+# one (observed: a secondmate's recorded Herdr pane hosting the primary
+# session). Prints exactly one line:
+#   match                  - the occupant's cwd is <expected-home> or inside it
+#   mismatch<TAB><cwd>     - the occupant runs outside <expected-home>
+#   unknown                - the occupant's cwd or the home could not be read
+# Both paths are compared physically, so symlinked spellings still match.
+# `unknown` is never evidence either way; callers keep their presence verdict.
+fm_backend_endpoint_occupant_verdict() {  # <backend> <target> <expected-home>
+  local backend=$1 target=$2 home=$3 cwd real_home real_cwd
+  [ -n "$home" ] || { printf 'unknown\n'; return 0; }
+  cwd=$(fm_backend_endpoint_occupant_cwd "$backend" "$target" 2>/dev/null | head -n 1)
+  case "$cwd" in /*) ;; *) printf 'unknown\n'; return 0 ;; esac
+  real_home=$(cd -P -- "$home" 2>/dev/null && pwd -P) || { printf 'unknown\n'; return 0; }
+  real_cwd=$(cd -P -- "$cwd" 2>/dev/null && pwd -P) || real_cwd=$cwd
+  case "$real_cwd/" in
+    "$real_home"/*) printf 'match\n' ;;
+    *) printf 'mismatch\t%s\n' "$real_cwd" ;;
+  esac
+}
+
 # fm_backend_agent_state: the single recovery-grade agent/endpoint state
 # contract. It is deliberately richer than fm_backend_target_exists's cheap
 # pane-presence read and prints exactly one of:
