@@ -1,0 +1,7 @@
+ok - herdr presentation regroup: a relaunched secondmate is followed by its own recorded children only
+ok - herdr presentation regroup: children land directly under a non-last parent
+ok - herdr presentation regroup: a child is never stranded past unrelated spaces
+ok - herdr presentation regroup: children keep their existing relative order
+ok - herdr presentation regroup: a failed move warns, stops, and leaves the relaunch successful
+ok - herdr presentation regroup: no recorded children, or children already in place, never move
+# all po-herdr-regroup tests passed

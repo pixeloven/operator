@@ -1,0 +1,26 @@
+== A1 - the project is never named firstmate
+== A2 - every self-referential PixelOven URL is a real PixelOven repo
+== A3 - the project is never capitalized as a proper noun (G-7)
+== A4 - O-1: the diff against upstream 427056c4181c41074ad24f051f79919330df0fa5 stays inside PixelOven namespaces and accepted ADR overrides
+== A5 - the README exception stays one bounded banner block
+== A6 - upstream repo invariant: personal fleet paths stay untracked
+== A7 - the recorded upstream pin is a canonical upstream ancestor contained in this tree
+fatal: write error: Disk quota exceeded
+fatal: fetch-pack: invalid index-pack output
+fm-pixeloven-upstream-check.sh: canonical upstream history unavailable for operator (https://github.com/kunchenguid/firstmate.git refs/heads/main)
+::error::A7: canonical upstream lineage checks failed
+== A8 - companion tools come from upstream sources, not PixelOven forks (ADR-0015)
+== A9 - the ADR-0016 persona hunks stay exactly as listed, and every ADR-0020 theme hook matches its registry row
+registry: every hook line in the registered upstream files matches its row
+== A10 - the theme canary: mirrored literals, commands, hooks, and person-facing producers still match, and every bundled theme validates
+anchors: ok
+validate: nautical ok
+note: product and user share 'operator': chat must code-style the product (ADR-0004, G-7)
+note: user 'operator' already appears 652 times upstream; avoid.operator covers it
+warn: submate 'navigator' already appears 37 times upstream; consider avoid.navigator
+warn: scout_task 'recon' already appears 3 times upstream; consider avoid.recon
+note: ship_task 'deploy' already appears 46 times upstream; avoid.deploy covers it
+validate: operator ok
+== A11 - architectural outputs are identical under every bundled theme
+ok - A11: routing names, session names, and the worker role contract are identical under every bundled theme
+fork-contract assertions FAILED

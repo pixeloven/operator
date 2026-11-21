@@ -1,0 +1,17 @@
+== live lab session: fm-lab-regroup-1996734-31217 (real herdr herdr 0.9.5)
+== before:
+w1=scratch | w2=└ t1 · p:Aa1Bb2Cc3Dd4Ee5Ff6Gg7H | w3=└ legacy-t3 | w4=└ t2 · p:Zz9Yy8Xx7Ww6Vv5Uu4Tt3S | w5=└ f9 · p:Qq1Qq1Qq1Qq1Qq1Qq1Qq1Q | w6=notes | w7=2ndmate-alpha
+== run 1 (relaunched secondmate w7 at list end):
+recorded candidates: w2 w3 w4 
+rc=0
+-- workspace.move/list calls:
+7
+== after run 1:
+w1=scratch | w3=└ legacy-t3 | w5=└ f9 · p:Qq1Qq1Qq1Qq1Qq1Qq1Qq1Q | w6=notes | w7=2ndmate-alpha | w2=└ t1 · p:Aa1Bb2Cc3Dd4Ee5Ff6Gg7H | w4=└ t2 · p:Zz9Yy8Xx7Ww6Vv5Uu4Tt3S
+== run 2 (already grouped, expect no move):
+recorded candidates: w2 w3 w4 
+rc=0
+-- herdr calls made in run 2:
+workspace list
+== after run 2:
+w1=scratch | w3=└ legacy-t3 | w5=└ f9 · p:Qq1Qq1Qq1Qq1Qq1Qq1Qq1Q | w6=notes | w7=2ndmate-alpha | w2=└ t1 · p:Aa1Bb2Cc3Dd4Ee5Ff6Gg7H | w4=└ t2 · p:Zz9Yy8Xx7Ww6Vv5Uu4Tt3S
