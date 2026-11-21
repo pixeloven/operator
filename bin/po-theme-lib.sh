@@ -10,9 +10,10 @@
 # state/po-theme/history, which exists only after a theme was applied.
 #
 # A themed home reads state/po-theme/values, which `bin/po-theme.sh refresh`
-# (run by `apply`, or here on first use or when a source is newer) builds from
-# the selected theme or, in a secondmate home, from the inherited Persona
-# values line. When a theme cannot be resolved, every function falls back to
+# (run by `apply` and `heal`, or here on first use, when a source is newer, or
+# when the cache lacks a key the bundled schema derives) builds from the
+# selected theme or, in a secondmate home, from the inherited Persona values
+# line. When a theme cannot be resolved, every function falls back to
 # the nautical literal, which every matcher always accepts.
 #
 # Matching uses an accept-set: the canonical word, the active theme's word, and
@@ -86,8 +87,22 @@ po__str_canonical() {
   esac
 }
 
-# po__fresh <values-file>: true when the cache still matches its sources and
-# was written in the current cache format.
+# po__complete <values-file>: true when the cache carries a value for every
+# label.*, str.*, and glyph.* key of the bundled nautical theme, the schema, so a
+# cache written before a checkout added a key reads as stale. A code root
+# without the bundled schema leaves the format tag to decide alone.
+po__complete() {
+  local schema="$PO_THEME_LIB_ROOT/.agents/skills/po-theme/themes/nautical.theme"
+  [ -s "$schema" ] || return 0
+  awk -F '\t' '
+    FNR == NR { if (match($0, /^(label|str|glyph)[.][a-z0-9_.-]+/)) need[substr($0, 1, RLENGTH)] = 1; next }
+    $2 != "" { have[$1] = 1 }
+    END { for (k in need) if (!(k in have)) exit 1 }
+  ' "$schema" "$1"
+}
+
+# po__fresh <values-file>: true when the cache still matches its sources, was
+# written in the current cache format, and carries every key the schema derives.
 po__fresh() {
   local vals=$1 home k v name='' src='' kind='' cache='' sel
   [ -f "$vals" ] || return 1
@@ -95,6 +110,7 @@ po__fresh() {
     case "$k" in name) name=$v ;; source) src=$v ;; kind) kind=$v ;; cache) cache=$v ;; esac
   done < "$vals"
   [ "$cache" = po-theme-values/3 ] || return 1
+  po__complete "$vals" || return 1
   home=$(po__home)
   if [ -e "$home/.fm-secondmate-home" ]; then
     [ "$kind" = secondmate ] || return 1

@@ -41,9 +41,16 @@ The selection is the first line of the gitignored `config/po-theme`; absent, emp
 The chat words change from the next session start; workers launched after `apply` get the new vocabulary line at once, and the supervision branch from its next wake.
 Second mates pick up the block when `data/captain-shared.md` next propagates to them, and they resolve the theme from its values line, so a custom theme defined only in the primary home still applies there.
 `apply` refuses in a second mate home, and a selection file there is ignored, because the persona is primary-authoritative.
-After an update that changes a theme's words, such as the lowercase role words of ADR-0020, the primary home reruns `apply` so second mates inherit the new block; until then a second mate reads an inherited values line's role words in lowercase.
+After an update that changes a theme's words, such as the lowercase role words of ADR-0020, the primary home re-applies so second mates inherit the new block (see "Re-applying after an update" below); until the new block reaches a second mate, it reads an inherited values line's role words in lowercase.
 A block written by an older `apply` can lack keys a newer checkout's theme schema requires; a second mate fills each missing key from its checkout's bundled theme of the block's name (nautical for a custom theme) so the inherited theme, its workspace labels, and its headline still resolve, rather than falling back to nautical labels such as `2ndmate-<id>`.
-After `/updatefirstmate` or an upstream merge, run `verify` and rerun `apply` if it reports drift.
+
+### Re-applying after an update
+
+An update re-applies the theme without anyone running `apply`: `bin/po-theme.sh heal` runs at every session start once the session lock is held, before bootstrap propagates `data/captain-shared.md`, and at the end of `bin/fm-update.sh`, after every home has moved.
+In a primary home whose `verify` finds drift, `heal` reruns `apply`, but only when the home is its own code root, because `apply` writes alias skills and `.git/info/exclude` entries into the code root of the script it runs; any other home gets the line `persona drift: not re-applied automatically because this home is not its own code root; run bin/po-theme.sh apply`.
+After `bin/fm-update.sh` re-applies, `heal --push` hands a changed block to the live second mates through `bin/fm-config-push.sh`.
+In every themed home, primary or second mate, `heal` also rebuilds a values cache that is not fresh, which the Claude Code mod and the Pi extensions never do themselves.
+A nautical home is never touched, and `heal` prints a line only when it re-applied, pushed, or could not, so a digest may show the headline's drift line followed by the line saying `heal` re-applied the theme.
 
 ### Headline and drift at session start
 
@@ -179,7 +186,8 @@ Everything else a person sees or hears without an agent in between is themed.
 
 Themed today: chat, worker prose a person reads, the words and glyphs of supervision notes, the intent-address guard, slash-command aliases and their menu descriptions, the herdr and Paseo workspace labels and the Herdr desktop app space names, the herdr sidebar state of a task waiting on the user, the wedge-alarm notification title, Calm's and the supervision commands' menu descriptions, Pi Calm's notice, the Calm working animation when the theme names a sprite, the Bearings board and its icons, the fleet view's headings, the inbox commands' note and status words, the remote doctor's not-ready verdict, and the voice relay's spoken words, as listed above.
 The note glyphs change only on screen: the outcome store and the notes the agent reads keep upstream's glyphs, so Pi shows a note written before a theme was applied with the theme's glyph, while Claude Code keeps a line it already logged as it was.
-The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load; run `bin/po-theme.sh apply` after updating so the cache carries the current keys.
+The Claude Code mod and the Pi extensions read the values cache through `.claude/mods/firstmate-calm/lib/po-theme-values.ts` and pick up a theme change at their next session or load.
+Both readers of the cache trust it only when it carries a value for every `label.*`, `str.*`, and `glyph.*` key of the bundled nautical theme, so a cache an older checkout wrote before a key existed reads as stale: the bash readers rebuild it on first use, and the TypeScript reader, which never rebuilds it, shows upstream's words until `heal` does at the next session start.
 The bundled `operator` theme names no pictures yet, so it keeps nautical's sailboat, board icons, and docs pictures.
 Not yet themed, and scheduled by a later ADR-0020 stage: the docs view and its pictures.
 In `bin/fm-remote-doctor.sh` only the not-ready verdict line is themed; the rest of its readiness output stays canonical, as the residue table below records.

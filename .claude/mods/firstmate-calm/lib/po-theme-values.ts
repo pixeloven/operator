@@ -11,7 +11,9 @@
 // under Node in tests. Every registered upstream hook calls it with upstream's own
 // literal as the fallback, so a nautical home - no selection, `nautical` selected, a
 // secondmate home with no inherited Persona block, or any cache that is missing, stale,
-// or of another format - returns that literal untouched.
+// of another format, or lacking a key the bundled schema derives - returns that literal
+// untouched. This reader never rebuilds the cache; `bin/po-theme.sh heal` does after an
+// update.
 //
 // Supervision-note glyphs are themed at display time only: the stored note, the outcome
 // store, and every message the model reads keep upstream's ⛵ and ⚓, so a note written
@@ -59,6 +61,8 @@ export type PoThemeFiles = {
   readonly secondmate: string;
   /** data/captain-shared.md, which carries a secondmate home's inherited Persona block. */
   readonly persona: string;
+  /** The bundled nautical theme in the code root, the schema whose label.*, str.*, and glyph.* keys a fresh cache carries. */
+  readonly schema: string;
 };
 
 export const PO_THEME_NAUTICAL: PoTheme = { values: new Map() };
@@ -72,19 +76,23 @@ export function poThemeFiles(env: PoThemeEnvironment, codeRoot: string): PoTheme
     selection: `${env.FM_CONFIG_OVERRIDE || `${home}/config`}/po-theme`,
     secondmate: `${home}/.fm-secondmate-home`,
     persona: `${env.FM_DATA_OVERRIDE || `${home}/data`}/captain-shared.md`,
+    schema: `${codeRoot}/.agents/skills/po-theme/themes/nautical.theme`,
   };
 }
 
 /**
- * The theme in force from the three files' contents (undefined when absent). The cache
- * counts only when it is in this reader's format and was written for this home's
- * current source: a primary home's selection naming the cached theme, or a secondmate
- * home's inherited block. Anything else reads as nautical.
+ * The theme in force from the files' contents (undefined when absent). The cache counts
+ * only when it is in this reader's format, carries a value for every label.*, str.*, and
+ * glyph.* key of the bundled nautical theme (the schema; a code root without it leaves
+ * the format to decide alone), and was written for this home's current source: a
+ * primary home's selection naming the cached theme, or a secondmate home's inherited
+ * block. Anything else reads as nautical.
  */
 export function parsePoTheme(
   values: string | undefined,
   selection: string | undefined,
   secondmate: boolean,
+  schema?: string,
 ): PoTheme {
   if (values === undefined) return PO_THEME_NAUTICAL;
   const fields = new Map<string, string>();
@@ -93,6 +101,7 @@ export function parsePoTheme(
     if (tab > 0 && line.slice(tab + 1) !== "") fields.set(line.slice(0, tab), line.slice(tab + 1));
   }
   if (fields.get("cache") !== PO_THEME_VALUES_CACHE) return PO_THEME_NAUTICAL;
+  for (const key of poThemeSchemaKeys(schema)) if (!fields.has(key)) return PO_THEME_NAUTICAL;
   if (secondmate) return fields.get("kind") === "secondmate" ? { values: fields } : PO_THEME_NAUTICAL;
   const selected = (selection ?? "").split("\n")[0]!.replace(/\s/g, "");
   if (selected === "" || selected === "nautical") return PO_THEME_NAUTICAL;
@@ -113,7 +122,7 @@ export function poThemeLoadSync(read: (path: string) => string, env: PoThemeEnvi
   const secondmate = text(files.secondmate) !== undefined;
   const selection = secondmate ? undefined : text(files.selection);
   if (secondmate ? !poThemeInherited(text(files.persona)) : !poThemeSelected(selection)) return poThemePublish(PO_THEME_NAUTICAL);
-  const theme = parsePoTheme(text(files.values), selection, secondmate);
+  const theme = parsePoTheme(text(files.values), selection, secondmate, text(files.schema));
   const assets = new Map<string, string>();
   for (const [key, path] of poThemeAssetPaths(theme, files)) {
     const asset = text(path);
@@ -142,7 +151,7 @@ export async function poThemeLoad(
   const secondmate = (await text(files.secondmate)) !== undefined;
   const selection = secondmate ? undefined : await text(files.selection);
   if (secondmate ? !poThemeInherited(await text(files.persona)) : !poThemeSelected(selection)) return poThemePublish(PO_THEME_NAUTICAL);
-  const theme = parsePoTheme(await text(files.values), selection, secondmate);
+  const theme = parsePoTheme(await text(files.values), selection, secondmate, await text(files.schema));
   const assets = new Map<string, string>();
   for (const [key, path] of poThemeAssetPaths(theme, files)) {
     const asset = await text(path);
@@ -183,6 +192,16 @@ export function poThemeInForce(): PoTheme {
 /** The text of the asset a `sprite.*` key names, when the theme's load could read it. */
 export function poThemeAsset(theme: PoTheme, key: string): string | undefined {
   return theme.assets?.get(key);
+}
+
+/** The label.*, str.*, and glyph.* keys a theme file defines; none for an absent one. */
+function poThemeSchemaKeys(schema: string | undefined): string[] {
+  const keys: string[] = [];
+  for (const line of (schema ?? "").split("\n")) {
+    const key = /^(?:label|str|glyph)\.[a-z0-9_.-]+/.exec(line);
+    if (key) keys.push(key[0]);
+  }
+  return keys;
 }
 
 function poThemeSelected(selection: string | undefined): boolean {

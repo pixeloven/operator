@@ -46,6 +46,8 @@ str.alert.wedge_title	T	bin/fm-supervise-daemon.sh	upstream	-e 'display notifica
 str.alert.wedge_title	T	bin/fm-supervise-daemon.sh	upstream	-e 'end run' "$summary" "$(po_str alert.wedge_title)" >/dev/null 2>&1 && return 0	-e 'end run' "$summary" >/dev/null 2>&1 && return 0
 str.alert.wedge_title	T	bin/fm-supervise-daemon.sh	upstream	wedge_alarm_run_bounded herdr herdr notification show "$(po_str alert.wedge_title)" \	wedge_alarm_run_bounded herdr herdr notification show "firstmate: away-mode escalations WEDGED" \
 persona	T	bin/fm-session-start.sh	upstream	FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" headline 2>/dev/null || true	
+heal	-	bin/fm-session-start.sh	upstream	[ "$READ_ONLY" -eq 1 ] || FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" heal 2>/dev/null || true	
+heal	-	bin/fm-update.sh	upstream	FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" heal --push 2>/dev/null || true	
 lib	-	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	import { fileURLToPath } from "node:url";	
 wake.vocabulary	-	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	let wakeVocabulary = { key: "", tail: "" };	
 wake.vocabulary	-	.pi/extensions/lib/fm-branch-dispatch.ts	upstream	function wakeVocabularyTail(): string {	

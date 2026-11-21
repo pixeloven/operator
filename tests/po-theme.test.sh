@@ -13,7 +13,9 @@
 #     a residue row without a rule or stage, and notes a stale one
 #   - nautical apply writes nothing; operator apply writes exactly one block,
 #     is idempotent, preserves the captain's prose, and rolls back byte-exact
-#   - the real fm-session-start.sh prints the Persona block in CONTEXT
+#   - the real fm-session-start.sh prints the Persona block in CONTEXT and
+#     heals a values cache missing a current key without writing alias skills
+#     into a code root the home does not own
 #   - the intent-address check refuses the themed vocative, keeps refusing the
 #     applied vocative when the selection breaks after apply, and under nautical
 #     matches the unpatched upstream detector on a sample corpus
@@ -31,6 +33,11 @@
 #   - verify reports a stale, hand-edited, missing, or unexpected block and
 #     alias drift, and in a secondmate home an inherited block older than the
 #     bundled theme of its name, skipping a custom primary-only theme
+#   - heal leaves a nautical home untouched, re-applies a drifted theme only in
+#     a primary home that is its own code root (reporting drift elsewhere and
+#     writing nothing into the code root), rebuilds a cache missing a current
+#     key in primary and secondmate homes, and with --push hands only a changed
+#     block to bin/fm-config-push.sh
 #   - headline prints nothing under nautical, the applied persona in two lines
 #     under a theme, and one drift line when verify fails; the real
 #     fm-session-start.sh prints it before LOCK and nothing there under nautical
@@ -66,7 +73,7 @@ USER_SKILLS='afk ahoy bearings lavish-url quiet stow updatefirstmate'
 new_code() {
   local code="$TMP_ROOT/$1/code" s
   mkdir -p "$code/bin" "$code/.agents/skills" "$code/docs/pixeloven"
-  cp "$PT" "$ROOT/bin/po-design-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$code/bin/"
+  cp "$PT" "$ROOT/bin/po-design-lib.sh" "$ROOT/bin/po-theme-lib.sh" "$ROOT/bin/fm-dod-lib.sh" "$code/bin/"
   cp -R "$ROOT/.agents/skills/po-theme" "$code/.agents/skills/"
   cp "$ROOT/AGENTS.md" "$ROOT/VISION.md" "$code/"
   for s in $USER_SKILLS; do
@@ -378,7 +385,7 @@ test_operator_apply() {
 }
 
 test_session_start_prints_persona() {
-  local code home root out context head
+  local code home root out context head tree_before
   code=$(new_code session)
   home=$(new_home session)
   root="$TMP_ROOT/session/root"
@@ -387,9 +394,22 @@ test_session_start_prints_persona() {
   printf '# Shared captain preferences\n\n- Prefers terse summaries.\n' > "$home/data/captain-shared.md"
   printf 'operator\n' > "$home/config/po-theme"
   run_in "$code" "$home" apply >/dev/null 2>&1 || fail "operator apply failed before session start"
+  strip_cache "$home"
+  tree_before=$(git -C "$ROOT" status --porcelain --ignored -- .agents/skills)
+  # A fixture harness ancestor lets the lock verify on a harness-free CI runner,
+  # so the start is not read-only and runs heal; the trailing ':' keeps bash
+  # from exec-ing the script in place of the harness process.
+  mkdir -p "$TMP_ROOT/session/harness"
+  ln -sf /bin/bash "$TMP_ROOT/session/harness/codex"
+  # shellcheck disable=SC2016 # Expand in the fixture shell, not this parent.
   out=$(env -u CLAUDECODE -u PI_CODING_AGENT -u FM_PI_HARNESS -u GROK_AGENT \
-    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" "$ROOT/bin/fm-session-start.sh" 2>&1) \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$root" PATH="$BASE_PATH" \
+    "$TMP_ROOT/session/harness/codex" -c '"$@"; rc=$?; :; exit "$rc"' _ "$ROOT/bin/fm-session-start.sh" 2>&1) \
     || fail "fm-session-start.sh failed: $out"
+  assert_contains "$out" "lock acquired: harness pid" "the fixture harness did not let session start verify its lock"
+  cache_complete "$home" || fail "session start did not rebuild a values cache missing a current key"
+  assert_equals "$tree_before" "$(git -C "$ROOT" status --porcelain --ignored -- .agents/skills)" \
+    "session start wrote alias skills into this checkout for a home that is not its code root"
   context=$(printf '%s\n' "$out" | awk '/^CONTEXT$/ { on = 1 } on')
   assert_contains "$context" '## Persona: operator' "the session-start CONTEXT did not print the Persona block"
   assert_contains "$context" 'Operator, all systems nominal.' "the session-start CONTEXT did not carry the themed no-op reply"
@@ -767,6 +787,94 @@ test_verify_reports_drift() {
   pass "verify reports stale, hand-edited, missing, and unexpected blocks and alias drift"
 }
 
+# strip_cache <home>: drop the keys an S5-era checkout added from the home's
+# values cache, keeping its current format line, as an update leaves it.
+strip_cache() {
+  grep -v '^str\.\(board\|fleet\|inbox\|doctor\)\.' "$1/state/po-theme/values" > "$1/state/po-theme/values.old"
+  mv "$1/state/po-theme/values.old" "$1/state/po-theme/values"
+}
+
+cache_complete() {  # <home>: exit 0 when the cache carries str.fleet.title again
+  grep -q '^str\.fleet\.title	' "$1/state/po-theme/values"
+}
+
+test_heal() {
+  local code home mate before exclude_before out
+  code=$(new_code heal)
+  printf '# local excludes\n*.swp\n' > "$code/.git/info/exclude"
+  exclude_before=$(cat "$code/.git/info/exclude")
+
+  home=$(new_home heal-nautical)
+  printf '# prefs\n' > "$home/data/captain-shared.md"
+  before=$(snapshot "$home")
+  out=$(run_in "$code" "$home" heal 2>&1) || fail "heal failed in a nautical home: $out"
+  assert_equals "" "$out" "heal printed something in a nautical home"
+  assert_equals "$before" "$(snapshot "$home")" "heal changed a nautical home"
+  printf 'nautical\n' > "$home/config/po-theme"
+  before=$(snapshot "$home")
+  assert_equals "" "$(run_in "$code" "$home" heal 2>&1)" "heal printed something with nautical selected"
+  assert_equals "$before" "$(snapshot "$home")" "heal changed a home with nautical selected"
+
+  # A home that is not its code root: drift is reported and never applied, so
+  # nothing is written into the code root; the values cache is still rebuilt.
+  printf 'operator\n' > "$home/config/po-theme"
+  out=$(run_in "$code" "$home" heal 2>&1) || fail "heal failed in a separate home: $out"
+  assert_contains "$out" "not re-applied automatically because this home is not its own code root" "heal did not report drift it may not fix"
+  assert_not_contains "$(cat "$home/data/captain-shared.md")" "po-theme:persona:start" "heal applied in a home that is not its code root"
+  assert_equals "" "$(git -C "$code" status --porcelain)" "heal wrote into another home's code root"
+  assert_equals "$exclude_before" "$(cat "$code/.git/info/exclude")" "heal changed another home's .git/info/exclude"
+  cache_complete "$home" || fail "heal did not rebuild the values cache of a separate home"
+
+  # A primary home that is its own code root, after an update that left its
+  # block stale and its cache without the newer keys: heal re-applies once.
+  mkdir -p "$code/config" "$code/data" "$code/state"
+  printf 'operator\n' > "$code/config/po-theme"
+  run_in "$code" "$code" apply >/dev/null 2>&1 || fail "operator apply failed in the code-root home"
+  sed -i.bak 's/all systems nominal/all good/' "$code/data/captain-shared.md"
+  rm -f "$code/data/captain-shared.md.bak"
+  strip_cache "$code"
+  out=$(run_in "$code" "$code" heal 2>&1) || fail "heal failed in the code-root home: $out"
+  assert_equals "persona: re-applied the operator theme after drift" "$out" "heal did not re-apply exactly once"
+  out=$(run_in "$code" "$code" verify 2>&1) || fail "verify failed after heal: $out"
+  cache_complete "$code" || fail "the re-apply did not rebuild the values cache"
+  assert_equals "" "$(run_in "$code" "$code" heal 2>&1)" "heal printed something with nothing to heal"
+
+  # A stale cache alone is rebuilt silently.
+  strip_cache "$code"
+  assert_equals "" "$(run_in "$code" "$code" heal 2>&1)" "heal printed something for a cache rebuild"
+  cache_complete "$code" || fail "heal did not rebuild a cache missing a current key"
+
+  # --push hands a block the re-apply changed to the inheriting homes, and only then.
+  # shellcheck disable=SC2016  # the stub expands its own variables when it runs.
+  printf '#!/bin/sh\nprintf "%%s\\n" "$FM_HOME" >> "$PUSH_LOG"\n' > "$code/bin/fm-config-push.sh"
+  chmod +x "$code/bin/fm-config-push.sh"
+  export PUSH_LOG="$TMP_ROOT/heal/push.log"
+  : > "$PUSH_LOG"
+  out=$(run_in "$code" "$code" heal --push 2>&1) || fail "heal --push failed: $out"
+  assert_equals "" "$out" "heal --push printed something with nothing to heal"
+  sed -i.bak 's/all systems nominal/all good/' "$code/data/captain-shared.md"
+  rm -f "$code/data/captain-shared.md.bak"
+  out=$(run_in "$code" "$code" heal --push 2>&1) || fail "heal --push failed on drift: $out"
+  assert_contains "$out" "persona: pushed the re-applied block to the inheriting homes" "heal --push did not push the re-applied block"
+  assert_equals "$code" "$(cat "$PUSH_LOG")" "heal --push did not push exactly once for this home"
+  unset PUSH_LOG
+  rm -f "$code/bin/fm-config-push.sh"
+
+  # A secondmate home never applies; it only rebuilds its cache from the block it inherits.
+  mate=$(new_home heal-mate)
+  printf 'gfm\n' > "$mate/.fm-secondmate-home"
+  run_in "$code" "$mate" persona operator > "$mate/data/captain-shared.md"
+  before=$(cat "$mate/data/captain-shared.md")
+  out=$(run_in "$code" "$mate" heal 2>&1) || fail "heal failed in a secondmate home: $out"
+  assert_equals "" "$out" "heal printed something in a secondmate home"
+  assert_equals "$before" "$(cat "$mate/data/captain-shared.md")" "heal changed a secondmate home's inherited block"
+  cache_complete "$mate" || fail "heal did not build a secondmate home's values cache"
+  strip_cache "$mate"
+  run_in "$code" "$mate" heal >/dev/null 2>&1 || fail "heal failed on a secondmate home's stale cache"
+  cache_complete "$mate" || fail "heal did not rebuild a secondmate home's stale cache"
+  pass "heal leaves nautical homes alone, re-applies drift only in a home that is its own code root, rebuilds stale caches, and pushes only a changed block"
+}
+
 block_of_file() {  # <file>: its Persona block, markers included
   awk '/^<!-- po-theme:persona:start -->$/ { on = 1 } on { print } /^<!-- po-theme:persona:end -->$/ { on = 0 }' "$1"
 }
@@ -880,6 +988,7 @@ test_address_guard_survives_broken_selection
 test_persona_aliases_primary_only
 test_aliases_keep_tree_clean
 test_verify_reports_drift
+test_heal
 test_secondmate_older_block
 test_digest_section_rows
 test_terms_and_resolve

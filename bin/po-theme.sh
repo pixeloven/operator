@@ -59,6 +59,12 @@
 #                                     words, a pointer to the full block, and one
 #                                     "persona drift" line when verify fails
 #                                     (empty for nautical)
+#   po-theme.sh heal [--push]         after an update: re-apply a drifted theme in a
+#                                     primary home that is its own code root, else
+#                                     rebuild a values cache that is not fresh;
+#                                     --push hands a changed block to the inheriting
+#                                     homes (silent when nothing changed; nothing
+#                                     under nautical)
 #   po-theme.sh anchors               sync canary: every nautical value still matches
 #                                     the upstream text it mirrors, every
 #                                     user-invocable skill has an alias key, the
@@ -1059,7 +1065,9 @@ labels_of() {
 # refresh: the values cache bin/po-theme-lib.sh and the Calm mod's
 # lib/po-theme-values.ts read (labels, str.* strings, glyph.* glyphs, and the
 # file names of the theme's pictures, tagged with the cache format both readers
-# require), the pictures themselves copied into assets/ beside it, plus the
+# require; both also require a value for every label.*, str.*, and glyph.* key
+# of the bundled nautical theme, so a cache from before a checkout added a key
+# reads as stale), the pictures themselves copied into assets/ beside it, plus the
 # history of labels this home applied, which keeps older workspace names
 # matchable. A picture that is missing or fails its validator is left out with
 # a warning, so that surface keeps nautical's built-in picture.
@@ -1157,6 +1165,48 @@ verify() {
   [ $drift -eq 0 ] && echo "verify: ok ($ACTIVE_NAME)"
   pd_verify || drift=1
   return $drift
+}
+
+# heal [--push]: the post-update step every update path reaches -
+# bin/fm-session-start.sh once it holds the session lock, and bin/fm-update.sh
+# after it moved the code. A nautical home is left untouched. A primary home
+# whose verify finds drift is re-applied, but only when the home is its own code
+# root, so an automatic apply never writes alias skills into a checkout another
+# home runs from; any other themed home has its values cache rebuilt when the
+# cache is not fresh (bin/po-theme-lib.sh), because the Calm mod and the Pi
+# extensions only read it. --push hands a block the re-apply changed to the
+# live secondmate homes through bin/fm-config-push.sh. Prints a line only when
+# it re-applied, pushed, or could not.
+heal() {
+  local push=0 before after home_real code_real
+  [ "${1:-}" != --push ] || push=1
+  active_is_nautical && return 0
+  # shellcheck source=bin/po-theme-lib.sh
+  . "$SCRIPT_DIR/po-theme-lib.sh"
+  if ! is_secondmate_home && ! ( verify ) > "$TMPD/heal.verify" 2>&1; then
+    home_real=$(cd "$FM_HOME" 2>/dev/null && pwd -P) || home_real=''
+    code_real=$(cd "$CODE_ROOT" && pwd -P)
+    before=$(cksum "$SHARED" 2>/dev/null || true)
+    if [ "$home_real" != "$code_real" ]; then
+      echo "persona drift: not re-applied automatically because this home is not its own code root; run bin/po-theme.sh apply"
+    elif ! ( apply ) > "$TMPD/heal.apply" 2>&1; then
+      echo "persona drift: automatic re-apply failed ($(grep -m 1 . "$TMPD/heal.apply" || true)); run bin/po-theme.sh apply"
+    else
+      resolve_active
+      echo "persona: re-applied the $ACTIVE_NAME theme after drift"
+      after=$(cksum "$SHARED" 2>/dev/null || true)
+      if [ $push -eq 1 ] && [ "$before" != "$after" ]; then
+        if FM_HOME="$FM_HOME" "$SCRIPT_DIR/fm-config-push.sh" > "$TMPD/heal.push" 2>&1; then
+          echo "persona: pushed the re-applied block to the inheriting homes"
+        else
+          echo "persona: the re-applied block was not pushed to every inheriting home; the next session start propagates it"
+        fi
+      fi
+    fi
+  fi
+  po__fresh "$(po__state)/values" && return 0
+  ( refresh ) > "$TMPD/heal.refresh" 2>&1 \
+    || echo "persona: the theme values cache could not be rebuilt; run bin/po-theme.sh refresh"
 }
 
 # headline: the persona in force, in two lines for the head of the session-start
@@ -1788,6 +1838,9 @@ case "$cmd" in
       *) die "usage: registry files | registry check-diff <ref>" ;;
     esac ;;
   verify) verify ;;
+  heal)
+    case "${1:-}" in ''|--push) ;; *) die "usage: heal [--push]" ;; esac
+    heal "$@" ;;
   headline) headline ;;
   anchors) anchors ;;
   address-alt)

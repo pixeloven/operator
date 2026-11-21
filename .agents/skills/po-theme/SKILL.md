@@ -45,8 +45,8 @@ When a clear or compaction left no Persona block in context, read the block from
 
 ## Verify and drift
 
-- After `/updatefirstmate`, an upstream merge, or any fast-forward of this repository, run `bin/po-theme.sh verify`.
-- On drift (a `persona drift` headline line or a nonzero `verify`), rerun `bin/po-theme.sh apply` in the primary home, then `verify` again.
+- After `/updatefirstmate`, an upstream merge, or any fast-forward of this repository, run `bin/po-theme.sh verify`; `bin/po-theme.sh heal` already re-applies a drifted primary home and rebuilds stale caches at session start and after `bin/fm-update.sh` (`docs/pixeloven/persona-themes.md` owns when), so this confirms it.
+- On drift that remains (a nonzero `verify`, or a `persona drift` line that no `persona: re-applied` line follows), rerun `bin/po-theme.sh apply` in the primary home, then `verify` again.
 - In a second mate home, a drift line saying the inherited block differs from the bundled theme means the primary home must rerun `apply` and propagate, or this home's checkout must be updated if it is the newer one; report it to the parent rather than editing the block.
 
 ## Upstream-merge PR anchors
