@@ -50,6 +50,7 @@ Use [`_template.md`](_template.md).
 | [0036](0036-carry-test-harness-trap-order.md) | Carry the test harness's signal-before-EXIT trap order until a sync brings it | Accepted | "Behavior portable serial 5" dead-pid case lost its fixtures on Bash 5.2; self-retiring local carry |
 | [0037](0037-operator-ci-serial-duration-hints.md) | The test runner may carry operator-CI duration hints for inherited serial scripts | Accepted | "Behavior portable serial 11" cancelled at the 30-minute job timeout on pull request #67; refreshed or retired at each sync |
 | [0038](0038-navigator-lane-carries-github-credential-helper.md) | A secondmate's delivery lane carries its launcher's GitHub credential helper | Proposed | Navigator teardown landed-work checks failed without GitHub credentials |
+| [0040](0040-carry-secondmate-crew-regroup.md) | Carry the Herdr regroup of a relaunched secondmate's crew until a sync brings it | Accepted | Pull request #78: a relaunched navigator's crew stayed under another parent; self-retiring local carry |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).

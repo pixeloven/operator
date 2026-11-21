@@ -1026,6 +1026,7 @@ tests/fm-worker-account.test.sh 82788
 tests/po-crew.test.sh 6601
 tests/po-delivery-lane-credential.test.sh 3194
 tests/po-design.test.sh 19933
+tests/po-herdr-regroup.test.sh 1849
 tests/po-theme-labels.test.sh 13679
 tests/po-theme.test.sh 27327
 EOF

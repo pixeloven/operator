@@ -8414,11 +8414,15 @@ SPAWN_ACCOUNT=
 [ "$BACKEND" != hc ] || [ "$RELAUNCH" -eq 1 ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE FM_CONFIG_OVERRIDE=$CONFIG FM_DATA_OVERRIDE=$DATA "$SCRIPT_DIR/po-theme.sh" hc-spaces "$ID" >/dev/null 2>&1 || true
 # A secondmate respawned into a fresh Herdr workspace lands at the end of the
 # list while its own crew's projected workspaces keep their old positions, so
-# regroup them under it; presentation-only and never fails the launch
-# (bin/backends/herdr.sh fm_backend_herdr_projection_regroup_children_best_effort).
-if [ "$KIND" = secondmate ] && [ "$BACKEND" = herdr ] && [ -n "${HERDR_SES:-}" ] && [ -n "${HERDR_WORKSPACE_ID:-}" ]; then
+# regroup them under it; presentation-only, skipped without the lock when the
+# home records no crew workspace, and never fails the launch
+# (bin/po-herdr-regroup-lib.sh, ADR-0040).
+# shellcheck source=bin/po-herdr-regroup-lib.sh
+if [ "$KIND" = secondmate ] && [ "$BACKEND" = herdr ] && [ -n "${HERDR_SES:-}" ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] \
+  && . "$SCRIPT_DIR/po-herdr-regroup-lib.sh" \
+  && [ -n "$(po_herdr_regroup_recorded_children "$HERDR_SES" "$HERDR_WORKSPACE_ID" "$PROJ_ABS/state")" ]; then
   if spawn_herdr_presentation_order_lock_acquire "$HERDR_SES"; then
-    fm_backend_herdr_projection_regroup_children_best_effort "$HERDR_SES" "$HERDR_WORKSPACE_ID" "$PROJ_ABS/state" || true
+    po_herdr_regroup_children_best_effort "$HERDR_SES" "$HERDR_WORKSPACE_ID" "$PROJ_ABS/state" || true
     spawn_herdr_presentation_order_lock_release
   else
     echo "warning: herdr presentation lock unavailable; leaving secondmate $ID's crew workspaces in Herdr's current order" >&2
