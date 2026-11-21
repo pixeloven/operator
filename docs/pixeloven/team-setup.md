@@ -1,7 +1,7 @@
 # Team setup: dotfiles, herdr, and `operator`
 
 This page is the onboarding guide for an engineer new to the PixelOven agent setup.
-It walks the stack in the order it is built: the machine (`pixeloven/dotfiles`), the workspace (herdr), and the agents (`operator`), plus the pieces that run through all three: `crew` and its skill packs, the PixelOven marketplace, and no-mistakes.
+It walks the stack in the order it is built: the machine (`pixeloven/dotfiles`), the workspace (herdr), and the agents (`operator`), plus the pieces that run through all three: `crew` with its skill packs and plugin catalogue, and no-mistakes.
 It explains how the parts fit and points at each part's own documentation, which stays the owner of exact commands and settings.
 Appendix A is a script for a live demo of the whole stack.
 
@@ -29,8 +29,8 @@ The stack has three layers, and each layer installs or configures the next:
 |              |-- navigators  (optional long-lived spotters with own home) |
 |    work ships through no-mistakes -> PR -> your merge decision            |
 +---------------------------------------------------------------------------+
-  Running through all three: crew (method skills + roles) and its skill packs,
-  pinned by the PixelOven marketplace and installed by dotfiles.
+  Running through all three: crew (method skills + roles) and its four skill packs,
+  released together on one crew tag and installed by dotfiles.
 ```
 
 | Piece | What it is | Where it comes from |
@@ -41,8 +41,8 @@ The stack has three layers, and each layer installs or configures the next:
 | `operator` | An agent distro: a cloned directory of instructions, skills, and scripts that turns an agent CLI started inside it into your spotter | [`pixeloven/operator`](https://github.com/pixeloven/operator), a soft fork of firstmate |
 | treehouse | Gives every task its own disposable git worktree | Required by `operator` |
 | no-mistakes | A local git proxy that runs a validation pipeline before code reaches the remote | Required by `operator` |
-| `crew` and packs | Methodology skills and role definitions for every agent, plus domain skill packs | [`pixeloven/crew`](https://github.com/pixeloven/crew) and the `*-skills` repositories |
-| marketplace | The one catalogue that pins `crew` and its packs by commit SHA | `pixeloven/marketplace` |
+| `crew` and packs | Methodology skills and role definitions for every agent, plus four domain skill packs under `packs/` | [`pixeloven/crew`](https://github.com/pixeloven/crew) |
+| Plugin catalogue | The `pixeloven` marketplace that serves `crew` and its packs; adding it at a release tag pins them all together | `.claude-plugin/marketplace.json` in `pixeloven/crew`; the old `pixeloven/marketplace` repository is retired and points there |
 
 ## 2. Vocabulary
 
@@ -87,7 +87,7 @@ The dotfiles README section "What a fresh install gets" owns the exact lists.
 | Terminal and shell: Ghostty (or your Linux terminal), JetBrains Mono, zsh with Starship and its plugins, fzf, zoxide, eza, bat, git-delta, glow, tmux | Always | Not optional |
 | Tooling the agents and `operator` lean on: `gh`, `jq`, Node through fnm, `uv`, the 1Password CLI, and `bats-core`, `shellcheck`, `gitleaks` | Always | Not optional |
 | herdr CLI, Claude Code, Codex | On (ticked by default) | `workstation-apps enable <app>` / `disable <app>` |
-| `crew`, its four packs, and the Impeccable design skill, in every installed agent CLI | On | `agentPlugins = false` opts out |
+| `crew` and its four packs from `pixeloven/crew` at its release tag, plus the Impeccable design skill, in every installed agent CLI | On | `agentPlugins = false` opts out |
 | Tool set `voice`: VoiceInk on macOS, ffmpeg, and on Linux the audio and local speech-to-text packages for spoken alerts and `dictate` | Off | `toolsets on voice` / `toolsets off voice` |
 | Tool set `aws`: the AWS CLI | Off | `toolsets on aws` / `toolsets off aws` |
 | Tool sets `kubernetes`, `talos`, `terraform`, `ansible`, `containers` | Off | `toolsets on <set>` / `toolsets off <set>` |
@@ -236,12 +236,12 @@ Ask the spotter to create one rather than building one by hand; navigators can a
 | `/flush` | Save what this session learned before a reset |
 | `/updateoperator` | Update the distro and its navigators |
 
-## 6. Running through every layer: `crew`, its packs, and the marketplace
+## 6. Running through every layer: `crew`, its packs, and the catalogue
 
 `crew` is PixelOven's portable agent foundation: one catalogue of methodology skills (planning, plan validation, orchestration, PR review, seam detection, decision records, incident runbooks, onboarding, and more) and shared role definitions such as lead, implementer, investigator, researcher, reviewer, and triage.
 It works in Claude Code, Codex, and pi.
 
-Packs are sibling plugins that ship skills only:
+The `pixeloven/crew` repository also holds four skill packs under `packs/<name>`, each still its own plugin that ships skills only:
 
 | Pack | Covers |
 |---|---|
@@ -250,18 +250,24 @@ Packs are sibling plugins that ship skills only:
 | `identity-skills` | Auth seams, flow tracing, funnel signatures, account investigation, vendor config review |
 | `language-skills` | One skill per language, Python first |
 
-The marketplace is the single catalogue, and it pins each plugin by commit SHA.
-A plugin release is a tag in the plugin's repository followed by a reviewed re-pin in the catalogue, and no machine moves until that re-pin merges.
+`crew` and every pack share one semver release line, and one release tag such as `v0.67.0` pins them all together.
+The plugin catalogue, the `pixeloven` marketplace, is `crew`'s own `.claude-plugin/marketplace.json`.
+Claude Code and Codex add that marketplace from `pixeloven/crew` pinned to a release tag, and pi installs the `crew` package, which carries the packs, from the tag directly.
+The tag is the release gate: a machine that followed the default branch instead would receive every change as it merges.
+Each release's CHANGELOG section opens with "Consumer impact", which says whether moving to that tag needs any action.
+Plugin names such as `crew@pixeloven` and `infra-skills@pixeloven`, and every skill name, are the same as before the packs moved into `crew`.
 
-dotfiles installs `crew` and all four packs at user scope for every installed agent CLI, so every specialist has them in every project.
+dotfiles installs `crew` and all four packs at user scope for every installed agent CLI, from `pixeloven/crew` at its release tag, so every specialist has them in every project.
 `crew` also documents enabling packs per project to trim each session's skill listing; that is an option, and the setup's default is user-wide.
 
 | Step | Owner |
 |---|---|
-| Install `crew` and the packs at the pins on every `chezmoi apply` | dotfiles |
-| Move a machine to a new pin | `~/Development/dotfiles/lib/agent-plugins.sh update`, run by hand |
+| Install `crew` and the packs at the release tag on every `chezmoi apply` | dotfiles |
+| Move a machine to a new `crew` release tag | `~/Development/dotfiles/lib/agent-plugins.sh update`, run by hand |
 | Keep `crew` out of the spotter's own session, so the supervisor stays a supervisor | `bin/po-crew.sh fence` in the home, which dotfiles runs |
 | Prove it | `bin/po-crew.sh check`, read-only and token-free, or `/crew:doctor` inside a session |
+
+Never run `claude plugin marketplace remove pixeloven` to fix or move the catalogue, because it uninstalls every `crew` plugin; dotfiles' update command moves the tag safely.
 
 [`crew` on every machine](crew.md) and [ADR-0019](../adr/0019-crew-machine-level-delivery.md) own this delivery path.
 
