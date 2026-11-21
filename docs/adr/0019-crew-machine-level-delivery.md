@@ -1,6 +1,6 @@
 # ADR-0019: `crew` reaches workers through the machine-level install that dotfiles maintains
 
-- **Status:** Accepted
+- **Status:** Accepted; decision 2's per-plugin commit pins superseded 2026-11-20 by the operator's decision to fold the four packs and the `pixeloven` marketplace into `pixeloven/crew` (crew 0.67.0), so one crew release tag pins `crew` and every pack on all three tools
 - **Date:** 2026-10-26
 - **Deciders:** Brian Gebel (the operator)
 - **Source:** the operator's decisions of 2026-10-26 on the crew-everywhere investigation; closes the delivery decisions D4 to D7 parked by the first-class crew recon

@@ -1,6 +1,7 @@
 # `crew` on every machine
 
 `crew` is the PixelOven agent plugin: process skills, readable role definitions, and the `infra-skills`, `planning-skills`, `identity-skills`, and `language-skills` packs.
+Since crew 0.67.0 one repository, `pixeloven/crew`, holds `crew` and the four packs and serves them as the `pixeloven` marketplace, and one crew release tag pins them all.
 [ADR-0019](../adr/0019-crew-machine-level-delivery.md) owns the decision; `bin/po-crew.sh --help` owns the exact commands; the agent-only `po-crew` skill owns when the agent runs them.
 This page owns how `crew` reaches workers, the supervising home's fence, and how to prove both.
 
@@ -9,8 +10,8 @@ This page owns how `crew` reaches workers, the supervising home's fence, and how
 | Piece | Owner |
 |---|---|
 | The five plugins, installed at user scope for Claude Code, Codex, and pi | dotfiles, on every `chezmoi apply` |
-| The pin for each plugin, the same commit on all three tools | the `pixeloven/marketplace` catalogue, changed only by a reviewed re-pin |
-| Moving a machine to a new pin | dotfiles' one update command, run by hand; Claude Code's marketplace auto-update stays off |
+| The pin for all five plugins, the same crew release tag on all three tools | dotfiles, which pins its `pixeloven/crew` source to one release tag, such as `v0.67.0`, and moves it only in a reviewed change |
+| Moving a machine to a new tag | dotfiles' one update command, run by hand; Claude Code's marketplace auto-update stays off |
 | Keeping `crew` out of the supervising agent's own session | `bin/po-crew.sh fence`, in this repository |
 
 Workers pick up user-scope plugins on their own: the hooks file the spawn writes into a worker copy carries no plugin settings, so the home's fence never reaches a worker.
@@ -36,17 +37,22 @@ Never put the fence in the tracked `.claude/settings.json`: that would turn `cre
 bin/po-crew.sh check    # read-only; exit 1 when any row is `fail`
 ```
 
-It prints one row for the catalogue, one per tool and plugin, and one for the fence.
-It compares each install against the published `pixeloven/marketplace` catalogue on its default branch, read with `gh api`, so a reviewed re-pin shows as `behind` before the machine's local catalogue copy refreshes on update.
-When that read fails, it prints one `warn` row, `comparing against the local copy`, and uses the local copy instead, which may predate a re-pin.
+It prints one row for the release, one per tool and plugin, and one for the fence.
+The release row names the newest crew release tag published on `pixeloven/crew`, read with `gh api`.
+Each tool is checked against the crew tag it is pinned to: Claude Code's marketplace and each plugin it installed, Codex's marketplace clone, and pi's one `crew` package.
+When the published tags cannot be read, the release row is a `warn`, `comparing each tool against its own marketplace clone`, and newer releases go unreported.
 A tool that is not installed prints a `skip` row.
-A Codex plugin whose cache directory is not a git checkout prints a `warn` row, `installed commit not readable from cache`, which does not fail the check.
 
 | Row says | Meaning | Fix |
 |---|---|---|
 | `not installed` | dotfiles has not installed that plugin for that tool yet | `chezmoi apply` |
 | `installed but disabled` | someone disabled it at user scope | re-enable it, or accept the reduced set |
-| `behind` | the installed commit is not the catalogue's pin | dotfiles' plugin update command |
+| `behind` | the installed commit is not the commit of the crew tag the tool is pinned to | dotfiles' plugin update command |
+| `not a published crew release tag`, `not pinned to a crew release tag`, or `pinned by commit` | the tool's pin is not a published `vX.Y.Z` crew tag | dotfiles' plugin update command |
+| `on the retired pixeloven/marketplace catalogue` or `its own pre-fold package` | the machine has not moved to `pixeloven/crew`, as crew 0.67.0's Consumer impact describes | dotfiles' plugin update command, which makes the switch |
+| `warn`: `crew vX.Y.Z is released` | the tool is at its tag, and a newer crew release exists | none for the machine; moving to it is a reviewed dotfiles change to the tag |
+| `warn`: `has a skills filter` | pi's `crew` package filters its skills, so the pack is not checked | none, or remove the filter to carry every pack |
+| `warn`: `marketplace install record not readable` | Codex's marketplace clone has no install record to read the source and tag from | dotfiles' plugin update command |
 | `fence ... of five disabled` | the supervising home's own session can see `crew` | `bin/po-crew.sh fence` |
 
 `check` spends no model tokens.

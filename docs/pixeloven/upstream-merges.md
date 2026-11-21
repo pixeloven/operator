@@ -474,7 +474,31 @@ The replay merged each day's last upstream first-parent commit into the hooked P
 `bin/po-theme.sh registry check-diff`, `verify`, and `anchors` pass on the merged tree.
 The only theme touch-up was data rather than a hook: the two new `alias.lavish-url` lines.
 
-## 10. Merge log
+## 10. Seventh synchronization - 2026-11-20
+
+The seventh synchronization merged upstream `427056c4181c41074ad24f051f79919330df0fa5` into PixelOven `767dc49e12f4`, 23 upstream commits past the previous pin `913bb7a7b6e6`.
+Upstream's own changes in that range touch 106 files with 8,465 insertions and 778 deletions.
+
+| | |
+|---|---|
+| **Conflicts** | **8 files, 8 hunks** |
+| **Merge wall-clock** | **0.30 s** |
+
+Resolutions:
+
+- `bin/fm-exclude-tools-lib.sh`, `bin/fm-spawn.sh`, and `docs/configuration.md` took upstream #8223, which honors `config/crew-exclude-tools` on Claude ship and scout launches through `--disallowedTools`.
+  ADR-0024's deny-rule hunks, including the auto-merged `__CLAUDEDENY__` settings fragment in `bin/fm-spawn.sh`, its Claude tests in `tests/fm-spawn-dispatch-profile.test.sh`, and the example list `docs/examples/crew-exclude-tools` with its inventory entry, were removed, so a Claude worker receives only upstream's flag.
+  ADR-0026's `disableAgentView` setting in the same launch value stays.
+- `docs/verification/runtime-backends.md` keeps ADR-0026's agent-view record beside upstream's new tool-exclusion record.
+- `tests/fm-agy-primary.test.sh`, `tests/fm-codex-hook-layer-live-e2e.test.sh`, `tests/fm-cursor-primary.test.sh`, and `tests/fm-extension-binding.test.sh` took upstream's fixture lists and keep ADR-0032's `fm-trap-lib.sh` entry.
+
+Upstream #8223 retired ADR-0024, and the A4 allowlist drops `bin/fm-exclude-tools-lib.sh`, which returned to upstream bytes, and `docs/examples/crew-exclude-tools`.
+Upstream `1d43f9cb` brought the `pendingBashComponents` field ADR-0030 carried, so that hunk returned to upstream bytes and ADR-0030 retired.
+`tests/fm-calm-pi-extension.test.sh` stays on the A4 allowlist because ADR-0020's theme-module fixture copies also differ from upstream there; ADR-0020 now names those lines.
+ADR-0023, ADR-0025, ADR-0026, ADR-0028, ADR-0029, ADR-0031 through ADR-0033, and ADR-0035 through ADR-0038 have no upstream equivalent in this range and stay carried.
+Upstream changed no portable serial duration-hint row that ADR-0037 carries; it only added rows, so no carried row takes a new upstream value.
+
+## 11. Merge log
 
 | Date | From | To | Commits | Conflicts | Merge wall | Notes |
 |------|------|----|---------|-----------|------------|-------|
@@ -485,3 +509,4 @@ The only theme touch-up was data rather than a hook: the two new `alias.lavish-u
 | 2026-10-21 | `8fd5575b1179` | `0e82f3eebd21` | 427 | **18 files** | 0.29 s | Fourth synchronization, stage 2 of 2. Re-ported the ADR-0012 and ADR-0013 cores onto upstream's rewrites, withdrew ADR-0014, dropped the superseded bootstrap and pr-check hunks, and added the delivery lane to the launch-env floor. |
 | 2026-11-02 | `0e82f3eebd21` | `78c69df2b0b2` | 145 | **11 files** | 0.34 s | Fifth synchronization. Took upstream's `ubuntu-24.04` runner pin under ADR-0027, kept ADR-0013 ahead of upstream's archive reader, re-wove ADR-0026 around upstream's Rex and T3 Code kill step, and retired ADR-0025's e2e leg. |
 | 2026-11-09 | `78c69df2b0b2` | `913bb7a7b6e6` | 56 | **4 files** | 0.29 s | Sixth synchronization. Kept ADR-0023's repeatable waiver across upstream's expected-head and branch-update merge flags, kept ADR-0026's `disableAgentView` beside upstream's `FM_HOME` export, retired ADR-0021, added ADR-0029's test hints and twelfth serial shard, and measured zero theme-hook conflicts (R13). |
+| 2026-11-20 | `913bb7a7b6e6` | `427056c4181c` | 23 | **8 files** | 0.30 s | Seventh synchronization. Took upstream #8223's `--disallowedTools` exclusion support and retired ADR-0024, retired ADR-0030 when upstream brought its Pi Calm fake-host field, and kept ADR-0026's agent-view record and ADR-0032's trap-lib fixture entries. |
