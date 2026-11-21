@@ -120,7 +120,7 @@ moves.)*
 Our default surface is new files in namespaces upstream can never collide with, while [`fork-contract.md`](fork-contract.md#where-our-code-goes) owns the exact current surface inventory and ADR exceptions.
 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
-ADRs 0008, 0011 through 0013, 0015, 0016, 0022, 0023, 0025, 0026, 0028, 0029, 0031 through 0033, and 0035 through 0038 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, notification reconciliation, archived captain-hold completion, documentation-audience ownership, persona themes, the delivery lane's GitHub credential helper, repeatable merge waivers, the remote-test timing deflake, the carried secondmate restart reliability fixes, the carried wake drain signal-trap fix, duration hints and a twelfth serial shard for PixelOven-owned tests, hc secondmates with recovery-grade exit and relaunch, the remaining carried signal-trap fixes, hc parent linkage, durable worktree leases, and themed app space names, a third CI lint partition, the test harness's signal-before-EXIT trap order, operator-CI duration hints for inherited serial scripts, and the navigator lane's carried GitHub credential helper.
+The ADRs that [`fork-contract.md`](fork-contract.md#where-our-code-goes) lists add exact existing-file allowlists for their bounded downstream hunks.
 ADR-0014 is withdrawn and ADR-0021, ADR-0024, and ADR-0030 are retired, so none of them carries hunks.
 Anything outside those lists needs a **new ADR**, not a silent change.
 
