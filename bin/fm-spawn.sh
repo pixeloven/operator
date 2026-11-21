@@ -502,8 +502,8 @@
 # Worker tool exclusions:
 #   docs/configuration.md "Worker tool exclusions" owns config/crew-exclude-tools
 #   and its operator contract. Resolve it with bin/fm-exclude-tools-lib.sh
-#   before provisioning; __PIEXCLUDE__ below owns the Pi launch substitution,
-#   and __CLAUDESETTINGS__ carries the Claude ship and scout deny rules.
+#   before provisioning; __PIEXCLUDE__ and __CLAUDEEXCLUDE__ below own the Pi and
+#   Claude launch substitutions.
 # Worker account pin (config/claude-account, config/pi-account):
 #   Opt-in. docs/configuration.md's "Worker account pin" section owns unpinned
 #   account selection. A present file pins every supported launch of
@@ -543,11 +543,7 @@
 #                  supplies its own trailing space, empty never used)
 #     __CLAUDESETTINGS__ the single claude --settings value: a quoted inline
 #                  JSON object for a crewmate or scout, or a quoted path to
-#                  state/<task-id>.claude-settings.json for a secondmate; only
-#                  the crewmate or scout object carries __CLAUDEDENY__
-#     __CLAUDEDENY__ the permissions.deny fragment from config/crew-exclude-tools,
-#                  substituted after every other placeholder so listed names
-#                  are never rewritten
+#                  state/<task-id>.claude-settings.json for a secondmate
 #     __PIBIN__    quoted concrete Pi-family executable path resolved from PATH
 #     __PITUIMODE__ optional --tui-mode regular when that executable advertises it
 #     __PIAPPROVE__ optional --approve on a seeded Pi/pi-signed secondmate when
@@ -556,6 +552,12 @@
 #     __PIEXCLUDE__ optional ` --exclude-tools '<comma-joined names>'` from
 #                  config/crew-exclude-tools on Pi/pi-signed ship and scout
 #                  launches (supplies its own leading space, empty otherwise)
+#     __CLAUDEEXCLUDE__ optional `--disallowedTools '<comma-joined names>' ` from
+#                  config/crew-exclude-tools on Claude ship and scout launches
+#                  (supplies its own trailing space, empty otherwise). Claude
+#                  Code drops a disallowed tool's schema from every request, and
+#                  a later flag always follows so the variadic option cannot
+#                  swallow the launch prompt.
 #     __PIRESUME__ optional relaunch-only `--session <reference>` that keeps a
 #                  Pi replacement on the session the endpoint's runtime already
 #                  reports (relaunch_resume_args below owns it; it supplies its
@@ -2935,6 +2937,7 @@ launch_template() {
   claude)
     printf '%s' 'CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude __CLAUDEPERMFLAG__ __CLAUDEADDDIRS__--settings __CLAUDESETTINGS__ '
     if [ "$kind" != secondmate ]; then
+      printf '%s' '__CLAUDEEXCLUDE__'
       printf '%s' "--append-system-prompt '$(spawn_claude_task_channel_statement)' "
     fi
     # Claude Code strips invisible characters, U+2063 included, from the
@@ -3374,10 +3377,8 @@ fi
 # config/crew-exclude-tools (header above): refuse before worker provisioning
 # if this launch cannot honor the list. Secondmate agents are not covered.
 EXCLUDE_TOOLS=
-CLAUDE_WORKER_DENY=
 if [ "$KIND" != secondmate ]; then
   EXCLUDE_TOOLS=$(fm_exclude_tools_check "$HARNESS" "$RAW_LAUNCH" "$CONFIG") || exit 1
-  [ "$HARNESS" != claude ] || CLAUDE_WORKER_DENY=$(fm_exclude_tools_claude_deny "$EXCLUDE_TOOLS")
 fi
 
 case "$HARNESS" in
@@ -6066,8 +6067,9 @@ EOF
 }
 
 # Rewrite <meta> into <out> without the <owned keys>, placing <line>... ahead
-# of the first pr= line so no key fm_pr_metadata_identity_parse refuses lands
-# after the PR region.
+# of the first pr= line so the PR region stays the record's tail that
+# fm_pr_metadata_identity_parse requires. Preserved PR metadata must remain
+# the record tail or the armed merge poll stops validating relaunched lanes.
 spawn_meta_rewrite_before_pr() {  # <meta> <out> <owned keys> <line>...
   local meta=$1 out=$2 keys=$3
   shift 3
@@ -7514,8 +7516,9 @@ preserve_relaunch_meta() {
   if [ "$SPAWN_CONTROL_PARENT" = 1 ] && [ -n "${FM_CONTROL_RELAUNCH_TX:-}" ]; then
     echo "control_relaunch_tx=$FM_CONTROL_RELAUNCH_TX"
   fi
-  # Preserved lines go last so nothing fm_pr_metadata_identity_parse
-  # (bin/fm-pr-lib.sh) refuses is written after an armed pr= identity region.
+  # Preserved lines go last so an armed pr= identity block stays last, as
+  # fm_pr_metadata_identity_parse (bin/fm-pr-lib.sh) requires; otherwise the
+  # armed merge poll stops validating relaunched lanes.
   if [ "$RELAUNCH" -eq 1 ]; then
     preserve_relaunch_meta
   fi
@@ -7637,6 +7640,9 @@ if [ "$RELAUNCH" -eq 1 ]; then
 fi
 LAUNCH=${LAUNCH//__PIRESUME__/$RESUME_ARGS}
 LAUNCH=${LAUNCH//__CLAUDEPERMFLAG__/$CLAUDE_PERM_FLAG}
+CLAUDE_EXCLUDE=
+[ -z "$EXCLUDE_TOOLS" ] || [ "$HARNESS" != claude ] || CLAUDE_EXCLUDE="--disallowedTools $(shell_quote "$EXCLUDE_TOOLS") "
+LAUNCH=${LAUNCH//__CLAUDEEXCLUDE__/$CLAUDE_EXCLUDE}
 case "$LAUNCH" in
 *__CLAUDESETTINGS__*)
   if [ "$KIND" = secondmate ]; then
@@ -7647,7 +7653,7 @@ case "$LAUNCH" in
     # the background leaves its endpoint while a client there still reads
     # alive, and its /exit then only detaches, so no lifecycle verb could stop
     # it. The user's own Claude settings are never touched.
-    claude_settings="'{\"feedbackDrafts\":\"off\",\"disableAgentView\":true__CLAUDEATTRIBUTION____CLAUDEDENY__}'"
+    claude_settings="'{\"feedbackDrafts\":\"off\",\"disableAgentView\":true__CLAUDEATTRIBUTION__}'"
     LAUNCH=${LAUNCH//__CLAUDESETTINGS__/$claude_settings}
   fi
   ;;
@@ -7764,7 +7770,6 @@ case "$LAUNCH" in
   LAUNCH=${LAUNCH//__CLAUDEADDDIRS__/$CLAUDE_ADD_DIRS}
   ;;
 esac
-LAUNCH=${LAUNCH//__CLAUDEDENY__/$CLAUDE_WORKER_DENY}
 case "$HARNESS" in
 claude | codex | opencode | pi | pi-signed | grok | kimi | gemini | muse | rovo | agy | devin | commandcode | cortex | kiro | hermes)
   LAUNCH="env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI $LAUNCH"

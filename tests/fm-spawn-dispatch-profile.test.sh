@@ -1887,6 +1887,57 @@ JS
   pass "Pi worker registries report unmatched and unverified exclusions without reporting exact matches"
 }
 
+# Claude Code removes a --disallowedTools entry's schema from every request
+# (docs/configuration.md "Worker tool exclusions"). The option is variadic, so
+# the launch must keep a later flag between it and the launch prompt.
+test_claude_exclude_tools_reach_ship_and_scout_launches() {
+  local rec id out status launch kindflag doorbell
+  for kindflag in --ship --scout; do
+    id="excl-claude-${kindflag#--}-z9k"
+    rec=$(make_spawn_case "excl-claude-${kindflag#--}" claude "$id")
+    read_case_record "$rec"
+    write_exclude_file "$HOME_DIR" '# hide the unused tool schemas' '' \
+      '  Workflow  ' 'mcp__other-srv' 'mcp__other-srv__tool.v2'
+    if [ "$kindflag" = --scout ]; then
+      out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" --scout)
+    else
+      out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
+    fi
+    status=$?
+    expect_code 0 "$status" "claude $kindflag spawn with exclusions should succeed"$'\n'"$out"
+    launch=$(fm_test_launch_unframe "$(cat "$LAUNCH_LOG")")
+    assert_contains "$launch" "--disallowedTools 'Workflow,mcp__other-srv,mcp__other-srv__tool.v2' --append-system-prompt " \
+      "claude $kindflag launch must carry the quoted list directly before the next flag"
+    assert_not_contains "$launch" "--exclude-tools" "claude must not receive the Pi flag"
+    doorbell=$(claude_launch_brief_arg "$launch")
+    [ -n "$doorbell" ] || fail "claude $kindflag launch lost its launch prompt after the exclusion flag"
+  done
+  pass "Claude ship and scout launches carry the configured tool exclusions ahead of the prompt"
+}
+
+test_claude_exclude_tools_leave_the_rest_of_the_launch_unchanged() {
+  local rec id out status launch with_list without_list
+  id=excl-claude-same-z9l
+  rec=$(make_spawn_case excl-claude-same claude "$id")
+  read_case_record "$rec"
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
+  expect_code 0 "$?" "claude spawn without the file should succeed"$'\n'"$out"
+  without_list=$(fm_test_launch_unframe "$(cat "$LAUNCH_LOG")")
+  assert_not_contains "$without_list" "--disallowedTools" "an absent file must add no Claude exclusions"
+
+  id=excl-claude-same-z9m
+  rec=$(make_spawn_case excl-claude-same2 claude "$id")
+  read_case_record "$rec"
+  write_exclude_file "$HOME_DIR" 'Workflow'
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
+  expect_code 0 "$?" "claude spawn with the file should succeed"$'\n'"$out"
+  with_list=$(fm_test_launch_unframe "$(cat "$LAUNCH_LOG")")
+  assert_contains "$with_list" "--disallowedTools 'Workflow' --append-system-prompt " "the exclusion flag is missing"
+  assert_contains "$with_list" "--dangerously-skip-permissions" "the permission flag must survive the exclusion flag"
+  assert_contains "$with_list" "--settings " "the settings flag must survive the exclusion flag"
+  pass "a Claude exclusion list adds only its own flag to the launch"
+}
+
 test_pi_exclude_tools_absent_and_empty_lists() {
   local rec id out status launch
   id=excl-absent-z9b
@@ -1914,11 +1965,12 @@ test_pi_exclude_tools_absent_and_empty_lists() {
     status=$?
     expect_code 0 "$status" "$harness spawn with an empty exclusion list should succeed"$'\n'"$out"
     assert_not_contains "$(cat "$LAUNCH_LOG")" "--exclude-tools" "$harness must receive no exclusion flag"
+    assert_not_contains "$(cat "$LAUNCH_LOG")" "--disallowedTools" "$harness must receive no disallowed-tools flag"
   done
   pass "an absent or empty exclusion list leaves every runtime unaffected"
 }
 
-test_exclude_tools_unsupported_runtime_refuses_non_empty_list() {
+test_exclude_tools_non_pi_runtime_refuses_non_empty_list() {
   local harness rec id out status
   for harness in codex grok; do
     id="excl-refuse-${harness}-z9i"
@@ -1944,96 +1996,6 @@ test_exclude_tools_unsupported_runtime_refuses_non_empty_list() {
   assert_contains "$out" "config/crew-exclude-tools" "the raw-launch refusal must name the config file"
   [ ! -s "$LAUNCH_LOG" ] || fail "a raw launch ignored the exclusion list"
   pass "a runtime that cannot hide tools, or a raw launch, refuses a non-empty exclusion list"
-}
-
-# Claude honors config/crew-exclude-tools through permissions.deny in the ship
-# or scout launch's own inline settings, which the worker cannot edit.
-claude_settings_deny() {  # <launch-command>: the launch's deny array, or null
-  claude_settings_json_arg "$1" | jq -c '.permissions.deny // null'
-}
-
-test_claude_exclude_tools_deny_on_ship_and_scout_launches() {
-  local rec id out status launch kindflag
-  for kindflag in --ship --scout; do
-    id="excl-claude-${kindflag#--}-z9e"
-    rec=$(make_spawn_case "excl-claude-${kindflag#--}" claude "$id")
-    read_case_record "$rec"
-    write_exclude_file "$HOME_DIR" '# connector writes' 'mcp__claude_ai_Gmail__send_message' '' \
-      '  mcp__claude_ai_Slack__slack_send_message  '
-    if [ "$kindflag" = --scout ]; then
-      out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" --scout 2>&1)
-    else
-      out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" 2>&1)
-    fi
-    status=$?
-    expect_code 0 "$status" "claude $kindflag spawn with an exclusion list should succeed"$'\n'"$out"
-    launch=$(cat "$LAUNCH_LOG")
-    [ "$(claude_settings_deny "$launch")" = '["mcp__claude_ai_Gmail__send_message","mcp__claude_ai_Slack__slack_send_message"]' ] \
-      || fail "claude $kindflag launch does not deny exactly the listed tools: $(claude_settings_json_arg "$launch")"
-    assert_attribution_policy "$launch" "claude $kindflag with an exclusion list"
-    assert_not_contains "$launch" "--exclude-tools" "claude $kindflag must not receive Pi's exclusion flag"
-    if [ -f "$WT_DIR/.claude/settings.local.json" ]; then
-      jq -e 'has("permissions") | not' "$WT_DIR/.claude/settings.local.json" >/dev/null \
-        || fail "claude $kindflag spawn wrote the deny rules into a settings file the worker can edit"
-    fi
-  done
-
-  id=excl-claude-noentries-z9f
-  rec=$(make_spawn_case excl-claude-noentries claude "$id")
-  read_case_record "$rec"
-  write_exclude_file "$HOME_DIR" '# nothing yet' ''
-  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
-  expect_code 0 "$?" "claude spawn with a comment-only file should succeed"$'\n'"$out"
-  [ "$(claude_settings_deny "$(cat "$LAUNCH_LOG")")" = null ] \
-    || fail "a list with no entries still put deny rules in the claude launch"
-  pass "claude ship and scout launches deny exactly the tools config/crew-exclude-tools lists"
-}
-
-test_claude_exclude_tools_names_survive_launch_placeholders() {
-  local rec id out status
-  id=excl-claude-placeholder-z9g
-  rec=$(make_spawn_case excl-claude-placeholder claude "$id")
-  read_case_record "$rec"
-  write_exclude_file "$HOME_DIR" 'mcp__x__BRIEF__' 'mcp__y__CLAUDEATTRIBUTION__' 'mcp__z__CLAUDEDENY__'
-  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" 2>&1)
-  status=$?
-  expect_code 0 "$status" "claude spawn with placeholder-shaped entries should succeed"$'\n'"$out"
-  [ "$(claude_settings_deny "$(cat "$LAUNCH_LOG")")" = '["mcp__x__BRIEF__","mcp__y__CLAUDEATTRIBUTION__","mcp__z__CLAUDEDENY__"]' ] \
-    || fail "claude launch rewrote placeholder-shaped deny entries: $(claude_settings_json_arg "$(cat "$LAUNCH_LOG")")"
-  pass "placeholder-shaped exclusion entries reach the claude deny array verbatim"
-}
-
-test_claude_secondmate_launch_ignores_exclude_tools() {
-  local rec id sm out status settings
-  id=excl-claude-secondmate-z9h
-  rec=$(make_spawn_case excl-claude-secondmate claude "$id")
-  read_case_record "$rec"
-  write_exclude_file "$HOME_DIR" 'mcp__claude_ai_Gmail__send_message'
-  sm="$CASE_DIR/secondmate-home"
-  make_seeded_secondmate_home "$sm" "$id"
-  out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$sm" --secondmate)
-  status=$?
-  expect_code 0 "$status" "secondmate claude spawn should succeed"$'\n'"$out"
-  settings=$(claude_settings_json_arg "$(cat "$LAUNCH_LOG")")
-  printf '%s' "$settings" | jq -e '.feedbackDrafts == "off" and (has("permissions") | not)' >/dev/null \
-    || fail "a secondmate's own claude agent received worker deny rules: $settings"
-  pass "a secondmate's own claude agent keeps its tools when the home has an exclusion list"
-}
-
-# The shipped example is meant to be copied verbatim, so it must parse.
-test_exclude_tools_example_parses_for_claude() {
-  local dir err fragment
-  dir="$TMP_ROOT/exclude-tools-example"
-  mkdir -p "$dir"
-  cp "$ROOT/docs/examples/crew-exclude-tools" "$dir/crew-exclude-tools"
-  err="$dir/err"
-  # shellcheck source=bin/fm-exclude-tools-lib.sh
-  fragment=$(. "$ROOT/bin/fm-exclude-tools-lib.sh" &&
-    fm_exclude_tools_claude_deny "$(fm_exclude_tools_check claude 0 "$dir")" 2>"$err") \
-    || fail "the example exclusion list did not parse: $(cat "$err")"
-  printf '{%s}' "${fragment#,}" | jq -e '.permissions.deny | length > 0 and all(startswith("mcp__claude_ai_"))' >/dev/null \
-    || fail "the example exclusion list did not produce claude.ai connector deny rules: $fragment"
-  pass "docs/examples/crew-exclude-tools parses for claude"
 }
 
 test_pi_exclude_tools_malformed_entry_refuses_before_endpoint() {
@@ -2127,6 +2089,22 @@ test_pi_exclude_tools_do_not_leak_across_homes_or_to_secondmates() {
   launch=$(fm_test_launch_unframe "$(cat "$LAUNCH_LOG")")
   assert_contains "$launch" "fm-primary-turnend-guard.ts" "secondmate launch was not the Pi secondmate shape"
   assert_not_contains "$launch" "--exclude-tools" "a secondmate's own agent must not receive the worker exclusions"
+
+  # The same holds for a Claude secondmate's own agent.
+  id_a=excl-sm-claude-z9n
+  rec_a=$(make_spawn_case excl-sm-claude claude "$id_a")
+  read_case_record "$rec_a"
+  write_exclude_file "$HOME_DIR" 'Workflow'
+  sm="$CASE_DIR/secondmate-home"
+  make_seeded_secondmate_home "$sm" "$id_a"
+  sm=$(cd "$sm" && pwd -P)
+  out=$(FM_TEST_CLAUDE_CONFIG_DIR="$CASE_DIR/claude-work" \
+    run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id_a" "$sm" --secondmate)
+  status=$?
+  expect_code 0 "$status" "Claude secondmate spawn should succeed"$'\n'"$out"
+  launch=$(fm_test_launch_unframe "$(cat "$LAUNCH_LOG")")
+  assert_contains "$launch" "claude " "secondmate launch was not the Claude shape"
+  assert_not_contains "$launch" "--disallowedTools" "a Claude secondmate's own agent must not receive the worker exclusions"
   pass "exclusions stay in the home that configured them and skip secondmate agents"
 }
 
@@ -3108,13 +3086,11 @@ test_pi_seeded_secondmate_preapproves_project_trust
 test_pi_worker_launch_omits_seeded_home_approve
 test_pi_approve_probe_omits_unsupported_flag
 test_pi_exclude_tools_reach_ship_and_scout_launches
+test_claude_exclude_tools_reach_ship_and_scout_launches
+test_claude_exclude_tools_leave_the_rest_of_the_launch_unchanged
 test_pi_exclude_tools_worker_registry_reports
 test_pi_exclude_tools_absent_and_empty_lists
-test_exclude_tools_unsupported_runtime_refuses_non_empty_list
-test_claude_exclude_tools_deny_on_ship_and_scout_launches
-test_claude_exclude_tools_names_survive_launch_placeholders
-test_claude_secondmate_launch_ignores_exclude_tools
-test_exclude_tools_example_parses_for_claude
+test_exclude_tools_non_pi_runtime_refuses_non_empty_list
 test_pi_exclude_tools_malformed_entry_refuses_before_endpoint
 test_pi_exclude_tools_read_failure_refuses_before_launch
 test_pi_exclude_tools_do_not_leak_across_homes_or_to_secondmates
