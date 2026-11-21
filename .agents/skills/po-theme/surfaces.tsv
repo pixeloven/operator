@@ -9,8 +9,10 @@
 # rows name the lines `bin/po-theme.sh render-board` changes (a str.* key's
 # nautical value inside the line, an icon.* key's <svg> content, and the line
 # design.css injects the design system after).
-# A registered file that also carries an accepted non-theme fork patch lists
-# those lines as `lib` plumbing rows, so A9 still holds it to its pin diff.
+# A registered file that also carries an ADR's non-theme fork patch lists
+# those lines as `lib` plumbing rows, so A9 still holds it to its pin diff; a
+# bug-fix carry there is a fix row in docs/pixeloven/carries.tsv instead
+# (ADR-0041), and A9 accepts that file's other changed lines.
 # bin/po-theme.sh reads it for `registry` (gates A4 and A9), `anchors` (A10),
 # and `render-board`.
 lib	-	bin/backends/herdr.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	

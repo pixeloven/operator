@@ -4,6 +4,7 @@
 - **Date:** 2026-08-16
 - **Deciders:** Brian Gebel (the operator), with Claude Code
 - **Source:** Program plan decision **D-01**; requirements **O-1**, **O-2**
+- **Amended by:** [ADR-0041](0041-bug-fix-carries-in-one-register.md), which records a bug-fix carry as a row in the carry register instead of a new ADR and states the contribution principle.
 
 ## Context
 

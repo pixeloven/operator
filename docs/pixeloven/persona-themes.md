@@ -216,7 +216,7 @@ The agent still reads nautical text and speaks themed words, so occasional leaka
 Gate A10 runs `bin/po-theme.sh anchors` and validates every bundled theme on every pull request.
 `anchors` fails when upstream changes a literal the nautical theme mirrors, adds a user-invocable skill with no `alias.<skill>` key, adds a person-facing nautical string the surface canary below does not know, or a merge drops one of ADR-0016's hook lines.
 The fix belongs in the same merge PR: update `nautical.theme` and the matching key of every other bundled theme, which is exactly when a reviewer should notice that upstream changed its voice.
-Gate A9 keeps the three hook hunks exactly as ADR-0016 lists them and holds every other upstream-owned file to the hook lines `.agents/skills/po-theme/surfaces.tsv` registers, which `anchors` also checks against upstream at the pin.
+Gate A9 keeps the three hook hunks exactly as ADR-0016 lists them and holds every other upstream-owned file to the hook lines `.agents/skills/po-theme/surfaces.tsv` registers, which `anchors` also checks against upstream at the pin; a bug-fix carry's own lines in such a file are the exception ([ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md)).
 A board template row registers a line that stays upstream-identical, so `anchors` catches an upstream rewording of any line `render-board` themes.
 Gate A11 proves the routing names and generated brief text identical under every bundled theme.
 

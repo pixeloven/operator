@@ -7,6 +7,7 @@
 - **Amends:** [ADR-0016](0016-persona-themed-at-the-edge.md).
   Decisions 1 (no upstream byte changes except the listed hunks), 4 (exactly three hunks), and 8 (gates A4, A9, A10) are replaced by this record's decisions 6-9.
   ADR-0016's selection, Persona block, aliases, validation, namespace claims, and the bundled `operator` vocabulary stand, except that role words become lowercase (decision 3).
+- **Amended by:** [ADR-0041](0041-bug-fix-carries-in-one-register.md), whose gate A9 accepts a bug-fix carry's changed lines in a theme-hook file that a fix row of the carry register names.
 
 ## Context
 

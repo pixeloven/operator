@@ -15,7 +15,7 @@ it costs to catch up, and how to do it*.
 ## 1. The rule that keeps this reviewable
 
 **We add by default and keep every existing-file exception exact and reviewed.**
-[ADR-0001](../adr/0001-soft-fork-of-firstmate.md) owns the additive default, while the ADRs listed in [`fork-contract.md`](fork-contract.md) own each bounded existing-file exception.
+[ADR-0001](../adr/0001-soft-fork-of-firstmate.md) owns the additive default, while the ADRs listed in [`fork-contract.md`](fork-contract.md) own each bounded existing-file exception, and the carry register [`carries.tsv`](carries.tsv) records each of those files and each bug-fix carry.
 Every merge is a live test of both rules.
 
 **G-5, absolutely: this is a PULL ONLY.** Nothing is pushed, opened, commented,
@@ -115,7 +115,8 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 ### What the review is actually looking for
 
 1. **Did anything conflict?** Resolve overlap in an ADR-accepted contact surface by behavior and ownership; a conflict anywhere else means the contract is leaking.
-2. **Did upstream touch a file we also touch?** Review `README.md` plus the exact existing-file exceptions owned by the accepted ADRs; never choose one side wholesale.
+2. **Did upstream touch a file we also touch?** Review `README.md` plus every file the carry register names; never choose one side wholesale.
+   When upstream brought an equivalent of a carry, take upstream's version and drop the carry's rows: `bin/po-carries.sh check-paths "$(cat docs/pixeloven/upstream-pin)"` notes each self-retiring ADR row whose file is back at upstream bytes and fails on such a fix row.
 3. **Is any merged change consumer-visible?** That decides the semver bump on
    our next tag ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md),
    [`releases.md`](releases.md) §2).

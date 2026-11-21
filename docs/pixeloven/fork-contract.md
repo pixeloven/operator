@@ -13,13 +13,14 @@
 [ADR-0016](../adr/0016-persona-themed-at-the-edge.md),
 [ADR-0018](../adr/0018-security-policy-file.md), which claims `.github/SECURITY.md` and no upstream hunk, and
 [ADR-0019](../adr/0019-crew-machine-level-delivery.md), which claims a `po-*` helper and no upstream hunk.
+[ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md) amends ADR-0001 so that a bug fix to an upstream file is a carry recorded in the carry register rather than a new ADR.
 [ADR-0014](../adr/0014-stale-lock-publication-serialization.md)'s stale-lock exception was withdrawn and carries no hunks.
 [ADR-0015](../adr/0015-companion-tools-from-upstream-sources.md) superseded the companion-distribution exception of
 [ADR-0010](../adr/0010-pixeloven-companion-forks-own-distribution.md).
 
 ## The rule, in one line
 
-**We add by default. We edit upstream files only for the exact downstream surfaces accepted by an ADR.**
+**We add by default. We edit upstream files only for the exact downstream surfaces accepted by an ADR, or for a bug fix carried under a register row.**
 
 ## Fork point
 
@@ -44,8 +45,8 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 |---|---|---|
 | Runtime backends | `bin/backends/` | new adapter files only |
 | Skills | `.agents/skills/po-*` | the `po-` prefix exists so upstream can never collide with us |
-| Fork scripts | `bin/po-*` | claimed by ADR-0016 for the persona theme helper; ADR-0019 adds the `crew` delivery helper and ADR-0040 the Herdr crew regroup library |
-| Fork tests | `tests/po-*` | claimed by ADR-0016, ADR-0019, and ADR-0040; upstream's runner picks them up by name |
+| Fork scripts | `bin/po-*` | claimed by ADR-0016 for the persona theme helper; ADR-0019 adds the `crew` delivery helper, ADR-0040 the Herdr crew regroup library, and ADR-0041 the carry register helper |
+| Fork tests | `tests/po-*` | claimed by ADR-0016, ADR-0019, and ADR-0040, and holding ADR-0041's carry register tests; upstream's runner picks them up by name |
 | Documentation | `docs/pixeloven/` | |
 | Decisions | `docs/adr/` | |
 | CI we own | `.github/workflows/pixeloven-*.yml` | |
@@ -53,8 +54,9 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage check | `bin/fm-pixeloven-upstream-check.sh` | canonical ancestry verification for the operator upstream pin |
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
-Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
+Anything that does not fit one of these needs a new ADR that says why and which namespace it claims, unless it is a bug fix to an upstream file, which is a [carry](#carries-and-the-carry-register).
 ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0033, and 0035 through 0040 list the exact existing upstream files that may carry their bounded downstream hunks.
+[`carries.tsv`](carries.tsv), the carry register, records each namespace above and each of those files with its owning ADR, and gate A4 reads it.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -90,6 +92,32 @@ ADR-0037 lets `bin/fm-test-run.sh` carry operator-CI median duration hints in `p
 ADR-0038 lets a secondmate launch carry its launcher's `https://github.com` credential helpers into its delivery lane through one `bin/fm-spawn.sh` hunk and one paragraph in ADR-0022's `docs/configuration.md` section with a qualifying clause on that file's Orca source-mode `GIT_CONFIG_NOSYSTEM=1` sentence, while ship and scout lanes stay unchanged.
 ADR-0039 carries the read-only secondmate endpoint occupant check in `bin/fm-backend.sh`, `bin/fm-secondmate-liveness-lib.sh`, and `bin/fm-session-start.sh`, whose lines in the theme-registered `bin/fm-session-start.sh` are `lib` rows in the hook registry, and its regression cases in `tests/fm-secondmate-liveness.test.sh` and `tests/fm-session-start.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0040 carries the Herdr regroup of a relaunched secondmate's own crew workspaces in PixelOven's `bin/po-herdr-regroup-lib.sh`, called from one `bin/fm-spawn.sh` hunk and described in one `docs/herdr-backend.md` paragraph, until an upstream synchronization brings an equivalent change.
+
+## Carries and the carry register
+
+A carry is a change to an upstream file that the fork keeps until upstream has an equivalent.
+[`carries.tsv`](carries.tsv) lists every path the fork may change relative to the upstream pin, one row per path and owner: the namespaces, each file an accepted ADR claims, and each bug-fix carry.
+Its header owns the row format, and `bin/po-carries.sh` owns the checks gates A4 and A9 run on it ([ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md)).
+
+A bug fix needs a register row, not an ADR.
+It corrects upstream behavior that is wrong by upstream's own contract, such as a defect, a flaky test, or a Bash or platform incompatibility, and keeps upstream's design, contracts, and defaults.
+Patch the upstream file in place, as upstream could take the change, keep the diff minimal, and add one `fix` row per changed file with a note saying what it fixes.
+In a file that carries theme hooks, gate A9 then accepts the fix's lines while still holding the hooks to their registered rows.
+A feature, a PixelOven-only behavior, a changed contract or default, or a new namespace is a decision and still needs an ADR.
+
+Each bug fix is offered upstream, and each offer needs the operator's approval for that one offer; the offer's link goes in the row's `upstream` column.
+A carry retires itself: when an upstream synchronization brings an equivalent change, the merge takes upstream's version of the file and drops the row.
+Gate A4 fails on a `fix` row whose file is back at upstream bytes, and prints a note for an ADR's self-retiring row in that state.
+
+## The contribution principle
+
+The operator's standing principle for changing upstream behavior ([ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md) records it in the operator's words):
+
+- Consider whether our approach to each enhancement still makes sense.
+- A fix patches the existing upstream file.
+- A feature keeps its changes to upstream as small as it can, but not at the expense of progress.
+- Firstmate's architecture, patterns, and design are respected, and still open to challenge.
+- What we build that could benefit others is shared upstream, one approved offer at a time.
 
 ## Taking upstream changes
 
