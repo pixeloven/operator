@@ -1,0 +1,29 @@
+# real herdr 0.9.5 lab session fm-lab-occupant-1001447-5377; pane get per recorded pane:
+{"pane_id":"w1:p1","foreground_cwd":"/tmp/fm-mate.vvAf1D","agent":"claude"}
+{"pane_id":"w2:p1","foreground_cwd":"/tmp/fm-mate.vvAf1D/projects/app","agent":"claude"}
+{"pane_id":"w3:p1","foreground_cwd":"/tmp/fm-foreign.UE3lQy","agent":"claude"}
+{"pane_id":"w4:p1","foreground_cwd":"/tmp/fm-foreign.UE3lQy","agent":"claude"}
+# recorded secondmate home for all four: /tmp/fm-mate.vvAf1D (w4 was created in it, then its agent was started after cd /tmp/fm-foreign.UE3lQy)
+# bin/fm-session-start.sh rc=0; endpoint lines:
+--- sm-foreign ---
+endpoint: mismatch (backend=herdr window=fm-lab-occupant-1001447-5377:w3:p1 - a different agent occupies the recorded pane: its cwd /tmp/fm-foreign.UE3lQy is outside the recorded secondmate home /tmp/fm-mate.vvAf1D; not relaunched automatically)
+--- sm-moved ---
+endpoint: mismatch (backend=herdr window=fm-lab-occupant-1001447-5377:w4:p1 - a different agent occupies the recorded pane: its cwd /tmp/fm-foreign.UE3lQy is outside the recorded secondmate home /tmp/fm-mate.vvAf1D; not relaunched automatically)
+--- sm-nested ---
+endpoint: alive (backend=herdr window=fm-lab-occupant-1001447-5377:w2:p1)
+--- sm-own ---
+endpoint: alive (backend=herdr window=fm-lab-occupant-1001447-5377:w1:p1)
+# deferred network stage result:
+completed off the startup path in 4s: GitHub authentication, dead-secondmate relaunch, secondmate convergence, pending handoff delivery, project clone refresh with its drift reporting, and inactive terminal-outcome reconciliation.
+SECONDMATE_LIVENESS: secondmate sm-foreign: skipped: a different agent occupies the recorded endpoint (backend=herdr): its cwd /tmp/fm-foreign.UE3lQy is outside the recorded home /tmp/fm-mate.vvAf1D; not relaunched automatically
+SECONDMATE_LIVENESS: secondmate sm-moved: skipped: a different agent occupies the recorded endpoint (backend=herdr): its cwd /tmp/fm-foreign.UE3lQy is outside the recorded home /tmp/fm-mate.vvAf1D; not relaunched automatically
+# panes after the sweep:
+{"pane_id":"w1:p1","foreground_cwd":"/tmp/fm-mate.vvAf1D","agent":"claude"}
+{"pane_id":"w2:p1","foreground_cwd":"/tmp/fm-mate.vvAf1D/projects/app","agent":"claude"}
+{"pane_id":"w3:p1","foreground_cwd":"/tmp/fm-foreign.UE3lQy","agent":"claude"}
+{"pane_id":"w4:p1","foreground_cwd":"/tmp/fm-foreign.UE3lQy","agent":"claude"}
+# fm_secondmate_liveness_probe against the same panes:
+sm-foreign: status=skipped state=mismatch reason=a different agent occupies the recorded endpoint (backend=herdr): its cwd /tmp/fm-foreign.UE3lQy is outside the recorded home /tmp/fm-mate.vvAf1D; not relaunched automatically line=
+sm-moved: status=skipped state=mismatch reason=a different agent occupies the recorded endpoint (backend=herdr): its cwd /tmp/fm-foreign.UE3lQy is outside the recorded home /tmp/fm-mate.vvAf1D; not relaunched automatically line=
+sm-nested: status=alive state=alive reason= line=secondmate sm-nested already live (backend=herdr)
+sm-own: status=alive state=alive reason= line=secondmate sm-own already live (backend=herdr)

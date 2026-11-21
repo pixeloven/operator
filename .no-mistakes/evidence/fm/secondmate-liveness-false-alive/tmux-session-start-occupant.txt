@@ -1,0 +1,43 @@
+# real tmux tmux 3.8 on private socket; windows and live pane cwds:
+fm-sm-own /tmp/fm-mate.cbCrng
+fm-sm-nested /tmp/fm-mate.cbCrng/projects/app
+fm-sm-foreign /tmp/fm-foreign.Q01vBW
+fm-sm-symlink /tmp/fm-mate.cbCrng
+fm-task-ship /tmp/fm-foreign.Q01vBW
+# recorded secondmate home: /tmp/fm-mate.cbCrng (sm-symlink records /tmp/fm-lab.B7Zogk/mate-link -> /tmp/fm-mate.cbCrng)
+# bin/fm-session-start.sh rc=0; endpoint lines:
+--- sm-foreign ---
+endpoint: mismatch (backend=tmux window=lab:fm-sm-foreign - a different agent occupies the recorded pane: its cwd /tmp/fm-foreign.Q01vBW is outside the recorded secondmate home /tmp/fm-mate.cbCrng; not relaunched automatically)
+--- sm-nested ---
+endpoint: alive (backend=tmux window=lab:fm-sm-nested)
+--- sm-own ---
+endpoint: alive (backend=tmux window=lab:fm-sm-own)
+--- sm-symlink ---
+endpoint: alive (backend=tmux window=lab:fm-sm-symlink)
+--- task-ship ---
+endpoint: alive (backend=tmux window=lab:fm-task-ship)
+# deferred network stage (dead-secondmate relaunch sweep) result:
+completed off the startup path in 4s: GitHub authentication, dead-secondmate relaunch, secondmate convergence, pending handoff delivery, project clone refresh with its drift reporting, and inactive terminal-outcome reconciliation.
+SECONDMATE_LIVENESS: secondmate sm-foreign: skipped: a different agent occupies the recorded endpoint (backend=tmux): its cwd /tmp/fm-foreign.Q01vBW is outside the recorded home /tmp/fm-mate.cbCrng; not relaunched automatically
+SECONDMATE_SYNC: secondmate sm-foreign: skipped: primary default-branch commit cannot be resolved
+SECONDMATE_SYNC: secondmate sm-nested: skipped: primary default-branch commit cannot be resolved
+SECONDMATE_SYNC: secondmate sm-own: skipped: primary default-branch commit cannot be resolved
+SECONDMATE_SYNC: secondmate sm-symlink: skipped: primary default-branch commit cannot be resolved
+  secondmate  liveness sm-foreign                        start=+946     elapsed=213
+  secondmate  liveness sm-nested                         start=+953     elapsed=206
+  secondmate  liveness sm-own                            start=+960     elapsed=209
+  secondmate  liveness sm-symlink                        start=+967     elapsed=206
+  phase       secondmate-liveness                        start=+935     elapsed=260
+  phase       secondmate-sync                            start=+1204    elapsed=52
+  slowest: stage network-checks probe_sweeps 3938ms, phase fleet-sync 3027ms, phase secondmate-liveness 260ms
+# windows after the sweep (foreign pane must still be there, never killed/relaunched):
+fm-sm-own claude /tmp/fm-mate.cbCrng
+fm-sm-nested claude /tmp/fm-mate.cbCrng/projects/app
+fm-sm-foreign claude /tmp/fm-foreign.Q01vBW
+fm-sm-symlink claude /tmp/fm-mate.cbCrng
+fm-task-ship zsh /tmp/fm-foreign.Q01vBW
+# fm_secondmate_liveness_probe (bin/fm-secondmate-liveness-lib.sh) against the same real panes:
+sm-foreign: status=skipped state=mismatch reason=a different agent occupies the recorded endpoint (backend=tmux): its cwd /tmp/fm-foreign.Q01vBW is outside the recorded home /tmp/fm-mate.cbCrng; not relaunched automatically line=
+sm-nested: status=alive state=alive reason= line=secondmate sm-nested already live (backend=tmux)
+sm-own: status=alive state=alive reason= line=secondmate sm-own already live (backend=tmux)
+sm-symlink: status=alive state=alive reason= line=secondmate sm-symlink already live (backend=tmux)

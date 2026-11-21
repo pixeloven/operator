@@ -1,0 +1,42 @@
+# real tmux tmux 3.8 on private socket; windows and live pane cwds:
+fm-sm-own /tmp/fm-mate.wmWk3m
+fm-sm-nested /tmp/fm-mate.wmWk3m/projects/app
+fm-sm-foreign /tmp/fm-foreign.MFwPx6
+fm-sm-symlink /tmp/fm-mate.wmWk3m
+fm-task-ship /tmp/fm-foreign.MFwPx6
+# recorded secondmate home: /tmp/fm-mate.wmWk3m (sm-symlink records /tmp/fm-lab.VRRzqO/mate-link -> /tmp/fm-mate.wmWk3m)
+# bin/fm-session-start.sh rc=0; endpoint lines:
+--- sm-foreign ---
+endpoint: alive (backend=tmux window=lab:fm-sm-foreign)
+--- sm-nested ---
+endpoint: alive (backend=tmux window=lab:fm-sm-nested)
+--- sm-own ---
+endpoint: alive (backend=tmux window=lab:fm-sm-own)
+--- sm-symlink ---
+endpoint: alive (backend=tmux window=lab:fm-sm-symlink)
+--- task-ship ---
+endpoint: alive (backend=tmux window=lab:fm-task-ship)
+# deferred network stage (dead-secondmate relaunch sweep) result:
+completed off the startup path in 3s: GitHub authentication, dead-secondmate relaunch, secondmate convergence, pending handoff delivery, project clone refresh with its drift reporting, and inactive terminal-outcome reconciliation.
+SECONDMATE_SYNC: secondmate sm-foreign: skipped: primary default-branch commit cannot be resolved
+SECONDMATE_SYNC: secondmate sm-nested: skipped: primary default-branch commit cannot be resolved
+SECONDMATE_SYNC: secondmate sm-own: skipped: primary default-branch commit cannot be resolved
+SECONDMATE_SYNC: secondmate sm-symlink: skipped: primary default-branch commit cannot be resolved
+  secondmate  liveness sm-foreign                        start=+944     elapsed=180
+  secondmate  liveness sm-nested                         start=+951     elapsed=179
+  secondmate  liveness sm-symlink                        start=+965     elapsed=172
+  secondmate  liveness sm-own                            start=+957     elapsed=181
+  phase       secondmate-liveness                        start=+933     elapsed=232
+  phase       secondmate-sync                            start=+1173    elapsed=52
+  slowest: stage network-checks probe_sweeps 2927ms, phase fleet-sync 2022ms, phase secondmate-liveness 232ms
+# windows after the sweep (foreign pane must still be there, never killed/relaunched):
+fm-sm-own claude /tmp/fm-mate.wmWk3m
+fm-sm-nested claude /tmp/fm-mate.wmWk3m/projects/app
+fm-sm-foreign claude /tmp/fm-foreign.MFwPx6
+fm-sm-symlink claude /tmp/fm-mate.wmWk3m
+fm-task-ship zsh /tmp/fm-foreign.MFwPx6
+# fm_secondmate_liveness_probe (bin/fm-secondmate-liveness-lib.sh) against the same real panes:
+sm-foreign: status=alive state=alive reason= line=secondmate sm-foreign already live (backend=tmux)
+sm-nested: status=alive state=alive reason= line=secondmate sm-nested already live (backend=tmux)
+sm-own: status=alive state=alive reason= line=secondmate sm-own already live (backend=tmux)
+sm-symlink: status=alive state=alive reason= line=secondmate sm-symlink already live (backend=tmux)
