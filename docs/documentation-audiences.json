@@ -666,6 +666,10 @@
       "audience": "maintainer-verification"
     },
     {
+      "path": "docs/pixeloven/team-setup.md",
+      "audience": "operator-current"
+    },
+    {
       "path": "docs/pixeloven/upstream-merges.md",
       "audience": "maintainer-verification"
     },
