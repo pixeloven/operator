@@ -10,7 +10,7 @@ metadata:
 
 # po-crew
 
-`crew` and its four skill packs reach every worker through the user-scope install that dotfiles maintains for Claude Code, Codex, and pi, pinned by the `pixeloven/marketplace` catalogue.
+`crew` and its four skill packs reach every worker through the user-scope install that dotfiles maintains for Claude Code, Codex, and pi, pinned by one `pixeloven/crew` release tag.
 ADR-0019 owns that decision, `docs/pixeloven/crew.md` owns the delivery model and what each check row means, and `bin/po-crew.sh --help` owns the exact commands.
 
 - Run `bin/po-crew.sh check` for the install, the pins, and this home's fence; it is read-only and spends no tokens.
