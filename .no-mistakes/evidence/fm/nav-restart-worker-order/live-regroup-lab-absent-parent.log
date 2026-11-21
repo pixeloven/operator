@@ -1,0 +1,4 @@
+### parent absent (w99): before w1,w3,w5,w6,w2,w4,w7,w9,w8
+warning: herdr presentation regrouping found the parent workspace absent or ambiguous; leaving workers in Herdr's current order
+rc=0
+after w1,w3,w5,w6,w2,w4,w7,w9,w8

@@ -1,0 +1,22 @@
+### before (recorded child w9 stranded past unrelated w8)
+w1	home-firstmate
+w3	unrelated-space
+w5	└ foreign-crew · p:CCCCCCCCCCCCCCCCCCCCC3
+w6	2ndmate-alpha (relaunched)
+w2	└ crew-one · p:AAAAAAAAAAAAAAAAAAAAA1
+w4	└ crew-two · p:BBBBBBBBBBBBBBBBBBBBB2
+w7	└ crew-three · p:DDDDDDDDDDDDDDDDDDDDD4
+w8	late-unrelated
+w9	└ crew-four · p:EEEEEEEEEEEEEEEEEEEEE5
+### regroup run
+rc=0
+### after
+w1	home-firstmate
+w3	unrelated-space
+w5	└ foreign-crew · p:CCCCCCCCCCCCCCCCCCCCC3
+w6	2ndmate-alpha (relaunched)
+w2	└ crew-one · p:AAAAAAAAAAAAAAAAAAAAA1
+w4	└ crew-two · p:BBBBBBBBBBBBBBBBBBBBB2
+w7	└ crew-three · p:DDDDDDDDDDDDDDDDDDDDD4
+w9	└ crew-four · p:EEEEEEEEEEEEEEEEEEEEE5
+w8	late-unrelated

@@ -1,0 +1,19 @@
+### before
+w1	home-firstmate
+w2	└ crew-one · p:AAAAAAAAAAAAAAAAAAAAA1
+w3	unrelated-space
+w4	└ crew-two · p:BBBBBBBBBBBBBBBBBBBBB2
+w5	└ foreign-crew · p:CCCCCCCCCCCCCCCCCCCCC3
+w6	2ndmate-alpha (relaunched)
+### recorded candidates
+w2
+w4
+### regroup run
+rc=0
+### after
+w1	home-firstmate
+w3	unrelated-space
+w5	└ foreign-crew · p:CCCCCCCCCCCCCCCCCCCCC3
+w6	2ndmate-alpha (relaunched)
+w2	└ crew-one · p:AAAAAAAAAAAAAAAAAAAAA1
+w4	└ crew-two · p:BBBBBBBBBBBBBBBBBBBBB2
