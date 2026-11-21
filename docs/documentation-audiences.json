@@ -490,6 +490,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0040-carry-secondmate-crew-regroup.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },
