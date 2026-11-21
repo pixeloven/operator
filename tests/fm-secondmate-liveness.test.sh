@@ -200,6 +200,68 @@ test_agent_state_dispatcher_and_compatibility() {
   pass "fm_backend_agent_state: routes tmux/Herdr and keeps Zellij unverified"
 }
 
+# --- probe level: the recorded endpoint's occupant identity -----------------
+
+# probe_herdr_occupant <dir> <occupant-cwd|-> <home>: the probe's verdict for a
+# Herdr secondmate whose pane holds a live agent (the process classifier is
+# pinned alive) and whose `pane get` reports <occupant-cwd> as foreground_cwd;
+# `-` reports none. Prints status|state|reason|line.
+probe_herdr_occupant() {
+  local dir=$1 occupant=$2 home=$3 fakebin
+  fakebin=$(fm_fakebin "$dir")
+  cat > "$fakebin/herdr" <<SH
+#!/usr/bin/env bash
+if [ "\${1:-}" = pane ] && [ "\${2:-}" = get ]; then
+  if [ '$occupant' = - ]; then
+    printf '%s\n' '{"result":{"pane":{"pane_id":"p1"}}}'
+  else
+    printf '{"result":{"pane":{"pane_id":"p1","foreground_cwd":"%s"}}}\n' '$occupant'
+  fi
+  exit 0
+fi
+exit 1
+SH
+  chmod +x "$fakebin/herdr"
+  mkdir -p "$dir/state"
+  printf 'window=sess:p1\nkind=secondmate\nbackend=herdr\nharness=claude\nhome=%s\n' "$home" > "$dir/state/sm1.meta"
+  PATH="$fakebin:$BASE_PATH" STATE="$dir/state" bash -c '
+    . "$1/bin/fm-secondmate-liveness-lib.sh"
+    fm_backend_agent_state() { printf alive; }
+    fm_secondmate_liveness_probe "$2" sm1 poll
+    printf "%s|%s|%s|%s\n" "$FM_SM_LIVE_STATUS" "$FM_SM_LIVE_STATE" "$FM_SM_LIVE_REASON" "$FM_SM_LIVE_LINE"
+  ' _ "$ROOT" "$dir/state/sm1.meta"
+}
+
+# The reported false-alive: the recorded pane holds a live agent, but it is a
+# different session running in another home. Only an occupant inside the
+# recorded home is this mate; a foreign one is reported and never relaunched,
+# and an unreadable occupant keeps today's alive verdict with its caveat.
+test_probe_checks_occupant_identity() {
+  local w home other out
+  w="$TMP_ROOT/probe-occupant"
+  home="$w/mate-home"; other="$w/primary-home"
+  mkdir -p "$home/projects/app" "$other"
+  home=$(cd -P "$home" && pwd -P); other=$(cd -P "$other" && pwd -P)
+
+  out=$(probe_herdr_occupant "$w/own" "$home" "$home")
+  [ "$out" = "alive|alive||secondmate sm1 already live (backend=herdr)" ] \
+    || fail "an occupant in the recorded home should stay alive, got: $out"
+
+  out=$(probe_herdr_occupant "$w/nested" "$home/projects/app" "$home")
+  [ "$out" = "alive|alive||secondmate sm1 already live (backend=herdr)" ] \
+    || fail "an occupant inside the recorded home should stay alive, got: $out"
+
+  out=$(probe_herdr_occupant "$w/foreign" "$other" "$home")
+  [ "$out" = "skipped|mismatch|a different agent occupies the recorded endpoint (backend=herdr): its cwd $other is outside the recorded home $home; not relaunched automatically|" ] \
+    || fail "a different agent in the recorded pane must be a non-relaunchable mismatch, got: $out"
+
+  out=$(probe_herdr_occupant "$w/blind" - "$home")
+  [ "$out" = "alive|alive||secondmate sm1 already live (backend=herdr) - occupant identity unreadable, so this is presence only" ] \
+    || fail "an unreadable occupant should keep the alive verdict and say so, got: $out"
+
+  pass "probe: own occupant alive, different agent mismatch without relaunch, unreadable identity unchanged"
+}
+
 # --- sweep level: bin/fm-bootstrap.sh's secondmate_liveness_sweep -----------
 
 # make_toolchain <dir>: the fixed set of stubs bin/fm-bootstrap.sh's read-only
@@ -1141,6 +1203,7 @@ test_remote_full_probe_legacy_record_defaults_herdr() {
 test_tmux_agent_state_classifies
 test_tmux_agent_state_rejects_malformed_targets_before_probe
 test_herdr_agent_state_preserves_husk_classifier
+test_probe_checks_occupant_identity
 test_agent_state_dispatcher_and_compatibility
 test_sweep_respawns_confirmed_dead_secondmate
 test_sweep_respawns_on_the_recorded_backend

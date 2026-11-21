@@ -19,6 +19,11 @@
 #   unverified  - the endpoint is recorded under a session this home does not
 #                 own, so probing is not authorized
 #
+# A local `alive` is then checked against the occupant's identity
+# (fm_backend_endpoint_occupant_verdict): an agent running outside the
+# recorded home reads `mismatch`, which is reported and never relaunched, while
+# an unreadable occupant keeps `alive`.
+#
 # Only `dead` and `missing` authorize recovery. The probe and recovery functions
 # below own whether that means resuming the endpoint or proving its close before
 # replacement; docs/t3code-backend.md owns T3's native status meanings.
@@ -265,7 +270,7 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
     return 0
   fi
 
-  local backend target
+  local backend target occupant=match
   backend=$(fm_backend_of_meta "$meta")
   target=$(fm_backend_target_of_meta "$meta")
   [ -n "$target" ] || target="$window"
@@ -278,11 +283,23 @@ fm_secondmate_liveness_probe() {  # <meta> <id> <full|poll>
       case "$agent_state" in dead|missing) agent_state=unverified-harness ;; esac
       ;;
   esac
+  # A live agent on the recorded endpoint is this mate only when it runs in the
+  # recorded home: a pane can outlive its agent and be reused by a different
+  # one. A mismatch is reported and never relaunched or repaired; an unreadable
+  # occupant keeps the alive verdict and says so.
+  if [ "$agent_state" = alive ]; then
+    occupant=$(fm_backend_endpoint_occupant_verdict "$backend" "$target" "$(fm_meta_get "$meta" home)")
+    [ "${occupant%%$'\t'*}" != mismatch ] || agent_state=mismatch
+  fi
   FM_SM_LIVE_STATE=$agent_state
   case "$agent_state" in
     alive)
       FM_SM_LIVE_STATUS=alive
       FM_SM_LIVE_LINE="secondmate $id already live (backend=$backend)"
+      [ "$occupant" = match ] || FM_SM_LIVE_LINE="$FM_SM_LIVE_LINE - occupant identity unreadable, so this is presence only"
+      ;;
+    mismatch)
+      FM_SM_LIVE_REASON="a different agent occupies the recorded endpoint (backend=$backend): its cwd ${occupant#*$'\t'} is outside the recorded home $(fm_meta_get "$meta" home); not relaunched automatically"
       ;;
     dead|missing)
       FM_SM_LIVE_STATUS=relaunchable

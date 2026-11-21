@@ -54,7 +54,7 @@ git diff 6789876442d0fb6da9f70d86399a2930c5073ae2..main
 | Upstream lineage tests | `tests/fm-pixeloven-upstream-check.test.sh` | behavioral lineage and failure contract |
 
 Anything that does not fit one of these needs a new ADR that says why and which namespace it claims.
-ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0033, 0035 through 0038, and 0040 list the exact existing upstream files that may carry their bounded downstream hunks.
+ADRs 0008, 0011 through 0013, 0015, 0016, 0022 through 0026, 0028 through 0033, and 0035 through 0040 list the exact existing upstream files that may carry their bounded downstream hunks.
 
 Nothing inside the upstream surface is renamed or rewritten in place - not the `fm-*` scripts, not the `FM_*` variables, not the vocabulary in upstream text.
 What agents say and what people type is themed per home at the edge ([ADR-0016](../adr/0016-persona-themed-at-the-edge.md), [`persona-themes.md`](persona-themes.md)).
@@ -88,6 +88,7 @@ ADR-0035 carries `--partition KofN` support in `bin/fm-lint.sh`, its partition r
 ADR-0036 carries the test harness's signal-before-EXIT trap order in `tests/lib.sh` and its regression case in `tests/fm-test-fixture-cleanup.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0037 lets `bin/fm-test-run.sh` carry operator-CI median duration hints in `portable_serial_weight_hints` for inherited portable serial scripts whose median differs from the inherited hint by more than 30,000 ms, refreshed or retired at each upstream synchronization.
 ADR-0038 lets a secondmate launch carry its launcher's `https://github.com` credential helpers into its delivery lane through one `bin/fm-spawn.sh` hunk and one paragraph in ADR-0022's `docs/configuration.md` section with a qualifying clause on that file's Orca source-mode `GIT_CONFIG_NOSYSTEM=1` sentence, while ship and scout lanes stay unchanged.
+ADR-0039 carries the read-only secondmate endpoint occupant check in `bin/fm-backend.sh`, `bin/fm-secondmate-liveness-lib.sh`, and `bin/fm-session-start.sh`, whose lines in the theme-registered `bin/fm-session-start.sh` are `lib` rows in the hook registry, and its regression cases in `tests/fm-secondmate-liveness.test.sh` and `tests/fm-session-start.test.sh`, until an upstream synchronization brings an equivalent change.
 ADR-0040 carries the Herdr regroup of a relaunched secondmate's own crew workspaces in PixelOven's `bin/po-herdr-regroup-lib.sh`, called from one `bin/fm-spawn.sh` hunk and described in one `docs/herdr-backend.md` paragraph, until an upstream synchronization brings an equivalent change.
 
 ## Taking upstream changes
