@@ -1,6 +1,6 @@
 # ADR-0030: Carry upstream's Pi Calm fake-host field until a sync brings it
 
-- **Status:** Accepted
+- **Status:** Retired 2026-11-20 by the seventh upstream synchronization, which brought upstream commit `1d43f9cb797836015aecb5aa4c6e14cb3124c1f0`; the carried hunk returned to upstream bytes, and `tests/fm-calm-pi-extension.test.sh` stays on the A4 allowlist only for ADR-0020's theme-module fixture copies
 - **Date:** 2026-11-12
 - **Deciders:** The operator
 - **Source:** "Behavior portable serial 11" CI failure on main, case "Pi Calm queued operational rows" in `tests/fm-calm-pi-extension.test.sh`; self-retiring upstream carry

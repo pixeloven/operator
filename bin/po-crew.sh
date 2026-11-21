@@ -2,11 +2,12 @@
 # po-crew.sh - PixelOven crew delivery helper (ADR-0019).
 #
 # Crew and its skill packs reach every specialist through the machine-level,
-# user-scope install that dotfiles maintains for Claude Code, Codex, and pi,
-# pinned by the commit SHAs in the pixeloven marketplace catalogue. Operator
-# installs nothing itself. This helper checks that install and applies the one
-# per-home choice operator owns: the supervising home's own session is fenced
-# off from crew, while its workers keep it.
+# user-scope install that dotfiles maintains for Claude Code, Codex, and pi.
+# Since crew 0.67.0, pixeloven/crew serves crew and its four packs as the
+# pixeloven marketplace, and one crew release tag pins crew and every pack.
+# Operator installs nothing itself. This helper checks that install and applies
+# the one per-home choice operator owns: the supervising home's own session is
+# fenced off from crew, while its workers keep it.
 #
 # The fence is five `"<plugin>@pixeloven": false` entries under enabledPlugins
 # in the home's untracked .claude/settings.local.json. `fence` merges exactly
@@ -18,18 +19,26 @@
 # come from the parent home's spawn, not from this file.
 #
 # `check` is read-only. It prints one row per item and exits 1 when any row is
-# `fail`; a tool that is not installed prints `skip` rows instead, and a Codex
-# plugin whose cache directory is not a git checkout prints a `warn` row.
-# It compares against the published catalogue, pixeloven/marketplace's
-# .claude-plugin/marketplace.json on its default branch, read with `gh api`, so
-# a reviewed re-pin shows before any machine updates its local copy. When that
-# read fails it prints one `warn` row and compares against the local copy under
-# CLAUDE_CONFIG_DIR instead.
-#   - the catalogue lists a pin for every plugin
-#   - Claude Code, Codex, and pi each have every plugin installed at user scope,
-#     enabled (Claude Code and Codex), and at the catalogue pin
-#   - the home fence is present (Claude Code lists all five disabled from the
-#     home); a secondmate home skips it
+# `fail`; a tool that is not installed prints `skip` rows instead.
+# It reads pixeloven/crew's published release tags (vX.Y.Z) with `gh api`, and
+# checks each tool against the crew tag that tool is pinned to:
+#   - release: the newest published crew release tag; when the tags are
+#     unreadable, one `warn` row, and each tool is compared against the commit
+#     its own marketplace clone holds instead
+#   - Claude Code: every plugin installed at user scope and enabled, its
+#     marketplace (known_marketplaces.json) on pixeloven/crew at a release tag,
+#     and each plugin's gitCommitSha equal to that tag's commit
+#   - Codex: every plugin installed and enabled, and its marketplace clone
+#     (.tmp/marketplaces/pixeloven) cloned from pixeloven/crew at a release tag
+#     whose commit is the clone's HEAD
+#   - pi: one git:github.com/pixeloven/crew@<tag> package carrying crew and the
+#     packs; a pack is not checked inside a package entry with a skills filter
+#   - the home fence (Claude Code lists all five disabled from the home); a
+#     secondmate home skips it
+# A tool at its tag while a newer crew release exists gets a `warn` row: moving
+# the tag is a dotfiles change. A tool still on the retired pixeloven/marketplace
+# catalogue, or a pi per-pack package, fails with the switch to pixeloven/crew
+# that crew 0.67.0's Consumer impact describes, rather than a `behind` row.
 #
 # Home paths follow upstream's resolution: an explicit [home] argument, else
 # FM_HOME, else FM_ROOT_OVERRIDE, else this script's code root. Tool state paths
@@ -51,10 +60,12 @@ PLUGINS='crew infra-skills planning-skills identity-skills language-skills'
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 PI_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
-CATALOGUE_REPO=pixeloven/marketplace
-CATALOGUE_PATH=.claude-plugin/marketplace.json
-CATALOGUE="$CLAUDE_DIR/plugins/marketplaces/$MARKET/$CATALOGUE_PATH"
-CATALOGUE_JSON=''
+SOURCE_REPO=pixeloven/crew
+OLD_REPO=pixeloven/marketplace
+SWITCH="on the retired $OLD_REPO catalogue; switch to $SOURCE_REPO per crew 0.67.0 Consumer impact with the dotfiles plugin update"
+UPDATE='run the dotfiles plugin update'
+TAGS=''     # "<tag> <commit>" lines for the published crew release tags
+NEWEST=''   # the newest of them
 REL_SETTINGS='.claude/settings.local.json'
 REL_BACKUP='state/po-crew/settings.local.json.bak'
 
@@ -115,54 +126,70 @@ row() {  # <ok|warn|fail|skip> <item> <detail>
   [ "$1" != fail ] || FAILED=1
 }
 
-pin_of() {  # <plugin>: the catalogue SHA, empty when unknown
-  printf '%s' "$CATALOGUE_JSON" | jq -r --arg p "$1" '[.plugins[]? | select(.name == $p) | .source.sha // empty][0] // empty' 2>/dev/null || true
-}
-
 short() { printf '%s' "$1" | cut -c1-7; }
 
-# at_pin <tool> <plugin> <installed-sha> <state-detail>
-at_pin() {
-  local want
-  want=$(pin_of "$2")
-  if [ -z "$want" ]; then
-    row fail "$1 $2@$MARKET" "$4, but the catalogue has no pin to compare"
-  elif [ -z "$3" ]; then
-    row fail "$1 $2@$MARKET" "$4, installed commit unreadable"
-  elif [ "$3" = "$want" ]; then
-    row ok "$1 $2@$MARKET" "$4, at the catalogue pin $(short "$want")"
+is_tag() { printf '%s' "$1" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; }
+
+tag_commit() {  # <tag>: its published commit, empty when unknown
+  printf '%s\n' "$TAGS" | awk -v t="$1" '$1 == t { print $2; exit }'
+}
+
+# at_tag <tool> <plugin> <state> <tag> <installed-commit> <local-commit>
+# Compares an install against the commit of the crew tag it is pinned to: the
+# published commit, or, when the tags are unreadable, <local-commit>, the commit
+# the tool's own marketplace clone resolved that tag to.
+at_tag() {
+  local item="$1 $2@$MARKET" state=$3 tag=$4 have=$5 want
+  if ! is_tag "$tag"; then
+    row fail "$item" "$state, not pinned to a crew release tag (${tag:-no ref}); $UPDATE"
+    return 0
+  fi
+  if [ -n "$TAGS" ]; then
+    want=$(tag_commit "$tag")
+    [ -n "$want" ] || { row fail "$item" "$state, pinned to $tag, which is not a published crew release tag; $UPDATE"; return 0; }
   else
-    row fail "$1 $2@$MARKET" "$4, behind: $(short "$3") installed, catalogue pins $(short "$want"); run the dotfiles plugin update"
+    want=$6
+    [ -n "$want" ] || { row fail "$item" "$state, pinned to crew $tag, but its commit is unreadable; $UPDATE"; return 0; }
+  fi
+  if [ -z "$have" ]; then
+    row fail "$item" "$state, installed commit unreadable"
+  elif [ "$have" != "$want" ]; then
+    row fail "$item" "$state, behind: $(short "$have") installed, crew $tag is $(short "$want"); $UPDATE"
+  elif [ -n "$NEWEST" ] && [ "$tag" != "$NEWEST" ]; then
+    row warn "$item" "$state, at crew $tag; crew $NEWEST is released, so move the dotfiles crew tag to adopt it"
+  else
+    row ok "$item" "$state, at crew $tag"
   fi
 }
 
-# Loads CATALOGUE_JSON from the published catalogue, else from the local copy.
-check_catalogue() {
-  local p from published=''
+# source_row <tool> <plugin> <state> <source>: a failure row for an install
+# whose marketplace is not pixeloven/crew; returns 1 when the source is crew.
+source_row() {
+  case "$4" in
+    *"$SOURCE_REPO"|*"$SOURCE_REPO.git") return 1 ;;
+    *"$OLD_REPO"|*"$OLD_REPO.git") row fail "$1 $2@$MARKET" "$3, $SWITCH" ;;
+    *) row fail "$1 $2@$MARKET" "$3, marketplace source ${4:-unreadable} is not $SOURCE_REPO; $UPDATE" ;;
+  esac
+}
+
+# Loads TAGS and NEWEST from pixeloven/crew's published release tags.
+check_release() {
+  local published=''
   if command -v gh >/dev/null 2>&1; then
-    published=$(GH_PROMPT_DISABLED=1 gh api -H 'Accept: application/vnd.github.raw' \
-      "repos/$CATALOGUE_REPO/contents/$CATALOGUE_PATH" 2>/dev/null) || published=''
+    published=$(GH_PROMPT_DISABLED=1 gh api --paginate "repos/$SOURCE_REPO/tags?per_page=100" 2>/dev/null) || published=''
   fi
-  if printf '%s' "$published" | jq -e '.plugins | type == "array"' >/dev/null 2>&1; then
-    CATALOGUE_JSON=$published
-    from="published $CATALOGUE_REPO"
-  else
-    row warn catalogue "published $CATALOGUE_REPO catalogue unreadable; comparing against the local copy, which may predate a re-pin"
-    if [ ! -f "$CATALOGUE" ]; then
-      row fail catalogue "local copy not found at $CATALOGUE; add the $MARKET marketplace through dotfiles"
-      return 0
-    fi
-    CATALOGUE_JSON=$(cat "$CATALOGUE")
-    from="local copy $CATALOGUE"
+  TAGS=$(printf '%s' "$published" | jq -r '.[]? | select(type == "object") | "\(.name) \(.commit.sha // "")"' 2>/dev/null \
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+ [0-9a-f]{40}$' || true)
+  if [ -z "$TAGS" ]; then
+    row warn release "published $SOURCE_REPO release tags unreadable; comparing each tool against its own marketplace clone, without the newest release"
+    return 0
   fi
-  for p in $PLUGINS; do
-    [ -n "$(pin_of "$p")" ] || { row fail catalogue "no pin for $p in the $from"; return 0; }
-  done
-  row ok catalogue "pins for all five plugins, from the $from"
+  NEWEST=$(printf '%s\n' "$TAGS" | awk '{ print $1 }' | sort -V | tail -n 1)
+  row ok release "crew $NEWEST ($(short "$(tag_commit "$NEWEST")")) is the newest release, from the published $SOURCE_REPO"
 }
 
 check_claude() {
-  local list p entry sha neutral
+  local list p entry sha neutral market src ref loc head
   if ! command -v claude >/dev/null 2>&1; then
     row skip claude "not installed"
     return 0
@@ -172,60 +199,98 @@ check_claude() {
   list=$(cd "$neutral" && claude plugin list --json 2>/dev/null) || list=''
   rmdir "$neutral" 2>/dev/null || true
   printf '%s' "$list" | jq -e 'type == "array"' >/dev/null 2>&1 || { row fail claude "plugin list unreadable"; return 0; }
+  market=$(jq -c --arg m "$MARKET" '.[$m] // empty' "$CLAUDE_DIR/plugins/known_marketplaces.json" 2>/dev/null || true)
+  src=$(printf '%s' "$market" | jq -r '.source.repo // .source.url // empty' 2>/dev/null || true)
+  ref=$(printf '%s' "$market" | jq -r '.source.ref // empty' 2>/dev/null || true)
+  loc=$(printf '%s' "$market" | jq -r '.installLocation // empty' 2>/dev/null || true)
+  head=''
+  [ -z "$loc" ] || head=$(git -C "$loc" rev-parse HEAD 2>/dev/null || true)
   for p in $PLUGINS; do
     entry=$(printf '%s' "$list" | jq -c --arg id "$p@$MARKET" '[.[] | select(.id == $id and .scope == "user")][0] // empty')
     if [ -z "$entry" ]; then
       row fail "claude $p@$MARKET" "not installed at user scope; run chezmoi apply"
     elif [ "$(printf '%s' "$entry" | jq -r '.enabled')" != true ]; then
       row fail "claude $p@$MARKET" "installed but disabled at user scope"
-    else
+    elif ! source_row claude "$p" enabled "$src"; then
       sha=$(jq -r --arg id "$p@$MARKET" '[.plugins[$id][]? | select(.scope == "user") | .gitCommitSha // empty][0] // empty' \
         "$CLAUDE_DIR/plugins/installed_plugins.json" 2>/dev/null || true)
-      at_pin claude "$p" "$sha" enabled
+      at_tag claude "$p" enabled "$ref" "$sha" "$head"
     fi
   done
 }
 
 check_codex() {
-  local list p entry dir
+  local list p entry clone record src ref rev head
   if ! command -v codex >/dev/null 2>&1; then
     row skip codex "not installed"
     return 0
   fi
   list=$(codex plugin list --marketplace "$MARKET" --json 2>/dev/null) || list=''
   printf '%s' "$list" | jq -e '.installed | type == "array"' >/dev/null 2>&1 || { row fail codex "plugin list unreadable"; return 0; }
+  # Codex installs every plugin from its one marketplace clone; the install
+  # record names the source and ref that clone came from.
+  clone="$CODEX_DIR/.tmp/marketplaces/$MARKET"
+  record=$(jq -c . "$clone/.codex-marketplace-install.json" 2>/dev/null || true)
+  src=$(printf '%s' "$record" | jq -r '.source // empty' 2>/dev/null || true)
+  ref=$(printf '%s' "$record" | jq -r '.ref_name // empty' 2>/dev/null || true)
+  rev=$(printf '%s' "$record" | jq -r '.revision // empty' 2>/dev/null || true)
+  head=$(git -C "$clone" rev-parse HEAD 2>/dev/null || true)
+  [ "$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null || true)" = "$(cd "$clone" 2>/dev/null && pwd -P)" ] || head=''
   for p in $PLUGINS; do
     entry=$(printf '%s' "$list" | jq -c --arg id "$p@$MARKET" '[.installed[] | select(.pluginId == $id and .installed == true)][0] // empty')
     if [ -z "$entry" ]; then
       row fail "codex $p@$MARKET" "not installed; run chezmoi apply"
     elif [ "$(printf '%s' "$entry" | jq -r '.enabled')" != true ]; then
       row fail "codex $p@$MARKET" "installed but disabled"
-    else
-      dir="$CODEX_DIR/plugins/cache/$MARKET/$p/$(printf '%s' "$entry" | jq -r '.version // empty')"
-      if [ -e "$dir/.git" ]; then
-        at_pin codex "$p" "$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)" enabled
-      else
-        row warn "codex $p@$MARKET" "enabled, installed commit not readable from cache"
-      fi
+    elif [ -z "$record" ]; then
+      row warn "codex $p@$MARKET" "enabled, marketplace install record not readable"
+    elif ! source_row codex "$p" enabled "$src"; then
+      at_tag codex "$p" enabled "$ref" "${head:-$rev}" "$rev"
     fi
   done
 }
 
+# pi_pkg <settings> <name>: "<source string> <filtered>" for name's git package
+# entry, if any; <filtered> is true for an object entry with a skills filter.
+pi_pkg() {
+  jq -r --arg p "$2" '
+    [.packages[]? | {s: (if type == "object" then .source else . end), f: (type == "object" and has("skills"))}
+     | select(.s | strings | test("^git:(https://)?github\\.com/pixeloven/" + $p + "(\\.git)?@")) | "\(.s) \(.f)"][0] // empty' \
+    "$1" 2>/dev/null || true
+}
+
 check_pi() {
-  local settings p ref
+  local settings p entry ref filtered=false state
   if ! command -v pi >/dev/null 2>&1; then
     row skip pi "not installed"
     return 0
   fi
   settings="$PI_DIR/settings.json"
+  # One crew package carries crew and every pack; a pre-fold machine has one
+  # git:github.com/pixeloven/<name>@<commit> package per plugin instead.
+  entry=$(pi_pkg "$settings" crew)
+  ref=''
+  if [ -n "$entry" ]; then
+    filtered=${entry##* }
+    entry=${entry% *}
+    ref=${entry##*@}
+  fi
   for p in $PLUGINS; do
-    ref=$(jq -r --arg p "$p" '
-      [.packages[]? | (if type == "object" then .source else . end) | strings
-       | select(test("^git:(https://)?github\\.com/pixeloven/" + $p + "(\\.git)?@"))][0] // empty' "$settings" 2>/dev/null || true)
-    if [ -z "$ref" ]; then
+    state=installed
+    [ "$p" = crew ] || state="in the crew package"
+    if [ "$p" != crew ] && [ -n "$(pi_pkg "$settings" "$p")" ]; then
+      row fail "pi $p@$MARKET" "its own pre-fold package is still installed; switch to the crew package, which carries every pack, per crew 0.67.0 Consumer impact with the dotfiles plugin update"
+    elif [ -z "$entry" ]; then
       row fail "pi $p@$MARKET" "not installed; run chezmoi apply"
+    elif [ "$p" != crew ] && [ "$filtered" = true ]; then
+      row warn "pi $p@$MARKET" "the crew package at $ref has a skills filter; whether it carries this pack is not checked"
+    elif ! is_tag "$ref"; then
+      row fail "pi $p@$MARKET" "$state, pinned by commit $(short "$ref") rather than a crew release tag; move it to the tag per crew 0.67.0 Consumer impact with the dotfiles plugin update"
+    elif [ -n "$TAGS" ]; then
+      # pi records no commit: the package entry's tag is the install.
+      at_tag pi "$p" "$state" "$ref" "$(tag_commit "$ref")" ''
     else
-      at_pin pi "$p" "${ref##*@}" installed
+      row ok "pi $p@$MARKET" "$state, at crew $ref"
     fi
   done
 }
@@ -255,7 +320,7 @@ check_fence() {
 check() {
   local home
   home=$(home_dir "${1:-}")
-  check_catalogue
+  check_release
   check_claude
   check_codex
   check_pi

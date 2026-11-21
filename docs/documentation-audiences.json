@@ -554,10 +554,6 @@
       "audience": "operator-example"
     },
     {
-      "path": "docs/examples/crew-exclude-tools",
-      "audience": "operator-example"
-    },
-    {
       "path": "docs/examples/process-event-extension/file-signal.mjs",
       "audience": "operator-example"
     },
@@ -664,6 +660,10 @@
     {
       "path": "docs/pixeloven/supply-chain-read.md",
       "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/pixeloven/team-setup.md",
+      "audience": "operator-current"
     },
     {
       "path": "docs/pixeloven/upstream-merges.md",
