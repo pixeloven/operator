@@ -1,0 +1,12 @@
+### case: norecords  (session fm-lab-regroup-901516-19191)
+-- before:
+wD=firstmate
+wE=└ stray · p:AbCdEfGhIjKlMnOpQrStU1
+wF=2ndmate-alpha
+candidates: 
+rc=0
+-- after:
+wD=firstmate
+wE=└ stray · p:AbCdEfGhIjKlMnOpQrStU1
+wF=2ndmate-alpha
+RESULT: PASS unrecorded lookalike untouched

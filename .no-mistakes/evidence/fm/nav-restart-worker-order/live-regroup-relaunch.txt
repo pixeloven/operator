@@ -1,0 +1,24 @@
+### case: relaunch  (session fm-lab-regroup-901516-19191)
+-- before (alpha relaunched at end; its crew own-a/own-b stranded under firstmate/bravo):
+w1=firstmate
+w2=└ own-a · p:AbCdEfGhIjKlMnOpQrStU1
+w3=2ndmate-bravo
+w4=└ own-b · p:AbCdEfGhIjKlMnOpQrStU2
+w5=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU4
+w6=own-legacy
+w7=2ndmate-alpha
+candidates: w2 w4 w6 
+rc=0
+-- after:
+w1=firstmate
+w3=2ndmate-bravo
+w5=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU4
+w6=own-legacy
+w7=2ndmate-alpha
+w2=└ own-a · p:AbCdEfGhIjKlMnOpQrStU1
+w4=└ own-b · p:AbCdEfGhIjKlMnOpQrStU2
+RESULT: PASS order=w1,w3,w5,w6,w7,w2,w4
+-- rerun (already grouped => no-op):
+candidates: w2 w4 w6 
+rc=0
+RESULT: PASS idempotent

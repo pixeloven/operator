@@ -1,0 +1,16 @@
+### case: nonlast  (session fm-lab-regroup-901516-19191)
+-- before:
+w8=firstmate
+w9=└ own-a · p:AbCdEfGhIjKlMnOpQrStU1
+wA=2ndmate-alpha
+wB=2ndmate-bravo
+wC=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU4
+candidates: w9 
+rc=0
+-- after:
+w8=firstmate
+wA=2ndmate-alpha
+w9=└ own-a · p:AbCdEfGhIjKlMnOpQrStU1
+wB=2ndmate-bravo
+wC=└ bravo-child · p:AbCdEfGhIjKlMnOpQrStU4
+RESULT: PASS order=w8,wA,w9,wB,wC

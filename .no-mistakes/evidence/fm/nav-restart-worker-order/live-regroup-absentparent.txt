@@ -1,0 +1,5 @@
+### case: absentparent  (session fm-lab-regroup-901516-19191)
+candidates: wG 
+warning: herdr presentation regrouping found the parent workspace absent or ambiguous; leaving workers in Herdr's current order
+rc=0
+RESULT: PASS absent parent warns, rc=0, nothing moved
