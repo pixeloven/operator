@@ -486,6 +486,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0039-carry-secondmate-occupant-check.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

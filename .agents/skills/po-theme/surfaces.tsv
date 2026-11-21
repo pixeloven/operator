@@ -133,3 +133,35 @@ lib	-	bin/fm-remote-doctor.sh	upstream	fm_trap_exit 143 TERM	trap 'exit 143' TER
 lib	-	bin/fm-remote-doctor.sh	upstream	# shellcheck source=bin/po-theme-lib.sh	
 lib	-	bin/fm-remote-doctor.sh	upstream	if [ -f "$SCRIPT_DIR/po-theme-lib.sh" ]; then . "$SCRIPT_DIR/po-theme-lib.sh"; else po_str() { printf 'remote second mate'; }; fi	
 str.doctor.submate	T	bin/fm-remote-doctor.sh	upstream	printf 'error: this host is not ready for a %s%s\n' "$(po_str doctor.submate)" "${NAMES:+; unresolved: $NAMES}" >&2	printf 'error: this host is not ready for a remote second mate%s\n' "${NAMES:+; unresolved: $NAMES}" >&2
+lib	-	bin/fm-session-start.sh	upstream	#                       digest: read-only, always runs. A present local	#                       digest: read-only, always runs. The per-task reads
+lib	-	bin/fm-session-start.sh	upstream	#                       secondmate endpoint also gets a bounded occupant-	
+lib	-	bin/fm-session-start.sh	upstream	#                       identity read, so a foreign occupant reads	
+lib	-	bin/fm-session-start.sh	upstream	#                       `endpoint: mismatch` instead of alive. The per-task reads	
+lib	-	bin/fm-session-start.sh	upstream	# fm_session_start_endpoint_occupant <backend> <target> <home>: the occupant	
+lib	-	bin/fm-session-start.sh	upstream	# identity verdict (bin/fm-backend.sh's fm_backend_endpoint_occupant_verdict)	
+lib	-	bin/fm-session-start.sh	upstream	# for a secondmate endpoint that already read present, under the same bound and	
+lib	-	bin/fm-session-start.sh	upstream	# crash isolation as the presence read. A read that dies or times out prints	
+lib	-	bin/fm-session-start.sh	upstream	# nothing, which the caller treats as unknown identity.	
+lib	-	bin/fm-session-start.sh	upstream	fm_session_start_endpoint_occupant() {  # <backend> <target> <home>	
+lib	-	bin/fm-session-start.sh	upstream	# shellcheck disable=SC2016  # Positional parameters expand inside the child bash, not here.	
+lib	-	bin/fm-session-start.sh	upstream	fm_run_timed "$ENDPOINT_TIMEOUT" bash -c '	
+lib	-	bin/fm-session-start.sh	upstream	. "$1"	
+lib	-	bin/fm-session-start.sh	upstream	fm_backend_endpoint_occupant_verdict "$2" "$3" "$4"	
+lib	-	bin/fm-session-start.sh	upstream	' _ "$SCRIPT_DIR/fm-backend.sh" "$1" "$2" "$3" 2>/dev/null || true	
+lib	-	bin/fm-session-start.sh	upstream	}	
+lib	-	bin/fm-session-start.sh	upstream		
+lib	-	bin/fm-session-start.sh	upstream	# A secondmate's pane can outlive its agent and host a different one, so	
+lib	-	bin/fm-session-start.sh	upstream	# presence reads alive only when the occupant runs in the recorded home; a	
+lib	-	bin/fm-session-start.sh	upstream	# mismatch is reported, never repaired here (remote routes are not local	
+lib	-	bin/fm-session-start.sh	upstream	# panes and keep the presence verdict).	
+lib	-	bin/fm-session-start.sh	upstream	occupant=match	
+lib	-	bin/fm-session-start.sh	upstream	if [ "$endpoint_rc" -eq 0 ] && [ "$(fm_meta_get "$meta" kind)" = secondmate ] \	
+lib	-	bin/fm-session-start.sh	upstream	&& [ -z "$(fm_meta_get "$meta" remote_host)" ]; then	
+lib	-	bin/fm-session-start.sh	upstream	occupant=$(fm_session_start_endpoint_occupant "$backend" "${target:-$window}" "$(fm_meta_get "$meta" home)")	
+lib	-	bin/fm-session-start.sh	upstream	fi	
+lib	-	bin/fm-session-start.sh	upstream	if [ "$endpoint_rc" -eq 0 ] && [ "${occupant%%$'\t'*}" = mismatch ]; then	if [ "$endpoint_rc" -eq 0 ]; then
+lib	-	bin/fm-session-start.sh	upstream	printf 'endpoint: mismatch (backend=%s window=%s - a different agent occupies the recorded pane: its cwd %s is outside the recorded secondmate home %s; not relaunched automatically)\n' \	
+lib	-	bin/fm-session-start.sh	upstream	"$backend" "$window" "${occupant#*$'\t'}" "$(fm_meta_get "$meta" home)"	
+lib	-	bin/fm-session-start.sh	upstream	elif [ "$endpoint_rc" -eq 0 ] && [ "$occupant" != match ]; then	
+lib	-	bin/fm-session-start.sh	upstream	printf 'endpoint: alive (backend=%s window=%s) - occupant identity unreadable, so this is pane presence only\n' "$backend" "$window"	
+lib	-	bin/fm-session-start.sh	upstream	elif [ "$endpoint_rc" -eq 0 ]; then	
