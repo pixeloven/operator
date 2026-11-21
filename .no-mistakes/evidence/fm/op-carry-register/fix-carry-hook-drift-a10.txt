@@ -1,0 +1,9 @@
+### S7b: fix row on bin/fm-session-start.sh + bug fix line + mutated registered heal hook: A9 accepts (documented exposure), A10 must catch the lost hook
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+registry: bin/fm-session-start.sh also carries a bug fix, so its other changed lines are that carry's
+registry: every hook line in the registered upstream files matches its row
+exit=
+$ bin/po-theme.sh anchors
+anchor missing: hook heal not found in bin/fm-session-start.sh: [ "$READ_ONLY" -eq 1 ] || FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" heal 2>/dev/null || true
+exit=
+A9 exit=0; A10 anchors exit=1

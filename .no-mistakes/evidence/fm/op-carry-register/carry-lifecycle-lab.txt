@@ -1,0 +1,79 @@
+
+### S1 adversarial: bug fix in an upstream file (bin/fm-afk-contract.sh) with no register row -> A4 must fail
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+A4: bin/fm-afk-contract.sh: in no PixelOven namespace, carry register row, or theme hook registry
+exit=1
+
+### S2: add a fix row (no new ADR, no regex edit) -> A4 passes
+$ bin/po-carries.sh validate
+carries: 164 rows, 1 fix carries
+exit=0
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+carries: every path that differs from 427056c4181c41074ad24f051f79919330df0fa5 is covered
+exit=0
+
+### S3 self-retire: upstream takes equivalent fix, file returns to pin bytes -> A4 fails telling to drop the row
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+A4: bin/fm-afk-contract.sh: the fix carry no longer differs from 427056c4181c41074ad24f051f79919330df0fa5; drop its row
+exit=1
+
+### S4 adversarial: malformed fix rows are refused (regex fix row, decision-retire fix row, missing note, unknown ADR, bad upstream link)
+$ bin/po-carries.sh validate
+po-carries: carries.tsv line 186: a fix row names one exact path
+po-carries: carries.tsv line 187: a fix row retires at sync
+po-carries: carries.tsv line 188: empty note; write - for none
+po-carries: carries.tsv line 189: owner ADR-9999 is neither fix nor an ADR with a record under docs/adr/
+po-carries: carries.tsv line 190: upstream must be - or an https:// link, not http://evil
+exit=1
+
+### S5 adversarial: bug fix line in theme-hook file bin/fm-session-start.sh without a fix row -> A9 fails
++: "${FM_BUGFIX_GUARD:=1}"  # carried bug fix
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+A9: bin/fm-session-start.sh: unregistered changed line: : "${FM_BUGFIX_GUARD:=1}"  # carried bug fix
+exit=1
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+carries: every path that differs from 427056c4181c41074ad24f051f79919330df0fa5 is covered
+exit=0
+
+### S6: add a fix row for bin/fm-session-start.sh -> A9 and A4 both pass
+$ bin/po-carries.sh validate
+carries: 164 rows, 1 fix carries
+exit=0
+$ bin/po-carries.sh fixes
+bin/fm-session-start.sh
+exit=0
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+registry: bin/fm-session-start.sh also carries a bug fix, so its other changed lines are that carry's
+registry: every hook line in the registered upstream files matches its row
+exit=0
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+carries: every path that differs from 427056c4181c41074ad24f051f79919330df0fa5 is covered
+exit=0
+
+### S7 adversarial: a fix row does not let a registered hook line drift (mutate a registered heal hook line)
++[ "$READ_ONLY" -eq 1 ] || FM_HOME="$FM_HOME" "$SCRIPT_DIR/po-theme.sh" heal --evil 2>/dev/null || true
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+registry: bin/fm-session-start.sh also carries a bug fix, so its other changed lines are that carry's
+registry: every hook line in the registered upstream files matches its row
+exit=0
+
+### S8 spent carry in theme-hook file: upstream fix landed, file differs only by its registered hooks -> A9 fails 'drop its fix row' while A4 whole-file check is blind
+ bin/fm-session-start.sh | 36 ++++++++++++++++++++++++++++++++++--
+ 1 file changed, 34 insertions(+), 2 deletions(-)
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+carries: every path that differs from 427056c4181c41074ad24f051f79919330df0fa5 is covered
+exit=0
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+registry: bin/fm-session-start.sh also carries a bug fix, so its other changed lines are that carry's
+A9: bin/fm-session-start.sh: the fix carry no longer changes any line beyond its registered hooks; drop its fix row
+exit=1
+
+### S9: drop the fix row -> both gates pass again
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+carries: every path that differs from 427056c4181c41074ad24f051f79919330df0fa5 is covered
+exit=0
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+registry: every hook line in the registered upstream files matches its row
+exit=0
+
+[exited with code 0]

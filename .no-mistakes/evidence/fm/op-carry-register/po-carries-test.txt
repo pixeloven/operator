@@ -1,0 +1,6 @@
+ok - A4 admits theme-hook files, exact path rows, and whole-path regex matches, and names every other changed path
+ok - every malformed register row is refused by line, and a missing or malformed register fails A4
+ok - a fix row fails A4 once its file is back at upstream bytes, while an ADR carry there only gets a note
+ok - A9 accepts a fix carry's lines in a theme-hook file, not an ADR row's, still holds that file's hooks to their rows, and fails a spent fix carry
+ok - this tree's register validates, admits exactly its namespaces' paths, and covers the diff against the upstream pin
+exit=0

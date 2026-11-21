@@ -1,0 +1,5 @@
+corpus paths:      990
+old-regex uncovered:      746
+register uncovered:      746
+--- diff old vs new (empty = identical verdicts) ---
+IDENTICAL

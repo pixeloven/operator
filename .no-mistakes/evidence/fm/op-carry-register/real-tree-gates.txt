@@ -1,0 +1,11 @@
+$ bin/po-carries.sh validate
+carries: 163 rows, 0 fix carries
+exit=0
+$ bin/po-carries.sh check-paths 427056c4181c41074ad24f051f79919330df0fa5
+carries: every path that differs from 427056c4181c41074ad24f051f79919330df0fa5 is covered
+exit=0
+$ bin/po-theme.sh registry check-diff 427056c4181c41074ad24f051f79919330df0fa5
+registry: every hook line in the registered upstream files matches its row
+exit=0
+$ bin/po-carries.sh fixes
+exit=0
