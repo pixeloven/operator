@@ -1,0 +1,15 @@
+$ po-crew.sh check  # infra-skills gitCommitSha stale (686d425) under a v0.67.0 marketplace; with and without gh
+ok    release                            crew v0.67.0 (dd29f25) is the newest release, from the published pixeloven/crew
+ok    claude crew@pixeloven              enabled, at crew v0.67.0
+fail  claude infra-skills@pixeloven      enabled, behind: 686d425 installed, crew v0.67.0 is dd29f25; run the dotfiles plugin update
+ok    claude planning-skills@pixeloven   enabled, at crew v0.67.0
+ok    claude identity-skills@pixeloven   enabled, at crew v0.67.0
+ok    claude language-skills@pixeloven   enabled, at crew v0.67.0
+exit=1
+warn  release                            published pixeloven/crew release tags unreadable; comparing each tool against its own marketplace clone, without the newest release
+ok    claude crew@pixeloven              enabled, at crew v0.67.0
+fail  claude infra-skills@pixeloven      enabled, behind: 686d425 installed, crew v0.67.0 is dd29f25; run the dotfiles plugin update
+ok    claude planning-skills@pixeloven   enabled, at crew v0.67.0
+ok    claude identity-skills@pixeloven   enabled, at crew v0.67.0
+ok    claude language-skills@pixeloven   enabled, at crew v0.67.0
+exit=1

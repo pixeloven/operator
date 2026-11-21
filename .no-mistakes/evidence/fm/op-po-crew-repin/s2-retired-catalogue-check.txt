@@ -1,0 +1,19 @@
+$ po-crew.sh check  # real claude+codex on retired pixeloven/marketplace, real pi per-pack commit packages
+ok    release                            crew v0.67.0 (dd29f25) is the newest release, from the published pixeloven/crew
+fail  claude crew@pixeloven              enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  claude infra-skills@pixeloven      enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  claude planning-skills@pixeloven   enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  claude identity-skills@pixeloven   enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  claude language-skills@pixeloven   enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  codex crew@pixeloven               enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  codex infra-skills@pixeloven       enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  codex planning-skills@pixeloven    enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  codex identity-skills@pixeloven    enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  codex language-skills@pixeloven    enabled, on the retired pixeloven/marketplace catalogue; switch to pixeloven/crew per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  pi crew@pixeloven                  installed, pinned by commit f962c69 rather than a crew release tag; move it to the tag per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  pi infra-skills@pixeloven          its own pre-fold package is still installed; switch to the crew package, which carries every pack, per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  pi planning-skills@pixeloven       its own pre-fold package is still installed; switch to the crew package, which carries every pack, per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  pi identity-skills@pixeloven       its own pre-fold package is still installed; switch to the crew package, which carries every pack, per crew 0.67.0 Consumer impact with the dotfiles plugin update
+fail  pi language-skills@pixeloven       its own pre-fold package is still installed; switch to the crew package, which carries every pack, per crew 0.67.0 Consumer impact with the dotfiles plugin update
+ok    fence                              all five disabled in /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/po-crew-live2.bDUomQ/fmhome
+exit=1
