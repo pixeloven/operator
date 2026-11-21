@@ -199,7 +199,8 @@ ADR-0004 and this page.
 [`carries.tsv`](carries.tsv) lists the PixelOven namespaces, each upstream file an accepted ADR claims, and each bug-fix carry ([ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md)); its header owns the row format.
 An upstream-owned file that carries [ADR-0020](../adr/0020-themes-first-class.md) theme hooks is admitted because the hook registry lists it, and A9 then holds every changed line in it to its registered hook.
 The check diffs against the pin with no second ref, so it covers the working tree as well as committed history.
-It also fails on a bug-fix carry whose file is back at upstream bytes, and prints a note for an ADR's self-retiring row in that state:
+It also fails on a bug-fix carry whose file is back at upstream bytes, and prints a note for an ADR's self-retiring row in that state.
+This check is whole-file; A9 catches a spent bug-fix carry in a theme-hook file, which still differs by its hooks:
 
 ```sh
 bin/po-carries.sh check-paths "$PIN"
@@ -263,7 +264,7 @@ git diff --summary "$PIN" -- AGENTS.md bin/fm-dod-lib.sh | grep 'mode change'
 ```
 
 In each upstream-owned file `bin/po-theme.sh registry files` lists, every added line must be a row's hook line, occurring at most as many times as rows register it, and every removed line must be the upstream line a row says its hook replaces; `registry check-diff` reports an affirmative line when they all match.
-In a file that a bug-fix carry's row in the carry register names, the other changed lines are that carry's, while the file's hook lines are still counted and must still replace their upstream lines:
+In a file that a bug-fix carry's row in the carry register names, the other changed lines are that carry's, while the file's hook lines are still counted and must still replace their upstream lines, and a file whose carry changes no line beyond its hooks fails because that carry is spent:
 
 ```sh
 bin/po-theme.sh registry check-diff "$PIN"

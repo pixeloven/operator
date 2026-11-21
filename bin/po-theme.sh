@@ -137,7 +137,8 @@
 #                                     file changes against <ref> is its registered hook,
 #                                     except in a file a bug-fix carry names
 #                                     (bin/po-carries.sh fixes), whose other changed
-#                                     lines are that carry's
+#                                     lines are that carry's; such a file with no
+#                                     such line fails, because its carry is spent
 #   po-theme.sh ds-resolve            print "<name> <origin>" for the design system in
 #                                     force (applied, inherited, or default)
 #   po-theme.sh ds-validate [D]       data checks for a design system (default: the
@@ -1772,7 +1773,8 @@ registry_carried() {
 
 # registry_check_diff <ref>: gate A9 for every registered upstream-owned file.
 # In a file a bug-fix carry names, changed lines that are not registered hooks
-# are the carry's; its hooks are still counted and still replace their lines.
+# are the carry's; its hooks are still counted and still replace their lines,
+# and a carry that no longer changes any such line is spent and fails.
 registry_check_diff() {
   local ref=$1 f bad=0 carried
   git -C "$CODE_ROOT" rev-parse --verify -q "$ref^{commit}" >/dev/null || die "registry check-diff: unknown ref $ref"
@@ -1793,7 +1795,7 @@ registry_check_diff() {
         while ((getline l < removed) > 0) rem[l]++
       }
       {
-        if (!($0 in hook)) { if (carried) next; printf "A9: %s: unregistered changed line: %s\n", f, $0; bad = 1; next }
+        if (!($0 in hook)) { if (carried) { own++; next } printf "A9: %s: unregistered changed line: %s\n", f, $0; bad = 1; next }
         if (++used[$0] > hook[$0]) { printf "A9: %s: hook line appears more times than it is registered: %s\n", f, $0; bad = 1; next }
         if (up[$0] != "") {
           if (rem[up[$0]] > 0) rem[up[$0]]--
@@ -1801,7 +1803,10 @@ registry_check_diff() {
         }
       }
       END {
-        if (!carried) for (l in rem) if (rem[l] > 0) { printf "A9: %s: unregistered removed line: %s\n", f, l; bad = 1 }
+        if (carried) {
+          for (l in rem) own += rem[l]
+          if (!own) { printf "A9: %s: the fix carry no longer changes any line beyond its registered hooks; drop its fix row\n", f; bad = 1 }
+        } else for (l in rem) if (rem[l] > 0) { printf "A9: %s: unregistered removed line: %s\n", f, l; bad = 1 }
         exit bad
       }
     ' "$TMPD/added" || bad=1

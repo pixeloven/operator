@@ -108,6 +108,7 @@ A feature, a PixelOven-only behavior, a changed contract or default, or a new na
 Each bug fix is offered upstream, and each offer needs the operator's approval for that one offer; the offer's link goes in the row's `upstream` column.
 A carry retires itself: when an upstream synchronization brings an equivalent change, the merge takes upstream's version of the file and drops the row.
 Gate A4 fails on a `fix` row whose file is back at upstream bytes, and prints a note for an ADR's self-retiring row in that state.
+A theme-hook file still differs by its hooks after its fix is spent, so gate A9 also fails on a `fix` row whose theme-hook file changes no line beyond its registered hooks.
 
 ## The contribution principle
 

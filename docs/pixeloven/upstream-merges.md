@@ -116,7 +116,7 @@ commits as O-1 violations; advancing it without merging is caught by A7.
 
 1. **Did anything conflict?** Resolve overlap in an ADR-accepted contact surface by behavior and ownership; a conflict anywhere else means the contract is leaking.
 2. **Did upstream touch a file we also touch?** Review `README.md` plus every file the carry register names; never choose one side wholesale.
-   When upstream brought an equivalent of a carry, take upstream's version and drop the carry's rows: `bin/po-carries.sh check-paths "$(cat docs/pixeloven/upstream-pin)"` notes each self-retiring ADR row whose file is back at upstream bytes and fails on such a fix row.
+   When upstream brought an equivalent of a carry, take upstream's version and drop the carry's rows: `bin/po-carries.sh check-paths "$(cat docs/pixeloven/upstream-pin)"` notes each self-retiring ADR row whose file is back at upstream bytes and fails on such a fix row, and `bin/po-theme.sh registry check-diff` fails on a fix row whose theme-hook file changes no line beyond its registered hooks.
 3. **Is any merged change consumer-visible?** That decides the semver bump on
    our next tag ([ADR-0006](../adr/0006-operator-cuts-its-own-release-tags.md),
    [`releases.md`](releases.md) §2).

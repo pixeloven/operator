@@ -185,7 +185,13 @@ test_a9_accepts_a_fix_carry_in_a_theme_hook_file() {
   # shellcheck disable=SC2016 # the hook line is literal shell text
   assert_contains "$out" 'A9: bin/x.sh: hook does not replace its registered upstream line: say "$who"' "A9 stopped holding hooks to their upstream lines in a carried file"
   out=$("$repo/bin/po-carries.sh" check-paths HEAD 2>&1) || fail "A4 refused a theme-hook file with a fix carry: $out"
-  pass "A9 accepts a fix carry's lines in a theme-hook file, not an ADR row's, and still holds that file's hooks to their rows"
+  # shellcheck disable=SC2016 # the hook line is literal shell text
+  printf 'say "$who"\nkeep\n' > "$repo/bin/x.sh"
+  out=$("$repo/bin/po-theme.sh" registry check-diff HEAD 2>&1)
+  status=$?
+  expect_code 1 "$status" "A9 with a fix carry whose file differs only by its hook"
+  assert_contains "$out" "A9: bin/x.sh: the fix carry no longer changes any line beyond its registered hooks; drop its fix row" "A9 kept a spent fix carry in a theme-hook file"
+  pass "A9 accepts a fix carry's lines in a theme-hook file, not an ADR row's, still holds that file's hooks to their rows, and fails a spent fix carry"
 }
 
 test_this_tree() {

@@ -27,11 +27,16 @@
 #                                     whose path no longer differs from <ref> is a
 #                                     finding, because a fix carry retires when its
 #                                     file returns to upstream bytes; an ADR's sync
-#                                     row whose path no longer differs prints a note
+#                                     row whose path no longer differs prints a note.
+#                                     This check is whole-file; a fix carry in a
+#                                     theme-hook file is also checked line by line
+#                                     by gate A9
 #   po-carries.sh fixes               print each path a fix row names; gate A9
 #                                     (bin/po-theme.sh registry check-diff) accepts
 #                                     changed lines in such a theme-hook file beyond
-#                                     its registered hooks
+#                                     its registered hooks, and fails such a file
+#                                     that changes no line beyond them, because its
+#                                     carry is spent
 #
 # Exit status: 0 on success; 1 on a malformed register, an uncovered path, a
 # fix row whose path no longer differs, an unreadable theme hook registry, an

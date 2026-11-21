@@ -44,7 +44,9 @@ The operator also set the standing principle for how this fork changes upstream 
    ADR-0016's exact checks on `AGENTS.md` and `bin/fm-dod-lib.sh` are unchanged.
 5. **Carries retire themselves.**
    When an upstream synchronization brings an equivalent change, the merge takes upstream's version of the file and drops the carry's row.
-   A4 fails on a `fix` row whose file no longer differs from the pin, and prints a note for an ADR's self-retiring row in that state, so a spent carry cannot linger unnoticed.
+   A4 fails on a `fix` row whose file no longer differs from the pin, and prints a note for an ADR's self-retiring row in that state.
+   A4's check is whole-file, and a theme-hook file still differs by its hooks after its fix is spent, so A9 also fails on a `fix` row whose theme-hook file changes no line beyond its registered hooks.
+   Together they keep a spent fix carry from lingering unnoticed.
    Where an accepted ADR says the A4 allowlist drops a path, the merge drops that ADR's row.
 6. **Fixes are offered upstream, each offer approved on its own.**
    A fix carry stays minimal, so the carried change and the upstream contribution are the same diff.
@@ -58,13 +60,13 @@ The operator also set the standing principle for how this fork changes upstream 
 - A bug fix in any upstream file, theme-hook files included, ships as a carry with one register row per changed file; the register records both the ADR-0039 and ADR-0040 carries as ADR rows, and a later bug fix of the same kind needs only fix rows.
 - ADRs stay for decisions, and the ADR index no longer grows by one record per fix.
 - Gate A4's path list has one owner instead of two drifting copies.
-- While a fix carry covers a theme-hook file, A9 cannot tell a fix line from an unregistered theme line in that file; the file's registered hooks are still counted, A10 still finds a lost hook, and the exposure ends when the carry retires.
+- While a fix carry covers a theme-hook file, A9 cannot tell a fix line from an unregistered theme line in that file; the file's registered hooks are still counted, A10 still finds a lost hook, and the exposure ends when the carry retires, which A9 enforces once the fix no longer changes any line beyond the file's hooks.
 - The `bin/backends/` namespace keeps admitting every path under it, as the expression did, so upstream's own adapters there pass A4 through it; their carries are still named by their ADR rows.
 - Every upstream synchronization has the register to review: rows whose file upstream changed, and rows the check notes as back at upstream bytes.
 
 ## Verification
 
-`tests/po-carries.test.sh` covers the register checks, the retirement rules, and the A9 exception, including that an ADR row does not relax A9 and that a fix-covered file's hooks are still held to their rows.
+`tests/po-carries.test.sh` covers the register checks, the retirement rules, and the A9 exception, including that an ADR row does not relax A9, that a fix-covered file's hooks are still held to their rows, and that A9 fails a spent fix carry in a theme-hook file.
 The old expression in effect when the migration landed gave the same A4 verdict as the register for every path in the proof corpus: every path tracked at the new head and at the upstream pin, every path differing from the pin, the paths of pull requests #78 and #79, and boundary paths around every namespace and every named file.
 
 ## Alternatives considered
