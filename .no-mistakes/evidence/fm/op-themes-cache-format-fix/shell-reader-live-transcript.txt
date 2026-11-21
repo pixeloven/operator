@@ -1,0 +1,7 @@
+--- shell reader (bin/po-theme-lib.sh po_str) on a key-incomplete cache
+has str.sidebar.needs before: 0
+po_str sidebar.needs => needs-operator
+has str.sidebar.needs after reader: 1
+--- control: base-commit (main) lib would accept the key-incomplete cache
+base po_str sidebar.needs => 'needs-captain'
+base: has str.sidebar.needs after reader: 0

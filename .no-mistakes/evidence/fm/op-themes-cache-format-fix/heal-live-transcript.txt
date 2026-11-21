@@ -1,0 +1,22 @@
+## LAB=/tmp/fm-lab.VLNCVL (disposable FM_HOME); code root = gate worktree
+$ echo operator > $LAB/config/po-theme; po-theme.sh refresh
+values: operator labels and strings written to /tmp/fm-lab.VLNCVL/state/po-theme/values
+rc=0
+keys in fresh cache: 30; cache tag: cache	po-theme-values/3
+removing key: str.sidebar.needs
+has str.sidebar.needs after strip: 0
+$ po-theme.sh term (lib read via po_str through shell lib)
+$ po-theme.sh heal
+persona drift: not re-applied automatically because this home is not its own code root; run bin/po-theme.sh apply
+rc=0
+has str.sidebar.needs after heal: 1  value: needs-operator
+$ po-theme.sh heal   (second run, already fresh: cache mtime should not change)
+persona drift: not re-applied automatically because this home is not its own code root; run bin/po-theme.sh apply
+rc=0
+mtime before=1795227257.'/tmp/fm-lab.VLNCVL/state/po-theme/values' after=1795227257
+--- adversarial: bad arg
+po-theme: usage: heal [--push]
+rc=1
+--- adversarial: nautical home, heal writes nothing
+rc=0
+state/po-theme exists: no

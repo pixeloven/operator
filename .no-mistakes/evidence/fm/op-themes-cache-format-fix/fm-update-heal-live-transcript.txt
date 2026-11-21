@@ -1,0 +1,10 @@
+## fm-update.sh from a disposable clone (/tmp/fm-upd.KXcGba/root, origin=/tmp/fm-upd.KXcGba/origin.git) with FM_HOME=/tmp/fm-lab.VLNCVL (operator theme)
+has str.sidebar.needs before update: 0
+$ FM_HOME=$LAB $ROOT/bin/fm-update.sh
+firstmate: already current
+persona drift: not re-applied automatically because this home is not its own code root; run bin/po-theme.sh apply
+reread-firstmate: no
+restart-secondmates: none
+nudge-secondmates: none
+rc=
+has str.sidebar.needs after update: 1  value: needs-operator
