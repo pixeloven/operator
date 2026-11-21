@@ -1,0 +1,4 @@
+$ /bin/bash --version: GNU bash, version 3.2.57(1)-release (arm64-apple-darwin26)
+[base(767dc49e)] /var/folders/1c/ft160xld787dzk2t3vdtrx0r0000gp/T/tmp.YmCeDz6x5Z/base.sh: line 6: words[@]: unbound variable (shell rc=1)
+[merged(HEAD)] rejected empty args cleanly (rc=1)
+hermes argv still matched (shell rc=0)

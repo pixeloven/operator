@@ -1,0 +1,2 @@
+A5 re-run with a portable sed (BSD sed rejects '1{/^$/d}' without ';'):
+A5 PASS: README equals upstream 427056c4 outside the banner
