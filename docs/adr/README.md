@@ -12,7 +12,7 @@ Use [`_template.md`](_template.md).
 
 | ADR | Title | Status | Source |
 |-----|-------|--------|--------|
-| [0001](0001-soft-fork-of-firstmate.md) | Soft fork of firstmate, additive-only | Accepted | Program plan D-01, O-1, O-2 |
+| [0001](0001-soft-fork-of-firstmate.md) | Soft fork of firstmate, additive-only | Accepted (option (c) amended for bug fixes by ADR-0041) | Program plan D-01, O-1, O-2 |
 | [0002](0002-seeded-with-full-upstream-history.md) | Seeded with full upstream history at the pin | Accepted | Task A0.1 |
 | [0003](0003-pixeloven-org-private-until-review.md) | PixelOven org, private until a go-public review | Accepted | Program plan D-02, G-6 |
 | [0004](0004-the-name-operator.md) | The name `operator`, and "the operator" is the human | Accepted | Program plan D-03, G-7 |
@@ -31,7 +31,7 @@ Use [`_template.md`](_template.md).
 | [0017](0017-go-public-criteria.md) | Go-public criteria for every public PixelOven repository | Accepted | ADR-0003 go-public review; retroactive review of `operator` |
 | [0018](0018-security-policy-file.md) | PixelOven claims `.github/SECURITY.md` for its security policy | Accepted | Go-public review decision D5 |
 | [0019](0019-crew-machine-level-delivery.md) | `crew` reaches workers through the machine-level install that dotfiles maintains | Accepted (per-plugin commit pins superseded 2026-11-20 by one crew release tag) | Crew-everywhere investigation; closes the parked crew delivery decisions |
-| [0020](0020-themes-first-class.md) | Themes are a first-class feature | Accepted | operator decisions on persona completion; amends ADR-0016 |
+| [0020](0020-themes-first-class.md) | Themes are a first-class feature | Accepted (A9 clause amended by ADR-0041) | operator decisions on persona completion; amends ADR-0016 |
 | [0021](0021-carry-upstream-herdr-slash-popup-fix.md) | Carry upstream's Herdr slash-popup composer fix until a sync brings it | Retired by the sixth synchronization | Herdr send-failure investigation; self-retiring upstream carry |
 | [0022](0022-delivery-lane-github-credential-helper.md) | The delivery lane may carry an operator-configured GitHub credential helper | Accepted | Worker GitHub credentials from a non-personal source |
 | [0023](0023-repeatable-allow-red-waiver.md) | The merge script accepts several named red-check waivers | Accepted | Two-check waived merge stopped on the single-waiver limit |
@@ -52,6 +52,7 @@ Use [`_template.md`](_template.md).
 | [0038](0038-navigator-lane-carries-github-credential-helper.md) | A secondmate's delivery lane carries its launcher's GitHub credential helper | Proposed | Navigator teardown landed-work checks failed without GitHub credentials |
 | [0039](0039-carry-secondmate-occupant-check.md) | Carry the secondmate endpoint occupant check until a sync brings it | Accepted | A navigator's recorded Herdr pane read alive while it hosted the primary session; self-retiring local carry |
 | [0040](0040-carry-secondmate-crew-regroup.md) | Carry the Herdr regroup of a relaunched secondmate's crew until a sync brings it | Accepted | Pull request #78: a relaunched navigator's crew stayed under another parent; self-retiring local carry |
+| [0041](0041-bug-fix-carries-in-one-register.md) | Bug-fix carries are rows in one carry register | Accepted | Architecture review of upstream synchronization; amends ADR-0001 and ADR-0020 |
 
 Exceptions to ADR-0017's go-public criteria that the operator has approved are recorded in
 [`0017-go-public-exceptions.md`](0017-go-public-exceptions.md).

@@ -134,7 +134,11 @@
 #   po-theme.sh registry files        upstream-owned files that carry theme hooks
 #   po-theme.sh registry check-diff <ref>
 #                                     gate A9: every line a registered upstream-owned
-#                                     file changes against <ref> is its registered hook
+#                                     file changes against <ref> is its registered hook,
+#                                     except in a file a bug-fix carry names
+#                                     (bin/po-carries.sh fixes), whose other changed
+#                                     lines are that carry's; such a file with no
+#                                     such line fails, because its carry is spent
 #   po-theme.sh ds-resolve            print "<name> <origin>" for the design system in
 #                                     force (applied, inherited, or default)
 #   po-theme.sh ds-validate [D]       data checks for a design system (default: the
@@ -1759,22 +1763,39 @@ registry_files() {
 
 trim() { sed 's/^[[:space:]]*//'; }
 
+# registry_carried: the files a bug-fix carry in the carry register names
+# (ADR-0041), read through bin/po-carries.sh beside this script; a copy of this
+# script without it, such as a test fixture, has none.
+registry_carried() {
+  [ -x "$SCRIPT_DIR/po-carries.sh" ] || return 0
+  "$SCRIPT_DIR/po-carries.sh" fixes || die "registry check-diff: the carry register is unreadable"
+}
+
 # registry_check_diff <ref>: gate A9 for every registered upstream-owned file.
+# In a file a bug-fix carry names, changed lines that are not registered hooks
+# are the carry's; its hooks are still counted and still replace their lines,
+# and a carry that no longer changes any such line is spent and fails.
 registry_check_diff() {
-  local ref=$1 f bad=0
+  local ref=$1 f bad=0 carried
   git -C "$CODE_ROOT" rev-parse --verify -q "$ref^{commit}" >/dev/null || die "registry check-diff: unknown ref $ref"
+  registry_carried > "$TMPD/carried"
   for f in $(registry_files); do
+    carried=0
+    if grep -qxF -- "$f" "$TMPD/carried"; then
+      carried=1
+      echo "registry: $f also carries a bug fix, so its other changed lines are that carry's"
+    fi
     git -C "$CODE_ROOT" diff -U0 "$ref" -- "$f" | grep -E '^[-+]' | grep -vE '^(\+\+\+ |--- )' > "$TMPD/d" || true
     grep '^+' "$TMPD/d" | cut -c2- | trim > "$TMPD/added" || true
     grep '^-' "$TMPD/d" | cut -c2- | trim > "$TMPD/removed" || true
     registry_rows | awk -F '\t' -v f="$f" '$3 == f { print $5 "\t" $6 }' > "$TMPD/rows"
-    awk -F '\t' -v f="$f" -v rows="$TMPD/rows" -v removed="$TMPD/removed" '
+    awk -F '\t' -v f="$f" -v rows="$TMPD/rows" -v removed="$TMPD/removed" -v carried="$carried" '
       BEGIN {
         while ((getline l < rows) > 0) { n = index(l, "\t"); h = substr(l, 1, n - 1); hook[h]++; up[h] = substr(l, n + 1) }
         while ((getline l < removed) > 0) rem[l]++
       }
       {
-        if (!($0 in hook)) { printf "A9: %s: unregistered changed line: %s\n", f, $0; bad = 1; next }
+        if (!($0 in hook)) { if (carried) { own++; next } printf "A9: %s: unregistered changed line: %s\n", f, $0; bad = 1; next }
         if (++used[$0] > hook[$0]) { printf "A9: %s: hook line appears more times than it is registered: %s\n", f, $0; bad = 1; next }
         if (up[$0] != "") {
           if (rem[up[$0]] > 0) rem[up[$0]]--
@@ -1782,7 +1803,10 @@ registry_check_diff() {
         }
       }
       END {
-        for (l in rem) if (rem[l] > 0) { printf "A9: %s: unregistered removed line: %s\n", f, l; bad = 1 }
+        if (carried) {
+          for (l in rem) own += rem[l]
+          if (!own) { printf "A9: %s: the fix carry no longer changes any line beyond its registered hooks; drop its fix row\n", f; bad = 1 }
+        } else for (l in rem) if (rem[l] > 0) { printf "A9: %s: unregistered removed line: %s\n", f, l; bad = 1 }
         exit bad
       }
     ' "$TMPD/added" || bad=1

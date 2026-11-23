@@ -1,0 +1,184 @@
+# Carry register (ADR-0041): every path the fork may change relative to the
+# upstream pin, other than a theme-hook file the hook registry
+# (.agents/skills/po-theme/surfaces.tsv) owns. One tab-separated row per claim:
+#   match     path (the row names one repository path exactly) or regex (an
+#             extended regular expression that must match the whole path; for
+#             PixelOven namespaces only)
+#   path      the repository path, or the expression
+#   owner     ADR-NNNN, the accepted decision that claims it, or fix, a bug-fix
+#             carry that needs no ADR of its own
+#   retire    sync (the carry retires at the upstream synchronization that brings
+#             an equivalent change: the merge takes upstream's version and drops
+#             the row) or decision (the row stands while its ADR stands)
+#   upstream  the https:// link to the upstream issue or pull request that offers
+#             the change, or - when none is known
+#   note      what the row carries; required for a fix row, which no ADR explains
+# A path several decisions touch has one row per owner, so each carry retires on
+# its own. A fix row names one exact path, retires at sync, and has a note.
+# Where an accepted ADR says the A4 allowlist drops a path, the merge drops that
+# owner's row here.
+# bin/po-carries.sh reads this file for gate A4, and gate A9 accepts a fix row's
+# changed lines in a theme-hook file; its header owns the checks.
+regex	docs/pixeloven/.*	ADR-0001	decision	-	PixelOven documentation
+regex	docs/adr/.*	ADR-0001	decision	-	decision records
+regex	bin/backends/.*	ADR-0001	decision	-	new runtime backend adapters
+regex	\.agents/skills/po-.*	ADR-0001	decision	-	PixelOven skills
+regex	\.github/workflows/pixeloven-.*	ADR-0007	decision	-	PixelOven CI
+regex	bin/po-[a-z0-9-]+\.sh	ADR-0016	decision	-	fork scripts
+regex	tests/po-[a-z0-9-]+\.test\.sh	ADR-0016	decision	-	fork tests
+regex	\.claude/mods/firstmate-calm/lib/po-[a-z0-9-]+\.ts	ADR-0020	decision	-	theme modules in the Calm mod
+regex	\.claude/mods/firstmate-calm/tests/po-[a-z0-9-]+\.test\.ts	ADR-0020	decision	-	theme module tests in the Calm mod
+regex	\.pi/extensions/lib/po-[a-z0-9-]+\.ts	ADR-0020	decision	-	theme module symlinks for Pi
+path	README.md	ADR-0001	decision	-	the PixelOven banner block, held by A5
+path	NOTICE	ADR-0001	decision	-	attribution and the fork point
+path	bin/fm-delivery-lane.sh	ADR-0008	decision	-	autonomous delivery lane
+path	bin/fm-spawn.sh	ADR-0008	decision	-	autonomous delivery lane
+path	docs/verification/delivery-lane.md	ADR-0008	decision	-	autonomous delivery lane
+path	tests/fm-task-delivery.test.sh	ADR-0008	decision	-	autonomous delivery lane
+path	.github/workflows/ci.yml	ADR-0011	decision	-	standard GitHub-hosted runner routing
+path	.github/workflows/no-mistakes-required.yml	ADR-0011	decision	-	standard GitHub-hosted runner routing
+path	docs/documentation-audiences.json	ADR-0011	decision	-	standard GitHub-hosted runner routing
+path	tests/fm-lint-workflows.test.sh	ADR-0011	decision	-	standard GitHub-hosted runner routing
+path	bin/fm-procevent-lib.sh	ADR-0012	decision	-	notification reconciliation
+path	bin/fm-procevent.sh	ADR-0012	decision	-	notification reconciliation
+path	bin/fm-wake-lib.sh	ADR-0012	decision	-	notification reconciliation
+path	bin/fm-watch.sh	ADR-0012	decision	-	notification reconciliation
+path	docs/configuration.md	ADR-0012	decision	-	notification reconciliation
+path	docs/remote-secondmates.md	ADR-0012	decision	-	notification reconciliation
+path	tests/fm-backend-herdr-presentation-e2e.test.sh	ADR-0012	decision	-	notification reconciliation
+path	tests/fm-pi-watch-extension.test.sh	ADR-0012	decision	-	notification reconciliation
+path	tests/fm-procevent.test.sh	ADR-0012	decision	-	notification reconciliation
+path	tests/fm-wake-queue.test.sh	ADR-0012	decision	-	notification reconciliation
+path	tests/fm-watch-triage.test.sh	ADR-0012	decision	-	notification reconciliation
+path	bin/fm-captain-hold.sh	ADR-0013	decision	-	archived captain-hold completion
+path	docs/captain-hold-lifecycle.md	ADR-0013	decision	-	archived captain-hold completion
+path	tests/fm-captain-hold-lifecycle.test.sh	ADR-0013	decision	-	archived captain-hold completion
+path	bin/fm-pixeloven-upstream-check.sh	ADR-0015	decision	-	operator upstream pin lineage check
+path	tests/fm-pixeloven-upstream-check.test.sh	ADR-0015	decision	-	operator upstream pin lineage check
+path	docs/documentation-audiences.json	ADR-0015	decision	-	audience entries for PixelOven prose
+path	AGENTS.md	ADR-0016	decision	-	the one Persona line, held by A9
+path	bin/fm-dod-lib.sh	ADR-0016	decision	-	the persona hunks, held by A9
+path	docs/documentation-audiences.json	ADR-0016	decision	-	audience entry for the po-theme skill
+path	.github/SECURITY.md	ADR-0018	decision	-	security policy
+path	docs/documentation-audiences.json	ADR-0019	decision	-	audience entries for the po-crew pages
+path	tests/fm-calm-pi-extension.test.sh	ADR-0020	decision	-	theme-module fixture copies
+path	docs/configuration.md	ADR-0022	decision	-	delivery lane GitHub credential helper section
+path	bin/fm-pr-merge.sh	ADR-0023	sync	-	repeatable --allow-red waiver
+path	tests/fm-pr-merge.test.sh	ADR-0023	sync	-	repeatable --allow-red waiver
+path	tests/fm-remote-job.test.sh	ADR-0025	sync	-	remote job timing deflake
+path	bin/fm-control.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-remote-secondmate-relaunch.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-secondmate-liveness-lib.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-secondmate-restart.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-spawn.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-test-run.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-watch.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	docs/agent-control.md	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	docs/configuration.md	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	docs/remote-secondmates.md	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	docs/verification/runtime-backends.md	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-backend-orca.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-claude-agent-view-live-e2e.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-control.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-control-relaunch.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-remote-secondmate-relaunch.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-secondmate-harness.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-secondmate-liveness.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-secondmate-restart.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-spawn-dispatch-profile.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	tests/fm-wake-queue.test.sh	ADR-0026	sync	-	secondmate restart fixes and disableAgentView
+path	bin/fm-wake-drain.sh	ADR-0028	sync	-	wake drain signal traps
+path	bin/fm-wake-lib.sh	ADR-0028	sync	-	wake drain signal traps
+path	tests/fm-wake-queue.test.sh	ADR-0028	sync	-	wake drain signal traps
+path	bin/fm-test-run.sh	ADR-0029	decision	-	duration hints for PixelOven-owned tests
+path	.github/workflows/ci.yml	ADR-0029	sync	-	twelfth portable serial shard
+path	.github/workflows/ci.yml	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-backend.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-control-lib.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-control.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-install-hc.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-secondmate-liveness-lib.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-spawn.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-teardown.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	docs/agent-control.md	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	docs/architecture.md	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	docs/configuration.md	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	docs/hc-backend.md	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	docs/verification/runtime-backends.md	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	tests/fm-backend-hc.test.sh	ADR-0031	sync	-	hc secondmates and recovery-grade exit and relaunch
+path	bin/fm-backlog-handoff.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-claude-stop-autoarm.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-codex-stop-park.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-contributions.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-home-summary-refresh.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-lint.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-lock.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-mail-check.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-osc7501.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-pr-check.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-pr-health.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-remote-delta-read.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-remote-doctor.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-remote-entrypoint.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-remote-home-provision.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-remote-inherit-push.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-remote-job-worker.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-review-check.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-secondmate-reconcile.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-spawn.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-startup-growth-check.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-supervision-handoff.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-supervision-host.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-teardown.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-tool-update-check.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-trap-lib.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-usage-warner.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-wake-grant.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-wake-lib.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-watch-arm.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-watch.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/fm-x-lib.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	docs/scripts.md	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-afk-return.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-agy-primary.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-claude-stop-autoarm.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-codex-hook-layer-live-e2e.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-cursor-primary.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-extension-binding.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-gotmp.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-mail-check.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-on.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-pi-branch-extension.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-backlog-handoff.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-entrypoint.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-job.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-job-claim-reap.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-job-launchagent.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-job-orphan-reap.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-job-process-start.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-remote-transport-lanes.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-session-lock-ancestry.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-startup-growth-check.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-turnend-guard.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	tests/fm-wake-queue.test.sh	ADR-0032	sync	-	Bash 5.2-safe signal traps
+path	bin/backends/hc.sh	ADR-0033	sync	-	hc parent linkage, durable leases, and themed app spaces
+path	bin/fm-spawn.sh	ADR-0033	sync	-	hc parent linkage, durable leases, and themed app spaces
+path	docs/hc-backend.md	ADR-0033	sync	-	hc parent linkage, durable leases, and themed app spaces
+path	docs/verification/runtime-backends.md	ADR-0033	sync	-	hc parent linkage, durable leases, and themed app spaces
+path	tests/fm-backend-hc.test.sh	ADR-0033	sync	-	hc parent linkage, durable leases, and themed app spaces
+path	tests/fm-backend-hc-appdetect-smoke.test.sh	ADR-0033	sync	-	hc parent linkage, durable leases, and themed app spaces
+path	.github/workflows/ci.yml	ADR-0035	sync	-	third CI lint partition
+path	bin/fm-lint.sh	ADR-0035	sync	-	third CI lint partition
+path	tests/fm-lint.test.sh	ADR-0035	sync	-	third CI lint partition
+path	tests/fm-test-fixture-cleanup.test.sh	ADR-0036	sync	-	signal-before-EXIT trap order in the test harness
+path	tests/lib.sh	ADR-0036	sync	-	signal-before-EXIT trap order in the test harness
+path	bin/fm-test-run.sh	ADR-0037	sync	-	operator-CI duration hints for inherited serial scripts
+path	bin/fm-spawn.sh	ADR-0038	decision	-	secondmate lane carries its launcher's GitHub credential helper
+path	docs/configuration.md	ADR-0038	decision	-	secondmate lane carries its launcher's GitHub credential helper
+path	bin/fm-backend.sh	ADR-0039	sync	-	secondmate endpoint occupant check
+path	bin/fm-secondmate-liveness-lib.sh	ADR-0039	sync	-	secondmate endpoint occupant check
+path	bin/fm-session-start.sh	ADR-0039	sync	-	secondmate endpoint occupant check
+path	tests/fm-secondmate-liveness.test.sh	ADR-0039	sync	-	secondmate endpoint occupant check
+path	tests/fm-session-start.test.sh	ADR-0039	sync	-	secondmate endpoint occupant check
+path	bin/fm-spawn.sh	ADR-0040	sync	-	Herdr regroup of a relaunched secondmate's crew
+path	docs/herdr-backend.md	ADR-0040	sync	-	Herdr regroup of a relaunched secondmate's crew

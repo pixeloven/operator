@@ -494,6 +494,10 @@
       "audience": "maintainer-architecture"
     },
     {
+      "path": "docs/adr/0041-bug-fix-carries-in-one-register.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "docs/adr/README.md",
       "audience": "maintainer-architecture"
     },

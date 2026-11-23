@@ -56,6 +56,7 @@ In a PR that merges upstream firstmate, `bin/po-theme.sh anchors` must pass (gat
 - A missing anchor means upstream changed wording a nautical key mirrors or added a user-invocable skill: update `themes/nautical.theme` and the matching key of every other theme.
 - A `surface canary` finding means upstream added a person-visible nautical string: theme it through a registered hook, or add a `residue.tsv` row whose reason opens with its rule or stage.
 - A missing theme hook or replaced upstream line means the merge touched a hooked line: re-apply the one hook line and update its row in `surfaces.tsv`.
+- A `drop its fix row` finding means upstream brought an equivalent of a bug-fix carry: drop that `fix` row from `docs/pixeloven/carries.tsv` (ADR-0041).
 
 ## Design systems
 

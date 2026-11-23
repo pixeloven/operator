@@ -122,7 +122,8 @@ Our default surface is new files in namespaces upstream can never collide with, 
 The delimited PixelOven banner at the top of `README.md` remains ADR-0001's identity exception.
 ADRs 0008, 0011 through 0013, 0015, 0016, 0022, 0023, 0025, 0026, 0028, 0029, 0031 through 0033, and 0035 through 0040 add exact existing-file allowlists for autonomous delivery, hosted-runner routing, notification reconciliation, archived captain-hold completion, documentation-audience ownership, persona themes, the delivery lane's GitHub credential helper, repeatable merge waivers, the remote-test timing deflake, the carried secondmate restart reliability fixes, the carried wake drain signal-trap fix, duration hints and a twelfth serial shard for PixelOven-owned tests, hc secondmates with recovery-grade exit and relaunch, the remaining carried signal-trap fixes, hc parent linkage, durable worktree leases, and themed app space names, a third CI lint partition, the test harness's signal-before-EXIT trap order, operator-CI duration hints for inherited serial scripts, the navigator lane's carried GitHub credential helper, the secondmate endpoint occupant check, and the secondmate crew regroup.
 ADR-0014 is withdrawn and ADR-0021, ADR-0024, and ADR-0030 are retired, so none of them carries hunks.
-Anything outside those lists needs a **new ADR**, not a silent change.
+A bug fix to an upstream file is a carry with a row in the carry register instead ([ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md)).
+Anything outside those lists and the register needs a **new ADR**, not a silent change.
 
 ## 4. Erratum on ADR-0004
 
@@ -145,7 +146,7 @@ pull request** by [`.github/workflows/pixeloven-gates.yml`](../../.github/workfl
 (job `fork-contract`), so this section is a description of a live gate rather
 than a one-time claim.
 
-Except for A7's affirmative lineage report, A9's affirmative registry report, and A10's and A11's affirmative theme reports, every command below is expected to print **nothing**; any other output is a finding.
+Except for A4's affirmative carry report and its notes, A7's affirmative lineage report, A9's affirmative registry report, and A10's and A11's affirmative theme reports, every command below is expected to print **nothing**; any other output is a finding.
 The workflow runs exactly these, in this order, and fails the job when a check reports a finding.
 
 ```sh
@@ -194,14 +195,15 @@ ADR-0004 and this page.
     | xargs -0 grep -nE '\bOperator\b'; }
 ```
 
-**A4 - O-1: the diff against the current upstream pin touches only our namespaces and accepted ADR override paths.**
-No second ref means this covers the working tree as well as committed history.
-An upstream-owned file that carries [ADR-0020](../adr/0020-themes-first-class.md) theme hooks is admitted because the hook registry lists it, and A9 then holds every changed line in it to its registered hook:
+**A4 - O-1: the diff against the current upstream pin touches only paths the carry register covers.**
+[`carries.tsv`](carries.tsv) lists the PixelOven namespaces, each upstream file an accepted ADR claims, and each bug-fix carry ([ADR-0041](../adr/0041-bug-fix-carries-in-one-register.md)); its header owns the row format.
+An upstream-owned file that carries [ADR-0020](../adr/0020-themes-first-class.md) theme hooks is admitted because the hook registry lists it, and A9 then holds every changed line in it to its registered hook.
+The check diffs against the pin with no second ref, so it covers the working tree as well as committed history.
+It also fails on a bug-fix carry whose file is back at upstream bytes, and prints a note for an ADR's self-retiring row in that state.
+This check is whole-file; A9 catches a spent bug-fix carry in a theme-hook file, which still differs by its hooks:
 
 ```sh
-git diff --name-only "$PIN" \
-  | grep -vxF -f <(bin/po-theme.sh registry files) \
-  | grep -vE '^(docs/pixeloven/|docs/adr/|\.github/workflows/pixeloven-|\.github/SECURITY\.md$|bin/backends/|\.agents/skills/po-|bin/po-[a-z0-9-]+\.sh$|tests/po-[a-z0-9-]+\.test\.sh$|\.claude/mods/firstmate-calm/(lib/po-[a-z0-9-]+\.ts|tests/po-[a-z0-9-]+\.test\.ts)$|\.pi/extensions/lib/po-[a-z0-9-]+\.ts$|AGENTS\.md$|bin/fm-pixeloven-upstream-check\.sh$|tests/fm-pixeloven-upstream-check\.test\.sh$|\.github/workflows/(ci|no-mistakes-required)\.yml$|bin/(fm-backend|fm-captain-hold|fm-control|fm-control-lib|fm-dod-lib|fm-install-hc|fm-lint|fm-spawn|fm-delivery-lane|fm-pr-merge|fm-procevent-lib|fm-procevent|fm-remote-secondmate-relaunch|fm-secondmate-liveness-lib|fm-secondmate-restart|fm-teardown|fm-test-run|fm-wake-drain|fm-wake-lib|fm-watch|fm-trap-lib|fm-backlog-handoff|fm-claude-stop-autoarm|fm-codex-stop-park|fm-contributions|fm-home-summary-refresh|fm-lock|fm-mail-check|fm-osc7501|fm-pr-check|fm-pr-health|fm-remote-delta-read|fm-remote-doctor|fm-remote-entrypoint|fm-remote-home-provision|fm-remote-inherit-push|fm-remote-job-worker|fm-review-check|fm-secondmate-reconcile|fm-startup-growth-check|fm-supervision-handoff|fm-supervision-host|fm-tool-update-check|fm-usage-warner|fm-wake-grant|fm-watch-arm|fm-x-lib)\.sh$|tests/(fm-backend-hc|fm-backend-hc-appdetect-smoke|fm-backend-herdr-presentation-e2e|fm-backend-orca|fm-calm-pi-extension|fm-captain-hold-lifecycle|fm-claude-agent-view-live-e2e|fm-control|fm-control-relaunch|fm-lint|fm-lint-workflows|fm-pr-merge|fm-remote-job|fm-task-delivery|fm-pi-watch-extension|fm-procevent|fm-remote-secondmate-relaunch|fm-secondmate-harness|fm-secondmate-liveness|fm-secondmate-restart|fm-spawn-dispatch-profile|fm-wake-queue|fm-watch-triage|fm-afk-return|fm-agy-primary|fm-claude-stop-autoarm|fm-codex-hook-layer-live-e2e|fm-cursor-primary|fm-extension-binding|fm-gotmp|fm-mail-check|fm-pi-branch-extension|fm-remote-backlog-handoff|fm-remote-entrypoint|fm-remote-job-claim-reap|fm-remote-job-launchagent|fm-remote-job-process-start|fm-remote-transport-lanes|fm-session-lock-ancestry|fm-turnend-guard|fm-on|fm-startup-growth-check|fm-remote-job-orphan-reap|fm-test-fixture-cleanup|fm-session-start)\.test\.sh$|tests/lib\.sh$|docs/(agent-control\.md|architecture\.md|captain-hold-lifecycle\.md|configuration\.md|documentation-audiences\.json|hc-backend\.md|herdr-backend\.md|remote-secondmates\.md|verification/delivery-lane\.md|verification/runtime-backends\.md|scripts\.md)$|README\.md$|NOTICE$)'
+bin/po-carries.sh check-paths "$PIN"
 ```
 
 **A5 — the README exception stays one bounded block.** Strip the banner and what
@@ -261,7 +263,8 @@ changed bin/fm-dod-lib.sh | sort | uniq -d
 git diff --summary "$PIN" -- AGENTS.md bin/fm-dod-lib.sh | grep 'mode change'
 ```
 
-In each upstream-owned file `bin/po-theme.sh registry files` lists, every added line must be a row's hook line, occurring at most as many times as rows register it, and every removed line must be the upstream line a row says its hook replaces; `registry check-diff` reports an affirmative line when they all match:
+In each upstream-owned file `bin/po-theme.sh registry files` lists, every added line must be a row's hook line, occurring at most as many times as rows register it, and every removed line must be the upstream line a row says its hook replaces; `registry check-diff` reports an affirmative line when they all match.
+In a file that a bug-fix carry's row in the carry register names, the other changed lines are that carry's, while the file's hook lines are still counted and must still replace their upstream lines, and a file whose carry changes no line beyond its hooks fails because that carry is spent:
 
 ```sh
 bin/po-theme.sh registry check-diff "$PIN"
